@@ -1,0 +1,219 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  nama      String
+  email     String   @unique
+  phone     String?
+  instagram String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  events    Event[]
+
+  @@index([email])
+}
+
+model Event {
+  id            String    @id @default(cuid())
+  kodeBooking   String    @unique
+  clientId      String
+  client        Client    @relation(fields: [clientId], references: [id])
+  packageId     String?
+  package       Package?  @relation(fields: [packageId], references: [id])
+  namaProject   String
+  eventDate     DateTime
+  location      String?
+  notes         String?
+  status        String    @default("pending")
+  totalPrice    Int       @default(0)
+  paidAmount    Int       @default(0)
+  paymentStatus String    @default("unpaid")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  galleries     Gallery[]
+
+  @@index([clientId])
+  @@index([status])
+  @@index([eventDate])
+  @@index([paymentStatus])
+}
+
+model Package {
+  id           String   @id @default(cuid())
+  nama         String
+  description  String?
+  price        Int
+  duration     Int?
+  fitur        String[]
+  maxSelection Int      @default(20)
+  maxDownload  Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  events       Event[]
+
+  @@index([isActive])
+}
+
+model Gallery {
+  id                String   @id @default(cuid())
+  eventId           String
+  event             Event    @relation(fields: [eventId], references: [id])
+  namaProject       String
+  clientToken       String   @unique @default(cuid())
+  status            String   @default("draft")
+  maxSelection      Int      @default(0)
+  enableDownload    Boolean  @default(false)
+  welcomeMessage    String?
+  thankYouMessage   String?
+  bannerClientName  String?
+  bannerEventDate   String?
+  bannerMessage     String?
+  viewCount         Int      @default(0)
+  isSelectionLocked Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  photos            Photo[]
+  selections        Selection[]
+
+  @@index([eventId])
+  @@index([status])
+  @@index([clientToken])
+}
+
+model Photo {
+  id              String   @id @default(cuid())
+  galleryId       String
+  gallery         Gallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  filename        String
+  url             String
+  thumbnailUrl    String?
+  publicId        String?
+  r2Key           String?
+  width           Int?
+  height          Int?
+  order           Int      @default(0)
+  fileSize        BigInt?
+  createdAt       DateTime @default(now())
+  
+  storageAccountId String?
+  storageAccount   StorageAccount? @relation(fields: [storageAccountId], references: [id])
+  
+  selections      PhotoSelection[]
+
+  @@index([galleryId])
+  @@index([storageAccountId])
+  @@index([publicId])
+}
+
+model Selection {
+  id          String            @id @default(cuid())
+  galleryId   String
+  gallery     Gallery           @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  submittedAt DateTime          @default(now())
+  photos      PhotoSelection[]
+
+  @@index([galleryId])
+  @@index([submittedAt])
+}
+
+model PhotoSelection {
+  id           String    @id @default(cuid())
+  selectionId  String
+  selection    Selection @relation(fields: [selectionId], references: [id], onDelete: Cascade)
+  photoId      String
+  photo        Photo     @relation(fields: [photoId], references: [id], onDelete: Cascade)
+
+  @@unique([selectionId, photoId])
+  @@index([selectionId])
+  @@index([photoId])
+}
+
+model Settings {
+  id              String   @id @default("studio")
+  namaStudio      String?
+  logoUrl         String?
+  phone           String?
+  email           String?
+  address         String?
+  socialMedia     Json?
+  bookingFields   Json?
+  notifications   Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+enum StorageProvider {
+  CLOUDINARY
+  R2
+}
+
+model StorageAccount {
+  id            String         @id @default(cuid())
+  name          String
+  provider      StorageProvider
+  isActive      Boolean        @default(true)
+  isDefault     Boolean        @default(false)
+  priority      Int            @default(0)
+  
+  // Cloudinary fields
+  cloudName     String?
+  apiKey        String?
+  apiSecret     String?
+  uploadPreset  String?
+  
+  // R2 fields
+  accountId     String?
+  accessKey     String?
+  secretKey     String?
+  bucketName    String?
+  publicUrl     String?
+  endpoint      String?
+  
+  // Key rotation support
+  rotationEnabled  Boolean      @default(false)
+  rotationSchedule String?
+  rotationNextDate DateTime?
+  secondaryApiKey  String?
+  secondarySecret  String?
+  secondaryAccessKey String?
+  isSecondaryActive Boolean    @default(false)
+  lastRotatedAt    DateTime?
+  
+  // Usage stats
+  usedStorage   BigInt         @default(0)
+  totalPhotos    Int            @default(0)
+  
+  createdAt     DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  photos        Photo[]
+
+  @@index([provider, isActive])
+  @@index([isDefault])
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
