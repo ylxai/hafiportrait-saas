@@ -5,6 +5,9 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import useSWR from 'swr';
 import Masonry from 'react-masonry-css';
+import YARLightbox from "yet-another-react-lightbox";
+import Zoom from "yet-another-react-lightbox/plugins/zoom";
+import "yet-another-react-lightbox/styles.css";
 import { useSelectionSubscription, useViewCountSubscription, useAblyConnection } from '@/lib/hooks/useAbly';
 import { publishSelectionUpdate, publishViewCount } from '@/lib/ably';
 
@@ -30,14 +33,12 @@ type GalleryData = {
     status: string;
     clientToken: string;
     viewCount: number;
-    settings: {
-      maxSelection: number;
-      enableDownload: boolean;
-      welcomeMessage: string | null;
-      thankYouMessage: string | null;
-      bannerClientName: string | null;
-      bannerEventDate: string | null;
-    };
+    maxSelection: number;
+    enableDownload: boolean;
+    welcomeMessage: string | null;
+    thankYouMessage: string | null;
+    bannerClientName: string | null;
+    bannerEventDate: string | null;
     photos: Photo[];
     selections: string[];
     isSelectionLocked: boolean;
@@ -57,93 +58,6 @@ const fetcher = (url: string) => fetch(url).then((res) => {
   return res.json();
 });
 
-function Lightbox({
-  photos,
-  currentIndex,
-  onClose,
-  onNavigate,
-  onToggleSelect,
-  hasPickspace,
-  isLocked,
-  selectedIds,
-}: {
-  photos: Photo[];
-  currentIndex: number;
-  onClose: () => void;
-  onNavigate: (direction: number) => void;
-  onToggleSelect: (photoId: string) => void;
-  hasPickspace: boolean;
-  isLocked: boolean;
-  selectedIds: Set<string>;
-}) {
-  const currentPhoto = photos[currentIndex];
-  if (!currentPhoto) return null;
-
-  const isSelected = selectedIds.has(currentPhoto.id);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/95"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Lightbox viewer"
-    >
-      <button
-        className="absolute top-4 right-4 text-white text-2xl p-2 hover:bg-card/10 rounded-lg transition-colors"
-        onClick={onClose}
-        aria-label="Tutup lightbox"
-      >
-        ✕
-      </button>
-
-      <button
-        className="absolute left-4 text-white text-3xl p-2 hover:bg-card/10 rounded-lg transition-colors"
-        onClick={(e) => { e.stopPropagation(); onNavigate(-1); }}
-        aria-label="Foto sebelumnya"
-      >
-        ←
-      </button>
-
-      <div className="relative max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-        <Image
-          src={currentPhoto.url}
-          alt={currentPhoto.filename}
-          width={1200}
-          height={800}
-          className="max-w-full max-h-[85vh] object-contain"
-          priority
-          quality={90}
-        />
-      </div>
-
-      <button
-        className="absolute right-4 text-white text-3xl p-2 hover:bg-card/10 rounded-lg transition-colors"
-        onClick={(e) => { e.stopPropagation(); onNavigate(1); }}
-        aria-label="Foto berikutnya"
-      >
-        →
-      </button>
-
-      {hasPickspace && !isLocked && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onToggleSelect(currentPhoto.id); }}
-          className={`absolute bottom-4 px-6 py-3 rounded-full text-sm font-medium transition-colors ${
-            isSelected
-              ? 'bg-primary/100 text-white'
-              : 'bg-card/20 text-white hover:bg-card/30'
-          }`}
-        >
-          {isSelected ? '✓ Dipilih' : 'Pilih'}
-        </button>
-      )}
-
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm">
-        {currentIndex + 1} / {photos.length}
-      </div>
-    </div>
-  );
-}
 
 export default function GalleryPage() {
   const params = useParams();
@@ -197,7 +111,7 @@ export default function GalleryPage() {
   const gallery = data?.data?.gallery;
   const photos = useMemo(() => allPhotos.length > 0 ? allPhotos : (gallery?.photos ?? []), [allPhotos, gallery?.photos]);
 
-  const maxSelection = useMemo(() => gallery?.settings.maxSelection ?? 0, [gallery?.settings.maxSelection]);
+  const maxSelection = useMemo(() => gallery?.maxSelection ?? 0, [gallery?.maxSelection]);
   const hasPickspace = useMemo(() => maxSelection > 0, [maxSelection]);
   const isLocked = useMemo(() => gallery?.isSelectionLocked ?? false, [gallery?.isSelectionLocked]);
   const serverSelections = useMemo(() => new Set(gallery?.selections ?? []), [gallery?.selections]);
@@ -208,7 +122,7 @@ export default function GalleryPage() {
   const draftSelectedPhotos = useMemo(() => photos.filter((p) => selectedIds.has(p.id)), [photos, selectedIds]);
   const activeSelectedPhotos = useMemo(() => isLocked ? serverSelectedPhotos : draftSelectedPhotos, [isLocked, serverSelectedPhotos, draftSelectedPhotos]);
   const activeSelectionCount = useMemo(() => isLocked ? serverSelectedPhotos.length : localSelectionCount, [isLocked, serverSelectedPhotos.length, localSelectionCount]);
-  const hasBanner = useMemo(() => !!(gallery?.settings.welcomeMessage ?? gallery?.settings.bannerClientName), [gallery?.settings.welcomeMessage, gallery?.settings.bannerClientName]);
+  const hasBanner = useMemo(() => !!(gallery?.welcomeMessage ?? gallery?.bannerClientName), [gallery?.welcomeMessage, gallery?.bannerClientName]);
 
   useEffect(() => {
     if (gallery?.isSelectionLocked) {
@@ -321,10 +235,6 @@ export default function GalleryPage() {
     setLightboxIndex(-1);
   }, []);
 
-  const navigateLightbox = useCallback((direction: number) => {
-    setLightboxIndex((prev) => (prev + direction + photos.length) % photos.length);
-  }, [photos.length]);
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -360,8 +270,8 @@ export default function GalleryPage() {
             </div>
             <h2 className="text-xl font-bold text-foreground mb-2">Pilihan Dikirim!</h2>
             <p className="text-muted-foreground text-sm mb-4">Terima kasih. Fotografer akan memproses pilihan Anda.</p>
-            {gallery.settings.thankYouMessage && (
-              <p className="text-sm italic text-muted-foreground bg-background p-3 rounded-lg mb-4">&quot;{gallery.settings.thankYouMessage}&quot;</p>
+            {gallery.thankYouMessage && (
+              <p className="text-sm italic text-muted-foreground bg-background p-3 rounded-lg mb-4">&quot;{gallery.thankYouMessage}&quot;</p>
             )}
             <button onClick={() => setShowSuccess(false)} className="w-full py-2 bg-primary/100 text-white rounded-lg hover:bg-primary/80">
               Tutup
@@ -411,13 +321,13 @@ export default function GalleryPage() {
         <div className="mx-4 mt-4 bg-card rounded-lg p-4 border border-border">
           <div className="flex justify-between items-start">
             <div className="text-center flex-1">
-              {gallery.settings.bannerClientName && (
-                <p className="text-xs font-medium uppercase tracking-wider text-primary">{gallery.settings.bannerClientName}</p>
+              {gallery.bannerClientName && (
+                <p className="text-xs font-medium uppercase tracking-wider text-primary">{gallery.bannerClientName}</p>
               )}
               {bannerOpen && (
                 <>
-                  {gallery.settings.welcomeMessage && <p className="text-sm text-muted-foreground mt-1">{gallery.settings.welcomeMessage}</p>}
-                  {gallery.settings.bannerEventDate && <p className="text-xs text-slate-400 mt-1">{gallery.settings.bannerEventDate}</p>}
+                  {gallery.welcomeMessage && <p className="text-sm text-muted-foreground mt-1">{gallery.welcomeMessage}</p>}
+                  {gallery.bannerEventDate && <p className="text-xs text-slate-400 mt-1">{gallery.bannerEventDate}</p>}
                 </>
               )}
             </div>
@@ -552,7 +462,7 @@ export default function GalleryPage() {
                 </div>
                 {isLocked ? (
                   <div className="mt-4 flex gap-2">
-                    {gallery.settings.enableDownload && activeSelectedPhotos.length > 0 && (
+                    {gallery.enableDownload && activeSelectedPhotos.length > 0 && (
                       <button onClick={handleDownload} className="flex-1 py-3 bg-muted text-foreground rounded-lg text-sm font-medium hover:bg-muted">↓ Download Semua</button>
                     )}
                   </div>
@@ -571,16 +481,31 @@ export default function GalleryPage() {
       <footer className="py-6 text-center text-xs text-slate-400">© {new Date().getFullYear()} PhotoStudio</footer>
 
       {lightboxIndex >= 0 && (
-        <Lightbox
-          photos={photos}
-          currentIndex={lightboxIndex}
-          onClose={closeLightbox}
-          onNavigate={navigateLightbox}
-          onToggleSelect={toggleSelect}
-          hasPickspace={hasPickspace}
-          isLocked={isLocked}
-          selectedIds={selectedIds}
-        />
+        <>
+          <YARLightbox
+            open={lightboxIndex >= 0}
+            close={closeLightbox}
+            index={lightboxIndex}
+            on={{ view: ({ index }) => setLightboxIndex(index) }}
+            slides={photos.map((p) => ({ src: p.url, alt: p.filename }))}
+            plugins={[Zoom]}
+            carousel={{ finite: false }}
+          />
+          {hasPickspace && !isLocked && photos[lightboxIndex] && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[10000]">
+              <button
+                onClick={(e) => { e.stopPropagation(); toggleSelect(photos[lightboxIndex].id); }}
+                className={`px-8 py-3 rounded-full text-sm font-bold transition-all shadow-xl backdrop-blur-md border ${
+                  selectedIds.has(photos[lightboxIndex].id)
+                    ? 'bg-primary text-white border-primary shadow-primary/20 scale-105'
+                    : 'bg-black/60 text-white border-white/20 hover:bg-black/80 hover:border-white/40'
+                }`}
+              >
+                {selectedIds.has(photos[lightboxIndex].id) ? '✓ Dipilih' : 'Pilih Foto Ini'}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
