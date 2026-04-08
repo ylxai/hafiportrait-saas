@@ -3,14 +3,21 @@ import { successResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return errorResponse('Unauthorized', 401);
     }
 
-    const [events, totalAgg, paidAgg] = await Promise.all([
+    // Parse pagination params
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20')));
+    const skip = (page - 1) * limit;
+
+    const [events, totalAgg, paidAgg, pendingAgg, revenueByMonthRaw] = await Promise.all([
+      // Paginated events list
       prisma.event.findMany({
         select: {
           id: true,
@@ -24,36 +31,49 @@ export async function GET() {
           package: { select: { nama: true } },
         },
         orderBy: { eventDate: 'desc' },
-        take: 100,
+        take: limit,
+        skip,
       }),
+      // Total stats
       prisma.event.aggregate({
         _sum: { totalPrice: true },
         _count: { id: true },
       }),
+      // Paid stats
       prisma.event.aggregate({
         where: { paymentStatus: 'PAID' },
         _sum: { totalPrice: true },
         _count: { id: true },
       }),
+      // Pending stats
+      prisma.event.aggregate({
+        where: { paymentStatus: { not: 'PAID' } },
+        _sum: { totalPrice: true },
+        _count: { id: true },
+      }),
+      // SQL aggregation for revenue by month (much faster than JS processing)
+      prisma.$queryRaw`
+        SELECT 
+          TO_CHAR("eventDate", 'YYYY Mon') as month,
+          SUM("totalPrice") as revenue
+        FROM "Event"
+        WHERE "paymentStatus" = 'PAID'
+        GROUP BY TO_CHAR("eventDate", 'YYYY Mon'), DATE_TRUNC('month', "eventDate")
+        ORDER BY DATE_TRUNC('month', "eventDate") DESC
+        LIMIT 12
+      ` as Promise<{ month: string; revenue: bigint }[]>,
     ]);
 
-    const pendingAgg = await prisma.event.aggregate({
-      where: { paymentStatus: { not: 'PAID' } },
-      _sum: { totalPrice: true },
-      _count: { id: true },
-    });
-
+    // Convert revenue by month to record
     const revenueByMonth: Record<string, number> = {};
-    
-    for (const e of events) {
-      if (e.paymentStatus === 'PAID') {
-        const month = new Date(e.eventDate).toLocaleString('id-ID', { year: 'numeric', month: 'short' });
-        revenueByMonth[month] = (revenueByMonth[month] || 0) + e.totalPrice;
-      }
+    for (const row of revenueByMonthRaw) {
+      revenueByMonth[row.month] = Number(row.revenue);
     }
 
+    const total = totalAgg._count.id;
+
     const summary = {
-      totalEvents: totalAgg._count.id,
+      totalEvents: total,
       paidEvents: paidAgg._count.id,
       pendingEvents: pendingAgg._count.id,
       totalRevenue: totalAgg._sum.totalPrice || 0,
@@ -73,7 +93,17 @@ export async function GET() {
       eventDate: e.eventDate,
     }));
 
-    return successResponse({ summary, revenueByMonth, events: eventsList });
+    return successResponse({
+      summary,
+      revenueByMonth,
+      events: eventsList,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error('Error fetching finance:', error);
     return errorResponse('Failed to fetch finance data', 500);

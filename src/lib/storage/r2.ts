@@ -43,6 +43,34 @@ export function getR2Client(credentials?: R2Credentials): S3Client {
   });
 }
 
+export async function downloadFromR2(
+  key: string,
+  credentials?: R2Credentials
+): Promise<Buffer> {
+  const client = credentials ? getR2Client(credentials) : defaultR2Client;
+  const bucket = credentials?.bucketName || DEFAULT_BUCKET_NAME;
+
+  const command = new GetObjectCommand({
+    Bucket: bucket,
+    Key: key,
+  });
+
+  const response = await client.send(command);
+  const stream = response.Body as ReadableStream;
+  
+  // Convert stream to buffer
+  const chunks: Buffer[] = [];
+  const reader = stream.getReader();
+  
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(Buffer.from(value));
+  }
+  
+  return Buffer.concat(chunks);
+}
+
 export async function uploadToR2(
   file: Buffer,
   filename: string,

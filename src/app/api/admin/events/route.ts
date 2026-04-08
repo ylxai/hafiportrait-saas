@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
-import { eventSchema } from '@/lib/api/validation';
+import { eventSchema, eventUpdateSchema } from '@/lib/api/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 
@@ -22,20 +22,38 @@ function generateKodeBooking(): string {
   return result;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const events = await prisma.event.findMany({
-      include: {
-        client: true,
-        package: true,
-      },
-      orderBy: { eventDate: 'desc' },
-    });
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20')));
+    const skip = (page - 1) * limit;
 
-    return successResponse({ events });
+    const [events, total] = await Promise.all([
+      prisma.event.findMany({
+        include: {
+          client: true,
+          package: true,
+        },
+        orderBy: { eventDate: 'desc' },
+        take: limit,
+        skip,
+      }),
+      prisma.event.count(),
+    ]);
+
+    return successResponse({
+      events,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error('Error fetching events:', error);
     return serverErrorResponse('Failed to fetch events');
@@ -89,9 +107,12 @@ export async function PATCH(request: Request) {
       return errorResponse('Event ID required', 400);
     }
 
+    // Validate update data
+    const validated = eventUpdateSchema.parse(data);
+
     const event = await prisma.event.update({
       where: { id },
-      data,
+      data: validated,
       include: { client: true, package: true },
     });
 

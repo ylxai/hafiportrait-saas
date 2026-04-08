@@ -1,0 +1,53 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e20] [cursor=pointer]:
+    - img [ref=e21]
+  - alert [ref=e24]
+  - generic [ref=e25]:
+    - complementary [ref=e26]:
+      - img [ref=e29]
+      - navigation [ref=e31]:
+        - link [ref=e32] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e33]
+        - link [ref=e35] [cursor=pointer]:
+          - /url: /admin/events
+          - img [ref=e36]
+        - link [ref=e38] [cursor=pointer]:
+          - /url: /admin/clients
+          - img [ref=e39]
+        - link [ref=e41] [cursor=pointer]:
+          - /url: /admin/galleries
+          - img [ref=e42]
+        - link [ref=e44] [cursor=pointer]:
+          - /url: /admin/analytics
+          - img [ref=e45]
+        - link [ref=e47] [cursor=pointer]:
+          - /url: /admin/finance
+          - img [ref=e48]
+        - link [ref=e50] [cursor=pointer]:
+          - /url: /admin/packages
+          - img [ref=e51]
+        - link [ref=e53] [cursor=pointer]:
+          - /url: /admin/storage
+          - img [ref=e54]
+        - link [ref=e56] [cursor=pointer]:
+          - /url: /admin/settings
+          - img [ref=e57]
+      - button [ref=e61]:
+        - img [ref=e62]
+    - main [ref=e64]:
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - heading "Clients" [level=1] [ref=e68]
+          - button "Tambah Client" [ref=e69]:
+            - img
+            - generic [ref=e70]: Tambah Client
+        - button "Tambah Client Baru" [ref=e71]:
+          - img
+        - generic [ref=e72]:
+          - img [ref=e74]
+          - heading "Belum ada client" [level=3] [ref=e77]
+          - paragraph [ref=e78]: Tambah client pertama Anda untuk memulai mengelola data klien dengan mudah.
+          - button "Tambah Client" [ref=e79]:
+            - img
+            - text: Tambah Client

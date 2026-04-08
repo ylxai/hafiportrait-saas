@@ -2,9 +2,12 @@
 
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
 import useSWR from 'swr';
 import { useSelectionSubscription, useAblyConnection } from '@/lib/hooks/useAbly';
+import { UploadManager } from '@/components/upload/UploadManager';
+import { Button } from '@/components/ui/button';
+import { Upload } from 'lucide-react';
+import { PhotoImage } from '@/components/photo/PhotoImage';
 
 type StorageAccount = {
   id: string;
@@ -20,6 +23,7 @@ type Photo = {
   publicId: string | null;
   width: number | null;
   height: number | null;
+  order: number | null;
 };
 
 type Selection = {
@@ -50,12 +54,21 @@ export default function GalleryDetailPage() {
   const params = useParams();
   const galleryId = params.id as string;
   
-  const [uploading, setUploading] = useState(false);
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
   const [selectedPhotoIdsForBulk, setSelectedPhotoIdsForBulk] = useState<Set<string>>(new Set());
   const [bulkMode, setBulkMode] = useState(false);
   const [showSelectionView, setShowSelectionView] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showUploadManager, setShowUploadManager] = useState(false);
+  const [reorderMode, setReorderMode] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
+  
+  // Gallery settings state
+  const [gallerySettings, setGallerySettings] = useState({
+    maxSelection: 20,
+    enableDownload: false,
+  });
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [settingsMessage, setSettingsMessage] = useState('');
 
   const fetcher = (url: string) => fetch(url).then((res) => res.json());
   const { data, isLoading, mutate } = useSWR<{ gallery: Gallery }>(
@@ -64,6 +77,16 @@ export default function GalleryDetailPage() {
   );
   
   const gallery = data?.gallery ?? null;
+  
+  // Update settings state when gallery data loads
+  useEffect(() => {
+    if (gallery) {
+      setGallerySettings({
+        maxSelection: gallery.maxSelection || 20,
+        enableDownload: gallery.enableDownload || false,
+      });
+    }
+  }, [gallery]);
 
   const handleSelectionUpdate = useCallback((update: { photoId: string; action: 'add' | 'remove'; selectionCount: number }) => {
     mutate();
@@ -86,129 +109,6 @@ export default function GalleryDetailPage() {
     [storageData]
   );
 
-  const [selectedCloudinaryAccount, setSelectedCloudinaryAccount] = useState<string>('');
-  const [selectedR2Account, setSelectedR2Account] = useState<string>('');
-  const [uploadProgress, setUploadProgress] = useState<{ total: number; completed: number; failed: number } | null>(null);
-  const [uploadQueue, setUploadQueue] = useState<{ name: string; status: 'pending' | 'uploading' | 'success' | 'failed' }[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-
-  const MAX_CONCURRENT_UPLOADS = 4;
-  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-
-  const uploadFile = useCallback(async (file: File, galleryId: string, cloudinaryId: string | null, r2Id: string | null) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('galleryId', galleryId);
-    if (cloudinaryId) formData.append('cloudinaryAccountId', cloudinaryId);
-    if (r2Id) formData.append('r2AccountId', r2Id);
-
-    const res = await fetch(`/api/admin/galleries/${galleryId}/photos`, {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!res.ok) {
-      throw new Error(`Failed to upload ${file.name}`);
-    }
-    const data = await res.json();
-    return { filename: file.name, url: data.photo.url };
-  }, []);
-
-  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const fileArray = Array.from(files);
-    
-    // Validate file sizes
-    const oversizedFiles = fileArray.filter(f => f.size > MAX_FILE_SIZE);
-    if (oversizedFiles.length > 0) {
-      alert(`File terlalu besar (maks 50MB): ${oversizedFiles.map(f => f.name).join(', ')}`);
-      return;
-    }
-
-    setUploading(true);
-    setUploadProgress({ total: fileArray.length, completed: 0, failed: 0 });
-    setUploadQueue(fileArray.map(f => ({ name: f.name, status: 'pending' as const })));
-
-    const cloudinaryId = selectedCloudinaryAccount || null;
-    const r2Id = selectedR2Account || null;
-
-    // Process in batches
-    for (let i = 0; i < fileArray.length; i += MAX_CONCURRENT_UPLOADS) {
-      const batch = fileArray.slice(i, i + MAX_CONCURRENT_UPLOADS);
-      
-      // Update batch status to uploading
-      setUploadQueue(prev => prev.map((item, idx) => 
-        idx >= i && idx < i + MAX_CONCURRENT_UPLOADS 
-          ? { ...item, status: 'uploading' } 
-          : item
-      ));
-
-      const batchResults = await Promise.allSettled(
-        batch.map((file) => uploadFile(file, galleryId, cloudinaryId, r2Id))
-      );
-
-      batchResults.forEach((result, idx) => {
-        const fileIdx = i + idx;
-        if (result.status === 'fulfilled') {
-          setUploadProgress((prev) => prev ? { ...prev, completed: prev.completed + 1 } : null);
-          setUploadQueue(prev => prev.map((item, idx) => 
-            idx === fileIdx ? { ...item, status: 'success' } : item
-          ));
-        } else {
-          console.error('Upload failed:', result.reason);
-          setUploadProgress((prev) => prev ? { ...prev, failed: prev.failed + 1 } : null);
-          setUploadQueue(prev => prev.map((item, idx) => 
-            idx === fileIdx ? { ...item, status: 'failed' } : item
-          ));
-        }
-      });
-    }
-
-    setUploading(false);
-    setTimeout(() => {
-      setUploadProgress(null);
-      setUploadQueue([]);
-    }, 2000);
-    mutate();
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  }, [galleryId, mutate, selectedCloudinaryAccount, selectedR2Account, uploadFile, MAX_FILE_SIZE]);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      const dt = new DataTransfer();
-      Array.from(files).forEach(f => {
-        if (f.type.startsWith('image/')) {
-          dt.items.add(f);
-        }
-      });
-      if (dt.files.length > 0) {
-        const fakeEvent: React.ChangeEvent<HTMLInputElement> = {
-          target: { files: dt.files },
-        } as unknown as React.ChangeEvent<HTMLInputElement>;
-        handleFileSelect(fakeEvent);
-      }
-    }
-  }, [handleFileSelect]);
-
   const deletePhoto = useCallback(async (photoId: string) => {
     if (!confirm('Hapus foto ini?')) return;
 
@@ -221,6 +121,61 @@ export default function GalleryDetailPage() {
       console.error('Error deleting photo:', error);
     }
   }, [galleryId, mutate]);
+  
+  // Save gallery settings
+  const handleSaveSettings = async () => {
+    if (!gallery) return;
+    
+    setIsSavingSettings(true);
+    setSettingsMessage('');
+    
+    try {
+      const response = await fetch(`/api/admin/galleries/${galleryId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          maxSelection: gallerySettings.maxSelection,
+          enableDownload: gallerySettings.enableDownload,
+        }),
+      });
+      
+      if (response.ok) {
+        setSettingsMessage('Settings saved successfully!');
+        mutate(); // Refresh gallery data
+        setTimeout(() => setSettingsMessage(''), 3000);
+      } else {
+        setSettingsMessage('Failed to save settings');
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      setSettingsMessage('Error saving settings');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+  
+  // Reorder photo
+  const handleReorderPhoto = async (photoId: string, newOrder: number) => {
+    setIsReordering(true);
+    
+    try {
+      const response = await fetch(`/api/admin/galleries/${galleryId}/photos/${photoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: newOrder }),
+      });
+      
+      if (response.ok) {
+        mutate(); // Refresh gallery data
+      } else {
+        console.error('Failed to reorder photo');
+      }
+    } catch (error) {
+      console.error('Error reordering photo:', error);
+    } finally {
+      setIsReordering(false);
+    }
+  };
 
   const toggleSelectForExport = (photoId: string) => {
     setSelectedPhotoIds((prev) => {
@@ -258,7 +213,6 @@ export default function GalleryDetailPage() {
   const deleteSelectedPhotos = useCallback(async () => {
     if (!confirm(`Hapus ${selectedPhotoIdsForBulk.size} foto yang dipilih?`)) return;
 
-    setUploading(true);
     for (const photoId of selectedPhotoIdsForBulk) {
       try {
         await fetch(`/api/admin/galleries/${galleryId}/photos/${photoId}`, {
@@ -271,7 +225,6 @@ export default function GalleryDetailPage() {
 
     setSelectedPhotoIdsForBulk(new Set());
     setBulkMode(false);
-    setUploading(false);
     mutate();
   }, [galleryId, mutate, selectedPhotoIdsForBulk]);
 
@@ -317,14 +270,14 @@ export default function GalleryDetailPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900">{gallery.namaProject}</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{gallery.namaProject}</h1>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-              gallery.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+              gallery.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-600'
             }`}>
               {gallery.status}
             </span>
           </div>
-          <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
+          <p className="text-sm text-slate-500 mt-1 flex items-center gap-2">
             {gallery.event.client.nama} • {gallery.event.kodeBooking} • {gallery.viewCount} views
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-green-500"></span>
@@ -344,7 +297,7 @@ export default function GalleryDetailPage() {
           <button
             onClick={() => setShowSelectionView(!showSelectionView)}
             className={`px-4 py-2 rounded-lg ${
-              showSelectionView ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'
+              showSelectionView ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-700'
             }`}
           >
             👁️ Lihat Seleksi Client
@@ -355,10 +308,10 @@ export default function GalleryDetailPage() {
       {/* Selection View - Admin sees client selections */}
       {showSelectionView && (
         <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <h2 className="font-semibold text-gray-900 mb-3">📋 Seleksi dari Client</h2>
+          <h2 className="font-semibold text-slate-900 mb-3">📋 Seleksi dari Client</h2>
           {gallery.isSelectionLocked ? (
             <div>
-              <p className="text-sm text-gray-600 mb-3">
+              <p className="text-sm text-slate-600 mb-3">
                 Client telah memilih <span className="font-bold text-amber-600">{selectedPhotoIdsFromServer.length}</span> foto
                 {gallery.maxSelection > 0 && ` (maks. ${gallery.maxSelection})`}
               </p>
@@ -372,7 +325,7 @@ export default function GalleryDetailPage() {
                 {selectedPhotoIds.size > 0 && (
                   <button
                     onClick={exportToTxt}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
+                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 text-sm"
                   >
                     📥 Export .txt (terpilih: {selectedPhotoIds.size})
                   </button>
@@ -385,7 +338,7 @@ export default function GalleryDetailPage() {
                   .filter((p) => selectedPhotoIdsFromServer.includes(p.id))
                   .map((photo, idx) => (
                     <div key={photo.id} className="relative group">
-                      <Image
+                      <PhotoImage
                         src={photo.url}
                         alt={photo.filename}
                         width={150}
@@ -404,8 +357,8 @@ export default function GalleryDetailPage() {
 
               {/* Filename list */}
               <div className="mt-4 p-3 bg-white rounded-lg">
-                <p className="text-xs font-medium text-gray-500 mb-2">Daftar filename:</p>
-                <div className="text-xs text-gray-600 font-mono max-h-32 overflow-y-auto">
+                <p className="text-xs font-medium text-slate-500 mb-2">Daftar filename:</p>
+                <div className="text-xs text-slate-600 font-mono max-h-32 overflow-y-auto">
                   {gallery.photos
                     .filter((p) => selectedPhotoIdsFromServer.includes(p.id))
                     .map((p) => p.filename)
@@ -414,32 +367,35 @@ export default function GalleryDetailPage() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-gray-500">Belum ada seleksi dari client</p>
+            <p className="text-sm text-slate-500">Belum ada seleksi dari client</p>
           )}
         </div>
       )}
 
       {/* Upload Section */}
-      <div 
-        className={`bg-white rounded-xl border-2 border-dashed p-4 sm:p-6 mb-6 transition-colors ${
-          isDragging ? 'border-champagne-500 bg-champagne-50' : 'border-champagne-100'
-        }`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
+      <div className="bg-white rounded-xl border border-champagne-100 p-4 sm:p-6 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <h2 className="font-semibold text-lg text-charcoal">Photos ({gallery.photos.length})</h2>
+            <h2 className="font-semibold text-lg text-slate-800">Photos ({gallery.photos.length})</h2>
             {gallery.photos.length > 0 && (
-              <button
-                onClick={() => { setBulkMode(!bulkMode); setSelectedPhotoIdsForBulk(new Set()); }}
-                className={`px-3 py-2 sm:py-1 text-sm rounded-lg transition-smooth cursor-pointer ${
-                  bulkMode ? 'bg-champagne-500 text-white' : 'bg-champagne-100 text-champagne-700 hover:bg-champagne-200'
-                }`}
-              >
-                {bulkMode ? '✓ Bulk ON' : '☐ Bulk Select'}
-              </button>
+              <>
+                <button
+                  onClick={() => { setBulkMode(!bulkMode); setSelectedPhotoIdsForBulk(new Set()); }}
+                  className={`px-3 py-2 sm:py-1 text-sm rounded-lg transition-smooth cursor-pointer ${
+                    bulkMode ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                  }`}
+                >
+                  {bulkMode ? '✓ Bulk ON' : '☐ Bulk Select'}
+                </button>
+                <button
+                  onClick={() => setReorderMode(!reorderMode)}
+                  className={`px-3 py-2 sm:py-1 text-sm rounded-lg transition-smooth cursor-pointer ${
+                    reorderMode ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  }`}
+                >
+                  {reorderMode ? '✓ Reorder ON' : '⇅ Reorder'}
+                </button>
+              </>
             )}
             {bulkMode && selectedPhotoIdsForBulk.size > 0 && (
               <button
@@ -450,98 +406,37 @@ export default function GalleryDetailPage() {
               </button>
             )}
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-            {/* Account Selection - Stack on mobile */}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <select
-                value={selectedCloudinaryAccount}
-                onChange={(e) => setSelectedCloudinaryAccount(e.target.value)}
-                className="text-sm border border-champagne-200 rounded-lg px-3 py-2 min-h-[44px]"
-              >
-                <option value="">Cloudinary: Default</option>
-                {cloudinaryAccounts.map((acc) => (
-                  <option key={acc.id} value={acc.id}>{acc.name}</option>
-                ))}
-              </select>
-              <select
-                value={selectedR2Account}
-                onChange={(e) => setSelectedR2Account(e.target.value)}
-                className="text-sm border border-champagne-200 rounded-lg px-3 py-2 min-h-[44px]"
-              >
-                <option value="">R2: Default</option>
-                {r2Accounts.map((acc) => (
-                  <option key={acc.id} value={acc.id}>{acc.name}</option>
-                ))}
-              </select>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="px-4 py-3 sm:py-2 bg-champagne-500 text-white rounded-lg hover:bg-champagne-600 disabled:opacity-50 cursor-pointer min-h-[44px]"
-            >
-              {uploading ? 'Mengunggah...' : '+ Upload'}
-            </button>
-          </div>
+          <Button
+            onClick={() => setShowUploadManager(true)}
+            className="bg-amber-500 hover:bg-amber-600 text-white"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Upload Foto
+          </Button>
         </div>
 
-        {/* Drag hint */}
-        <div className="text-center text-sm text-warm-gray mb-4">
-          💡 Drag & drop or click to upload
-        </div>
-
-        {/* Upload Progress */}
-        {uploadProgress && (
-          <div className="mb-4 p-3 bg-amber-50 rounded-lg">
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-gray-600">
-                Mengunggah {uploadProgress.completed}/{uploadProgress.total} foto...
-              </span>
-              {uploadProgress.failed > 0 && (
-                <span className="text-red-500">Gagal: {uploadProgress.failed}</span>
-              )}
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-amber-500 h-2 rounded-full transition-all"
-                style={{ width: `${(uploadProgress.completed / uploadProgress.total) * 100}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* File Queue */}
-        {uploadQueue.length > 0 && (
-          <div className="mb-4 text-sm">
-            <div className="font-medium text-gray-600 mb-2">Status Upload:</div>
-            <div className="max-h-40 overflow-y-auto space-y-1">
-              {uploadQueue.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  {item.status === 'pending' && <span className="text-gray-400">⏳</span>}
-                  {item.status === 'uploading' && <span className="text-amber-500 animate-spin">⏳</span>}
-                  {item.status === 'success' && <span className="text-green-500">✓</span>}
-                  {item.status === 'failed' && <span className="text-red-500">✕</span>}
-                  <span className="text-gray-600 truncate">{item.name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Upload Manager Modal */}
+        <UploadManager
+          galleryId={galleryId}
+          galleryName={gallery?.namaProject || ''}
+          clientName={gallery?.event?.client?.nama || ''}
+          isOpen={showUploadManager}
+          onClose={() => setShowUploadManager(false)}
+          onSuccess={() => {
+            mutate();
+            setShowUploadManager(false);
+          }}
+          cloudinaryAccounts={cloudinaryAccounts}
+          r2Accounts={r2Accounts}
+        />
 
         {gallery.photos.length === 0 ? (
           <div className="text-center py-8 sm:py-12 border-2 border-dashed border-champagne-200 rounded-lg">
-            <p className="text-warm-gray">Belum ada foto. Upload foto untuk gallery ini.</p>
+            <p className="text-slate-500">Belum ada foto. Upload foto untuk gallery ini.</p>
           </div>
         ) : (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3">
-            {gallery.photos.map((photo) => (
+            {gallery.photos.map((photo, index) => (
               <div key={photo.id} className="relative group aspect-square">
                 {bulkMode && (
                   <input
@@ -551,7 +446,21 @@ export default function GalleryDetailPage() {
                     className="absolute top-2 left-2 z-10 w-5 h-5 rounded cursor-pointer"
                   />
                 )}
-                <Image
+                {reorderMode && (
+                  <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+                    <span className="text-xs bg-amber-500 text-white px-1 rounded">
+                      {photo.order || index + 1}
+                    </span>
+                    <input
+                      type="number"
+                      defaultValue={photo.order || index + 1}
+                      onBlur={(e) => handleReorderPhoto(photo.id, parseInt(e.target.value) || 0)}
+                      className="w-12 px-1 py-0.5 text-xs border border-slate-300 rounded"
+                      min="1"
+                    />
+                  </div>
+                )}
+                <PhotoImage
                   src={photo.url}
                   alt={photo.filename}
                   fill
@@ -560,7 +469,7 @@ export default function GalleryDetailPage() {
                 />
                 {/* Selection indicator */}
                 {selectedPhotoIdsFromServer.includes(photo.id) && (
-                  <div className="absolute top-1 right-1 w-5 h-5 sm:w-6 sm:h-6 bg-champagne-500 rounded-full flex items-center justify-center text-white text-xs">
+                  <div className="absolute top-1 right-1 w-5 h-5 sm:w-6 sm:h-6 bg-amber-500 rounded-full flex items-center justify-center text-white text-xs">
                     ✓
                   </div>
                 )}
@@ -582,14 +491,15 @@ export default function GalleryDetailPage() {
 
       {/* Settings */}
       <div className="glass-card p-4 sm:p-6">
-        <h2 className="font-semibold text-lg text-charcoal mb-4">Pengaturan Gallery</h2>
+        <h2 className="font-semibold text-lg text-slate-800 mb-4">Pengaturan Gallery</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Max Selection</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Max Selection</label>
             <input
               type="number"
-              defaultValue={gallery.maxSelection}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg"
+              value={gallerySettings.maxSelection}
+              onChange={(e) => setGallerySettings(prev => ({ ...prev, maxSelection: parseInt(e.target.value) || 20 }))}
+              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
               placeholder="20"
             />
           </div>
@@ -597,13 +507,28 @@ export default function GalleryDetailPage() {
             <input
               type="checkbox"
               id="enableDownload"
-              defaultChecked={gallery.enableDownload}
-              className="rounded border-gray-300"
+              checked={gallerySettings.enableDownload}
+              onChange={(e) => setGallerySettings(prev => ({ ...prev, enableDownload: e.target.checked }))}
+              className="rounded border-slate-300"
             />
-            <label htmlFor="enableDownload" className="text-sm text-gray-700">
+            <label htmlFor="enableDownload" className="text-sm text-slate-700">
               Izinkan client download
             </label>
           </div>
+        </div>
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            onClick={handleSaveSettings}
+            disabled={isSavingSettings}
+            className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            {isSavingSettings ? 'Saving...' : 'Save Settings'}
+          </button>
+          {settingsMessage && (
+            <span className={`text-sm ${settingsMessage.includes('success') ? 'text-green-600' : 'text-red-600'}`}>
+              {settingsMessage}
+            </span>
+          )}
         </div>
       </div>
     </div>

@@ -1,0 +1,87 @@
+- generic [ref=e1]:
+  - generic [ref=e19] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e20]:
+      - img [ref=e21]
+    - generic [ref=e114]:
+      - button "Open issues overlay" [ref=e115]:
+        - generic [ref=e132]:
+          - generic [ref=e133]: "1"
+          - generic [ref=e134]: "2"
+        - generic [ref=e119]:
+          - text: Issue
+          - generic [ref=e135]: s
+      - button "Collapse issues badge" [ref=e120]:
+        - img [ref=e121]
+  - alert [ref=e24]
+  - generic [ref=e136]:
+    - complementary [ref=e137]:
+      - img [ref=e140]
+      - navigation [ref=e142]:
+        - link [ref=e143] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e144]
+        - link [ref=e146] [cursor=pointer]:
+          - /url: /admin/events
+          - img [ref=e147]
+        - link [ref=e149] [cursor=pointer]:
+          - /url: /admin/clients
+          - img [ref=e150]
+        - link [ref=e152] [cursor=pointer]:
+          - /url: /admin/galleries
+          - img [ref=e153]
+        - link [ref=e155] [cursor=pointer]:
+          - /url: /admin/analytics
+          - img [ref=e156]
+        - link [ref=e158] [cursor=pointer]:
+          - /url: /admin/finance
+          - img [ref=e159]
+        - link [ref=e161] [cursor=pointer]:
+          - /url: /admin/packages
+          - img [ref=e162]
+        - link [ref=e164] [cursor=pointer]:
+          - /url: /admin/storage
+          - img [ref=e165]
+        - link [ref=e167] [cursor=pointer]:
+          - /url: /admin/settings
+          - img [ref=e168]
+      - button [ref=e172]:
+        - img [ref=e173]
+    - main [ref=e175]:
+      - generic [ref=e177]:
+        - generic [ref=e178]:
+          - heading [level=1] [ref=e191]: Clients
+          - button [ref=e192]:
+            - img
+            - generic [ref=e181]: Tambah Client
+        - button [ref=e193]:
+          - img
+        - generic [ref=e183]:
+          - img [ref=e185]
+          - heading [level=3] [ref=e194]: Belum ada client
+          - paragraph [ref=e189]: Tambah client pertama Anda untuk memulai mengelola data klien dengan mudah.
+          - button [ref=e195]:
+            - img
+            - text: Tambah Client
+  - dialog "Tambah Client Baru" [ref=e199]:
+    - generic [ref=e200]:
+      - heading "Tambah Client Baru" [level=2] [ref=e201]
+      - paragraph [ref=e202]: Isi detail client baru di bawah.
+    - generic [ref=e203]:
+      - generic [ref=e204]:
+        - generic [ref=e205]: Nama Lengkap *
+        - textbox [active] [ref=e206]
+      - generic [ref=e207]:
+        - generic [ref=e208]: Email *
+        - textbox [ref=e209]
+      - generic [ref=e210]:
+        - generic [ref=e211]: Phone
+        - textbox [ref=e212]
+      - generic [ref=e213]:
+        - generic [ref=e214]: Instagram
+        - textbox [ref=e215]
+      - generic [ref=e216]:
+        - button "Batal" [ref=e217]
+        - button "Tambah" [ref=e218]
+    - button "Close" [ref=e219]:
+      - img [ref=e220]
+      - generic [ref=e223]: Close

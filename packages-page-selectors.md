@@ -1,0 +1,10 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e4]:
+    - generic [ref=e6]: ⚠️
+    - heading "Gagal Memuat" [level=2] [ref=e7]
+    - paragraph [ref=e8]: Terjadi kesalahan saat memuat halaman.
+    - generic [ref=e9]:
+      - button "Coba Lagi" [ref=e10]
+      - link "Beranda" [ref=e11] [cursor=pointer]:
+        - /url: /

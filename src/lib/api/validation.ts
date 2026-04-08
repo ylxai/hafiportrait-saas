@@ -3,16 +3,16 @@ import { z } from 'zod';
 export const clientSchema = z.object({
   nama: z.string().min(1, 'Nama wajib diisi'),
   email: z.string().email('Email tidak valid'),
-  phone: z.string().optional(),
-  instagram: z.string().optional(),
+  phone: z.string().nullish(),
+  instagram: z.string().nullish(),
 });
 
 export const packageSchema = z.object({
   nama: z.string().min(1, 'Nama paket wajib diisi'),
-  description: z.string().optional(),
+  description: z.string().nullish(),
   price: z.number().min(0, 'Harga tidak boleh negatif'),
-  duration: z.number().int().positive().optional(),
-  fitur: z.array(z.string()).optional(),
+  duration: z.number().int().positive().nullish(),
+  fitur: z.array(z.string()).optional().transform((val) => val === null ? undefined : val),
   maxSelection: z.number().int().min(0).default(20),
   maxDownload: z.number().int().min(0).default(0),
   isActive: z.boolean().default(true),
@@ -20,11 +20,11 @@ export const packageSchema = z.object({
 
 export const eventSchema = z.object({
   clientId: z.string().min(1, 'Client wajib dipilih'),
-  packageId: z.string().optional(),
+  packageId: z.string().nullish(),  // Accept null or undefined
   namaProject: z.string().min(1, 'Nama project wajib diisi'),
   eventDate: z.string().transform((str) => new Date(str)),
-  location: z.string().optional(),
-  notes: z.string().optional(),
+  location: z.string().nullish(),  // Accept null or undefined
+  notes: z.string().nullish(),  // Accept null or undefined
   totalPrice: z.number().int().min(0).default(0),
   status: z.enum(['pending', 'confirmed', 'completed', 'cancelled']).default('pending'),
   paymentStatus: z.enum(['unpaid', 'partial', 'paid']).default('unpaid'),
@@ -72,3 +72,8 @@ export const loginSchema = z.object({
   email: z.string().email('Email tidak valid'),
   password: z.string().min(1, 'Password wajib diisi'),
 });
+
+// Partial schemas for PATCH endpoints (all fields optional)
+export const eventUpdateSchema = eventSchema.partial();
+export const clientUpdateSchema = clientSchema.partial();
+export const packageUpdateSchema = packageSchema.partial();

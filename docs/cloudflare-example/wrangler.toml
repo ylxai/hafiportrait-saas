@@ -1,0 +1,88 @@
+# wrangler.toml - Configuration for 100% Cloudflare PhotoStudio
+
+name = "photostudio-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Environment variables
+[vars]
+CLOUDINARY_CLOUD_NAME = "your-cloud-name"
+NEXT_PUBLIC_ABLY_CHANNEL_PREFIX = "photostudio"
+
+# Secrets (use `wrangler secret put`)
+# CLOUDINARY_API_KEY
+# CLOUDINARY_API_SECRET
+# ABLY_API_KEY
+# JWT_SECRET
+
+# R2 Buckets
+[[r2_buckets]]
+binding = "PHOTO_BUCKET"
+bucket_name = "photostudio-photos"
+
+[[r2_buckets]]
+binding = "THUMBNAIL_BUCKET"
+bucket_name = "photostudio-thumbnails"
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "photostudio-db"
+database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# KV Namespaces
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+[[kv_namespaces]]
+binding = "UPLOAD_CACHE"
+id = "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+
+# Queue: Upload Processing
+[[queues.producers]]
+queue = "upload-processing"
+binding = "UPLOAD_QUEUE"
+
+[[queues.consumers]]
+queue = "upload-processing"
+max_batch_size = 5
+max_batch_timeout = 30
+max_retries = 3
+dead_letter_queue = "upload-processing-dlq"
+
+# Queue: Thumbnail Generation
+[[queues.producers]]
+queue = "thumbnail-generation"
+binding = "THUMBNAIL_QUEUE"
+
+[[queues.consumers]]
+queue = "thumbnail-generation"
+max_batch_size = 10
+max_wait_timeout = 5
+max_retries = 3
+
+# Queue: Storage Deletion
+[[queues.producers]]
+queue = "storage-deletion"
+binding = "DELETION_QUEUE"
+
+[[queues.consumers]]
+queue = "storage-deletion"
+max_batch_size = 20
+max_wait_timeout = 10
+max_retries = 3
+
+# Environment-specific configs
+[env.staging]
+name = "photostudio-api-staging"
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "photostudio-db-staging"
+database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+[env.production]
+name = "photostudio-api"
+routes = [
+  { pattern = "api.photostudio.com/*", zone_id = "your-zone-id" }
+]

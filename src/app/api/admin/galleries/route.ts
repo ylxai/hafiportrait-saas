@@ -14,29 +14,48 @@ async function checkAuth() {
   return session;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const galleries = await prisma.gallery.findMany({
-      include: {
-        event: {
-          include: {
-            client: true,
-          },
-        },
-        _count: {
-          select: {
-            photos: true,
-            selections: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20')));
+    const skip = (page - 1) * limit;
 
-    return NextResponse.json({ success: true, galleries }, { status: 200 });
+    const [galleries, total] = await Promise.all([
+      prisma.gallery.findMany({
+        include: {
+          event: {
+            include: {
+              client: true,
+            },
+          },
+          _count: {
+            select: {
+              photos: true,
+              selections: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip,
+      }),
+      prisma.gallery.count(),
+    ]);
+
+    return NextResponse.json({
+      success: true,
+      galleries,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    }, { status: 200 });
   } catch (error) {
     console.error('Error fetching galleries:', error);
     return NextResponse.json(

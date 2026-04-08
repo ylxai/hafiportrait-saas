@@ -1,6 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, User, Edit2, Trash2 } from 'lucide-react';
 
 type Client = {
   id: string;
@@ -82,11 +87,15 @@ export default function ClientsPage() {
       });
 
       if (res.ok) {
-        const data = await res.json();
-        if (editingClient) {
-          setClients(clients.map(c => c.id === editingClient.id ? data.client : c));
+        const result = await res.json();
+        const clientData = result.data?.client || result.client;
+        if (editingClient && clientData?.id) {
+          setClients(clients.map(c => c.id === editingClient.id ? clientData : c));
+        } else if (clientData?.id) {
+          setClients([clientData, ...clients]);
         } else {
-          setClients([data.client, ...clients]);
+          // If no client data, refresh the list
+          fetchClients();
         }
         setShowModal(false);
         resetForm();
@@ -145,41 +154,35 @@ export default function ClientsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-charcoal">Clients</h1>
-        <button
-          onClick={() => { resetForm(); setShowModal(true); }}
-          className="touch-target px-4 py-2.5 bg-champagne-500 hover:bg-champagne-600 text-white font-medium rounded-lg transition-smooth cursor-pointer flex items-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
+        <h1 className="text-2xl font-bold text-slate-800">Clients</h1>
+        <Button onClick={() => { resetForm(); setShowModal(true); }}>
+          <Plus className="w-5 h-5 mr-2" />
           <span className="hidden sm:inline">Tambah Client</span>
-        </button>
+        </Button>
       </div>
 
       {/* Floating Action Button for Mobile */}
-      <button
+      <Button
         onClick={() => { resetForm(); setShowModal(true); }}
-        className="fab bg-champagne-500 text-white sm:hidden"
+        size="icon"
+        className="fab bg-amber-500 text-white sm:hidden fixed bottom-6 right-6"
         aria-label="Tambah Client Baru"
       >
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-        </svg>
-      </button>
+        <Plus className="w-6 h-6" />
+      </Button>
 
       {selectedIds.length > 0 && (
         <div className="glass-card mb-4 p-3 flex items-center justify-between">
-          <span className="text-sm text-charcoal font-medium">
+          <span className="text-sm text-slate-800 font-medium">
             {selectedIds.length} item dipilih
           </span>
           <div className="flex gap-2">
-            <button onClick={openBulkModal} className="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 cursor-pointer">
+            <Button variant="destructive" size="sm" onClick={openBulkModal}>
               Hapus
-            </button>
-            <button onClick={() => setSelectedIds([])} className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer">
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>
               Batal
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -192,61 +195,58 @@ export default function ClientsPage() {
           ))}
         </div>
       ) : clients.length === 0 ? (
-        <div className="glass-card p-12 text-center">
-          <div className="w-16 h-16 rounded-xl bg-champagne-100 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-champagne-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+        <div className="glass-card p-16 text-center">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-6 shadow-inner">
+            <User className="w-10 h-10 text-amber-600" />
           </div>
-          <h3 className="text-lg font-semibold text-charcoal mb-2">Belum ada client</h3>
-          <p className="text-warm-gray mb-4">Tambah client pertama Anda</p>
-          <button onClick={() => setShowModal(true)} className="px-4 py-2 bg-champagne-500 text-white rounded-lg hover:bg-champagne-600 cursor-pointer">
-            + Tambah Client
-          </button>
+          <h3 className="text-2xl font-bold text-slate-800 mb-3">Belum ada client</h3>
+          <p className="text-base text-slate-500 mb-8 max-w-sm mx-auto">Tambah client pertama Anda untuk memulai mengelola data klien dengan mudah.</p>
+          <Button onClick={() => setShowModal(true)} size="lg">
+            <Plus className="w-5 h-5 mr-2" />
+            Tambah Client
+          </Button>
         </div>
       ) : (
         <div className="glass-card overflow-hidden">
           <div className="table-mobile-scroll">
             <table className="w-full">
-            <thead className="bg-champagne-50/50 border-b border-champagne-100">
+            <thead className="bg-amber-50/50 border-b border-champagne-100">
               <tr>
                 <th className="px-4 py-3 text-left">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedIds.length === clients.length && clients.length > 0}
-                    onChange={toggleSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-champagne-500 focus:ring-champagne-500"
+                    onCheckedChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-warm-gray uppercase">Nama</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-warm-gray uppercase">Email</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-warm-gray uppercase">Phone</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-warm-gray uppercase">Instagram</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-warm-gray uppercase">Dibuat</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-warm-gray uppercase">Aksi</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Nama</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Email</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Phone</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Instagram</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Dibuat</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-champagne-100">
-              {clients.map((client) => (
-                <tr key={client.id} className={`hover:bg-champagne-50/30 transition-smooth ${selectedIds.includes(client.id) ? 'bg-champagne-50' : ''}`}>
+              {clients.filter(c => c && c.id).map((client) => (
+                <tr key={client.id} className={`hover:bg-amber-50/30 transition-smooth ${selectedIds.includes(client.id) ? 'bg-amber-50' : ''}`}>
                   <td className="px-4 py-4">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selectedIds.includes(client.id)}
-                      onChange={() => toggleSelect(client.id)}
-                      className="w-4 h-4 rounded border-gray-300 text-champagne-500 focus:ring-champagne-500"
+                      onCheckedChange={() => toggleSelect(client.id)}
                     />
                   </td>
-                  <td className="px-4 py-4 text-charcoal font-medium">{client.nama}</td>
-                  <td className="px-4 py-4 text-warm-gray">{client.email}</td>
-                  <td className="px-4 py-4 text-warm-gray">{client.phone || '-'}</td>
-                  <td className="px-4 py-4 text-warm-gray">{client.instagram || '-'}</td>
-                  <td className="px-4 py-4 text-warm-gray text-sm">
+                  <td className="px-4 py-4 text-slate-800 font-medium">{client.nama}</td>
+                  <td className="px-4 py-4 text-slate-500">{client.email}</td>
+                  <td className="px-4 py-4 text-slate-500">{client.phone || '-'}</td>
+                  <td className="px-4 py-4 text-slate-500">{client.instagram || '-'}</td>
+                  <td className="px-4 py-4 text-slate-500 text-sm">
                     {new Date(client.createdAt).toLocaleDateString('id-ID')}
                   </td>
                   <td className="px-4 py-4 text-right">
-                    <button onClick={() => openEdit(client)} className="text-blue-600 hover:underline mr-3 cursor-pointer">Edit</button>
-                    <button onClick={() => handleDelete(client.id)} className="text-red-600 hover:underline cursor-pointer">Hapus</button>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(client)}>Edit</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(client.id)} className="text-red-600">Hapus</Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -257,97 +257,77 @@ export default function ClientsPage() {
       )}
 
       {/* Add/Edit Client Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {editingClient ? 'Edit Client' : 'Tambah Client Baru'}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.nama}
-                  onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input
-                  type="text"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Instagram</label>
-                <input
-                  type="text"
-                  value={formData.instagram}
-                  onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => { setShowModal(false); resetForm(); }}
-                  className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50"
-                >
-                  {submitting ? 'Menyimpan...' : editingClient ? 'Simpan' : 'Tambah'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Dialog open={showModal} onOpenChange={(open) => { setShowModal(open); if (!open) resetForm(); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingClient ? 'Edit Client' : 'Tambah Client Baru'}</DialogTitle>
+            <DialogDescription>
+              {editingClient ? 'Ubah detail client di bawah.' : 'Isi detail client baru di bawah.'}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Nama Lengkap *</label>
+              <Input
+                required
+                value={formData.nama}
+                onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Email *</label>
+              <Input
+                type="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Phone</label>
+              <Input
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Instagram</label>
+              <Input
+                value={formData.instagram}
+                onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setShowModal(false); resetForm(); }}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? 'Menyimpan...' : editingClient ? 'Simpan' : 'Tambah'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Bulk Action Modal */}
-      {showBulkModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-sm w-full p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Hapus Massal</h2>
-            <p className="text-gray-600 mb-4">
-              Yakin hapus {selectedIds.length} client ini? Tindakan ini tidak dapat dibatalkan.
-            </p>
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setShowBulkModal(false)} 
-                className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50"
-              >
-                Batal
-              </button>
-              <button 
-                onClick={handleBulkDelete} 
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-              >
-                Hapus
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog open={showBulkModal} onOpenChange={setShowBulkModal}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Hapus Massal</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground">
+            Yakin hapus {selectedIds.length} client ini? Tindakan ini tidak dapat dibatalkan.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkModal(false)}>
+              Batal
+            </Button>
+            <Button variant="destructive" onClick={handleBulkDelete}>
+              Hapus
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

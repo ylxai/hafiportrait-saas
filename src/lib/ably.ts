@@ -26,6 +26,7 @@ export const CHANNELS = {
   VIEW_COUNT: (galleryId: string) => `${env.NEXT_PUBLIC_ABLY_CHANNEL_PREFIX}:views:${galleryId}`,
   BOOKINGS: `${env.NEXT_PUBLIC_ABLY_CHANNEL_PREFIX}:bookings`,
   PAYMENTS: `${env.NEXT_PUBLIC_ABLY_CHANNEL_PREFIX}:payments`,
+  UPLOADS: (galleryId: string) => `${env.NEXT_PUBLIC_ABLY_CHANNEL_PREFIX}:uploads:${galleryId}`,
 };
 
 export async function publishSelectionUpdate(galleryId: string, data: {
@@ -88,5 +89,18 @@ export async function publishPaymentUpdate(data: {
     await client.channels.get(CHANNELS.PAYMENTS).publish('payment-update', data);
   } catch (error) {
     console.error('Failed to publish payment update:', error);
+  }
+}
+
+export async function publishPhotoUploaded(galleryId: string, data: {
+  photoId: string;
+  filename: string;
+  thumbnailUrl?: string | null;
+}) {
+  try {
+    const client = getAblyRestClient();
+    await client.channels.get(CHANNELS.UPLOADS(galleryId)).publish('photo-uploaded', data);
+  } catch (error) {
+    console.error('Failed to publish photo upload:', error);
   }
 }

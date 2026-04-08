@@ -1,0 +1,74 @@
+- generic [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - img [ref=e7]
+      - navigation [ref=e9]:
+        - link [ref=e10] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e11]
+        - link [ref=e13] [cursor=pointer]:
+          - /url: /admin/events
+          - img [ref=e14]
+        - link [ref=e16] [cursor=pointer]:
+          - /url: /admin/clients
+          - img [ref=e17]
+        - link [ref=e19] [cursor=pointer]:
+          - /url: /admin/galleries
+          - img [ref=e20]
+        - link [ref=e22] [cursor=pointer]:
+          - /url: /admin/analytics
+          - img [ref=e23]
+        - link [ref=e25] [cursor=pointer]:
+          - /url: /admin/finance
+          - img [ref=e26]
+        - link [ref=e28] [cursor=pointer]:
+          - /url: /admin/packages
+          - img [ref=e29]
+        - link [ref=e31] [cursor=pointer]:
+          - /url: /admin/storage
+          - img [ref=e32]
+        - link [ref=e34] [cursor=pointer]:
+          - /url: /admin/settings
+          - img [ref=e35]
+      - button [ref=e39]:
+        - img [ref=e40]
+    - main [ref=e42]:
+      - generic [ref=e44]:
+        - generic [ref=e45]:
+          - heading [level=1] [ref=e63]: Clients
+          - button [ref=e64]:
+            - img
+            - generic [ref=e48]: Tambah Client
+        - button [ref=e65]:
+          - img
+        - generic [ref=e50]:
+          - img [ref=e57]
+          - heading [level=3] [ref=e66]: Belum ada client
+          - paragraph [ref=e61]: Tambah client pertama Anda untuk memulai mengelola data klien dengan mudah.
+          - button [ref=e67]:
+            - img
+            - text: Tambah Client
+  - dialog "Tambah Client Baru" [ref=e71]:
+    - generic [ref=e72]:
+      - heading "Tambah Client Baru" [level=2] [ref=e73]
+      - paragraph [ref=e74]: Isi detail client baru di bawah.
+    - generic [ref=e75]:
+      - generic [ref=e76]:
+        - generic [ref=e77]: Nama Lengkap *
+        - textbox [active] [ref=e78]
+      - generic [ref=e79]:
+        - generic [ref=e80]: Email *
+        - textbox [ref=e81]
+      - generic [ref=e82]:
+        - generic [ref=e83]: Phone
+        - textbox [ref=e84]
+      - generic [ref=e85]:
+        - generic [ref=e86]: Instagram
+        - textbox [ref=e87]
+      - generic [ref=e88]:
+        - button "Batal" [ref=e89]
+        - button "Tambah" [ref=e90]
+    - button "Close" [ref=e91]:
+      - img [ref=e92]
+      - generic [ref=e95]: Close

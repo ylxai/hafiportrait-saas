@@ -3,14 +3,30 @@ import { successResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 
-export async function GET() {
+// Simple in-memory cache (in production, use Redis)
+const cache = new Map<string, { data: unknown; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return errorResponse('Unauthorized', 401);
     }
 
-    const [galleries, summary] = await Promise.all([
+    // Parse pagination params
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '20')));
+    const skip = (page - 1) * limit;
+
+    // Check cache for summary data (page 1 only)
+    const cacheKey = 'analytics:summary';
+    const cached = cache.get(cacheKey);
+    const isCacheValid = cached && Date.now() - cached.timestamp < CACHE_TTL;
+
+    // Fetch galleries with pagination
+    const [galleries, summary, publishedCount, totalSelections] = await Promise.all([
       prisma.gallery.findMany({
         select: {
           id: true,
@@ -23,18 +39,36 @@ export async function GET() {
           _count: { select: { photos: true, selections: true } },
         },
         orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip,
       }),
-      prisma.gallery.aggregate({
-        _count: { id: true },
-        _sum: { viewCount: true },
-      }),
+      // Use cache for summary on page 1
+      page === 1 && isCacheValid
+        ? Promise.resolve(cached!.data as { _count: { id: number }; _sum: { viewCount: number | null } })
+        : prisma.gallery.aggregate({
+            _count: { id: true },
+            _sum: { viewCount: true },
+          }),
+      page === 1 && isCacheValid
+        ? Promise.resolve((cached!.data as { publishedCount: number }).publishedCount)
+        : prisma.gallery.count({ where: { status: 'published' } }),
+      page === 1 && isCacheValid
+        ? Promise.resolve((cached!.data as { totalSelections: number }).totalSelections)
+        : prisma.selection.count(),
     ]);
 
-    const publishedCount = await prisma.gallery.count({
-      where: { status: 'published' },
-    });
+    // Update cache if not using cache
+    if (page === 1 && !isCacheValid) {
+      cache.set(cacheKey, {
+        data: { ...summary, publishedCount, totalSelections },
+        timestamp: Date.now(),
+      });
+    }
 
-    const totalSelections = await prisma.selection.count();
+    // Get total count for pagination
+    const total = page === 1 && isCacheValid
+      ? (summary as { _count: { id: number } })._count.id
+      : await prisma.gallery.count();
 
     const analytics = galleries.map((g) => ({
       id: g.id,
@@ -50,14 +84,23 @@ export async function GET() {
     }));
 
     const summaryResult = {
-      totalGalleries: galleries.length,
-      publishedGalleries: publishedCount,
-      totalViews: summary._sum.viewCount || 0,
-      avgViews: galleries.length > 0 ? Math.round((summary._sum.viewCount || 0) / galleries.length) : 0,
-      totalSelections,
+      totalGalleries: total,
+      publishedGalleries: publishedCount as number,
+      totalViews: (summary as { _sum: { viewCount: number | null } })._sum.viewCount || 0,
+      avgViews: total > 0 ? Math.round(((summary as { _sum: { viewCount: number | null } })._sum.viewCount || 0) / total) : 0,
+      totalSelections: totalSelections as number,
     };
 
-    return successResponse({ analytics, summary: summaryResult });
+    return successResponse({
+      analytics,
+      summary: summaryResult,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error('Error fetching analytics:', error);
     return errorResponse('Failed to fetch analytics', 500);

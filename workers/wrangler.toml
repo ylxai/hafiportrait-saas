@@ -1,0 +1,37 @@
+# wrangler.toml for Deletion Worker
+# Deploy this worker to Cloudflare for background storage deletion
+# 
+# IMPORTANT: Cloudinary credentials are provided via message body (from database)
+# NOT via environment variables, to support multiple Cloudinary accounts
+
+name = "photostudio-deletion-worker"
+main = "deletion-worker.ts"
+compatibility_date = "2024-01-01"
+account_id = "b14090010faed475102a62eca152b67f"
+
+# Environment variables (non-secret)
+[vars]
+# Webhook URL untuk callback dari Workers
+# WARNING: Using HTTP (not HTTPS) for development only
+VPS_WEBHOOK_URL = "http://124.197.42.88:3000/api/webhook"
+
+# R2 Bucket binding (for deleting files)
+[[r2_buckets]]
+binding = "PHOTO_BUCKET"
+bucket_name = "photo"
+
+# Queue: untuk kirim dan terima message
+[[queues.producers]]
+queue = "storage-deletion"
+binding = "DELETION_QUEUE"
+
+[[queues.consumers]]
+queue = "storage-deletion"
+max_batch_size = 20
+max_retries = 3
+
+# Secrets (use `wrangler secret put` to set these):
+# - VPS_WEBHOOK_SECRET (required for webhook authentication)
+#
+# Note: CLOUDINARY_* credentials are NOT here!
+# They come from database via message body (support multiple accounts)

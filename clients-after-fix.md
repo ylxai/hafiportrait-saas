@@ -1,0 +1,12 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - heading "Clients" [level=1] [ref=e4]
+      - button "Tambah Client" [ref=e5]:
+        - img
+        - generic [ref=e6]: Tambah Client
+    - button "Tambah Client Baru" [ref=e7]:
+      - img
+  - button "Open Next.js Dev Tools" [ref=e21] [cursor=pointer]:
+    - img [ref=e22]
+  - alert [ref=e15]

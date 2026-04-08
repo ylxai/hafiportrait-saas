@@ -1,0 +1,23 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - img [ref=e6]
+      - heading "PhotoStudio" [level=1] [ref=e9]
+      - paragraph [ref=e10]: Masuk ke dashboard
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: Email
+          - textbox "Email" [ref=e15]:
+            - /placeholder: email@studio.com…
+        - generic [ref=e16]:
+          - generic [ref=e17]: Password
+          - textbox "Password" [ref=e18]:
+            - /placeholder: ••••••••…
+        - button "Masuk" [ref=e19]:
+          - img [ref=e20]
+          - text: Masuk
+      - link "← Kembali ke beranda" [ref=e23] [cursor=pointer]:
+        - /url: /
+    - paragraph [ref=e24]: © 2026 PhotoStudio
+  - alert [ref=e25]

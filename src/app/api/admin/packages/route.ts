@@ -13,22 +13,37 @@ async function checkAuth() {
   return session;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const packages = await prisma.package.findMany({
-      orderBy: { price: 'asc' },
-    });
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20')));
+    const skip = (page - 1) * limit;
 
-    return NextResponse.json({ success: true, packages }, { status: 200 });
+    const [packages, total] = await Promise.all([
+      prisma.package.findMany({
+        orderBy: { price: 'asc' },
+        take: limit,
+        skip,
+      }),
+      prisma.package.count(),
+    ]);
+
+    return successResponse({
+      packages,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error('Error fetching packages:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch packages' },
-      { status: 500 }
-    );
+    return serverErrorResponse('Failed to fetch packages');
   }
 }
 

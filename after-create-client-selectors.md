@@ -1,0 +1,70 @@
+- generic [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - img [ref=e7]
+      - navigation [ref=e9]:
+        - link [ref=e10] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e11]
+        - link [ref=e13] [cursor=pointer]:
+          - /url: /admin/events
+          - img [ref=e14]
+        - link [ref=e16] [cursor=pointer]:
+          - /url: /admin/clients
+          - img [ref=e17]
+        - link [ref=e19] [cursor=pointer]:
+          - /url: /admin/galleries
+          - img [ref=e20]
+        - link [ref=e22] [cursor=pointer]:
+          - /url: /admin/analytics
+          - img [ref=e23]
+        - link [ref=e25] [cursor=pointer]:
+          - /url: /admin/finance
+          - img [ref=e26]
+        - link [ref=e28] [cursor=pointer]:
+          - /url: /admin/packages
+          - img [ref=e29]
+        - link [ref=e31] [cursor=pointer]:
+          - /url: /admin/storage
+          - img [ref=e32]
+        - link [ref=e34] [cursor=pointer]:
+          - /url: /admin/settings
+          - img [ref=e35]
+      - button [ref=e39]:
+        - img [ref=e40]
+    - main [ref=e42]:
+      - generic [ref=e44]:
+        - generic [ref=e45]:
+          - heading "Clients" [level=1] [ref=e97]
+          - button "Tambah Client" [ref=e98]:
+            - img
+            - generic [ref=e48]: Tambah Client
+        - button "Tambah Client Baru" [active] [ref=e99]:
+          - img
+        - table [ref=e100]:
+          - rowgroup [ref=e101]:
+            - row "Nama Email Phone Instagram Dibuat Aksi" [ref=e102]:
+              - columnheader [ref=e103]:
+                - checkbox [ref=e104]
+                - checkbox [ref=e105]
+              - columnheader "Nama" [ref=e106]
+              - columnheader "Email" [ref=e107]
+              - columnheader "Phone" [ref=e108]
+              - columnheader "Instagram" [ref=e109]
+              - columnheader "Dibuat" [ref=e110]
+              - columnheader "Aksi" [ref=e111]
+          - rowgroup [ref=e112]:
+            - row "Test MCP Client mcp@test.com 08123456789 - 8/4/2026 Edit Hapus" [ref=e113]:
+              - cell [ref=e114]:
+                - checkbox [ref=e115]
+                - checkbox [ref=e116]
+              - cell "Test MCP Client" [ref=e117]
+              - cell "mcp@test.com" [ref=e118]
+              - cell "08123456789" [ref=e119]
+              - cell "-" [ref=e120]
+              - cell "8/4/2026" [ref=e121]
+              - cell "Edit Hapus" [ref=e122]:
+                - generic [ref=e123]:
+                  - button "Edit" [ref=e124]
+                  - button "Hapus" [ref=e125]

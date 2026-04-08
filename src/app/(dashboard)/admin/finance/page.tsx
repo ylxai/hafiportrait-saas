@@ -2,8 +2,10 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import useSWR from 'swr';
+import { Button } from '@/components/ui/button';
+import { Plus, Save, X } from 'lucide-react';
 
 type Summary = {
   totalEvents: number;
@@ -31,7 +33,12 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export default function FinancePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { data, isLoading } = useSWR<{ summary: Summary; revenueByMonth: Record<string, number>; events: Event[] }>('/api/admin/finance', fetcher);
+  const { data, isLoading, mutate } = useSWR<{ summary: Summary; revenueByMonth: Record<string, number>; events: Event[] }>('/api/admin/finance', fetcher);
+  
+  const [recordingEvent, setRecordingEvent] = useState<string | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -58,79 +65,159 @@ export default function FinancePage() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount);
   };
 
+  const handleRecordPayment = async (eventId: string, amount: number) => {
+    setIsSaving(true);
+    setMessage('');
+    
+    try {
+      const response = await fetch(`/api/admin/events?id=${eventId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          paidAmount: amount,
+          paymentStatus: amount >= (events.find(e => e.id === eventId)?.totalPrice || 0) ? 'paid' : 'partial'
+        }),
+      });
+      
+      if (response.ok) {
+        setMessage('Payment recorded successfully');
+        mutate(); // Refresh data
+        setRecordingEvent(null);
+        setPaymentAmount('');
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        setMessage('Failed to record payment');
+      }
+    } catch (error) {
+      console.error('Error recording payment:', error);
+      setMessage('Error recording payment');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-charcoal mb-6">Finance</h1>
+      <h1 className="text-2xl font-bold text-slate-800 mb-6">Finance</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div className="glass-card p-6">
-          <div className="text-sm text-warm-gray">Total Revenue</div>
+          <div className="text-sm text-slate-500">Total Revenue</div>
           <div className="text-2xl font-bold text-green-600">{formatCurrency(summary?.totalRevenue ?? 0)}</div>
         </div>
         <div className="glass-card p-6">
-          <div className="text-sm text-warm-gray">Paid</div>
+          <div className="text-sm text-slate-500">Paid</div>
           <div className="text-2xl font-bold text-blue-600">{formatCurrency(summary?.totalPaid ?? 0)}</div>
         </div>
         <div className="glass-card p-6">
-          <div className="text-sm text-warm-gray">Pending</div>
-          <div className="text-2xl font-bold text-champagne-600">{formatCurrency(summary?.totalPending ?? 0)}</div>
+          <div className="text-sm text-slate-500">Pending</div>
+          <div className="text-2xl font-bold text-amber-600">{formatCurrency(summary?.totalPending ?? 0)}</div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="glass-card p-4">
-          <div className="text-sm text-warm-gray">Total Events</div>
-          <div className="text-xl font-bold text-charcoal">{summary?.totalEvents ?? 0}</div>
+          <div className="text-sm text-slate-500">Total Events</div>
+          <div className="text-xl font-bold text-slate-800">{summary?.totalEvents ?? 0}</div>
         </div>
         <div className="glass-card p-4">
-          <div className="text-sm text-warm-gray">Paid Events</div>
+          <div className="text-sm text-slate-500">Paid Events</div>
           <div className="text-xl font-bold text-green-600">{summary?.paidEvents ?? 0}</div>
         </div>
         <div className="glass-card p-4">
-          <div className="text-sm text-warm-gray">Pending Events</div>
-          <div className="text-xl font-bold text-champagne-600">{summary?.pendingEvents ?? 0}</div>
+          <div className="text-sm text-slate-500">Pending Events</div>
+          <div className="text-xl font-bold text-amber-600">{summary?.pendingEvents ?? 0}</div>
         </div>
       </div>
 
+      {message && (
+        <div className={`mb-4 p-3 rounded-lg ${message.includes('success') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          {message}
+        </div>
+      )}
+
       <div className="glass-card">
         <div className="p-4 border-b border-champagne-100">
-          <h2 className="font-semibold text-charcoal">Events</h2>
+          <h2 className="font-semibold text-slate-800">Events</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-champagne-50/50">
+            <thead className="bg-amber-50/50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-warm-gray uppercase">Booking</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-warm-gray uppercase">Project</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Package</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Paid</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Booking</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Project</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Client</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Package</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Total</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Paid</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {events.length > 0 ? (
                 events.map((event) => (
-                  <tr key={event.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-600">{event.kodeBooking}</td>
-                    <td className="px-4 py-3 font-medium text-gray-900">{event.namaProject}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{event.client}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{event.packageName}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{formatCurrency(event.totalPrice)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(event.paidAmount)}</td>
+                  <tr key={event.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 text-sm text-slate-600">{event.kodeBooking}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">{event.namaProject}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{event.client}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{event.packageName}</td>
+                    <td className="px-4 py-3 text-sm text-slate-900">{formatCurrency(event.totalPrice)}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{formatCurrency(event.paidAmount)}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 text-xs rounded-full ${
-                        event.paymentStatus === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                        event.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : event.paymentStatus === 'partial' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
                       }`}>
                         {event.paymentStatus}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {recordingEvent === event.id ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            placeholder="Amount"
+                            value={paymentAmount}
+                            onChange={(e) => setPaymentAmount(e.target.value)}
+                            className="w-24 px-2 py-1 text-sm border border-slate-300 rounded"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => handleRecordPayment(event.id, parseInt(paymentAmount) || 0)}
+                            disabled={isSaving || !paymentAmount}
+                            className="p-1 text-green-600 hover:bg-green-50 rounded disabled:opacity-50"
+                          >
+                            <Save className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setRecordingEvent(null);
+                              setPaymentAmount('');
+                            }}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setRecordingEvent(event.id);
+                            setPaymentAmount((event.totalPrice - event.paidAmount).toString());
+                          }}
+                          disabled={event.paymentStatus === 'paid'}
+                          className="flex items-center gap-1 px-3 py-1 text-sm text-amber-600 hover:bg-amber-50 rounded disabled:opacity-50 disabled:text-slate-400"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Record
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
                     No events found
                   </td>
                 </tr>

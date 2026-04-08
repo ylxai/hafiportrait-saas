@@ -1,0 +1,52 @@
+# wrangler.toml untuk Hybrid Architecture
+# Workers-only deployment (tidak termasuk Next.js)
+
+name = "photostudio-workers"
+main = "src/worker-hybrid.ts"
+compatibility_date = "2024-01-01"
+
+# Environment variables (non-secret)
+[vars]
+# URL ke VPS untuk callback setelah processing
+VPS_WEBHOOK_URL = "https://your-vps-domain.com/api/webhook"
+# Contoh: VPS_WEBHOOK_URL = "https://api.photostudio.com/api/webhook"
+
+# Cloudinary config (bisa juga pake secrets untuk API key)
+CLOUDINARY_CLOUD_NAME = "your-cloud-name"
+
+# R2 Bucket (untuk download file)
+[[r2_buckets]]
+binding = "PHOTO_BUCKET"
+bucket_name = "photostudio-photos"
+
+# Queue: Thumbnail Generation
+[[queues.consumers]]
+queue = "thumbnail-generation"
+max_batch_size = 10
+max_wait_timeout = 5
+max_retries = 3
+
+# Queue: Storage Deletion
+[[queues.consumers]]
+queue = "storage-deletion"
+max_batch_size = 20
+max_wait_timeout = 10
+max_retries = 3
+
+# Secrets (use `wrangler secret put`):
+# - VPS_WEBHOOK_SECRET
+# - CLOUDINARY_API_KEY
+# - CLOUDINARY_API_SECRET
+
+# Environment-specific configs
+[env.staging]
+name = "photostudio-workers-staging"
+[env.staging.vars]
+VPS_WEBHOOK_URL = "https://staging.your-vps-domain.com/api/webhook"
+CLOUDINARY_CLOUD_NAME = "your-staging-cloud"
+
+[env.production]
+name = "photostudio-workers"
+[env.production.vars]
+VPS_WEBHOOK_URL = "https://your-vps-domain.com/api/webhook"
+CLOUDINARY_CLOUD_NAME = "your-production-cloud"

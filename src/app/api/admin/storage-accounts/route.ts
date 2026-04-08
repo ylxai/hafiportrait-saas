@@ -21,7 +21,13 @@ export async function GET() {
       orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }],
     });
 
-    return successResponse({ accounts });
+    // Convert BigInt to string for JSON serialization
+    const serializedAccounts = accounts.map(account => ({
+      ...account,
+      usedStorage: account.usedStorage.toString(),
+    }));
+
+    return successResponse({ accounts: serializedAccounts });
   } catch (error) {
     console.error('Error fetching storage accounts:', error);
     return serverErrorResponse('Failed to fetch storage accounts');
@@ -55,7 +61,13 @@ export async function POST(request: Request) {
       },
     });
 
-    return successResponse({ account }, 201);
+    // Convert BigInt to string for JSON serialization
+    const serializedAccount = {
+      ...account,
+      usedStorage: account.usedStorage.toString(),
+    };
+
+    return successResponse({ account: serializedAccount }, 201);
   } catch (error) {
     console.error('Error creating storage account:', error);
     return serverErrorResponse('Failed to create storage account');
@@ -85,7 +97,13 @@ export async function PATCH(request: Request) {
       data,
     });
 
-    return successResponse({ account });
+    // Convert BigInt to string for JSON serialization
+    const serializedAccount = {
+      ...account,
+      usedStorage: account.usedStorage.toString(),
+    };
+
+    return successResponse({ account: serializedAccount });
   } catch (error) {
     console.error('Error updating storage account:', error);
     return serverErrorResponse('Failed to update storage account');

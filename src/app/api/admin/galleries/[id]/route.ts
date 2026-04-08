@@ -47,7 +47,16 @@ export async function GET(
       return notFoundResponse('Gallery not found');
     }
 
-    return successResponse({ gallery });
+    // Serialize BigInt fields for JSON
+    const serializedGallery = {
+      ...gallery,
+      photos: gallery.photos.map(photo => ({
+        ...photo,
+        fileSize: photo.fileSize?.toString() || null,
+      })),
+    };
+
+    return successResponse({ gallery: serializedGallery });
   } catch (error) {
     console.error('Error fetching gallery:', error);
     return serverErrorResponse('Failed to fetch gallery');

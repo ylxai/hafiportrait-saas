@@ -151,7 +151,13 @@ export async function POST(
       },
     });
 
-    return successResponse({ photo }, 201);
+    // Serialize BigInt for JSON response
+    const serializedPhoto = {
+      ...photo,
+      fileSize: photo.fileSize?.toString() || null,
+    };
+
+    return successResponse({ photo: serializedPhoto }, 201);
   } catch (error) {
     console.error('Error uploading photo:', error);
     return serverErrorResponse('Failed to upload photo');

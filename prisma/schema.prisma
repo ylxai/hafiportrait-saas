@@ -29,6 +29,8 @@ model Client {
   events    Event[]
 
   @@index([email])
+  @@index([createdAt])
+  @@index([nama])
 }
 
 model Event {
@@ -54,6 +56,8 @@ model Event {
   @@index([status])
   @@index([eventDate])
   @@index([paymentStatus])
+  @@index([createdAt])
+  @@index([status, createdAt])
 }
 
 model Package {
@@ -71,12 +75,14 @@ model Package {
   events       Event[]
 
   @@index([isActive])
+  @@index([createdAt])
+  @@index([isActive, createdAt])
 }
 
 model Gallery {
   id                String   @id @default(cuid())
   eventId           String
-  event             Event    @relation(fields: [eventId], references: [id])
+  event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   namaProject       String
   clientToken       String   @unique @default(cuid())
   status            String   @default("draft")
@@ -97,6 +103,8 @@ model Gallery {
   @@index([eventId])
   @@index([status])
   @@index([clientToken])
+  @@index([createdAt])
+  @@index([status, createdAt])
 }
 
 model Photo {
@@ -122,6 +130,8 @@ model Photo {
   @@index([galleryId])
   @@index([storageAccountId])
   @@index([publicId])
+  @@index([galleryId, order])
+  @@index([galleryId, createdAt])
 }
 
 model Selection {
@@ -208,12 +218,4 @@ model StorageAccount {
 
   @@index([provider, isActive])
   @@index([isDefault])
-}
-
-model Setting {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }

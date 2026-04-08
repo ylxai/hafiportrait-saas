@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
-import { clientSchema } from '@/lib/api/validation';
+import { clientSchema, clientUpdateSchema } from '@/lib/api/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 
@@ -13,16 +13,34 @@ async function checkAuth() {
   return session;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const clients = await prisma.client.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20')));
+    const skip = (page - 1) * limit;
 
-    return successResponse({ clients });
+    const [clients, total] = await Promise.all([
+      prisma.client.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip,
+      }),
+      prisma.client.count(),
+    ]);
+
+    return successResponse({
+      clients,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error('Error fetching clients:', error);
     return serverErrorResponse('Failed to fetch clients');
@@ -60,9 +78,12 @@ export async function PATCH(request: Request) {
       return errorResponse('Client ID required', 400);
     }
 
+    // Validate update data
+    const validated = clientUpdateSchema.parse(data);
+
     const client = await prisma.client.update({
       where: { id },
-      data,
+      data: validated,
     });
 
     return successResponse({ client });

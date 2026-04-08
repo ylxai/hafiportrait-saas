@@ -1,0 +1,23 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e19] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e20]:
+      - img [ref=e21]
+    - generic [ref=e114]:
+      - button "Open issues overlay" [ref=e115]:
+        - generic [ref=e132]:
+          - generic [ref=e133]: "1"
+          - generic [ref=e134]: "2"
+        - generic [ref=e119]:
+          - text: Issue
+          - generic [ref=e135]: s
+      - button "Collapse issues badge" [ref=e120]:
+        - img [ref=e121]
+  - alert [ref=e24]
+  - generic [ref=e226]:
+    - generic [ref=e228]: ⚠️
+    - heading "Gagal Memuat" [level=2] [ref=e229]
+    - paragraph [ref=e230]: Terjadi kesalahan saat memuat halaman.
+    - generic [ref=e231]:
+      - button "Coba Lagi" [ref=e232]
+      - link "Beranda" [ref=e233] [cursor=pointer]:
+        - /url: /

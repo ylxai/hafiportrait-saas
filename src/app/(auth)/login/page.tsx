@@ -41,18 +41,18 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo & Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl glass mb-4">
-            <svg className="w-8 h-8 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-100 mb-4">
+            <svg className="w-8 h-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.76-.9l.814-1.74A2 2 0 0111.52 4H17a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-charcoal">PhotoStudio</h1>
-          <p className="text-warm-gray mt-2">Masuk ke dashboard</p>
+          <h1 className="text-2xl font-bold text-slate-800">PhotoStudio</h1>
+          <p className="text-slate-500 mt-2">Masuk ke dashboard</p>
         </div>
 
-        {/* Login Form - Glass Card */}
-        <div className="glass-card p-8">
+        {/* Login Form - Card */}
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div className="p-3 bg-red-50/80 backdrop-blur-sm text-red-600 text-sm rounded-xl border border-red-100">
@@ -61,7 +61,7 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-charcoal mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
                 Email
               </label>
               <input
@@ -71,14 +71,14 @@ export default function LoginPage() {
                 inputMode="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="glass-input"
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all"
                 placeholder="email@studio.com…"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-charcoal mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-slate-800 mb-2">
                 Password
               </label>
               <input
@@ -87,7 +87,7 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="glass-input"
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all"
                 placeholder="••••••••…"
                 required
               />
@@ -96,7 +96,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="glass-btn-primary w-full flex items-center justify-center gap-2"
+              className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -113,14 +113,14 @@ export default function LoginPage() {
 
           {/* Back to home */}
           <div className="mt-6 text-center">
-            <Link href="/" className="text-sm text-warm-gray hover:text-rose transition-smooth">
+            <Link href="/" className="text-sm text-slate-500 hover:text-amber-600 transition-smooth">
               ← Kembali ke beranda
             </Link>
           </div>
         </div>
 
         {/* Footer */}
-        <p className="text-center text-light-gray text-xs mt-8">
+        <p className="text-center text-slate-400 text-xs mt-8">
           © {new Date().getFullYear()} PhotoStudio
         </p>
       </div>
