@@ -12,7 +12,7 @@ type Package = {
   fitur: string[];
 };
 
-type PackagesResponse = { packages: Package[] };
+type PackagesResponse = { data: { packages: Package[] } };
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -21,7 +21,7 @@ export default function BookingPage() {
     revalidateOnFocus: false,
   });
   
-  const packages = data?.packages ?? [];
+  const packages = data?.data?.packages ?? [];
   
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);

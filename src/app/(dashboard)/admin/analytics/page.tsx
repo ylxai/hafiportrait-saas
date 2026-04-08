@@ -31,7 +31,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export default function AnalyticsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { data, isLoading } = useSWR<{ analytics: Analytics[]; summary: Summary }>('/api/admin/analytics', fetcher);
+  const { data, isLoading } = useSWR<{ data: { analytics: Analytics[]; summary: Summary } }>('/api/admin/analytics', fetcher);
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
@@ -52,8 +52,8 @@ export default function AnalyticsPage() {
     return null;
   }
 
-  const analytics = data?.analytics || [];
-  const summary = data?.summary;
+  const analytics = data?.data?.analytics || [];
+  const summary = data?.data?.summary;
 
   const filteredAnalytics = filter === 'all' 
     ? analytics 
@@ -61,34 +61,34 @@ export default function AnalyticsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-800 mb-6">Gallery Analytics</h1>
+      <h1 className="text-2xl font-bold text-foreground mb-6">Gallery Analytics</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-        <div className="glass-card p-4">
-          <div className="text-sm text-slate-500">Total Galleries</div>
-          <div className="text-2xl font-bold text-slate-800">{summary?.totalGalleries ?? 0}</div>
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4">
+          <div className="text-sm text-muted-foreground">Total Galleries</div>
+          <div className="text-2xl font-bold text-foreground">{summary?.totalGalleries ?? 0}</div>
         </div>
-        <div className="glass-card p-4">
-          <div className="text-sm text-slate-500">Published</div>
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4">
+          <div className="text-sm text-muted-foreground">Published</div>
           <div className="text-2xl font-bold text-green-600">{summary?.publishedGalleries ?? 0}</div>
         </div>
-        <div className="glass-card p-4">
-          <div className="text-sm text-slate-500">Total Views</div>
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4">
+          <div className="text-sm text-muted-foreground">Total Views</div>
           <div className="text-2xl font-bold text-blue-600">{summary?.totalViews ?? 0}</div>
         </div>
-        <div className="glass-card p-4">
-          <div className="text-sm text-slate-500">Avg Views</div>
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4">
+          <div className="text-sm text-muted-foreground">Avg Views</div>
           <div className="text-2xl font-bold text-purple-600">{summary?.avgViews ?? 0}</div>
         </div>
-        <div className="glass-card p-4">
-          <div className="text-sm text-slate-500">Total Selections</div>
-          <div className="text-2xl font-bold text-amber-600">{summary?.totalSelections ?? 0}</div>
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4">
+          <div className="text-sm text-muted-foreground">Total Selections</div>
+          <div className="text-2xl font-bold text-primary">{summary?.totalSelections ?? 0}</div>
         </div>
       </div>
 
-      <div className="glass-card">
+      <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl">
         <div className="p-4 border-b border-champagne-100 flex items-center justify-between">
-          <h2 className="font-semibold text-slate-800">Gallery Performance</h2>
+          <h2 className="font-semibold text-foreground">Gallery Performance</h2>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
@@ -102,30 +102,30 @@ export default function AnalyticsPage() {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-amber-50/50">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Gallery</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Client</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Photos</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Views</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Selected</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Gallery</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Client</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Photos</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Views</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Selected</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-champagne-100">
               {filteredAnalytics.length > 0 ? (
                 filteredAnalytics.map((item) => (
-                  <tr key={item.id} className="hover:bg-amber-50/30 transition-smooth">
+                  <tr key={item.id} className="hover:bg-muted/30 transition-smooth">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-slate-800">{item.namaProject}</div>
+                      <div className="font-medium text-foreground">{item.namaProject}</div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-500">{item.client}</td>
-                    <td className="px-4 py-3 text-sm text-slate-500">{item.photoCount}</td>
-                    <td className="px-4 py-3 text-sm text-slate-500">{item.viewCount}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{item.selectedPhotos}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{item.client}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{item.photoCount}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{item.viewCount}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{item.selectedPhotos}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 text-xs rounded-full ${
-                        item.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'
+                        item.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-muted text-foreground'
                       }`}>
                         {item.status}
                       </span>
@@ -134,7 +134,7 @@ export default function AnalyticsPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                     No galleries found
                   </td>
                 </tr>

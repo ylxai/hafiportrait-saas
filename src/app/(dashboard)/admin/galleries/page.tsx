@@ -37,7 +37,7 @@ type Pagination = {
 };
 
 type GalleriesResponse = { galleries: Gallery[]; pagination?: Pagination };
-type EventsResponse = { events: Event[] };
+type EventsResponse = { data: { events: Event[] } };
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -51,7 +51,7 @@ export default function GalleriesPage() {
 
   // Fetch events for the create form
   const { data: eventsData } = useSWR<EventsResponse>('/api/admin/events?limit=100', fetcher);
-  const events = eventsData?.events ?? [];
+  const events = eventsData?.data?.events ?? [];
   
   const [showModal, setShowModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -160,7 +160,7 @@ export default function GalleriesPage() {
   };
 
   const statusColors: Record<string, string> = {
-    draft: 'bg-slate-100 text-slate-800',
+    draft: 'bg-muted text-foreground',
     published: 'bg-green-100 text-green-800',
     archived: 'bg-yellow-100 text-yellow-800',
   };
@@ -168,7 +168,7 @@ export default function GalleriesPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Galleries</h1>
+        <h1 className="text-2xl font-bold text-foreground">Galleries</h1>
         <Button onClick={() => setShowModal(true)}>
           <Plus className="w-5 h-5 mr-2" />
           <span className="hidden sm:inline">Buat Gallery</span>
@@ -179,15 +179,15 @@ export default function GalleriesPage() {
       <Button
         onClick={() => setShowModal(true)}
         size="icon"
-        className="fab bg-amber-500 text-white sm:hidden fixed bottom-6 right-6"
+        className="fab bg-muted0 text-white sm:hidden fixed bottom-6 right-6"
         aria-label="Buat Gallery Baru"
       >
         <Plus className="w-6 h-6" />
       </Button>
 
       {selectedIds.length > 0 && (
-        <div className="glass-card mb-4 p-3 flex items-center justify-between">
-          <span className="text-sm text-slate-800 font-medium">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl mb-4 p-3 flex items-center justify-between">
+          <span className="text-sm text-foreground font-medium">
             {selectedIds.length} item dipilih
           </span>
           <div className="flex gap-2">
@@ -207,7 +207,7 @@ export default function GalleriesPage() {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="glass-card overflow-hidden">
+            <div key={i} className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl overflow-hidden">
               <div className="skeleton skeleton-image"></div>
               <div className="p-4 space-y-2">
                 <div className="skeleton skeleton-title"></div>
@@ -218,13 +218,13 @@ export default function GalleriesPage() {
           ))}
         </div>
       ) : galleries.length === 0 ? (
-        <div className="glass-card p-12 text-center">
-          <div className="w-16 h-16 rounded-xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
-            <Image className="w-8 h-8 text-amber-600" />
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-12 text-center">
+          <div className="w-16 h-16 rounded-xl bg-primary/20 flex items-center justify-center mx-auto mb-4">
+            <Image className="w-8 h-8 text-primary" />
           </div>
-          <h3 className="text-xl font-bold text-slate-800 mb-2">Belum ada gallery</h3>
-          <p className="text-base text-slate-500 mb-6">Buat gallery pertama Anda</p>
-          <Button onClick={() => setShowModal(true)} className="bg-amber-500 text-white hover:bg-amber-600">
+          <h3 className="text-xl font-bold text-foreground mb-2">Belum ada gallery</h3>
+          <p className="text-base text-muted-foreground mb-6">Buat gallery pertama Anda</p>
+          <Button onClick={() => setShowModal(true)} className="bg-muted0 text-white hover:bg-amber-600">
             <Plus className="w-4 h-4 mr-2" />
             + Buat Gallery
           </Button>
@@ -232,7 +232,7 @@ export default function GalleriesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {galleries.map((gallery) => (
-            <div key={gallery.id} className={`glass-card overflow-hidden glass-card-hover ${selectedIds.includes(gallery.id) ? 'ring-2 ring-champagne-500' : ''}`}>
+            <div key={gallery.id} className={`bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl overflow-hidden bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl-hover ${selectedIds.includes(gallery.id) ? 'ring-2 ring-champagne-500' : ''}`}>
               <div className="h-32 bg-gradient-to-r from-champagne-200 to-champagne-300 flex items-center justify-center relative">
                 <svg className="w-12 h-12 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -246,13 +246,13 @@ export default function GalleriesPage() {
               </div>
               <div className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-slate-800 truncate">{gallery.namaProject}</h3>
+                  <h3 className="font-semibold text-foreground truncate">{gallery.namaProject}</h3>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[gallery.status]}`}>
                     {gallery.status}
                   </span>
                 </div>
-                <p className="text-sm text-slate-500 mb-3">{gallery.event.client.nama} • {gallery.event.kodeBooking}</p>
-                <div className="flex items-center gap-4 text-sm text-slate-500 mb-4">
+                <p className="text-sm text-muted-foreground mb-3">{gallery.event.client.nama} • {gallery.event.kodeBooking}</p>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
                   <span className="flex items-center gap-1"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.76-.9l.814-1.74A2 2 0 0111.52 4H17a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg> {gallery._count.photos} foto</span>
                   <span className="flex items-center gap-1"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> {gallery._count.selections} seleksi</span>
                 </div>
@@ -273,7 +273,7 @@ export default function GalleriesPage() {
       {/* Pagination */}
       {pagination && pagination.pages > 1 && (
         <div className="flex items-center justify-between mt-6">
-          <div className="text-sm text-slate-500">
+          <div className="text-sm text-muted-foreground">
             Menampilkan {galleries.length} dari {pagination.total} gallery
           </div>
           <div className="flex items-center gap-2">
@@ -285,7 +285,7 @@ export default function GalleriesPage() {
             >
               ← Prev
             </Button>
-            <span className="text-sm text-slate-600">
+            <span className="text-sm text-muted-foreground">
               Halaman {page} dari {pagination.pages}
             </span>
             <Button
@@ -311,7 +311,7 @@ export default function GalleriesPage() {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Pilih Event *</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Pilih Event *</label>
               <Select 
                 value={formData.eventId || undefined} 
                 onValueChange={(value) => setFormData({ ...formData, eventId: value || '' })}
@@ -329,7 +329,7 @@ export default function GalleriesPage() {
               </Select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Nama Project *</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Nama Project *</label>
               <Input 
                 type="text" 
                 placeholder="Wedding Jane & John"
@@ -340,7 +340,7 @@ export default function GalleriesPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Maksimal Seleksi</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Maksimal Seleksi</label>
                 <Input 
                   type="number" 
                   min={0}
@@ -349,7 +349,7 @@ export default function GalleriesPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Status</label>
                 <Select 
                   value={formData.status}
                   onValueChange={(value) => setFormData({ ...formData, status: (value as 'draft' | 'published') || 'draft' })}
@@ -370,7 +370,7 @@ export default function GalleriesPage() {
                 checked={formData.enableDownload}
                 onCheckedChange={(checked) => setFormData({ ...formData, enableDownload: checked })}
               />
-              <label htmlFor="enableDownload" className="text-sm text-slate-700">Izinkan client download foto</label>
+              <label htmlFor="enableDownload" className="text-sm text-foreground">Izinkan client download foto</label>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowModal(false)}>

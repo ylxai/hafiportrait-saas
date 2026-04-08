@@ -20,10 +20,12 @@ type StorageAccount = {
   createdAt: string;
 };
 
-type AccountsResponse = { accounts: StorageAccount[] };
+type AccountsResponse = { data: { accounts: StorageAccount[] } };
 type EnvConfig = {
-  cloudinary: { cloudName: string };
-  r2: { accountId: string; bucketName: string; publicUrl: string; endpoint: string };
+  data: {
+    cloudinary: { cloudName: string };
+    r2: { accountId: string; bucketName: string; publicUrl: string; endpoint: string };
+  };
 };
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -39,8 +41,8 @@ export default function StorageAccountsPage() {
   const { data, isLoading, mutate } = useSWR<AccountsResponse>('/api/admin/storage-accounts', fetcher);
   const { data: configData } = useSWR<EnvConfig>('/api/admin/storage-config', fetcher);
   const { data: rotationData } = useSWR('/api/admin/storage-accounts/rotation', fetcher);
-  const accounts = data?.accounts ?? [];
-  const envConfig = configData?.cloudinary?.cloudName || configData?.r2?.bucketName;
+  const accounts = data?.data?.accounts ?? [];
+  const envConfig = configData?.data?.cloudinary?.cloudName || configData?.data?.r2?.bucketName;
 
   const [showModal, setShowModal] = useState(false);
   const [showRotationModal, setShowRotationModal] = useState(false);
@@ -288,7 +290,7 @@ export default function StorageAccountsPage() {
         <h1 className="text-2xl font-bold text-slate-900">Storage Accounts</h1>
         <button
           onClick={() => { resetForm(); setShowModal(true); }}
-          className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition"
+          className="px-4 py-2 bg-muted0 hover:bg-amber-600 text-white font-medium rounded-lg transition"
         >
           + Tambah Akun
         </button>
@@ -299,22 +301,22 @@ export default function StorageAccountsPage() {
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <h3 className="font-medium text-blue-800 mb-2">Konfigurasi dari .env</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            {configData?.cloudinary?.cloudName && (
+            {configData?.data?.cloudinary?.cloudName && (
               <div>
-                <span className="text-slate-500">Cloudinary:</span>
-                <span className="ml-2 font-medium">{configData.cloudinary.cloudName}</span>
+                <span className="text-muted-foreground">Cloudinary:</span>
+                <span className="ml-2 font-medium">{configData.data.cloudinary.cloudName}</span>
               </div>
             )}
-            {configData?.r2?.bucketName && (
+            {configData?.data?.r2?.bucketName && (
               <div>
-                <span className="text-slate-500">R2 Bucket:</span>
-                <span className="ml-2 font-medium">{configData.r2.bucketName}</span>
+                <span className="text-muted-foreground">R2 Bucket:</span>
+                <span className="ml-2 font-medium">{configData.data.r2.bucketName}</span>
               </div>
             )}
-            {configData?.r2?.publicUrl && (
+            {configData?.data?.r2?.publicUrl && (
               <div>
-                <span className="text-slate-500">R2 Public URL:</span>
-                <span className="ml-2 font-medium">{configData.r2.publicUrl}</span>
+                <span className="text-muted-foreground">R2 Public URL:</span>
+                <span className="ml-2 font-medium">{configData.data.r2.publicUrl}</span>
               </div>
             )}
           </div>
@@ -323,19 +325,19 @@ export default function StorageAccountsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Cloudinary */}
-        <div className="glass-card p-6">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Cloudinary</h2>
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Cloudinary</h2>
           
-          {cloudinaryAccounts.length === 0 && !configData?.cloudinary?.cloudName ? (
-            <p className="text-slate-500 text-sm">Belum ada akun Cloudinary</p>
+          {cloudinaryAccounts.length === 0 && !configData?.data?.cloudinary?.cloudName ? (
+            <p className="text-muted-foreground text-sm">Belum ada akun Cloudinary</p>
           ) : (
             <div className="space-y-3">
               {cloudinaryAccounts.map((account) => (
-                <div key={account.id} className={`p-4 rounded-lg border ${account.isDefault ? 'border-champagne-500 bg-amber-50' : 'border-champagne-100'}`}>
+                <div key={account.id} className={`p-4 rounded-lg border ${account.isDefault ? 'border-champagne-500 bg-muted' : 'border-champagne-100'}`}>
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <span className="font-medium text-slate-800">{account.name}</span>
-                      {account.isDefault && <span className="ml-2 text-xs bg-amber-500 text-white px-2 py-0.5 rounded">Default</span>}
+                      <span className="font-medium text-foreground">{account.name}</span>
+                      {account.isDefault && <span className="ml-2 text-xs bg-muted0 text-white px-2 py-0.5 rounded">Default</span>}
                       {account.rotationEnabled && (
                         <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">🔄 Auto-rotate</span>
                       )}
@@ -344,7 +346,7 @@ export default function StorageAccountsPage() {
                       )}
                     </div>
                   </div>
-                  <div className="text-xs text-slate-500 mb-2">
+                  <div className="text-xs text-muted-foreground mb-2">
                     {account.totalPhotos} foto • {formatBytes(account.usedStorage)} digunakan
                   </div>
                   {account.rotationNextDate && (
@@ -355,13 +357,13 @@ export default function StorageAccountsPage() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => handleToggleActive(account)}
-                      className={`text-xs px-2 py-1 rounded cursor-pointer ${account.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}
+                      className={`text-xs px-2 py-1 rounded cursor-pointer ${account.isActive ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
                     >
                       {account.isActive ? 'Aktif' : 'Nonaktif'}
                     </button>
                     <button onClick={() => openRotationModal(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Key Rotation</button>
                     {!account.isDefault && (
-                      <button onClick={() => handleSetDefault(account)} className="text-xs text-amber-600 hover:underline cursor-pointer">Jadikan Default</button>
+                      <button onClick={() => handleSetDefault(account)} className="text-xs text-primary hover:underline cursor-pointer">Jadikan Default</button>
                     )}
                     <button onClick={() => openEdit(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Edit</button>
                     <button onClick={() => handleDelete(account.id)} className="text-xs text-red-600 hover:underline cursor-pointer">Hapus</button>
@@ -373,19 +375,19 @@ export default function StorageAccountsPage() {
         </div>
 
         {/* R2 */}
-        <div className="glass-card p-6">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Cloudflare R2</h2>
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Cloudflare R2</h2>
           
-          {r2Accounts.length === 0 && !configData?.r2?.bucketName ? (
-            <p className="text-slate-500 text-sm">Belum ada akun R2</p>
+          {r2Accounts.length === 0 && !configData?.data?.r2?.bucketName ? (
+            <p className="text-muted-foreground text-sm">Belum ada akun R2</p>
           ) : (
             <div className="space-y-3">
               {r2Accounts.map((account) => (
-                <div key={account.id} className={`p-4 rounded-lg border ${account.isDefault ? 'border-champagne-500 bg-amber-50' : 'border-champagne-100'}`}>
+                <div key={account.id} className={`p-4 rounded-lg border ${account.isDefault ? 'border-champagne-500 bg-muted' : 'border-champagne-100'}`}>
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <span className="font-medium text-slate-800">{account.name}</span>
-                      {account.isDefault && <span className="ml-2 text-xs bg-amber-500 text-white px-2 py-0.5 rounded">Default</span>}
+                      <span className="font-medium text-foreground">{account.name}</span>
+                      {account.isDefault && <span className="ml-2 text-xs bg-muted0 text-white px-2 py-0.5 rounded">Default</span>}
                       {account.rotationEnabled && (
                         <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">🔄 Auto-rotate</span>
                       )}
@@ -394,7 +396,7 @@ export default function StorageAccountsPage() {
                       )}
                     </div>
                   </div>
-                  <div className="text-xs text-slate-500 mb-2">
+                  <div className="text-xs text-muted-foreground mb-2">
                     {account.totalPhotos} foto • {formatBytes(account.usedStorage)} digunakan
                   </div>
                   {account.rotationNextDate && (
@@ -405,13 +407,13 @@ export default function StorageAccountsPage() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => handleToggleActive(account)}
-                      className={`text-xs px-2 py-1 rounded cursor-pointer ${account.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}
+                      className={`text-xs px-2 py-1 rounded cursor-pointer ${account.isActive ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
                     >
                       {account.isActive ? 'Aktif' : 'Nonaktif'}
                     </button>
                     <button onClick={() => openRotationModal(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Key Rotation</button>
                     {!account.isDefault && (
-                      <button onClick={() => handleSetDefault(account)} className="text-xs text-amber-600 hover:underline cursor-pointer">Jadikan Default</button>
+                      <button onClick={() => handleSetDefault(account)} className="text-xs text-primary hover:underline cursor-pointer">Jadikan Default</button>
                     )}
                     <button onClick={() => openEdit(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Edit</button>
                     <button onClick={() => handleDelete(account.id)} className="text-xs text-red-600 hover:underline cursor-pointer">Hapus</button>
@@ -426,28 +428,28 @@ export default function StorageAccountsPage() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+          <div className="bg-card text-card-foreground rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-slate-900 mb-4">
               {editingAccount ? 'Edit Akun Storage' : 'Tambah Akun Storage'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nama Akun</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Nama Akun</label>
                 <input
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                  className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                   placeholder="Akun Utama / Backup 1"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Provider</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Provider</label>
                 <select
                   value={formData.provider}
                   onChange={(e) => setFormData({ ...formData, provider: e.target.value as 'CLOUDINARY' | 'R2' })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                  className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                 >
                   <option value="CLOUDINARY">Cloudinary (Thumbnails)</option>
                   <option value="R2">Cloudflare R2 (Original)</option>
@@ -455,12 +457,12 @@ export default function StorageAccountsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Prioritas</label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Prioritas</label>
                   <input
                     type="number"
                     value={formData.priority}
                     onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 0 })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                    className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                     placeholder="0"
                   />
                 </div>
@@ -472,118 +474,118 @@ export default function StorageAccountsPage() {
                       onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
                       className="rounded"
                     />
-                    <span className="text-sm text-slate-700">Jadikan default</span>
+                    <span className="text-sm text-foreground">Jadikan default</span>
                   </label>
                 </div>
               </div>
 
               {formData.provider === 'CLOUDINARY' && (
-                <div className="space-y-3 p-3 bg-slate-50 rounded-lg">
-                  <h3 className="text-sm font-medium text-slate-700">Cloudinary Credentials</h3>
+                <div className="space-y-3 p-3 bg-muted rounded-lg">
+                  <h3 className="text-sm font-medium text-foreground">Cloudinary Credentials</h3>
                   <div>
-                    <label className="block text-xs text-slate-600 mb-1">Cloud Name</label>
+                    <label className="block text-xs text-muted-foreground mb-1">Cloud Name</label>
                     <input
                       type="text"
                       value={formData.cloudName}
                       onChange={(e) => setFormData({ ...formData, cloudName: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-600 mb-1">API Key</label>
+                    <label className="block text-xs text-muted-foreground mb-1">API Key</label>
                     <input
                       type="text"
                       value={formData.apiKey}
                       onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-600 mb-1">API Secret</label>
+                    <label className="block text-xs text-muted-foreground mb-1">API Secret</label>
                     <input
                       type="password"
                       value={formData.apiSecret}
                       onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-600 mb-1">Upload Preset (Unsigned)</label>
+                    <label className="block text-xs text-muted-foreground mb-1">Upload Preset (Unsigned)</label>
                     <input
                       type="text"
                       value={formData.uploadPreset}
                       onChange={(e) => setFormData({ ...formData, uploadPreset: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                     />
                   </div>
                 </div>
               )}
 
               {formData.provider === 'R2' && (
-                <div className="space-y-3 p-3 bg-slate-50 rounded-lg">
-                  <h3 className="text-sm font-medium text-slate-700">R2 Credentials</h3>
+                <div className="space-y-3 p-3 bg-muted rounded-lg">
+                  <h3 className="text-sm font-medium text-foreground">R2 Credentials</h3>
                   <div>
-                    <label className="block text-xs text-slate-600 mb-1">Account ID</label>
+                    <label className="block text-xs text-muted-foreground mb-1">Account ID</label>
                     <input
                       type="text"
                       value={formData.accountId}
                       onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-600 mb-1">Access Key</label>
+                    <label className="block text-xs text-muted-foreground mb-1">Access Key</label>
                     <input
                       type="text"
                       value={formData.accessKey}
                       onChange={(e) => setFormData({ ...formData, accessKey: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-600 mb-1">Secret Key</label>
+                    <label className="block text-xs text-muted-foreground mb-1">Secret Key</label>
                     <input
                       type="password"
                       value={formData.secretKey}
                       onChange={(e) => setFormData({ ...formData, secretKey: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-600 mb-1">Bucket Name</label>
+                    <label className="block text-xs text-muted-foreground mb-1">Bucket Name</label>
                     <input
                       type="text"
                       value={formData.bucketName}
                       onChange={(e) => setFormData({ ...formData, bucketName: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-600 mb-1">Public URL</label>
+                    <label className="block text-xs text-muted-foreground mb-1">Public URL</label>
                     <input
                       type="text"
                       value={formData.publicUrl}
                       onChange={(e) => setFormData({ ...formData, publicUrl: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-600 mb-1">Endpoint (optional)</label>
+                    <label className="block text-xs text-muted-foreground mb-1">Endpoint (optional)</label>
                     <input
                       type="text"
                       value={formData.endpoint}
                       onChange={(e) => setFormData({ ...formData, endpoint: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                     />
                   </div>
                 </div>
               )}
 
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-champagne-200 text-slate-800 rounded-lg hover:bg-amber-50">
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-champagne-200 text-foreground rounded-lg hover:bg-muted">
                   Batal
                 </button>
-                <button type="submit" disabled={submitting} className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50">
+                <button type="submit" disabled={submitting} className="flex-1 px-4 py-2 bg-muted0 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50">
                   {submitting ? 'Menyimpan...' : 'Simpan'}
                 </button>
               </div>
@@ -595,14 +597,14 @@ export default function StorageAccountsPage() {
       {/* Key Rotation Modal */}
       {showRotationModal && rotationAccount && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold text-slate-800 mb-4">
+          <div className="bg-card text-card-foreground rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold text-foreground mb-4">
               Key Rotation - {rotationAccount.name}
             </h2>
             
             <div className="space-y-4">
-              <div className="p-3 bg-amber-50 rounded-lg">
-                <p className="text-sm text-slate-800">
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm text-foreground">
                   <strong>Current Status:</strong><br />
                   Rotation: {rotationAccount.rotationEnabled ? 'Enabled' : 'Disabled'}<br />
                   {rotationAccount.rotationSchedule && `Schedule: ${rotationAccount.rotationSchedule}`}<br />
@@ -613,7 +615,7 @@ export default function StorageAccountsPage() {
               {!rotationAccount.rotationEnabled ? (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-slate-800 mb-1">Jadwal Rotasi</label>
+                    <label className="block text-sm font-medium text-foreground mb-1">Jadwal Rotasi</label>
                     <select
                       value={rotationForm.schedule}
                       onChange={(e) => setRotationForm({ ...rotationForm, schedule: e.target.value })}
@@ -628,7 +630,7 @@ export default function StorageAccountsPage() {
                   <button
                     onClick={handleEnableRotation}
                     disabled={submitting}
-                    className="w-full px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50"
+                    className="w-full px-4 py-2 bg-muted0 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50"
                   >
                     Aktifkan Auto-Rotation
                   </button>
@@ -653,15 +655,15 @@ export default function StorageAccountsPage() {
 
               <hr className="border-champagne-200" />
               
-              <h3 className="font-medium text-slate-800">Set Secondary Credentials</h3>
-              <p className="text-xs text-slate-500">
+              <h3 className="font-medium text-foreground">Set Secondary Credentials</h3>
+              <p className="text-xs text-muted-foreground">
                 Masukkan credential baru yang akan digunakan setelah rotasi.
               </p>
               
               {rotationAccount.provider === 'CLOUDINARY' ? (
                 <>
                   <div>
-                    <label className="block text-xs text-slate-500 mb-1">New API Key</label>
+                    <label className="block text-xs text-muted-foreground mb-1">New API Key</label>
                     <input
                       type="text"
                       value={rotationForm.secondaryApiKey}
@@ -671,7 +673,7 @@ export default function StorageAccountsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-500 mb-1">New API Secret</label>
+                    <label className="block text-xs text-muted-foreground mb-1">New API Secret</label>
                     <input
                       type="password"
                       value={rotationForm.secondaryApiSecret}
@@ -684,7 +686,7 @@ export default function StorageAccountsPage() {
               ) : (
                 <>
                   <div>
-                    <label className="block text-xs text-slate-500 mb-1">New Access Key</label>
+                    <label className="block text-xs text-muted-foreground mb-1">New Access Key</label>
                     <input
                       type="text"
                       value={rotationForm.secondaryAccessKey}
@@ -694,7 +696,7 @@ export default function StorageAccountsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-500 mb-1">New Secret Key</label>
+                    <label className="block text-xs text-muted-foreground mb-1">New Secret Key</label>
                     <input
                       type="password"
                       value={rotationForm.secondarySecretKey}
@@ -716,7 +718,7 @@ export default function StorageAccountsPage() {
             </div>
             
             <div className="flex gap-3 pt-4 mt-4 border-t border-champagne-200">
-              <button type="button" onClick={() => setShowRotationModal(false)} className="flex-1 px-4 py-2 border border-champagne-200 text-slate-800 rounded-lg hover:bg-amber-50">
+              <button type="button" onClick={() => setShowRotationModal(false)} className="flex-1 px-4 py-2 border border-champagne-200 text-foreground rounded-lg hover:bg-muted">
                 Tutup
               </button>
             </div>

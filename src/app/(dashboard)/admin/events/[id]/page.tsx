@@ -22,7 +22,7 @@ export default function EventDetailPage() {
     fetcher
   );
 
-  const event = data?.event;
+  const event = data?.data?.event;
 
   const handleUpdate = async (field: string, value: any) => {
     if (!event) return;
@@ -63,8 +63,8 @@ export default function EventDetailPage() {
   if (!event) {
     return (
       <div className="p-8">
-        <p className="text-slate-500">Event not found</p>
-        <Link href="/admin/events" className="text-amber-600 hover:underline">
+        <p className="text-muted-foreground">Event not found</p>
+        <Link href="/admin/events" className="text-primary hover:underline">
           ← Back to events
         </Link>
       </div>
@@ -74,12 +74,12 @@ export default function EventDetailPage() {
   return (
     <div className="p-4 max-w-4xl mx-auto">
       <div className="mb-6">
-        <Link href="/admin/events" className="text-slate-500 hover:text-amber-600 flex items-center gap-2 mb-4">
+        <Link href="/admin/events" className="text-muted-foreground hover:text-primary flex items-center gap-2 mb-4">
           <ArrowLeft className="w-4 h-4" />
           Back to events
         </Link>
-        <h1 className="text-2xl font-bold text-slate-800">Event Detail</h1>
-        <p className="text-slate-500">{event.kodeBooking}</p>
+        <h1 className="text-2xl font-bold text-foreground">Event Detail</h1>
+        <p className="text-muted-foreground">{event.kodeBooking}</p>
       </div>
 
       {message && (
@@ -90,42 +90,42 @@ export default function EventDetailPage() {
 
       <div className="space-y-6">
         {/* Event Info */}
-        <div className="glass-card p-6">
-          <h2 className="font-semibold text-lg text-slate-800 mb-4">Event Information</h2>
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-6">
+          <h2 className="font-semibold text-lg text-foreground mb-4">Event Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Project Name</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Project Name</label>
               <input
                 type="text"
                 defaultValue={event.namaProject}
                 onBlur={(e) => handleUpdate('namaProject', e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Event Date</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Event Date</label>
               <input
                 type="date"
                 defaultValue={event.eventDate?.split('T')[0]}
                 onBlur={(e) => handleUpdate('eventDate', e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Location</label>
               <input
                 type="text"
                 defaultValue={event.location || ''}
                 onBlur={(e) => handleUpdate('location', e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Status</label>
               <select
                 value={event.status}
                 onChange={(e) => handleUpdate('status', e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
               >
                 <option value="pending">Pending</option>
                 <option value="confirmed">Confirmed</option>
@@ -137,42 +137,42 @@ export default function EventDetailPage() {
         </div>
 
         {/* Client Info */}
-        <div className="glass-card p-6">
-          <h2 className="font-semibold text-lg text-slate-800 mb-4">Client Information</h2>
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-6">
+          <h2 className="font-semibold text-lg text-foreground mb-4">Client Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Client Name</label>
-              <p className="text-slate-800">{event.client?.nama || '-'}</p>
+              <label className="block text-sm font-medium text-foreground mb-1">Client Name</label>
+              <p className="text-foreground">{event.client?.nama || '-'}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-              <p className="text-slate-800">{event.client?.email || '-'}</p>
+              <label className="block text-sm font-medium text-foreground mb-1">Email</label>
+              <p className="text-foreground">{event.client?.email || '-'}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-              <p className="text-slate-800">{event.client?.phone || '-'}</p>
+              <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
+              <p className="text-foreground">{event.client?.phone || '-'}</p>
             </div>
           </div>
         </div>
 
         {/* Payment Info */}
-        <div className="glass-card p-6">
-          <h2 className="font-semibold text-lg text-slate-800 mb-4">Payment Information</h2>
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-6">
+          <h2 className="font-semibold text-lg text-foreground mb-4">Payment Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Total Price</label>
-              <p className="text-slate-800">Rp {event.totalPrice?.toLocaleString() || '0'}</p>
+              <label className="block text-sm font-medium text-foreground mb-1">Total Price</label>
+              <p className="text-foreground">Rp {event.totalPrice?.toLocaleString() || '0'}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Paid Amount</label>
-              <p className="text-slate-800">Rp {event.paidAmount?.toLocaleString() || '0'}</p>
+              <label className="block text-sm font-medium text-foreground mb-1">Paid Amount</label>
+              <p className="text-foreground">Rp {event.paidAmount?.toLocaleString() || '0'}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Payment Status</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Payment Status</label>
               <select
                 value={event.paymentStatus}
                 onChange={(e) => handleUpdate('paymentStatus', e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
               >
                 <option value="unpaid">Unpaid</option>
                 <option value="partial">Partial</option>
@@ -184,10 +184,10 @@ export default function EventDetailPage() {
 
         {/* Package Info */}
         {event.package && (
-          <div className="glass-card p-6">
-            <h2 className="font-semibold text-lg text-slate-800 mb-4">Package</h2>
-            <p className="text-slate-800">{event.package.name}</p>
-            <p className="text-slate-500 text-sm">Rp {event.package.price?.toLocaleString()}</p>
+          <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-6">
+            <h2 className="font-semibold text-lg text-foreground mb-4">Package</h2>
+            <p className="text-foreground">{event.package.name}</p>
+            <p className="text-muted-foreground text-sm">Rp {event.package.price?.toLocaleString()}</p>
           </div>
         )}
       </div>

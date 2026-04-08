@@ -90,7 +90,7 @@ function Lightbox({
       aria-label="Lightbox viewer"
     >
       <button
-        className="absolute top-4 right-4 text-white text-2xl p-2 hover:bg-white/10 rounded-lg transition-colors"
+        className="absolute top-4 right-4 text-white text-2xl p-2 hover:bg-card/10 rounded-lg transition-colors"
         onClick={onClose}
         aria-label="Tutup lightbox"
       >
@@ -98,7 +98,7 @@ function Lightbox({
       </button>
 
       <button
-        className="absolute left-4 text-white text-3xl p-2 hover:bg-white/10 rounded-lg transition-colors"
+        className="absolute left-4 text-white text-3xl p-2 hover:bg-card/10 rounded-lg transition-colors"
         onClick={(e) => { e.stopPropagation(); onNavigate(-1); }}
         aria-label="Foto sebelumnya"
       >
@@ -118,7 +118,7 @@ function Lightbox({
       </div>
 
       <button
-        className="absolute right-4 text-white text-3xl p-2 hover:bg-white/10 rounded-lg transition-colors"
+        className="absolute right-4 text-white text-3xl p-2 hover:bg-card/10 rounded-lg transition-colors"
         onClick={(e) => { e.stopPropagation(); onNavigate(1); }}
         aria-label="Foto berikutnya"
       >
@@ -130,8 +130,8 @@ function Lightbox({
           onClick={(e) => { e.stopPropagation(); onToggleSelect(currentPhoto.id); }}
           className={`absolute bottom-4 px-6 py-3 rounded-full text-sm font-medium transition-colors ${
             isSelected
-              ? 'bg-amber-500 text-white'
-              : 'bg-white/20 text-white hover:bg-white/30'
+              ? 'bg-primary/100 text-white'
+              : 'bg-card/20 text-white hover:bg-card/30'
           }`}
         >
           {isSelected ? '✓ Dipilih' : 'Pilih'}
@@ -154,17 +154,17 @@ export default function GalleryPage() {
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const { data, error, isLoading } = useSWR<GalleryData>(
+  const { data, error, isLoading } = useSWR<{ data: GalleryData }>(
     token ? `/api/public/gallery/${token}` : null,
     fetcher,
     { 
       revalidateOnFocus: false, 
       revalidateOnReconnect: false,
-      onSuccess: (data) => {
+      onSuccess: (resData) => {
         // Only reset photos on initial load, not when polling
         if (allPhotos.length === 0) {
-          setAllPhotos(data.gallery.photos);
-          setPagination(data.gallery.pagination);
+          setAllPhotos(resData.data.gallery.photos);
+          setPagination(resData.data.gallery.pagination);
         }
       }
     }
@@ -176,10 +176,10 @@ export default function GalleryPage() {
     setLoadingMore(true);
     try {
       const res = await fetch(`/api/public/gallery/${token}?cursor=${pagination.nextCursor}`);
-      const newData: GalleryData = await res.json();
+      const newData: { data: GalleryData } = await res.json();
       
-      setAllPhotos(prev => [...prev, ...newData.gallery.photos]);
-      setPagination(newData.gallery.pagination);
+      setAllPhotos(prev => [...prev, ...newData.data.gallery.photos]);
+      setPagination(newData.data.gallery.pagination);
     } catch (err) {
       console.error('Error loading more photos:', err);
     } finally {
@@ -194,7 +194,7 @@ export default function GalleryPage() {
   const [bannerOpen, setBannerOpen] = useState(true);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
 
-  const gallery = data?.gallery;
+  const gallery = data?.data?.gallery;
   const photos = useMemo(() => allPhotos.length > 0 ? allPhotos : (gallery?.photos ?? []), [allPhotos, gallery?.photos]);
 
   const maxSelection = useMemo(() => gallery?.settings.maxSelection ?? 0, [gallery?.settings.maxSelection]);
@@ -229,10 +229,10 @@ export default function GalleryPage() {
   }, []);
 
   const handleViewCountUpdate = useCallback((count: number) => {
-    if (data?.gallery) {
-      data.gallery.viewCount = count;
+    if (data?.data?.gallery) {
+      data.data.gallery.viewCount = count;
     }
-  }, [data?.gallery]);
+  }, [data?.data?.gallery]);
 
   const isAblyConnected = useAblyConnection();
   useSelectionSubscription(gallery?.id || '', handleSelectionUpdate);
@@ -327,10 +327,10 @@ export default function GalleryPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-500 mx-auto mb-4"></div>
-          <p className="text-slate-500">Memuat galeri…</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Memuat galeri…</p>
         </div>
       </div>
     );
@@ -338,43 +338,43 @@ export default function GalleryPage() {
 
   if (error || !gallery) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="text-center">
-          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">📷</span>
           </div>
-          <h2 className="text-xl font-semibold text-slate-900 mb-2">Galeri tidak ditemukan</h2>
-          <p className="text-slate-500">Link galeri tidak valid</p>
+          <h2 className="text-xl font-semibold text-foreground mb-2">Galeri tidak ditemukan</h2>
+          <p className="text-muted-foreground">Link galeri tidak valid</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50" ref={containerRef}>
+    <div className="min-h-screen bg-background" ref={containerRef}>
       {showSuccess && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-label="Success dialog">
-          <div className="bg-white rounded-xl max-w-sm w-full p-8 text-center">
+          <div className="bg-card rounded-xl max-w-sm w-full p-8 text-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl text-green-600">✓</span>
             </div>
-            <h2 className="text-xl font-bold text-slate-900 mb-2">Pilihan Dikirim!</h2>
-            <p className="text-slate-500 text-sm mb-4">Terima kasih. Fotografer akan memproses pilihan Anda.</p>
+            <h2 className="text-xl font-bold text-foreground mb-2">Pilihan Dikirim!</h2>
+            <p className="text-muted-foreground text-sm mb-4">Terima kasih. Fotografer akan memproses pilihan Anda.</p>
             {gallery.settings.thankYouMessage && (
-              <p className="text-sm italic text-slate-600 bg-slate-50 p-3 rounded-lg mb-4">&quot;{gallery.settings.thankYouMessage}&quot;</p>
+              <p className="text-sm italic text-muted-foreground bg-background p-3 rounded-lg mb-4">&quot;{gallery.settings.thankYouMessage}&quot;</p>
             )}
-            <button onClick={() => setShowSuccess(false)} className="w-full py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600">
+            <button onClick={() => setShowSuccess(false)} className="w-full py-2 bg-primary/100 text-white rounded-lg hover:bg-primary/80">
               Tutup
             </button>
           </div>
         </div>
       )}
 
-      <header className="sticky top-0 bg-white border-b border-slate-200 z-30">
+      <header className="sticky top-0 bg-card border-b border-border z-30">
         <div className="px-4 py-3 flex items-center justify-between">
           <div>
-            <h1 className="font-bold text-slate-900">{gallery.namaProject}</h1>
-            <span className="text-xs text-slate-500 flex items-center gap-2">
+            <h1 className="font-bold text-foreground">{gallery.namaProject}</h1>
+            <span className="text-xs text-muted-foreground flex items-center gap-2">
               {photos.length} foto
               {isAblyConnected && (
                 <span className="flex items-center gap-1">
@@ -386,7 +386,7 @@ export default function GalleryPage() {
           </div>
           <div className="flex items-center gap-2">
             {hasPickspace && !isLocked && localSelectionCount > 0 && (
-              <button onClick={handleSubmit} disabled={submitting} className="px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50">
+              <button onClick={handleSubmit} disabled={submitting} className="px-4 py-2 bg-primary/100 text-white text-sm font-medium rounded-lg hover:bg-primary/80 disabled:opacity-50">
                 {submitting ? 'Mengirim…' : `Kirim (${localSelectionCount})`}
               </button>
             )}
@@ -398,30 +398,30 @@ export default function GalleryPage() {
         {hasPickspace && !isLocked && localSelectionCount > 0 && (
           <div className="px-4 pb-3">
             <div className="flex items-center gap-2">
-              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full transition-all ${isMaxed ? 'bg-red-500' : 'bg-amber-500'}`} style={{ width: `${Math.min((localSelectionCount / maxSelection) * 100, 100)}%` }} />
+              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${isMaxed ? 'bg-red-500' : 'bg-primary/100'}`} style={{ width: `${Math.min((localSelectionCount / maxSelection) * 100, 100)}%` }} />
               </div>
-              <span className="text-xs text-slate-500">{localSelectionCount}/{maxSelection}</span>
+              <span className="text-xs text-muted-foreground">{localSelectionCount}/{maxSelection}</span>
             </div>
           </div>
         )}
       </header>
 
       {hasBanner && (
-        <div className="mx-4 mt-4 bg-white rounded-lg p-4 border border-slate-100">
+        <div className="mx-4 mt-4 bg-card rounded-lg p-4 border border-border">
           <div className="flex justify-between items-start">
             <div className="text-center flex-1">
               {gallery.settings.bannerClientName && (
-                <p className="text-xs font-medium uppercase tracking-wider text-amber-600">{gallery.settings.bannerClientName}</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-primary">{gallery.settings.bannerClientName}</p>
               )}
               {bannerOpen && (
                 <>
-                  {gallery.settings.welcomeMessage && <p className="text-sm text-slate-600 mt-1">{gallery.settings.welcomeMessage}</p>}
+                  {gallery.settings.welcomeMessage && <p className="text-sm text-muted-foreground mt-1">{gallery.settings.welcomeMessage}</p>}
                   {gallery.settings.bannerEventDate && <p className="text-xs text-slate-400 mt-1">{gallery.settings.bannerEventDate}</p>}
                 </>
               )}
             </div>
-            <button onClick={() => setBannerOpen(!bannerOpen)} className="text-slate-400 hover:text-slate-600" aria-label={bannerOpen ? 'Tutup banner' : 'Buka banner'}>
+            <button onClick={() => setBannerOpen(!bannerOpen)} className="text-slate-400 hover:text-muted-foreground" aria-label={bannerOpen ? 'Tutup banner' : 'Buka banner'}>
               {bannerOpen ? '▲' : '▼'}
             </button>
           </div>
@@ -429,11 +429,11 @@ export default function GalleryPage() {
       )}
 
       {hasPickspace && (
-        <div className="mx-4 mt-3 flex gap-1 bg-white rounded-lg p-1 border border-slate-100">
-          <button onClick={() => setActiveTab('all')} className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'all' ? 'bg-amber-50 text-amber-700' : 'text-slate-500 hover:bg-slate-50'}`}>
+        <div className="mx-4 mt-3 flex gap-1 bg-card rounded-lg p-1 border border-border">
+          <button onClick={() => setActiveTab('all')} className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'all' ? 'bg-primary/10 text-amber-700' : 'text-muted-foreground hover:bg-background'}`}>
             Semua Foto
           </button>
-          <button onClick={() => setActiveTab('selected')} className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'selected' ? 'bg-amber-50 text-amber-700' : 'text-slate-500 hover:bg-slate-50'}`}>
+          <button onClick={() => setActiveTab('selected')} className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'selected' ? 'bg-primary/10 text-amber-700' : 'text-muted-foreground hover:bg-background'}`}>
             Terpilih ({activeSelectionCount})
           </button>
         </div>
@@ -441,7 +441,7 @@ export default function GalleryPage() {
 
       <main className="p-4">
         {photos.length === 0 ? (
-          <div className="text-center py-16"><p className="text-slate-500">Belum ada foto</p></div>
+          <div className="text-center py-16"><p className="text-muted-foreground">Belum ada foto</p></div>
         ) : activeTab === 'all' ? (
           <>
             <Masonry
@@ -478,7 +478,7 @@ export default function GalleryPage() {
                         onClick={(e) => { e.stopPropagation(); toggleSelect(photo.id); }}
                         disabled={isLocked || !canSelect}
                         aria-label={isSelected ? 'Batal pilih' : 'Pilih foto'}
-                        className={`absolute top-2 right-2 w-7 h-7 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all ${isSelected ? 'bg-amber-500 border-amber-500 text-white' : canSelect ? 'bg-white/80 border-slate-300 text-transparent hover:border-amber-500 hover:text-amber-500' : 'bg-slate-200 border-slate-300 cursor-not-allowed'}`}
+                        className={`absolute top-2 right-2 w-7 h-7 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all ${isSelected ? 'bg-primary/100 border-primary text-white' : canSelect ? 'bg-card/80 border-slate-300 text-transparent hover:border-primary hover:text-primary' : 'bg-muted border-slate-300 cursor-not-allowed'}`}
                       >
                         ✓
                       </button>
@@ -494,7 +494,7 @@ export default function GalleryPage() {
                 <button
                   onClick={loadMore}
                   disabled={loadingMore}
-                  className="px-6 py-3 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-6 py-3 bg-primary/100 text-white rounded-lg font-medium hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {loadingMore ? (
                     <span className="flex items-center gap-2">
@@ -515,12 +515,12 @@ export default function GalleryPage() {
           <div className="space-y-3">
             {activeSelectedPhotos.length === 0 ? (
               <div className="text-center py-16">
-                <p className="text-slate-500">{isLocked ? 'Tidak ada foto terpilih' : 'Belum ada foto dipilih'}</p>
-                {!isLocked && <button onClick={() => setActiveTab('all')} className="text-amber-600 text-sm mt-2">← Lihat semua foto</button>}
+                <p className="text-muted-foreground">{isLocked ? 'Tidak ada foto terpilih' : 'Belum ada foto dipilih'}</p>
+                {!isLocked && <button onClick={() => setActiveTab('all')} className="text-primary text-sm mt-2">← Lihat semua foto</button>}
               </div>
             ) : (
               <>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground">
                   {activeSelectedPhotos.length} foto terpilih
                   {!isLocked && isMaxed && <span className="text-red-500 font-medium"> (Kuota penuh)</span>}
                   {!isLocked && !isMaxed && <span> • Maks. {maxSelection}</span>}
@@ -529,7 +529,7 @@ export default function GalleryPage() {
                   {activeSelectedPhotos.map((photo, idx) => {
                     const originalIndex = photos.findIndex((p) => p.id === photo.id);
                     return (
-                      <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden bg-slate-100">
+                      <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden bg-muted">
                         <Image
                           src={photo.thumbnailUrl || photo.url}
                           alt={photo.filename}
@@ -537,7 +537,7 @@ export default function GalleryPage() {
                           className="object-cover"
                           onClick={() => openLightbox(originalIndex)}
                         />
-                        <span className="absolute top-2 left-2 bg-amber-500 text-white text-xs px-2 py-1 rounded">{idx + 1}</span>
+                        <span className="absolute top-2 left-2 bg-primary/100 text-white text-xs px-2 py-1 rounded">{idx + 1}</span>
                         {!isLocked && (
                           <button
                             onClick={() => toggleSelect(photo.id)}
@@ -553,12 +553,12 @@ export default function GalleryPage() {
                 {isLocked ? (
                   <div className="mt-4 flex gap-2">
                     {gallery.settings.enableDownload && activeSelectedPhotos.length > 0 && (
-                      <button onClick={handleDownload} className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200">↓ Download Semua</button>
+                      <button onClick={handleDownload} className="flex-1 py-3 bg-muted text-foreground rounded-lg text-sm font-medium hover:bg-muted">↓ Download Semua</button>
                     )}
                   </div>
                 ) : (
                   <div className="mt-4 flex gap-2">
-                    <button onClick={selectAll} disabled={isMaxed} className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 disabled:opacity-50">Pilih Semua</button>
+                    <button onClick={selectAll} disabled={isMaxed} className="flex-1 py-3 bg-muted text-foreground rounded-lg text-sm font-medium hover:bg-muted disabled:opacity-50">Pilih Semua</button>
                     {localSelectionCount > 0 && <button onClick={clearAll} className="flex-1 py-3 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50">Hapus Semua</button>}
                   </div>
                 )}

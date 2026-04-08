@@ -71,12 +71,12 @@ export default function GalleryDetailPage() {
   const [settingsMessage, setSettingsMessage] = useState('');
 
   const fetcher = (url: string) => fetch(url).then((res) => res.json());
-  const { data, isLoading, mutate } = useSWR<{ gallery: Gallery }>(
+  const { data, isLoading, mutate } = useSWR<{ data: { gallery: Gallery } }>(
     galleryId ? `/api/admin/galleries/${galleryId}` : null,
     fetcher
   );
   
-  const gallery = data?.gallery ?? null;
+  const gallery = data?.data?.gallery ?? null;
   
   // Update settings state when gallery data loads
   useEffect(() => {
@@ -95,17 +95,17 @@ export default function GalleryDetailPage() {
   const isAblyConnected = useAblyConnection();
   useSelectionSubscription(gallery?.id || '', handleSelectionUpdate);
 
-  const { data: storageData } = useSWR<{ accounts: StorageAccount[] }>(
+  const { data: storageData } = useSWR<{ data: { accounts: StorageAccount[] } }>(
     '/api/admin/storage-accounts',
     fetcher
   );
 
   const cloudinaryAccounts = useMemo(
-    () => storageData?.accounts?.filter((a) => a.provider === 'CLOUDINARY') ?? [],
+    () => storageData?.data?.accounts?.filter((a) => a.provider === 'CLOUDINARY') ?? [],
     [storageData]
   );
   const r2Accounts = useMemo(
-    () => storageData?.accounts?.filter((a) => a.provider === 'R2') ?? [],
+    () => storageData?.data?.accounts?.filter((a) => a.provider === 'R2') ?? [],
     [storageData]
   );
 
@@ -272,12 +272,12 @@ export default function GalleryDetailPage() {
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-slate-900">{gallery.namaProject}</h1>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-              gallery.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-600'
+              gallery.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-muted text-muted-foreground'
             }`}>
               {gallery.status}
             </span>
           </div>
-          <p className="text-sm text-slate-500 mt-1 flex items-center gap-2">
+          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
             {gallery.event.client.nama} • {gallery.event.kodeBooking} • {gallery.viewCount} views
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-green-500"></span>
@@ -297,7 +297,7 @@ export default function GalleryDetailPage() {
           <button
             onClick={() => setShowSelectionView(!showSelectionView)}
             className={`px-4 py-2 rounded-lg ${
-              showSelectionView ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-700'
+              showSelectionView ? 'bg-muted0 text-white' : 'bg-muted text-foreground'
             }`}
           >
             👁️ Lihat Seleksi Client
@@ -307,25 +307,25 @@ export default function GalleryDetailPage() {
 
       {/* Selection View - Admin sees client selections */}
       {showSelectionView && (
-        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <div className="mb-6 bg-muted border border-amber-200 rounded-xl p-4">
           <h2 className="font-semibold text-slate-900 mb-3">📋 Seleksi dari Client</h2>
           {gallery.isSelectionLocked ? (
             <div>
-              <p className="text-sm text-slate-600 mb-3">
-                Client telah memilih <span className="font-bold text-amber-600">{selectedPhotoIdsFromServer.length}</span> foto
+              <p className="text-sm text-muted-foreground mb-3">
+                Client telah memilih <span className="font-bold text-primary">{selectedPhotoIdsFromServer.length}</span> foto
                 {gallery.maxSelection > 0 && ` (maks. ${gallery.maxSelection})`}
               </p>
               <div className="flex gap-2 mb-4">
                 <button
                   onClick={exportToTxt}
-                  className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 text-sm"
+                  className="px-4 py-2 bg-muted0 text-white rounded-lg hover:bg-amber-600 text-sm"
                 >
                   📥 Export .txt (semua foto)
                 </button>
                 {selectedPhotoIds.size > 0 && (
                   <button
                     onClick={exportToTxt}
-                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 text-sm"
+                    className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-slate-200 text-sm"
                   >
                     📥 Export .txt (terpilih: {selectedPhotoIds.size})
                   </button>
@@ -345,7 +345,7 @@ export default function GalleryDetailPage() {
                         height={150}
                         className="w-full h-32 object-cover rounded-lg"
                       />
-                      <div className="absolute top-1 left-1 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded">
+                      <div className="absolute top-1 left-1 bg-muted0 text-white text-xs px-1.5 py-0.5 rounded">
                         {idx + 1}
                       </div>
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition rounded-lg flex items-center justify-center">
@@ -356,9 +356,9 @@ export default function GalleryDetailPage() {
               </div>
 
               {/* Filename list */}
-              <div className="mt-4 p-3 bg-white rounded-lg">
-                <p className="text-xs font-medium text-slate-500 mb-2">Daftar filename:</p>
-                <div className="text-xs text-slate-600 font-mono max-h-32 overflow-y-auto">
+              <div className="mt-4 p-3 bg-card text-card-foreground rounded-lg">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Daftar filename:</p>
+                <div className="text-xs text-muted-foreground font-mono max-h-32 overflow-y-auto">
                   {gallery.photos
                     .filter((p) => selectedPhotoIdsFromServer.includes(p.id))
                     .map((p) => p.filename)
@@ -367,22 +367,22 @@ export default function GalleryDetailPage() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-slate-500">Belum ada seleksi dari client</p>
+            <p className="text-sm text-muted-foreground">Belum ada seleksi dari client</p>
           )}
         </div>
       )}
 
       {/* Upload Section */}
-      <div className="bg-white rounded-xl border border-champagne-100 p-4 sm:p-6 mb-6">
+      <div className="bg-card text-card-foreground rounded-xl border border-champagne-100 p-4 sm:p-6 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <h2 className="font-semibold text-lg text-slate-800">Photos ({gallery.photos.length})</h2>
+            <h2 className="font-semibold text-lg text-foreground">Photos ({gallery.photos.length})</h2>
             {gallery.photos.length > 0 && (
               <>
                 <button
                   onClick={() => { setBulkMode(!bulkMode); setSelectedPhotoIdsForBulk(new Set()); }}
                   className={`px-3 py-2 sm:py-1 text-sm rounded-lg transition-smooth cursor-pointer ${
-                    bulkMode ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                    bulkMode ? 'bg-muted0 text-white' : 'bg-primary/20 text-amber-700 hover:bg-amber-200'
                   }`}
                 >
                   {bulkMode ? '✓ Bulk ON' : '☐ Bulk Select'}
@@ -408,7 +408,7 @@ export default function GalleryDetailPage() {
           </div>
           <Button
             onClick={() => setShowUploadManager(true)}
-            className="bg-amber-500 hover:bg-amber-600 text-white"
+            className="bg-muted0 hover:bg-amber-600 text-white"
           >
             <Upload className="w-4 h-4 mr-2" />
             Upload Foto
@@ -432,7 +432,7 @@ export default function GalleryDetailPage() {
 
         {gallery.photos.length === 0 ? (
           <div className="text-center py-8 sm:py-12 border-2 border-dashed border-champagne-200 rounded-lg">
-            <p className="text-slate-500">Belum ada foto. Upload foto untuk gallery ini.</p>
+            <p className="text-muted-foreground">Belum ada foto. Upload foto untuk gallery ini.</p>
           </div>
         ) : (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3">
@@ -448,14 +448,14 @@ export default function GalleryDetailPage() {
                 )}
                 {reorderMode && (
                   <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
-                    <span className="text-xs bg-amber-500 text-white px-1 rounded">
+                    <span className="text-xs bg-muted0 text-white px-1 rounded">
                       {photo.order || index + 1}
                     </span>
                     <input
                       type="number"
                       defaultValue={photo.order || index + 1}
                       onBlur={(e) => handleReorderPhoto(photo.id, parseInt(e.target.value) || 0)}
-                      className="w-12 px-1 py-0.5 text-xs border border-slate-300 rounded"
+                      className="w-12 px-1 py-0.5 text-xs border border-border rounded"
                       min="1"
                     />
                   </div>
@@ -469,7 +469,7 @@ export default function GalleryDetailPage() {
                 />
                 {/* Selection indicator */}
                 {selectedPhotoIdsFromServer.includes(photo.id) && (
-                  <div className="absolute top-1 right-1 w-5 h-5 sm:w-6 sm:h-6 bg-amber-500 rounded-full flex items-center justify-center text-white text-xs">
+                  <div className="absolute top-1 right-1 w-5 h-5 sm:w-6 sm:h-6 bg-muted0 rounded-full flex items-center justify-center text-white text-xs">
                     ✓
                   </div>
                 )}
@@ -490,16 +490,16 @@ export default function GalleryDetailPage() {
       </div>
 
       {/* Settings */}
-      <div className="glass-card p-4 sm:p-6">
-        <h2 className="font-semibold text-lg text-slate-800 mb-4">Pengaturan Gallery</h2>
+      <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4 sm:p-6">
+        <h2 className="font-semibold text-lg text-foreground mb-4">Pengaturan Gallery</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Max Selection</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Max Selection</label>
             <input
               type="number"
               value={gallerySettings.maxSelection}
               onChange={(e) => setGallerySettings(prev => ({ ...prev, maxSelection: parseInt(e.target.value) || 20 }))}
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+              className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
               placeholder="20"
             />
           </div>
@@ -509,9 +509,9 @@ export default function GalleryDetailPage() {
               id="enableDownload"
               checked={gallerySettings.enableDownload}
               onChange={(e) => setGallerySettings(prev => ({ ...prev, enableDownload: e.target.checked }))}
-              className="rounded border-slate-300"
+              className="rounded border-border"
             />
-            <label htmlFor="enableDownload" className="text-sm text-slate-700">
+            <label htmlFor="enableDownload" className="text-sm text-foreground">
               Izinkan client download
             </label>
           </div>
@@ -520,7 +520,7 @@ export default function GalleryDetailPage() {
           <button
             onClick={handleSaveSettings}
             disabled={isSavingSettings}
-            className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className="px-4 py-2 bg-muted0 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
             {isSavingSettings ? 'Saving...' : 'Save Settings'}
           </button>

@@ -1,69 +1,130 @@
 @import "tailwindcss";
-@import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
-@theme {
-  /* ===== COLOR SYSTEM ===== */
+/* ===== BASE OKLCH VARIABLES ===== */
+:root {
+  /* Aura Noir Light (Cinematic Pale) */
+  --background: oklch(98% 0.01 45);
+  --foreground: oklch(20% 0.02 45);
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(20% 0.02 45);
+  --popover: oklch(100% 0 0);
+  --popover-foreground: oklch(20% 0.02 45);
+  --muted: oklch(94% 0.01 45);
+  --muted-foreground: oklch(50% 0.02 45);
+  --accent: oklch(94% 0.01 45);
+  --accent-foreground: oklch(20% 0.02 45);
 
-  /* Primary - Deep Charcoal */
-  --color-slate-950: #0C1222;
-  --color-slate-900: #1E293B;
-  --color-slate-800: #334155;
-  --color-slate-700: #475569;
-  --color-slate-600: #64748B;
-  --color-slate-500: #94A3B8;
-  --color-slate-400: #CBD5E1;
-  --color-slate-300: #E2E8F0;
-  --color-slate-200: #F1F5F9;
-  --color-slate-100: #F8FAFC;
-  --color-slate-50: #FAFBFC;
+  --primary: oklch(70% 0.15 45);
+  --primary-foreground: oklch(10% 0 0);
+  
+  --secondary: oklch(90% 0.01 45);
+  --secondary-foreground: oklch(20% 0.02 45);
 
-  /* Accent - Warm Amber/Gold */
-  --color-amber-950: #451A03;
-  --color-amber-900: #78350F;
-  --color-amber-800: #92400E;
-  --color-amber-700: #B45309;
-  --color-amber-600: #D97706;
-  --color-amber-500: #F59E0B;
-  --color-amber-400: #FBBF24;
-  --color-amber-300: #FCD34D;
-  --color-amber-200: #FDE68A;
-  --color-amber-100: #FEF3C7;
-  --color-amber-50: #FFFBEB;
+  --border: oklch(85% 0.01 45);
+  --input: oklch(85% 0.01 45);
+  --ring: oklch(70% 0.15 45);
 
-  /* Semantic Colors */
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-error: #EF4444;
-  --color-info: #3B82F6;
+  --destructive: oklch(60% 0.15 25);
+  --destructive-foreground: oklch(98% 0 0);
+  
+  --success: oklch(60% 0.15 145);
+  --warning: oklch(75% 0.15 85);
+  --error: oklch(60% 0.15 25);
+  
+  --radius: 0.75rem;
 
-  /* ===== TYPOGRAPHY ===== */
+  --glass-bg: oklch(100% 0 0 / 0.85);
+  --glass-border: oklch(85% 0.01 45 / 0.8);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.dark {
+  /* Aura Noir Dark (OLED Luxury) */
+  --background: oklch(10% 0 0);
+  --foreground: oklch(95% 0.01 45);
+  --card: oklch(14% 0.01 45);
+  --card-foreground: oklch(95% 0.01 45);
+  --popover: oklch(14% 0.01 45);
+  --popover-foreground: oklch(95% 0.01 45);
+  --muted: oklch(18% 0.02 45);
+  --muted-foreground: oklch(70% 0.01 45);
+  --accent: oklch(18% 0.02 45);
+  --accent-foreground: oklch(95% 0.01 45);
+
+  --primary: oklch(70% 0.15 45);
+  --primary-foreground: oklch(10% 0 0);
+  
+  --secondary: oklch(20% 0.02 45);
+  --secondary-foreground: oklch(95% 0.01 45);
+
+  --border: oklch(25% 0.02 45);
+  --input: oklch(25% 0.02 45);
+  --ring: oklch(70% 0.15 45);
+
+  --destructive: oklch(60% 0.15 25);
+  --destructive-foreground: oklch(98% 0 0);
+  
+  --success: oklch(60% 0.15 145);
+  --warning: oklch(75% 0.15 85);
+  --error: oklch(60% 0.15 25);
+
+  --glass-bg: oklch(14% 0.01 45 / 0.85);
+  --glass-border: oklch(25% 0.02 45 / 0.8);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
 
-  /* ===== SPACING ===== */
-
+  /* Custom Glow Shadow */
+  --shadow-glow: 0 0 20px 0 oklch(70% 0.15 45 / 0.3);
+  
+  /* Animations */
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-slide-up: slide-up 0.3s ease-out;
+  --animate-shimmer: shimmer 1.5s infinite;
+  
+  /* Spacing fixes */
   --spacing-18: 4.5rem;
   --spacing-88: 22rem;
   --spacing-100: 25rem;
   --spacing-112: 28rem;
   --spacing-128: 32rem;
-
-  /* ===== EFFECTS ===== */
-
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-
-  /* ===== ANIMATION ===== */
-
-  --animate-fade-in: fade-in 0.3s ease-out;
-  --animate-slide-up: slide-up 0.3s ease-out;
-  --animate-shimmer: shimmer 1.5s infinite;
 }
 
 @keyframes fade-in {
@@ -91,88 +152,15 @@
   to { transform: rotate(360deg); }
 }
 
-/* ===== CSS VARIABLES ===== */
-:root {
-  /* Backgrounds */
-  --background: #F8FAFC;
-  --foreground: #1E293B;
-  --card: #FFFFFF;
-  --card-foreground: #1E293B;
-  --popover: #FFFFFF;
-  --popover-foreground: #1E293B;
-  --muted: #F1F5F9;
-  --muted-foreground: #64748B;
-  --accent: #FEF3C7;
-  --accent-foreground: #92400E;
-
-  /* Primary */
-  --primary: #1E293B;
-  --primary-foreground: #F8FAFC;
-  
-  /* Secondary */
-  --secondary: #F1F5F9;
-  --secondary-foreground: #475569;
-
-  /* Borders & Inputs */
-  --border: #E2E8F0;
-  --input: #E2E8F0;
-  --ring: #F59E0B;
-
-  /* Destructive */
-  --destructive: #EF4444;
-  --destructive-foreground: #FFFFFF;
-
-  /* Success/Warning/Info */
-  --success: #10B981;
-  --success-foreground: #FFFFFF;
-  --warning: #F59E0B;
-  --warning-foreground: #1E293B;
-  --error: #EF4444;
-  --error-foreground: #FFFFFF;
-  --info: #3B82F6;
-  --info-foreground: #FFFFFF;
-
-  /* Radius */
-  --radius: 0.5rem;
-
-  /* Glass Effects */
-  --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(226, 232, 240, 0.8);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-}
-
-/* Dark Mode */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0C1222;
-    --foreground: #F1F5F9;
-    --card: #1E293B;
-    --card-foreground: #F1F5F9;
-    --popover: #1E293B;
-    --popover-foreground: #F1F5F9;
-    --muted: #1E293B;
-    --muted-foreground: #94A3B8;
-    --accent: #92400E;
-    --accent-foreground: #FEF3C7;
-    --primary: #F1F5F9;
-    --primary-foreground: #0C1222;
-    --secondary: #334155;
-    --secondary-foreground: #F1F5F9;
-    --border: #334155;
-    --input: #334155;
-    --glass-bg: rgba(30, 41, 59, 0.85);
-    --glass-border: rgba(51, 65, 85, 0.8);
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  }
-}
-
 /* ===== BASE STYLES ===== */
-body {
-  font-family: var(--font-sans);
-  background-color: var(--background);
-  color: var(--foreground);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--background);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }
 
 /* Pearl Gradient Background */

@@ -268,7 +268,7 @@ export default function EventsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Events</h1>
+        <h1 className="text-2xl font-bold text-foreground">Events</h1>
         <Button
           onClick={() => { resetForm(); setShowModal(true); }}
           className="touch-target"
@@ -282,15 +282,15 @@ export default function EventsPage() {
       <Button
         onClick={() => { resetForm(); setShowModal(true); }}
         size="icon"
-        className="fab bg-amber-500 text-white sm:hidden fixed bottom-6 right-6"
+        className="fab bg-muted0 text-white sm:hidden fixed bottom-6 right-6"
         aria-label="Buat Event Baru"
       >
         <Plus className="w-6 h-6" />
       </Button>
 
       {selectedIds.length > 0 && (
-        <div className="glass-card mb-4 p-3 flex items-center justify-between">
-          <span className="text-sm text-slate-800 font-medium">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl mb-4 p-3 flex items-center justify-between">
+          <span className="text-sm text-foreground font-medium">
             {selectedIds.length} item dipilih
           </span>
           <div className="flex gap-2">
@@ -311,29 +311,29 @@ export default function EventsPage() {
       )}
 
       {loading ? (
-        <div className="glass-card p-4 space-y-3">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4 space-y-3">
           <div className="skeleton skeleton-title"></div>
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="skeleton skeleton-table-row"></div>
           ))}
         </div>
       ) : events.length === 0 ? (
-        <div className="glass-card p-16 text-center">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-16 text-center">
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-6 shadow-inner">
-            <Calendar className="w-10 h-10 text-amber-600" />
+            <Calendar className="w-10 h-10 text-primary" />
           </div>
-          <h3 className="text-2xl font-bold text-slate-800 mb-3">Belum ada event</h3>
-          <p className="text-base text-slate-500 mb-8 max-w-sm mx-auto">Buat event pertama Anda untuk memulai mengelola proyek fotografi dengan mudah.</p>
+          <h3 className="text-2xl font-bold text-foreground mb-3">Belum ada event</h3>
+          <p className="text-base text-muted-foreground mb-8 max-w-sm mx-auto">Buat event pertama Anda untuk memulai mengelola proyek fotografi dengan mudah.</p>
           <Button onClick={() => setShowModal(true)} size="lg">
             <Plus className="w-5 h-5 mr-2" />
             Buat Event Baru
           </Button>
         </div>
       ) : (
-        <div className="glass-card overflow-hidden">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl overflow-hidden">
           <div className="table-mobile-scroll">
             <table className="w-full">
-            <thead className="bg-amber-50/50 border-b border-champagne-100">
+            <thead className="bg-muted/30 border-b border-border">
               <tr>
                 <th className="px-4 py-3 text-left">
                   <Checkbox
@@ -341,19 +341,19 @@ export default function EventsPage() {
                     onCheckedChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Kode</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Project</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Client</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Tanggal</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Pembayaran</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Total</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Aksi</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Kode</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Project</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Client</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Tanggal</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Pembayaran</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Total</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-champagne-100">
               {events.map((event) => (
-                <tr key={event.id} className={`hover:bg-amber-50/30 transition-smooth ${selectedIds.includes(event.id) ? 'bg-amber-50' : ''}`}>
+                <tr key={event.id} className={`hover:bg-muted/20 transition-smooth ${selectedIds.includes(event.id) ? 'bg-muted' : ''}`}>
                   <td className="px-4 py-4">
                     <Checkbox
                       checked={selectedIds.includes(event.id)}
@@ -361,13 +361,13 @@ export default function EventsPage() {
                     />
                   </td>
                   <td className="px-4 py-4">
-                    <Link href={`/admin/events/${event.id}`} className="text-amber-600 hover:underline font-medium cursor-pointer">
+                    <Link href={`/admin/events/${event.id}`} className="text-primary hover:underline font-medium cursor-pointer">
                       {event.kodeBooking}
                     </Link>
                   </td>
-                  <td className="px-4 py-4 text-slate-800">{event.namaProject}</td>
-                  <td className="px-4 py-4 text-slate-500">{event.client?.nama || '-'}</td>
-                  <td className="px-4 py-4 text-slate-500">
+                  <td className="px-4 py-4 text-foreground">{event.namaProject}</td>
+                  <td className="px-4 py-4 text-muted-foreground">{event.client?.nama || '-'}</td>
+                  <td className="px-4 py-4 text-muted-foreground">
                     {new Date(event.eventDate).toLocaleDateString('id-ID')}
                   </td>
                   <td className="px-4 py-4">
@@ -380,7 +380,7 @@ export default function EventsPage() {
                       {event.paymentStatus}
                     </Badge>
                   </td>
-                  <td className="px-4 py-4 text-slate-800 font-medium">
+                  <td className="px-4 py-4 text-foreground font-medium">
                     Rp {event.totalPrice.toLocaleString('id-ID')}
                   </td>
                   <td className="px-4 py-4 text-right">
@@ -397,8 +397,8 @@ export default function EventsPage() {
           
           {/* Pagination */}
           {pagination.pages > 1 && (
-            <div className="flex items-center justify-between px-4 py-4 border-t border-champagne-100">
-              <div className="text-sm text-slate-500">
+            <div className="flex items-center justify-between px-4 py-4 border-t border-border">
+              <div className="text-sm text-muted-foreground">
                 Menampilkan {events.length} dari {pagination.total} event
               </div>
               <div className="flex items-center gap-2">
@@ -410,7 +410,7 @@ export default function EventsPage() {
                 >
                   ← Prev
                 </Button>
-                <span className="text-sm text-slate-600">
+                <span className="text-sm text-muted-foreground">
                   Halaman {pagination.page} dari {pagination.pages}
                 </span>
                 <Button
@@ -438,7 +438,7 @@ export default function EventsPage() {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Nama Project</label>
+              <label className="block text-sm font-semibold text-foreground mb-2">Nama Project</label>
               <Input
                 required
                 value={formData.namaProject}
@@ -447,7 +447,7 @@ export default function EventsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Pilih Client</label>
+              <label className="block text-sm font-semibold text-foreground mb-2">Pilih Client</label>
               <Select value={formData.clientId} onValueChange={(v) => setFormData({ ...formData, clientId: v || '' })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih client..." />
@@ -461,7 +461,7 @@ export default function EventsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Tanggal Event</label>
+                <label className="block text-sm font-semibold text-foreground mb-2">Tanggal Event</label>
                 <Input
                   type="date"
                   required
@@ -470,7 +470,7 @@ export default function EventsPage() {
                 />
               </div>
               <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Lokasi</label>
+              <label className="block text-sm font-semibold text-foreground mb-2">Lokasi</label>
               <Input
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
@@ -479,7 +479,7 @@ export default function EventsPage() {
             </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Paket</label>
+              <label className="block text-sm font-semibold text-foreground mb-2">Paket</label>
               <Select value={formData.packageId} onValueChange={handlePackageChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih paket..." />
@@ -492,7 +492,7 @@ export default function EventsPage() {
               </Select>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Total Harga</label>
+              <label className="block text-sm font-semibold text-foreground mb-2">Total Harga</label>
               <Input
                 type="number"
                 value={formData.totalPrice}
@@ -501,12 +501,12 @@ export default function EventsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Catatan</label>
+              <label className="block text-sm font-semibold text-foreground mb-2">Catatan</label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 resize-none"
+                className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 resize-none"
                 placeholder="Catatan tambahan..."
               />
             </div>
@@ -545,7 +545,7 @@ export default function EventsPage() {
               <Button type="button" variant="outline" onClick={() => { setShowModal(false); resetForm(); }}>
                 Batal
               </Button>
-              <Button type="submit" disabled={submitting} className="bg-amber-500 hover:bg-amber-600">
+              <Button type="submit" disabled={submitting} className="bg-muted0 hover:bg-amber-600">
                 {submitting ? 'Menyimpan...' : editingEvent ? 'Simpan Perubahan' : 'Buat Event'}
               </Button>
             </DialogFooter>
@@ -561,12 +561,12 @@ export default function EventsPage() {
           </DialogHeader>
           
           {bulkAction === 'delete' ? (
-            <p className="text-slate-500">
+            <p className="text-muted-foreground">
               Yakin hapus {selectedIds.length} event ini? Tindakan ini tidak dapat dibatalkan.
             </p>
           ) : (
             <div className="mb-4">
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
+              <label className="block text-sm font-semibold text-foreground mb-2">
                 {bulkAction === 'status' ? 'Status Baru' : 'Status Pembayaran Baru'}
               </label>
               <Select value={bulkValue} onValueChange={(v) => setBulkValue(v || '')}>
