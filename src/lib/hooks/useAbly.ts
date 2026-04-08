@@ -2,14 +2,14 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Ably from 'ably';
-import { env } from '@/lib/env';
+
 
 let ablyClient: Ably.Realtime | null = null;
 let connectionListeners = 0;
 
 function getClient(): Ably.Realtime {
   if (!ablyClient) {
-    const key = env.NEXT_PUBLIC_ABLY_API_KEY;
+    const key = process.env.NEXT_PUBLIC_ABLY_API_KEY;
     if (!key) {
       throw new Error('NEXT_PUBLIC_ABLY_API_KEY is not configured');
     }
@@ -59,7 +59,7 @@ export function useSelectionSubscription(galleryId: string, onUpdate: (update: S
   }, [onUpdate]);
 
   useEffect(() => {
-    if (!galleryId || !env.NEXT_PUBLIC_ABLY_API_KEY) return;
+    if (!galleryId || !process.env.NEXT_PUBLIC_ABLY_API_KEY) return;
 
     const client = getClient();
     const channel = client.channels.get(`photostudio:selections:${galleryId}`);
@@ -89,7 +89,7 @@ export function useViewCountSubscription(galleryId: string, onUpdate: (count: nu
   }, [onUpdate]);
 
   useEffect(() => {
-    if (!galleryId || !env.NEXT_PUBLIC_ABLY_API_KEY) return;
+    if (!galleryId || !process.env.NEXT_PUBLIC_ABLY_API_KEY) return;
 
     const client = getClient();
     const channel = client.channels.get(`photostudio:views:${galleryId}`);
@@ -119,7 +119,7 @@ export function useNotificationSubscription(userId: string, onNotification: (not
   }, [onNotification]);
 
   useEffect(() => {
-    if (!userId || !env.NEXT_PUBLIC_ABLY_API_KEY) return;
+    if (!userId || !process.env.NEXT_PUBLIC_ABLY_API_KEY) return;
 
     const client = getClient();
     const channel = client.channels.get(`photostudio:notifications:${userId}`);
@@ -149,7 +149,7 @@ export function useBookingUpdates(onUpdate: (update: BookingUpdate) => void) {
   }, [onUpdate]);
 
   useEffect(() => {
-    if (!env.NEXT_PUBLIC_ABLY_API_KEY) return;
+    if (!process.env.NEXT_PUBLIC_ABLY_API_KEY) return;
 
     const client = getClient();
     const channel = client.channels.get('photostudio:bookings');
@@ -179,7 +179,7 @@ export function usePaymentUpdates(onUpdate: (update: PaymentUpdate) => void) {
   }, [onUpdate]);
 
   useEffect(() => {
-    if (!env.NEXT_PUBLIC_ABLY_API_KEY) return;
+    if (!process.env.NEXT_PUBLIC_ABLY_API_KEY) return;
 
     const client = getClient();
     const channel = client.channels.get('photostudio:payments');
@@ -209,7 +209,7 @@ export function useAblyConnection() {
   } | null>(null);
 
   useEffect(() => {
-    if (!env.NEXT_PUBLIC_ABLY_API_KEY) return;
+    if (!process.env.NEXT_PUBLIC_ABLY_API_KEY) return;
 
     const client = getClient();
     

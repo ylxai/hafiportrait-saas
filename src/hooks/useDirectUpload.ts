@@ -172,12 +172,12 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         signal: abortController.signal,
       });
 
+      const presignedData = await presignedRes.json();
       if (!presignedRes.ok) {
-        const errorData = await presignedRes.json().catch(() => ({}));
-        throw new Error(errorData.error || `Server error: ${presignedRes.status}`);
+        throw new Error(presignedData.error || `Server error: ${presignedRes.status}`);
       }
 
-      const { presignedUrl, publicUrl, r2Key, uploadId } = await presignedRes.json();
+      const { presignedUrl, publicUrl, r2Key, uploadId } = presignedData.data || presignedData;
 
       // Update status: Uploading
       updateFileStatus(uploadFile.id, { status: 'uploading', progress: 10 });
@@ -211,12 +211,12 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         signal: abortController.signal,
       });
 
+      const completeData = await completeRes.json();
       if (!completeRes.ok) {
-        const errorData = await completeRes.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Thumbnail generation failed');
+        throw new Error(completeData.error || 'Thumbnail generation failed');
       }
 
-      const { photo } = await completeRes.json();
+      const { photo } = completeData.data || completeData;
 
       // Update status: Completed
       updateFileStatus(uploadFile.id, {

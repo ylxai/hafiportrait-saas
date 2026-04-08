@@ -1,4 +1,3 @@
-import { env } from '@/lib/env';
 
 /**
  * Generate Cloudinary fetch URL from R2 public URL
@@ -24,7 +23,7 @@ export function getCloudinaryThumbnailUrl(
     format = 'auto' 
   } = options;
 
-  const cloudName = env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   
   if (!cloudName) {
     console.error('Cloudinary cloud name not configured');
