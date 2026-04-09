@@ -1,0 +1,15 @@
+# Konfigurasi Gemini Code Assist untuk Repositori PhotoStudio SaaS
+ignore_patterns:
+  - "node_modules/**"
+  - ".next/**"
+  - "dist/**"
+  - ".husky/**"
+  - "test-results/**"
+  - "playwright-report/**"
+  - "**/*.spec.ts"
+  - "scripts/**"
+
+code_review:
+  comment_severity_threshold: LOW
+  have_fun: true
+  disable: false
