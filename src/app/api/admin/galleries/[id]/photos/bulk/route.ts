@@ -2,8 +2,7 @@ import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { deletionQueue } from '@/lib/queue';
-import { queueStorageDeletion, isQueueConfigured } from '@/lib/cloudflare-queue';
+import { queueStorageDeletionBulk, isQueueConfigured } from '@/lib/cloudflare-queue';
 
 export async function POST(
   request: Request,
@@ -54,54 +53,35 @@ export async function POST(
     } : null;
 
     // Prepare jobs for queues
-    const bullMQJobs = [];
+    const deletionJobs = [];
 
     for (const photo of photos) {
       if (photo.r2Key || photo.thumbnailUrl) {
-        const deletionData = {
+        deletionJobs.push({
           photoId: photo.id,
           r2Key: photo.r2Key,
           thumbnailUrl: photo.thumbnailUrl,
           storageAccountId: photo.storageAccountId,
           fileSize: photo.fileSize ? Number(photo.fileSize) : undefined,
           cloudinaryCredentials,
-        };
-
-        // Try Cloudflare Queue first
-        if (isQueueConfigured()) {
-          try {
-            await queueStorageDeletion(deletionData);
-          } catch (cfError) {
-            console.error(`[Delete] Cloudflare Queue error for ${photo.id}:`, cfError);
-          }
-        }
-
-        // Always add to BullMQ array for fallback/local
-        bullMQJobs.push({
-          name: 'delete-photo',
-          data: {
-            photoId: photo.id,
-            r2Key: photo.r2Key,
-            thumbnailUrl: photo.thumbnailUrl,
-            storageAccountId: photo.storageAccountId,
-            fileSize: photo.fileSize?.toString(),
-            cloudinaryCredentials,
-          },
-          opts: {
-            attempts: 3,
-            backoff: { type: 'exponential', delay: 2000 },
-          }
         });
       }
     }
 
-    // Add all to BullMQ in bulk
-    if (bullMQJobs.length > 0) {
-      try {
-        await deletionQueue.addBulk(bullMQJobs as unknown as Parameters<typeof deletionQueue.addBulk>[0]);
-        console.log(`[Delete] Queued ${bullMQJobs.length} bulk deletions to BullMQ`);
-      } catch (bullMQError) {
-        console.error(`[Delete] BullMQ bulk add failed:`, bullMQError);
+    if (deletionJobs.length > 0) {
+      if (isQueueConfigured()) {
+        try {
+          const result = await queueStorageDeletionBulk(deletionJobs);
+          if (result.success) {
+            console.log(`[Delete] Queued ${deletionJobs.length} deletions to Cloudflare Queue`);
+          } else {
+            console.error(`[Delete] Cloudflare Queue bulk error:`, result.error);
+          }
+        } catch (cfError) {
+          console.error(`[Delete] Cloudflare Queue bulk error:`, cfError);
+        }
+      } else {
+        console.warn(`[Delete] Cloudflare Queue not configured. Storage cleanup skipped for ${deletionJobs.length} photos`);
       }
     }
 

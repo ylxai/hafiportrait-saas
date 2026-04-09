@@ -219,3 +219,17 @@ model StorageAccount {
   @@index([provider, isActive])
   @@index([isDefault])
 }
+
+model UploadSession {
+  id              String   @id // The uploadId (UUID)
+  galleryId       String
+  r2Key           String
+  filename        String
+  fileSize        BigInt
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+  storageAccountId String?
+  
+  @@index([createdAt])
+  @@index([galleryId])
+}

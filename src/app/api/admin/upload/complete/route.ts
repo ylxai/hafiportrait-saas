@@ -1,5 +1,5 @@
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
-import { verifyR2Upload, updateUploadProgress, cleanupUploadSession } from '@/lib/upload/presigned';
+import { verifyR2Upload, cleanupUploadSession } from '@/lib/upload/presigned';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
@@ -59,12 +59,6 @@ export async function POST(request: Request) {
       await updateStorageUsage(storageAccountId, BigInt(fileSize));
     }
 
-    // Update progress: Completed
-    await updateUploadProgress(uploadId, {
-      status: 'completed',
-      progress: 100,
-    });
-
     // Notify client via Ably
     await publishPhotoUploaded(galleryId, {
       photoId: photo.id,
@@ -72,8 +66,8 @@ export async function POST(request: Request) {
       thumbnailUrl: null, // Will be generated on-demand
     });
 
-    // Cleanup session setelah 5 menit
-    setTimeout(() => cleanupUploadSession(uploadId), 300000);
+    // Cleanup session
+    await cleanupUploadSession(uploadId);
 
     return successResponse({
       photo: {
@@ -89,29 +83,5 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error completing upload:', error);
     return serverErrorResponse('Failed to complete upload');
-  }
-}
-
-// Get upload progress
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const uploadId = searchParams.get('uploadId');
-
-    if (!uploadId) {
-      return errorResponse('Upload ID required', 400);
-    }
-
-    const { getUploadProgress } = await import('@/lib/upload/presigned');
-    const progress = await getUploadProgress(uploadId);
-
-    if (!progress) {
-      return errorResponse('Upload not found', 404);
-    }
-
-    return successResponse({ progress });
-  } catch (error) {
-    console.error('Error getting upload progress:', error);
-    return serverErrorResponse('Failed to get upload progress');
   }
 }

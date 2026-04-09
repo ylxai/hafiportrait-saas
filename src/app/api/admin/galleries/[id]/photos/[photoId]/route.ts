@@ -2,7 +2,6 @@ import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { deletionQueue } from '@/lib/queue';
 import { queueStorageDeletion, isQueueConfigured } from '@/lib/cloudflare-queue';
 
 export async function DELETE(
@@ -62,40 +61,19 @@ export async function DELETE(
         cloudinaryCredentials,
       };
 
-      // Try Cloudflare Queue first (for production on Vercel)
       if (isQueueConfigured()) {
         try {
           const result = await queueStorageDeletion(deletionData);
           if (result.success) {
             console.log(`[Delete] Queued to Cloudflare for photo ${photoId}`);
           } else {
-            console.warn(`[Delete] Cloudflare Queue failed, trying BullMQ: ${result.error}`);
+            console.error(`[Delete] Cloudflare Queue failed: ${result.error}`);
           }
         } catch (cfError) {
           console.error(`[Delete] Cloudflare Queue error:`, cfError);
         }
-      }
-      
-      // Fallback to BullMQ (for local development or if Cloudflare fails)
-      try {
-        await deletionQueue.add('delete-photo', {
-          photoId: photo.id,
-          r2Key: photo.r2Key,
-          thumbnailUrl: photo.thumbnailUrl,
-          storageAccountId: photo.storageAccountId,
-          fileSize: photo.fileSize?.toString(),
-          // Cloudinary credentials untuk BullMQ worker
-          cloudinaryCredentials,
-        }, {
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 2000,
-          },
-        });
-        console.log(`[Delete] Queued to BullMQ for photo ${photoId}`);
-      } catch (bullMQError) {
-        console.error(`[Delete] BullMQ also failed:`, bullMQError);
+      } else {
+        console.warn('[Delete] Cloudflare Queue not configured. Storage will not be cleaned up.');
       }
     }
 

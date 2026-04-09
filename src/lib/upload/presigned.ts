@@ -1,7 +1,6 @@
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getR2Client, R2Credentials } from '@/lib/storage/r2';
-import { redis } from '@/lib/redis';
 import { prisma } from '@/lib/db';
 
 // Get R2 account credentials from database
@@ -99,17 +98,17 @@ export async function generatePresignedUploadUrl(
   
   const publicUrl = `${credentials.publicUrl}/${r2Key}`;
   
-  // Simpan upload session di Redis (30 menit)
-  await redis.setex(`upload:${uploadId}`, 1800, JSON.stringify({
-    r2Key,
-    filename,
-    contentType,
-    galleryId,
-    publicUrl,
-    storageAccountId: actualAccountId,
-    status: 'pending',
-    createdAt: Date.now(),
-  }));
+  // Simpan upload session di PostgreSQL
+  await prisma.uploadSession.create({
+    data: {
+      id: uploadId,
+      r2Key,
+      filename,
+      galleryId,
+      fileSize: 0,
+      storageAccountId: actualAccountId,
+    },
+  });
   
   return { presignedUrl, publicUrl, r2Key, uploadId, r2AccountId: actualAccountId };
 }
@@ -118,8 +117,8 @@ export async function generatePresignedUploadUrl(
 export async function verifyR2Upload(
   uploadId: string,
   fileSize: number,
-  width?: number,
-  height?: number
+  _width?: number,
+  _height?: number
 ): Promise<{
   success: boolean;
   r2Key?: string;
@@ -129,74 +128,47 @@ export async function verifyR2Upload(
   storageAccountId?: string | null;
   error?: string;
 }> {
-  const sessionData = await redis.get(`upload:${uploadId}`);
+  const session = await prisma.uploadSession.findUnique({
+    where: { id: uploadId },
+  });
   
-  if (!sessionData) {
+  if (!session) {
     return { success: false, error: 'Upload session expired or not found' };
   }
   
-  const session = JSON.parse(sessionData);
-  
-  // Update session dengan info file
-  session.status = 'completed';
-  session.fileSize = fileSize;
-  session.width = width;
-  session.height = height;
-  session.completedAt = Date.now();
-  
-  await redis.setex(`upload:${uploadId}`, 3600, JSON.stringify(session)); // Extend to 1 hour
+  await prisma.uploadSession.update({
+    where: { id: uploadId },
+    data: {
+      fileSize: BigInt(Math.floor(fileSize)),
+      completedAt: new Date(),
+    }
+  });
+
+  // Karena publicUrl tidak disimpan di UploadSession untuk menghemat ruang,
+  // kita dapat menyusun ulang publicUrl atau mengandalkan return r2Key.
+  // Untuk ini, mari kita asumsikan publicUrl dibutuhkan, maka kita ambil credentials r2:
+  const credentialsResult = await getR2Credentials(session.storageAccountId || undefined);
+  const publicUrl = `${credentialsResult.credentials.publicUrl}/${session.r2Key}`;
   
   return {
     success: true,
     r2Key: session.r2Key,
-    publicUrl: session.publicUrl,
+    publicUrl: publicUrl,
     filename: session.filename,
     galleryId: session.galleryId,
     storageAccountId: session.storageAccountId,
   };
 }
 
-// Get upload progress
-export async function getUploadProgress(uploadId: string): Promise<{
-  status: 'pending' | 'completed' | 'processing' | 'failed';
-  progress?: number;
-  thumbnailUrl?: string;
-  error?: string;
-} | null> {
-  const data = await redis.get(`upload:${uploadId}`);
-  if (!data) return null;
-  
-  const session = JSON.parse(data);
-  return {
-    status: session.status,
-    progress: session.progress,
-    thumbnailUrl: session.thumbnailUrl,
-    error: session.error,
-  };
-}
-
-// Update upload progress (for thumbnail generation)
-export async function updateUploadProgress(
-  uploadId: string,
-  updates: {
-    status?: 'pending' | 'completed' | 'processing' | 'failed';
-    progress?: number;
-    thumbnailUrl?: string;
-    error?: string;
-  }
-): Promise<void> {
-  const data = await redis.get(`upload:${uploadId}`);
-  if (!data) return;
-  
-  const session = JSON.parse(data);
-  Object.assign(session, updates);
-  
-  await redis.setex(`upload:${uploadId}`, 3600, JSON.stringify(session));
-}
-
 // Cleanup upload session
 export async function cleanupUploadSession(uploadId: string): Promise<void> {
-  await redis.del(`upload:${uploadId}`);
+  try {
+    await prisma.uploadSession.delete({
+      where: { id: uploadId }
+    });
+  } catch (_error) {
+    // Ignore error if already deleted
+  }
 }
 
 // Delete file dari R2
