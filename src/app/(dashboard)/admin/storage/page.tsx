@@ -357,17 +357,17 @@ export default function StorageAccountsPage() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => handleToggleActive(account)}
+                      onClick={() => { void handleToggleActive(account); }}
                       className={`text-xs px-2 py-1 rounded cursor-pointer ${account.isActive ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
                     >
                       {account.isActive ? 'Aktif' : 'Nonaktif'}
                     </button>
-                    <button type="button" onClick={() => openRotationModal(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Key Rotation</button>
+                    <button type="button" onClick={() => { openRotationModal(account); }} className="text-xs text-blue-600 hover:underline cursor-pointer">Key Rotation</button>
                     {!account.isDefault && (
-                      <button type="button" onClick={() => handleSetDefault(account)} className="text-xs text-primary hover:underline cursor-pointer">Jadikan Default</button>
+                      <button type="button" onClick={() => { void handleSetDefault(account); }} className="text-xs text-primary hover:underline cursor-pointer">Jadikan Default</button>
                     )}
-                    <button type="button" onClick={() => openEdit(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Edit</button>
-                    <button type="button" onClick={() => handleDelete(account.id)} className="text-xs text-red-600 hover:underline cursor-pointer">Hapus</button>
+                    <button type="button" onClick={() => { openEdit(account); }} className="text-xs text-blue-600 hover:underline cursor-pointer">Edit</button>
+                    <button type="button" onClick={() => { void handleDelete(account.id); }} className="text-xs text-red-600 hover:underline cursor-pointer">Hapus</button>
                   </div>
                 </div>
               ))}
@@ -408,17 +408,17 @@ export default function StorageAccountsPage() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => handleToggleActive(account)}
+                      onClick={() => { void handleToggleActive(account); }}
                       className={`text-xs px-2 py-1 rounded cursor-pointer ${account.isActive ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
                     >
                       {account.isActive ? 'Aktif' : 'Nonaktif'}
                     </button>
-                    <button type="button" onClick={() => openRotationModal(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Key Rotation</button>
+                    <button type="button" onClick={() => { openRotationModal(account); }} className="text-xs text-blue-600 hover:underline cursor-pointer">Key Rotation</button>
                     {!account.isDefault && (
-                      <button type="button" onClick={() => handleSetDefault(account)} className="text-xs text-primary hover:underline cursor-pointer">Jadikan Default</button>
+                      <button type="button" onClick={() => { void handleSetDefault(account); }} className="text-xs text-primary hover:underline cursor-pointer">Jadikan Default</button>
                     )}
-                    <button type="button" onClick={() => openEdit(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Edit</button>
-                    <button type="button" onClick={() => handleDelete(account.id)} className="text-xs text-red-600 hover:underline cursor-pointer">Hapus</button>
+                    <button type="button" onClick={() => { openEdit(account); }} className="text-xs text-blue-600 hover:underline cursor-pointer">Edit</button>
+                    <button type="button" onClick={() => { void handleDelete(account.id); }} className="text-xs text-red-600 hover:underline cursor-pointer">Hapus</button>
                   </div>
                 </div>
               ))}

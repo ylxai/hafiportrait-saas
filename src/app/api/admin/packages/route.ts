@@ -19,10 +19,10 @@ export async function GET(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(request.url);
-    const pageRaw = parseInt(searchParams.get('page') || '1', 10);
-    const page = isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
-    const limitRaw = parseInt(searchParams.get('limit') || '20', 10);
-    const limit = isNaN(limitRaw) ? 20 : Math.min(100, Math.max(1, limitRaw));
+    const pageRaw = parseInt(searchParams.get('page') ?? '1', 10);
+    const page = Number.isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
+    const limitRaw = parseInt(searchParams.get('limit') ?? '20', 10);
+    const limit = Number.isNaN(limitRaw) ? 20 : Math.min(100, Math.max(1, limitRaw));
     const skip = (page - 1) * limit;
 
     const [packages, total] = await Promise.all([

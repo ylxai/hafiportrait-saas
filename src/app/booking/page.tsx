@@ -89,7 +89,7 @@ export default function BookingPage() {
           <p className="text-muted-foreground text-sm">Isi form di bawah untuk booking sesi foto</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-card text-foreground rounded-xl shadow-sm border border-border p-4 sm:p-6 space-y-5">
+        <form onSubmit={(e) => { void handleSubmit(e); }} className="bg-card text-foreground rounded-xl shadow-sm border border-border p-4 sm:p-6 space-y-5">
           {/* Package Selection */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Pilih Paket</label>

@@ -27,10 +27,10 @@ export async function GET(
 
     const { id: galleryId } = await params;
     const { searchParams } = new URL(request.url);
-    const pageRaw = parseInt(searchParams.get('page') || '1', 10);
-    const page = isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
+    const pageRaw = parseInt(searchParams.get('page') ?? '1', 10);
+    const page = Number.isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
     const limitRaw = parseInt(searchParams.get('limit') || '50', 10);
-    const limit = isNaN(limitRaw) ? 50 : Math.min(100, Math.max(1, limitRaw));
+    const limit = Number.isNaN(limitRaw) ? 50 : Math.min(100, Math.max(1, limitRaw));
     const skip = (page - 1) * limit;
 
     const [photos, total] = await Promise.all([
