@@ -49,7 +49,7 @@ export function PhotoImage({
   }
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${fill ? 'w-full h-full' : ''} ${className}`}>
       {isLoading && (
         <div className="absolute inset-0 bg-muted flex items-center justify-center z-10 rounded-lg">
           <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
