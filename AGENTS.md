@@ -14,21 +14,21 @@ npm run build            # Production build (lint + typecheck + build)
 npm run lint             # ESLint only
 npm run db:push          # Push Prisma schema to DB
 npm run db:generate      # Generate Prisma client
-npm run workers          # Start background workers (dev)
-npm run workers:prod     # Start workers (production)
+npm run workers          # Start background workers (dev) - Note: Migrating to Cloudflare Edge Workers
+npm run workers:prod     # Start workers (production) - Note: Migrating to Cloudflare Edge Workers
 ```
 
-## Critical UI Conventions
+## Critical UI Conventions (Aura Noir Theme)
 
 ```tsx
-// ALWAYS use slate, NEVER gray
-text-slate-800 / text-slate-500 / bg-slate-50
+// ALWAYS use semantic OKLCH colors for Aura Noir (The OLED Luxury)
+text-foreground / text-muted-foreground / bg-background / bg-card / bg-card-hover
 
-// Primary actions use amber
-bg-amber-500 / focus:ring-amber-500/20
+// Primary actions
+bg-primary / text-primary-foreground / hover:bg-primary/90
 
 // Native inputs need explicit styling
-<input className="border border-slate-300 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20" />
+<input className="border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground" />
 
 // Dialog uses @base-ui/react (NOT Radix)
 import { Dialog } from '@/components/ui/dialog'
@@ -43,39 +43,34 @@ import { Dialog } from '@/components/ui/dialog'
 | `src/app/api/admin/` | Admin API routes |
 | `src/app/api/public/` | Public API routes |
 | `src/components/ui/` | shadcn/ui components (base-ui based) |
-| `src/lib/workers.ts` | BullMQ workers (separate process) |
+| `workers/` | Cloudflare Edge Workers (planned migration for background tasks) |
 | `prisma/schema.prisma` | Database schema |
-| `docs/` | **Excluded from build** - Documentation only (cloudflare-example, deployment guides)
+| `docs/` | **Excluded from build** - Documentation only (Migration guides, Design proposals) |
 
-## Worker Deployment (CRITICAL)
+## Background Jobs & Worker Deployment (CRITICAL)
 
-**Workers MUST run as separate process from Next.js.**
+**Currently migrating from PM2/BullMQ local workers to Cloudflare Queues + Cloudflare Workers (Native Edge).**
 
-```bash
-# Development - need TWO terminals
-npm run dev          # Terminal 1: Web
-npm run workers      # Terminal 2: Workers
-
-# Production with PM2 (recommended)
-pm install -g pm2
-pm2 start ecosystem.config.js
-```
-
-**Why separate?** Workers continue processing if web crashes. Can scale independently.
+See `docs/CLOUDFLARE_EDGE_MIGRATION.md` and `docs/EXPERT_BACKGROUND_JOBS.md` for details.
+- Background tasks (like deleting photos from R2/Cloudinary) will be handled by Cloudflare Edge Workers.
+- Next.js acts as the Publisher, sending messages to Cloudflare Queues via HTTP POST.
 
 ## Dual Storage Architecture
 
 - **Cloudinary**: Thumbnails only
 - **R2 (Cloudflare)**: Original files
 
+**Credentials Configuration**:
+- Storage credentials (Cloudinary, R2) are **dynamically loaded from the PostgreSQL database** (`StorageAccount` table), NOT exclusively from `.env`. This allows multiple storage accounts to be configured and managed via the Admin Dashboard.
+
 **Direct Upload Flow** (no chunking):
 1. Client requests presigned URL from API
 2. Client uploads directly to R2 (bypass server)
-3. Worker processes thumbnail generation asynchronously
+3. Worker processes thumbnail generation asynchronously / Client notifies webhook
 
 **Photo Deletion**:
 - API immediately deletes from database
-- Storage cleanup (R2 + Cloudinary) queued for background processing
+- Storage cleanup (R2 + Cloudinary) is queued for background processing (Cloudflare Queues planned)
 - This prevents API blocking and provides retry on failure
 
 ## Database - BigInt Serialization
@@ -106,16 +101,16 @@ return {
 GET /api/admin/events?page=1&limit=20
 
 // Response format:
-{ data: [...], pagination: { page: 1, limit: 20, total: 150, pages: 8 } }
+{ data: { events: [...] }, pagination: { page: 1, limit: 20, total: 150, pages: 8 } }
 ```
+*(Note: API responses are typically wrapped in a `data` object via the `successResponse` utility).*
 
 ## Environment Variables Required
 
 ```env
 DATABASE_URL=postgresql://...
-REDIS_URL=redis://...           # For queues
-R2_*=...                        # Cloudflare R2 credentials
-CLOUDINARY_*=...                # Cloudinary credentials
+# REDIS_URL=redis://...         # Deprecated/Migrating out (used for BullMQ)
+CLOUDFLARE_API_TOKEN=...        # Required for Wrangler & Queues (Use .dev.vars for Worker isolation)
 ABLY_API_KEY=...                # Real-time notifications
 NEXTAUTH_SECRET=...             # Auth
 ```
@@ -126,15 +121,12 @@ NEXTAUTH_SECRET=...             # Auth
 npm run lint && npm run build
 ```
 
-No test framework configured. Build + lint success = ready to commit.
+No test framework configured for CI. Playwright is used for interactive/manual UI tests. Build + lint success = ready to commit.
 
 ## Key Files Reference
 
+- `/docs/DESIGN_PROPOSAL_2026.md` - Aura Noir UI/UX design specifications
+- `/docs/CLOUDFLARE_EDGE_MIGRATION.md` - Cloudflare Worker edge migration plan
 - `/src/lib/upload/presigned.ts` - R2 presigned URL generation
 - `/src/hooks/useDirectUpload.ts` - Frontend upload hook with retry logic
 - `/src/components/upload/UploadManager.tsx` - Upload UI component
-- `/ecosystem.config.js` - PM2 configuration for workers
-- `/docs/WORKERS_DEPLOYMENT.md` - Detailed deployment guide
-- `/docs/cloudflare-example/` - Cloudflare integration examples:
-  - **HYBRID**: Next.js VPS + Cloudflare Workers (recommended for existing projects)
-  - **FULL**: 100% Cloudflare serverless (greenfield projects)
