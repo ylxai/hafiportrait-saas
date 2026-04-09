@@ -22,12 +22,6 @@ const envSchema = z.object({
   ABLY_API_KEY: z.string().optional(),
   NEXT_PUBLIC_ABLY_API_KEY: z.string().optional(),
   NEXT_PUBLIC_ABLY_CHANNEL_PREFIX: z.string().default('photostudio'),
-  
-  // Redis/Valkey (for queues and caching)
-  REDIS_URL: z.string().optional(),
-  REDIS_HOST: z.string().optional(),
-  REDIS_PORT: z.string().optional(),
-  REDIS_PASSWORD: z.string().optional(),
 });
 
 const parsed = typeof window === 'undefined' ? envSchema.safeParse(process.env) : ({ success: true, data: process.env as unknown as z.infer<typeof envSchema> } as z.SafeParseSuccess<z.infer<typeof envSchema>>);

@@ -4,6 +4,7 @@ import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/r
 import { eventSchema, eventUpdateSchema } from '@/lib/api/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -134,6 +135,8 @@ export async function DELETE(request: Request) {
     if (!id) {
       return errorResponse('Event ID required', 400);
     }
+
+    await queuePhotosDeletionForEntities({ gallery: { eventId: id } });
 
     await prisma.event.delete({ where: { id } });
 

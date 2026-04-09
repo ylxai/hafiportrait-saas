@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -50,6 +51,8 @@ export async function DELETE(request: Request) {
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return errorResponse('IDs required', 400);
     }
+
+    await queuePhotosDeletionForEntities({ galleryId: { in: ids } });
 
     await prisma.gallery.deleteMany({
       where: { id: { in: ids } },

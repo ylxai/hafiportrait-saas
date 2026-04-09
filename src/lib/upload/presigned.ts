@@ -166,7 +166,7 @@ export async function cleanupUploadSession(uploadId: string): Promise<void> {
     await prisma.uploadSession.delete({
       where: { id: uploadId }
     });
-  } catch (_error) {
+  } catch {
     // Ignore error if already deleted
   }
 }

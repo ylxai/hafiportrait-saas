@@ -3,7 +3,7 @@ import { successResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 
-// Simple in-memory cache (in production, use Redis)
+// Simple in-memory cache
 const cache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 

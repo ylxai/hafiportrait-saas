@@ -31,7 +31,7 @@ export async function performPhotoDeletion(data: DeletionJobData): Promise<void>
       r2Deleted = true;
     } catch (error) {
       console.error(`[DeletionWorker] Failed to delete R2 file ${r2Key}:`, error);
-      // Will retry via BullMQ
+      // Will retry via Cloudflare Queue
       throw new Error(`R2 deletion failed: ${error}`);
     }
   }
@@ -58,7 +58,7 @@ export async function performPhotoDeletion(data: DeletionJobData): Promise<void>
       }
     } catch (error) {
       console.error(`[DeletionWorker] Failed to delete Cloudinary file:`, error);
-      // Will retry via BullMQ
+      // Will retry via Cloudflare Queue
       throw new Error(`Cloudinary deletion failed: ${error}`);
     }
   }

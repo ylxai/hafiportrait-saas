@@ -8,6 +8,9 @@
  * - NEXT_SERVER_CF_QUEUE_TOKEN (with Queue write permission)
  */
 
+import { prisma } from '@/lib/db';
+import { Prisma } from '@/generated/prisma';
+
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const API_TOKEN = process.env.NEXT_SERVER_CF_QUEUE_TOKEN;
 
@@ -180,4 +183,48 @@ export async function queueStorageDeletionBulk(dataList: Array<{
  */
 export function isQueueConfigured(): boolean {
   return !!ACCOUNT_ID && !!API_TOKEN;
+}
+
+/**
+ * Queue photos deletion for entities before deleting them from DB.
+ * Use this for bulk deletes or cascading deletes (Gallery, Event, Client)
+ * where deleting the parent entity would orphan files in storage.
+ */
+export async function queuePhotosDeletionForEntities(whereCriteria: Prisma.PhotoWhereInput): Promise<void> {
+  if (!isQueueConfigured()) return;
+  
+  const photos = await prisma.photo.findMany({
+    where: whereCriteria,
+  });
+
+  if (photos.length === 0) return;
+
+  const defaultCloudinaryAccount = await prisma.storageAccount.findFirst({
+    where: { provider: 'CLOUDINARY', isActive: true },
+    orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }],
+  });
+
+  const cloudinaryCredentials = defaultCloudinaryAccount ? {
+    cloudName: defaultCloudinaryAccount.cloudName,
+    apiKey: defaultCloudinaryAccount.apiKey,
+    apiSecret: defaultCloudinaryAccount.apiSecret,
+  } : null;
+
+  const deletionJobs = photos.map(photo => ({
+    photoId: photo.id,
+    r2Key: photo.r2Key,
+    thumbnailUrl: photo.thumbnailUrl,
+    storageAccountId: photo.storageAccountId,
+    fileSize: photo.fileSize ? Number(photo.fileSize) : undefined,
+    cloudinaryCredentials,
+  })).filter(job => job.r2Key || job.thumbnailUrl);
+
+  if (deletionJobs.length > 0) {
+    try {
+      await queueStorageDeletionBulk(deletionJobs);
+      console.log(`[Delete] Queued ${deletionJobs.length} associated photos to Cloudflare Queue`);
+    } catch (cfError) {
+      console.error(`[Delete] Cloudflare Queue bulk error:`, cfError);
+    }
+  }
 }
