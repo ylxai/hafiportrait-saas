@@ -62,7 +62,7 @@ export async function POST(
           r2Key: photo.r2Key,
           thumbnailUrl: photo.thumbnailUrl,
           storageAccountId: photo.storageAccountId,
-          fileSize: photo.fileSize ? Number(photo.fileSize) : undefined,
+          fileSize: photo.fileSize?.toString(),
           cloudinaryCredentials,
         });
       }

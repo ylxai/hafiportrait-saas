@@ -87,3 +87,5 @@ opencode.json
 skills-lock.json
 AGENTS.md
 CLAUDE.md
+
+workers/.dev.vars

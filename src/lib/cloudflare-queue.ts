@@ -128,7 +128,7 @@ export async function queueStorageDeletion(data: {
   photoId: string;
   r2Key?: string | null;
   thumbnailUrl?: string | null;
-  fileSize?: number;
+  fileSize?: string;
   storageAccountId?: string | null;
   cloudinaryCredentials?: {
     cloudName?: string | null;
@@ -155,7 +155,7 @@ export async function queueStorageDeletionBulk(dataList: Array<{
   photoId: string;
   r2Key?: string | null;
   thumbnailUrl?: string | null;
-  fileSize?: number;
+  fileSize?: string;
   storageAccountId?: string | null;
   cloudinaryCredentials?: {
     cloudName?: string | null;
@@ -215,7 +215,7 @@ export async function queuePhotosDeletionForEntities(whereCriteria: Prisma.Photo
     r2Key: photo.r2Key,
     thumbnailUrl: photo.thumbnailUrl,
     storageAccountId: photo.storageAccountId,
-    fileSize: photo.fileSize ? Number(photo.fileSize) : undefined,
+    fileSize: photo.fileSize?.toString(),
     cloudinaryCredentials,
   })).filter(job => job.r2Key || job.thumbnailUrl);
 
