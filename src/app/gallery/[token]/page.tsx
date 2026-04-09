@@ -8,6 +8,8 @@ import Masonry from 'react-masonry-css';
 import YARLightbox from "yet-another-react-lightbox";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import "yet-another-react-lightbox/styles.css";
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import { useSelectionSubscription, useViewCountSubscription, useAblyConnection } from '@/lib/hooks/useAbly';
 import { publishSelectionUpdate } from '@/lib/ably';
 
@@ -107,6 +109,7 @@ export default function GalleryPage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [bannerOpen, setBannerOpen] = useState(true);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
+  const [downloadProgress, setDownloadProgress] = useState<{ active: boolean; current: number; total: number }>({ active: false, current: 0, total: 0 });
 
   const gallery = data?.data?.gallery;
   const photos = useMemo(() => allPhotos.length > 0 ? allPhotos : (gallery?.photos ?? []), [allPhotos, gallery?.photos]);
@@ -195,26 +198,55 @@ export default function GalleryPage() {
     }
   }, [localSelectionCount, submitting, isLocked, token, selectedIds, gallery, mutate]);
 
-  const handleDownload = useCallback(async () => {
-    if (activeSelectedPhotos.length === 0) return;
-    const downloadPromises = activeSelectedPhotos.map(async (photo) => {
-      try {
+  const handleDownloadZip = useCallback(async () => {
+    if (activeSelectedPhotos.length === 0 || downloadProgress.active) return;
+    
+    setDownloadProgress({ active: true, current: 0, total: activeSelectedPhotos.length });
+    const zip = new JSZip();
+    
+    try {
+      for (let i = 0; i < activeSelectedPhotos.length; i++) {
+        const photo = activeSelectedPhotos[i];
+        setDownloadProgress(prev => ({ ...prev, current: i + 1 }));
+        
         const res = await fetch(`/api/public/gallery/${token}/photos/${photo.id}/download`);
         const data = await res.json();
         const url = data.success && data.data?.downloadUrl ? data.data.downloadUrl : photo.url;
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = photo.filename;
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (err) {
-        console.error('Error downloading photo:', err);
+        
+        const imageRes = await fetch(url);
+        const blob = await imageRes.blob();
+        
+        zip.file(photo.filename, blob);
       }
-    });
-    await Promise.all(downloadPromises);
-  }, [activeSelectedPhotos, token]);
+      
+      const content = await zip.generateAsync({ type: 'blob' });
+      saveAs(content, `${gallery?.namaProject || 'gallery'}-selected-photos.zip`);
+    } catch (err) {
+      console.error('Error creating ZIP:', err);
+      alert('Gagal mengunduh ZIP. Silakan coba lagi.');
+    } finally {
+      setDownloadProgress({ active: false, current: 0, total: 0 });
+    }
+  }, [activeSelectedPhotos, token, gallery, downloadProgress.active]);
+
+  const handleDownloadSingle = useCallback(async (photoId: string, filename: string, urlFallback: string) => {
+    try {
+      const res = await fetch(`/api/public/gallery/${token}/photos/${photoId}/download`);
+      const data = await res.json();
+      const url = data.success && data.data?.downloadUrl ? data.data.downloadUrl : urlFallback;
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Error downloading photo:', err);
+      alert('Gagal mengunduh foto.');
+    }
+  }, [token]);
 
   const clearAll = useCallback(() => setSelectedIds(new Set()), []);
   const selectAll = useCallback(() => {
@@ -457,6 +489,19 @@ export default function GalleryPage() {
                             ✕
                           </button>
                         )}
+                        {gallery.enableDownload && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDownloadSingle(photo.id, photo.filename, photo.url); }}
+                            className="absolute bottom-2 right-2 bg-black/60 text-white p-2 rounded-full hover:bg-black/80 flex items-center justify-center backdrop-blur-md"
+                            title="Download foto"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                              <polyline points="7 10 12 15 17 10"></polyline>
+                              <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                          </button>
+                        )}
                       </div>
                     );
                   })}
@@ -464,7 +509,19 @@ export default function GalleryPage() {
                 {isLocked ? (
                   <div className="mt-4 flex gap-2">
                     {gallery.enableDownload && activeSelectedPhotos.length > 0 && (
-                      <button onClick={handleDownload} className="flex-1 py-3 bg-muted text-foreground rounded-lg text-sm font-medium hover:bg-muted">↓ Download Semua</button>
+                      <button onClick={handleDownloadZip} disabled={downloadProgress.active} className="flex-1 py-3 bg-muted text-foreground rounded-lg text-sm font-medium hover:bg-muted disabled:opacity-50 flex justify-center items-center gap-2">
+                        {downloadProgress.active ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            Memproses ZIP ({downloadProgress.current}/{downloadProgress.total})
+                          </>
+                        ) : (
+                          '↓ Download Semua (ZIP)'
+                        )}
+                      </button>
                     )}
                   </div>
                 ) : (
@@ -519,24 +576,38 @@ export default function GalleryPage() {
         slides={photos.map((p) => ({ src: p.url, alt: p.filename }))}
         plugins={[Zoom]}
         carousel={{ finite: false }}
-        toolbar={hasPickspace && !isLocked && photos[lightboxIndex] ? {
+        toolbar={{
           buttons: [
-            <button
-              key="select-button"
-              type="button"
-              aria-label="Pilih foto"
-              onClick={(e) => { e.stopPropagation(); toggleSelect(photos[lightboxIndex].id); }}
-              className={`mr-4 px-4 py-1.5 rounded-full text-sm font-semibold transition-all border ${
-                selectedIds.has(photos[lightboxIndex].id)
-                  ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_15px_rgba(var(--primary),0.5)]'
-                  : 'bg-black/50 text-white border-white/50 hover:bg-white/20'
-              }`}
-            >
-              {selectedIds.has(photos[lightboxIndex].id) ? '✓ Terpilih' : 'Pilih Foto'}
-            </button>,
+            ...(gallery?.enableDownload && photos[lightboxIndex] ? [
+              <button
+                key="download-button"
+                type="button"
+                aria-label="Download foto"
+                onClick={(e) => { e.stopPropagation(); handleDownloadSingle(photos[lightboxIndex].id, photos[lightboxIndex].filename, photos[lightboxIndex].url); }}
+                className="mr-2 px-3 py-1.5 rounded-full text-sm font-semibold transition-all border bg-black/50 text-white border-white/50 hover:bg-white/20 flex items-center gap-2"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span className="hidden sm:inline">Download</span>
+              </button>
+            ] : []),
+            ...(hasPickspace && !isLocked && photos[lightboxIndex] ? [
+              <button
+                key="select-button"
+                type="button"
+                aria-label="Pilih foto"
+                onClick={(e) => { e.stopPropagation(); toggleSelect(photos[lightboxIndex].id); }}
+                className={`mr-4 px-4 py-1.5 rounded-full text-sm font-semibold transition-all border ${
+                  selectedIds.has(photos[lightboxIndex].id)
+                    ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_15px_rgba(var(--primary),0.5)]'
+                    : 'bg-black/50 text-white border-white/50 hover:bg-white/20'
+                }`}
+              >
+                {selectedIds.has(photos[lightboxIndex].id) ? '✓ Terpilih' : 'Pilih Foto'}
+              </button>
+            ] : []),
             "close",
           ],
-        } : undefined}
+        }}
       />
     </div>
   );
