@@ -421,7 +421,7 @@ export default function GalleryPage() {
                         onClick={(e) => { e.stopPropagation(); toggleSelect(photo.id); }}
                         disabled={isLocked || !canSelect}
                         aria-label={isSelected ? 'Batal pilih' : 'Pilih foto'}
-                        className={`absolute top-3 right-3 w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm transition-all shadow-md ${isSelected ? 'bg-primary border-primary text-primary-foreground shadow-[0_0_10px_rgba(var(--primary),0.5)] scale-110' : canSelect ? 'bg-black/40 border-white/50 text-transparent hover:border-white hover:text-white hover:bg-black/60 backdrop-blur-sm' : 'bg-muted/80 border-muted-foreground/30 text-transparent cursor-not-allowed'}`}
+                        className={`absolute top-3 right-3 w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm transition-all shadow-md ${isSelected ? 'bg-primary border-primary text-primary-foreground shadow-[0_0_10px_rgba(224,155,61,0.5)] scale-110' : canSelect ? 'bg-black/40 border-white/50 text-transparent hover:border-white hover:text-white hover:bg-black/60 backdrop-blur-sm' : 'bg-muted/80 border-muted-foreground/30 text-transparent cursor-not-allowed'}`}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
                       </button>
@@ -551,7 +551,7 @@ export default function GalleryPage() {
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="w-full py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 disabled:opacity-50 flex justify-center items-center gap-2 shadow-[0_0_15px_rgba(var(--primary),0.3)] transition-all"
+            className="w-full py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 disabled:opacity-50 flex justify-center items-center gap-2 shadow-[0_0_15px_rgba(224,155,61,0.3)] transition-all"
           >
             {submitting ? (
               <>
@@ -598,7 +598,7 @@ export default function GalleryPage() {
                 onClick={(e) => { e.stopPropagation(); toggleSelect(photos[lightboxIndex].id); }}
                 className={`mr-4 px-4 py-1.5 rounded-full text-sm font-semibold transition-all border ${
                   selectedIds.has(photos[lightboxIndex].id)
-                    ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_15px_rgba(var(--primary),0.5)]'
+                    ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_15px_rgba(224,155,61,0.5)]'
                     : 'bg-black/50 text-white border-white/50 hover:bg-white/20'
                 }`}
               >
