@@ -47,12 +47,12 @@ export default function LoginPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-slate-800">PhotoStudio</h1>
-          <p className="text-slate-500 mt-2">Masuk ke dashboard</p>
+          <h1 className="text-2xl font-bold text-foreground">PhotoStudio</h1>
+          <p className="text-muted-foreground mt-2">Masuk ke dashboard</p>
         </div>
 
         {/* Login Form - Card */}
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
+        <div className="bg-card text-foreground rounded-2xl shadow-lg border border-border p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div className="p-3 bg-red-50/80 backdrop-blur-sm text-red-600 text-sm rounded-xl border border-red-100">

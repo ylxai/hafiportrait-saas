@@ -96,7 +96,7 @@ export default function SettingsPage() {
       <h1 className="text-2xl font-bold text-foreground mb-6">Settings</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-6">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-6">
           <h2 className="font-semibold text-foreground mb-4">Studio Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

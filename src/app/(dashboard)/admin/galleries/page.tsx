@@ -179,7 +179,7 @@ export default function GalleriesPage() {
       </Button>
 
       {selectedIds.length > 0 && (
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl mb-4 p-3 flex items-center justify-between">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl mb-4 p-3 flex items-center justify-between">
           <span className="text-sm text-foreground font-medium">
             {selectedIds.length} item dipilih
           </span>
@@ -200,7 +200,7 @@ export default function GalleriesPage() {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl overflow-hidden">
+            <div key={i} className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl overflow-hidden">
               <div className="skeleton skeleton-image"></div>
               <div className="p-4 space-y-2">
                 <div className="skeleton skeleton-title"></div>
@@ -211,7 +211,7 @@ export default function GalleriesPage() {
           ))}
         </div>
       ) : galleries.length === 0 ? (
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-12 text-center">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-12 text-center">
           <div className="w-16 h-16 rounded-xl bg-primary/20 flex items-center justify-center mx-auto mb-4">
             <ImageIcon className="w-8 h-8 text-primary" />
           </div>
@@ -225,7 +225,7 @@ export default function GalleriesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {galleries.map((gallery) => (
-            <div key={gallery.id} className={`bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl overflow-hidden bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl-hover ${selectedIds.includes(gallery.id) ? 'ring-2 ring-champagne-500' : ''}`}>
+            <div key={gallery.id} className={`bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl overflow-hidden bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl-hover ${selectedIds.includes(gallery.id) ? 'ring-2 ring-champagne-500' : ''}`}>
               <div className="h-32 bg-gradient-to-r from-champagne-200 to-champagne-300 flex items-center justify-center relative">
                 <svg className="w-12 h-12 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />

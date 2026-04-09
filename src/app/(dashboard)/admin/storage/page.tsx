@@ -324,7 +324,7 @@ export default function StorageAccountsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Cloudinary */}
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-6">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-6">
           <h2 className="text-lg font-semibold text-foreground mb-4">Cloudinary</h2>
           
           {cloudinaryAccounts.length === 0 && !configData?.data?.cloudinary?.cloudName ? (
@@ -374,7 +374,7 @@ export default function StorageAccountsPage() {
         </div>
 
         {/* R2 */}
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-6">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-6">
           <h2 className="text-lg font-semibold text-foreground mb-4">Cloudflare R2</h2>
           
           {r2Accounts.length === 0 && !configData?.data?.r2?.bucketName ? (

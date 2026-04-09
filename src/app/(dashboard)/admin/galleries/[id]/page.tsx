@@ -632,7 +632,7 @@ export default function GalleryDetailPage() {
       />
 
       {/* Settings */}
-      <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4 sm:p-6">
+      <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-4 sm:p-6">
         <h2 className="font-semibold text-lg text-foreground mb-4">Pengaturan Gallery</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>

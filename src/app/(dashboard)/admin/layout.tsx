@@ -114,7 +114,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgb(245_158_11_/_0.2)]">
               <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.76-.9l.814-1.74A2 2 0 0111.52 4H17a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
               </svg>
@@ -126,7 +126,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               onClick={() => setProfileOpen(!profileOpen)}
               className="p-1.5 -mr-2 rounded-lg hover:bg-muted transition touch-target flex items-center justify-center"
             >
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgb(245_158_11_/_0.2)]">
                 <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
@@ -159,7 +159,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="absolute left-0 top-0 bottom-0 w-[280px] bg-card border-r border-border shadow-2xl transform transition-transform duration-300 ease-out">
             <div className="flex items-center justify-between p-4 border-b border-border">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgb(245_158_11_/_0.2)]">
                   <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.76-.9l.814-1.74A2 2 0 0111.52 4H17a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   </svg>
@@ -183,7 +183,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition ${
                       isActive 
-                        ? 'bg-primary text-primary-foreground font-medium shadow-[0_0_10px_rgba(245,158,11,0.3)]' 
+                        ? 'bg-primary text-primary-foreground font-medium shadow-[0_0_10px_rgb(245_158_11_/_0.3)]' 
                         : 'text-muted-foreground hover:bg-muted0 hover:text-foreground'
                     }`}
                   >
@@ -214,7 +214,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-4 border-b border-border h-16 flex items-center">
           {sidebarOpen ? (
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgb(245_158_11_/_0.2)]">
                 <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.76-.9l.814-1.74A2 2 0 0111.52 4H17a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                 </svg>
@@ -222,7 +222,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <h1 className="font-bold text-lg tracking-wide">PhotoStudio</h1>
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgba(245,158,11,0.2)] mx-auto">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgb(245_158_11_/_0.2)] mx-auto">
               <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.76-.9l.814-1.74A2 2 0 0111.52 4H17a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
               </svg>
@@ -239,7 +239,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${
                   isActive 
-                    ? 'bg-primary text-primary-foreground font-medium shadow-[0_0_15px_rgba(245,158,11,0.3)]' 
+                    ? 'bg-primary text-primary-foreground font-medium shadow-[0_0_15px_rgb(245_158_11_/_0.3)]' 
                     : 'text-muted-foreground hover:bg-muted0 hover:text-foreground'
                 } ${!sidebarOpen && 'justify-center px-0'}`}
                 title={!sidebarOpen ? item.label : undefined}
@@ -285,7 +285,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   isActive ? 'text-foreground scale-110' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <div className={`p-1.5 rounded-full transition-all ${isActive ? 'bg-primary text-primary-foreground shadow-[0_0_10px_rgba(245,158,11,0.4)]' : ''}`}>
+                <div className={`p-1.5 rounded-full transition-all ${isActive ? 'bg-primary text-primary-foreground shadow-[0_0_10px_rgb(245_158_11_/_0.4)]' : ''}`}>
                   {item.icon}
                 </div>
                 <span className="text-[9px] font-medium tracking-wide">{item.label}</span>

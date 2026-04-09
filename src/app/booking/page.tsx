@@ -85,14 +85,14 @@ export default function BookingPage() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-6 px-3">
       <div className="max-w-lg mx-auto">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-slate-800 mb-1">Booking Session</h1>
-          <p className="text-slate-500 text-sm">Isi form di bawah untuk booking sesi foto</p>
+          <h1 className="text-2xl font-bold text-foreground mb-1">Booking Session</h1>
+          <p className="text-muted-foreground text-sm">Isi form di bawah untuk booking sesi foto</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="bg-card text-foreground rounded-xl shadow-sm border border-border p-4 sm:p-6 space-y-5">
           {/* Package Selection */}
           <div>
-            <label className="block text-sm font-medium text-slate-800 mb-2">Pilih Paket</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Pilih Paket</label>
             {isLoading ? (
               <div className="animate-pulse h-24 bg-slate-100 rounded-lg"></div>
             ) : packages.length > 0 ? (

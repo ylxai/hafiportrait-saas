@@ -64,29 +64,29 @@ export default function AnalyticsPage() {
       <h1 className="text-2xl font-bold text-foreground mb-6">Gallery Analytics</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-4">
           <div className="text-sm text-muted-foreground">Total Galleries</div>
           <div className="text-2xl font-bold text-foreground">{summary?.totalGalleries ?? 0}</div>
         </div>
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-4">
           <div className="text-sm text-muted-foreground">Published</div>
           <div className="text-2xl font-bold text-green-600">{summary?.publishedGalleries ?? 0}</div>
         </div>
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-4">
           <div className="text-sm text-muted-foreground">Total Views</div>
           <div className="text-2xl font-bold text-blue-600">{summary?.totalViews ?? 0}</div>
         </div>
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-4">
           <div className="text-sm text-muted-foreground">Avg Views</div>
           <div className="text-2xl font-bold text-purple-600">{summary?.avgViews ?? 0}</div>
         </div>
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-4">
           <div className="text-sm text-muted-foreground">Total Selections</div>
           <div className="text-2xl font-bold text-primary">{summary?.totalSelections ?? 0}</div>
         </div>
       </div>
 
-      <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl">
+      <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl">
         <div className="p-4 border-b border-champagne-100 flex items-center justify-between">
           <h2 className="font-semibold text-foreground">Gallery Performance</h2>
           <select

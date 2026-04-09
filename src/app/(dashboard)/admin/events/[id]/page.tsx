@@ -84,7 +84,7 @@ export default function EventDetailPage() {
 
       <div className="space-y-6">
         {/* Event Info */}
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-6">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-6">
           <h2 className="font-semibold text-lg text-foreground mb-4">Event Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -131,7 +131,7 @@ export default function EventDetailPage() {
         </div>
 
         {/* Client Info */}
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-6">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-6">
           <h2 className="font-semibold text-lg text-foreground mb-4">Client Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -150,7 +150,7 @@ export default function EventDetailPage() {
         </div>
 
         {/* Payment Info */}
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-6">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-6">
           <h2 className="font-semibold text-lg text-foreground mb-4">Payment Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -178,7 +178,7 @@ export default function EventDetailPage() {
 
         {/* Package Info */}
         {event.package && (
-          <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-6">
+          <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-6">
             <h2 className="font-semibold text-lg text-foreground mb-4">Package</h2>
             <p className="text-foreground">{event.package.name}</p>
             <p className="text-muted-foreground text-sm">Rp {event.package.price?.toLocaleString()}</p>

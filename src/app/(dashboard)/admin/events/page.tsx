@@ -290,7 +290,7 @@ export default function EventsPage() {
       </Button>
 
       {selectedIds.length > 0 && (
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl mb-4 p-3 flex items-center justify-between">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl mb-4 p-3 flex items-center justify-between">
           <span className="text-sm text-foreground font-medium">
             {selectedIds.length} item dipilih
           </span>
@@ -312,14 +312,14 @@ export default function EventsPage() {
       )}
 
       {loading ? (
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4 space-y-3">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-4 space-y-3">
           <div className="skeleton skeleton-title"></div>
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="skeleton skeleton-table-row"></div>
           ))}
         </div>
       ) : events.length === 0 ? (
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-16 text-center">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-16 text-center">
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-6 shadow-inner">
             <Calendar className="w-10 h-10 text-primary" />
           </div>
@@ -331,7 +331,7 @@ export default function EventsPage() {
           </Button>
         </div>
       ) : (
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl overflow-hidden">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl overflow-hidden">
           <div className="table-mobile-scroll">
             <table className="w-full">
             <thead className="bg-muted/30 border-b border-border">

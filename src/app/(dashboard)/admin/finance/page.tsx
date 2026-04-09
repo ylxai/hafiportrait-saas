@@ -100,30 +100,30 @@ export default function FinancePage() {
       <h1 className="text-2xl font-bold text-foreground mb-6">Finance</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-6">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-6">
           <div className="text-sm text-muted-foreground">Total Revenue</div>
           <div className="text-2xl font-bold text-green-600">{formatCurrency(summary?.totalRevenue ?? 0)}</div>
         </div>
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-6">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-6">
           <div className="text-sm text-muted-foreground">Paid</div>
           <div className="text-2xl font-bold text-blue-600">{formatCurrency(summary?.totalPaid ?? 0)}</div>
         </div>
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-6">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-6">
           <div className="text-sm text-muted-foreground">Pending</div>
           <div className="text-2xl font-bold text-primary">{formatCurrency(summary?.totalPending ?? 0)}</div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-4">
           <div className="text-sm text-muted-foreground">Total Events</div>
           <div className="text-xl font-bold text-foreground">{summary?.totalEvents ?? 0}</div>
         </div>
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-4">
           <div className="text-sm text-muted-foreground">Paid Events</div>
           <div className="text-xl font-bold text-green-600">{summary?.paidEvents ?? 0}</div>
         </div>
-        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4">
+        <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-4">
           <div className="text-sm text-muted-foreground">Pending Events</div>
           <div className="text-xl font-bold text-primary">{summary?.pendingEvents ?? 0}</div>
         </div>
@@ -135,7 +135,7 @@ export default function FinancePage() {
         </div>
       )}
 
-      <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl">
+      <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl">
         <div className="p-4 border-b border-champagne-100">
           <h2 className="font-semibold text-foreground">Events</h2>
         </div>
