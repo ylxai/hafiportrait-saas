@@ -229,6 +229,7 @@ model UploadSession {
   createdAt       DateTime @default(now())
   completedAt     DateTime?
   storageAccountId String?
+  publicUrl       String?
   
   @@index([createdAt])
   @@index([galleryId])

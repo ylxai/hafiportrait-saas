@@ -239,20 +239,19 @@ export default function GalleryDetailPage() {
     mutatePhotos();
   }, [galleryId, mutatePhotos, selectedPhotoIdsForBulk]);
 
-  const exportToTxt = () => {
-    const photosToExport = photos;
-
-    if (!photosToExport || photosToExport.length === 0) {
-      toast.error('Tidak ada foto untuk diekspor');
+  const handleExport = () => {
+    // Only exports actual selection file names
+    const photosToExport = gallery?.selections?.[0]?.photos?.map((p: { photo: { filename: string } }) => p.photo) || [];
+    if (photosToExport.length === 0) {
+      toast.error('Tidak ada foto seleksi klien untuk diekspor');
       return;
     }
-
-    const content = photosToExport.map((p) => p.filename).join('\n');
+    const content = photosToExport.map((p: { filename: string }) => p.filename).join('\n');
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${gallery?.namaProject || 'gallery'}-filelist.txt`;
+    a.download = `${gallery?.namaProject || 'gallery'}-selection-filelist.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -287,7 +286,7 @@ export default function GalleryDetailPage() {
   if (isLoading || photosLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -368,10 +367,10 @@ export default function GalleryDetailPage() {
               </p>
               <div className="flex gap-2 mb-4">
                 <button
-                  onClick={exportToTxt}
-                  className="px-4 py-2 bg-muted0 text-white rounded-lg hover:bg-amber-600 text-sm"
+                  onClick={handleExport}
+                  className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-primary/20 hover:text-primary text-sm"
                 >
-                  📥 Export .txt (semua foto)
+                  📥 Export .txt (foto seleksi)
                 </button>
               </div>
               
@@ -389,7 +388,7 @@ export default function GalleryDetailPage() {
                         height={150}
                         className="w-full h-32 object-cover rounded-lg"
                       />
-                      <div className="absolute top-1 left-1 bg-muted0 text-white text-xs px-1.5 py-0.5 rounded">
+                      <div className="absolute top-1 left-1 bg-foreground text-background text-xs px-1.5 py-0.5 rounded">
                         {idx + 1}
                       </div>
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition rounded-lg flex items-center justify-center">
@@ -424,7 +423,7 @@ export default function GalleryDetailPage() {
       )}
 
       {/* Upload Section */}
-      <div className="bg-card text-card-foreground rounded-xl border border-champagne-100 p-4 sm:p-6 mb-6">
+      <div className="bg-card text-card-foreground rounded-xl border border-border p-4 sm:p-6 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <h2 className="font-semibold text-lg text-foreground">Photos ({totalPhotos})</h2>
@@ -467,7 +466,7 @@ export default function GalleryDetailPage() {
           </div>
           <Button
             onClick={() => setShowUploadManager(true)}
-            className="bg-muted0 hover:bg-amber-600 text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             <Upload className="w-4 h-4 mr-2" />
             Upload Foto
@@ -490,7 +489,7 @@ export default function GalleryDetailPage() {
         />
 
         {photos.length === 0 ? (
-          <div className="text-center py-8 sm:py-12 border-2 border-dashed border-champagne-200 rounded-lg">
+          <div className="text-center py-8 sm:py-12 border-2 border-dashed border-border rounded-lg">
             <p className="text-muted-foreground">Belum ada foto. Upload foto untuk gallery ini.</p>
           </div>
         ) : (
@@ -531,14 +530,14 @@ export default function GalleryDetailPage() {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex flex-col items-center gap-2">
-                      <span className="text-sm font-bold bg-muted0 text-white px-2 py-1 rounded shadow-lg">
+                      <span className="text-sm font-bold bg-muted text-foreground px-2 py-1 rounded shadow-lg">
                         Order: {photo.order || (currentPage - 1) * photosPerPage + localIndex + 1}
                       </span>
                       <input
                         type="number"
                         defaultValue={photo.order || (currentPage - 1) * photosPerPage + localIndex + 1}
                         onBlur={(e) => handleReorderPhoto(photo.id, parseInt(e.target.value) || 0)}
-                        className="w-16 px-2 py-1 text-center font-bold text-black border-2 border-white rounded shadow-lg"
+                        className="w-16 px-2 py-1 text-center font-bold text-background bg-foreground border-2 border-border rounded shadow-lg"
                         min="1"
                       />
                     </div>
@@ -644,7 +643,7 @@ export default function GalleryDetailPage() {
               type="number"
               value={gallerySettings.maxSelection}
               onChange={(e) => setGallerySettings(prev => ({ ...prev, maxSelection: parseInt(e.target.value) || 20 }))}
-              className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+              className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
               placeholder="20"
             />
           </div>
@@ -665,7 +664,7 @@ export default function GalleryDetailPage() {
           <button
             onClick={handleSaveSettings}
             disabled={isSavingSettings}
-            className="px-4 py-2 bg-muted0 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
             {isSavingSettings ? 'Saving...' : 'Save Settings'}
           </button>

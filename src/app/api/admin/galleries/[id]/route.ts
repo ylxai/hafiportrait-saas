@@ -53,6 +53,16 @@ export async function GET(
       ...gallery,
       // photos are now fetched via a separate paginated endpoint
       photos: [],
+      selections: gallery.selections.map((selection) => ({
+        ...selection,
+        photos: selection.photos.map((p) => ({
+          ...p,
+          photo: {
+            ...p.photo,
+            fileSize: p.photo.fileSize?.toString() || '0'
+          }
+        }))
+      }))
     };
 
     return successResponse({ gallery: serializedGallery });

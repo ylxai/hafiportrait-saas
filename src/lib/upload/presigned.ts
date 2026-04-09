@@ -107,6 +107,7 @@ export async function generatePresignedUploadUrl(
       galleryId,
       fileSize: 0,
       storageAccountId: actualAccountId,
+      publicUrl,
     },
   });
   
@@ -144,11 +145,7 @@ export async function verifyR2Upload(
     }
   });
 
-  // Karena publicUrl tidak disimpan di UploadSession untuk menghemat ruang,
-  // kita dapat menyusun ulang publicUrl atau mengandalkan return r2Key.
-  // Untuk ini, mari kita asumsikan publicUrl dibutuhkan, maka kita ambil credentials r2:
-  const credentialsResult = await getR2Credentials(session.storageAccountId || undefined);
-  const publicUrl = `${credentialsResult.credentials.publicUrl}/${session.r2Key}`;
+  const publicUrl = session.publicUrl || '';
   
   return {
     success: true,
