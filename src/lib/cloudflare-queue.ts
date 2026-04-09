@@ -199,25 +199,58 @@ export async function queuePhotosDeletionForEntities(whereCriteria: Prisma.Photo
 
   if (photos.length === 0) return;
 
+  // Mengumpulkan semua storageAccountId unik dari foto-foto yang akan dihapus
+  const uniqueStorageAccountIds = Array.from(new Set(photos.map(p => p.storageAccountId).filter(Boolean))) as string[];
+
+  // Mengambil semua akun penyimpanan yang relevan dalam satu query
+  const storageAccounts = await prisma.storageAccount.findMany({
+    where: { id: { in: uniqueStorageAccountIds } }
+  });
+
+  // Membuat map dari storageAccountId ke kredensial Cloudinary yang sesuai
+  const cloudinaryCredentialsMap = new Map<string, { cloudName: string | null; apiKey: string | null; apiSecret: string | null } | null>();
+  
+  storageAccounts.forEach(account => {
+    // We pass the credentials if they exist on the account
+    cloudinaryCredentialsMap.set(account.id, {
+      cloudName: account.cloudName,
+      apiKey: account.apiKey,
+      apiSecret: account.apiSecret,
+    });
+  });
+
+  // Ambil default cloudinary account sebagai fallback jika storage account tidak memilikinya
   const defaultCloudinaryAccount = await prisma.storageAccount.findFirst({
     where: { provider: 'CLOUDINARY', isActive: true },
     orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }],
   });
 
-  const cloudinaryCredentials = defaultCloudinaryAccount ? {
+  const defaultCloudinaryCredentials = defaultCloudinaryAccount ? {
     cloudName: defaultCloudinaryAccount.cloudName,
     apiKey: defaultCloudinaryAccount.apiKey,
     apiSecret: defaultCloudinaryAccount.apiSecret,
   } : null;
 
-  const deletionJobs = photos.map(photo => ({
-    photoId: photo.id,
-    r2Key: photo.r2Key,
-    thumbnailUrl: photo.thumbnailUrl,
-    storageAccountId: photo.storageAccountId,
-    fileSize: photo.fileSize?.toString(),
-    cloudinaryCredentials,
-  })).filter(job => job.r2Key || job.thumbnailUrl);
+  const deletionJobs = photos.map(photo => {
+    // Gunakan kredensial dari map berdasarkan storageAccountId, atau fallback ke default
+    let cloudinaryCredentials = defaultCloudinaryCredentials;
+    if (photo.storageAccountId && cloudinaryCredentialsMap.has(photo.storageAccountId)) {
+      const accountCreds = cloudinaryCredentialsMap.get(photo.storageAccountId);
+      // Hanya gunakan jika setidaknya memiliki cloudName dan apiKey
+      if (accountCreds && accountCreds.cloudName && accountCreds.apiKey) {
+        cloudinaryCredentials = accountCreds;
+      }
+    }
+
+    return {
+      photoId: photo.id,
+      r2Key: photo.r2Key,
+      thumbnailUrl: photo.thumbnailUrl,
+      storageAccountId: photo.storageAccountId,
+      fileSize: photo.fileSize?.toString(),
+      cloudinaryCredentials,
+    };
+  }).filter(job => job.r2Key || job.thumbnailUrl);
 
   if (deletionJobs.length > 0) {
     try {

@@ -34,7 +34,22 @@ export async function DELETE(
       // (untuk deletion dari Cloudinary)
       let cloudinaryCredentials = null;
       if (photo.storageAccountId) {
-        const cloudinaryAccount = await prisma.storageAccount.findFirst({
+        const cloudinaryAccount = await prisma.storageAccount.findUnique({
+          where: { id: photo.storageAccountId }
+        });
+        
+        if (cloudinaryAccount && cloudinaryAccount.cloudName && cloudinaryAccount.apiKey) {
+          cloudinaryCredentials = {
+            cloudName: cloudinaryAccount.cloudName,
+            apiKey: cloudinaryAccount.apiKey,
+            apiSecret: cloudinaryAccount.apiSecret,
+          };
+        }
+      }
+
+      // Fallback ke default account
+      if (!cloudinaryCredentials) {
+        const defaultCloudinaryAccount = await prisma.storageAccount.findFirst({
           where: { 
             provider: 'CLOUDINARY',
             isActive: true,
@@ -42,11 +57,11 @@ export async function DELETE(
           orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }],
         });
         
-        if (cloudinaryAccount) {
+        if (defaultCloudinaryAccount) {
           cloudinaryCredentials = {
-            cloudName: cloudinaryAccount.cloudName,
-            apiKey: cloudinaryAccount.apiKey,
-            apiSecret: cloudinaryAccount.apiSecret,
+            cloudName: defaultCloudinaryAccount.cloudName,
+            apiKey: defaultCloudinaryAccount.apiKey,
+            apiSecret: defaultCloudinaryAccount.apiSecret,
           };
         }
       }
