@@ -1,0 +1,30 @@
+---
+engines:
+  eslint:
+    enabled: true
+  remark-lint:
+    enabled: true
+  prettier:
+    enabled: true
+  hadolint:
+    enabled: true
+  shellcheck:
+    enabled: true
+languages:
+  typescript:
+    enabled: true
+  javascript:
+    enabled: true
+  css:
+    enabled: true
+  json:
+    enabled: true
+exclude_paths:
+  - ".next/**"
+  - "node_modules/**"
+  - "src/generated/**"
+  - "dist/**"
+  - "workers/**"
+  - "public/**"
+  - "docs/**"
+  - "test-results/**"
