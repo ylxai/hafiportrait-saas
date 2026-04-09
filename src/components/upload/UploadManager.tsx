@@ -32,7 +32,7 @@ export function UploadManager({
   clientName,
   isOpen,
   onClose,
-  onSuccess,
+  onSuccess: _onSuccess,
   cloudinaryAccounts,
   r2Accounts,
 }: UploadManagerProps) {
@@ -47,7 +47,7 @@ export function UploadManager({
   const {
     files,
     isUploading,
-    errors,
+    errors: _errors,
     addFiles,
     removeFile,
     startUpload,

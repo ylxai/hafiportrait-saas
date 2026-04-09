@@ -222,7 +222,7 @@ test.describe('Create Gallery', () => {
     const hasNoEvents = await noEventsMessage.isVisible().catch(() => false);
     
     if (hasNoEvents) {
-      test.skip('No events available - skipping gallery test');
+      test.skip(true, 'No events available - skipping gallery test');
       return;
     }
     
@@ -238,7 +238,7 @@ test.describe('Create Gallery', () => {
     const hasCreateBtn = await createGalleryBtn.isVisible().catch(() => false);
     
     if (!hasCreateBtn) {
-      test.skip('Create Gallery button not found');
+      test.skip(true, 'Create Gallery button not found');
       return;
     }
     
@@ -262,7 +262,7 @@ test.describe('Upload Photos', () => {
     const hasNoGalleries = await noGalleriesMessage.isVisible().catch(() => false);
     
     if (hasNoGalleries) {
-      test.skip('No galleries available for upload test');
+      test.skip(true, 'No galleries available for upload test');
       return;
     }
     
@@ -277,7 +277,7 @@ test.describe('Upload Photos', () => {
     const hasUploadBtn = await uploadBtn.isVisible().catch(() => false);
     
     if (!hasUploadBtn) {
-      test.skip('Upload button not found');
+      test.skip(true, 'Upload button not found');
       return;
     }
     
@@ -316,7 +316,7 @@ test.describe('Bulk Operations', () => {
     const hasGallery = await firstGallery.isVisible().catch(() => false);
     
     if (!hasGallery) {
-      test.skip('No galleries available for bulk test');
+      test.skip(true, 'No galleries available for bulk test');
       return;
     }
     
@@ -328,7 +328,7 @@ test.describe('Bulk Operations', () => {
     const hasBulkMode = await bulkBtn.isVisible().catch(() => false);
     
     if (!hasBulkMode) {
-      test.skip('Bulk mode not available');
+      test.skip(true, 'Bulk mode not available');
       return;
     }
     
@@ -339,7 +339,7 @@ test.describe('Bulk Operations', () => {
     const checkboxCount = await checkboxes.count();
     
     if (checkboxCount < 3) {
-      test.skip('Not enough photos for bulk delete test');
+      test.skip(true, 'Not enough photos for bulk delete test');
       return;
     }
     

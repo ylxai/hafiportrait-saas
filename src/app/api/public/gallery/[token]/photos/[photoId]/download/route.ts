@@ -1,7 +1,5 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
-import { getPublicUrl } from '@/lib/storage/r2';
 import { generateDownloadUrl } from '@/lib/upload/presigned';
 
 export async function GET(

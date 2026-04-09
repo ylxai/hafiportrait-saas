@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
-import { uploadToR2, getPublicUrl } from '@/lib/storage/r2';
+import { uploadToR2 } from '@/lib/storage/r2';
 import { uploadToCloudinary, generateThumbnailUrl } from '@/lib/storage/cloudinary';
 import { getDefaultAccount, updateStorageUsage, findWorkingAccount } from '@/lib/storage/accounts';
 import imageSize from 'image-size';

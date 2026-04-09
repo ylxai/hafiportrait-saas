@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import useSWR from 'swr';
 import { useSelectionSubscription, useAblyConnection } from '@/lib/hooks/useAbly';
@@ -58,13 +58,12 @@ export default function GalleryDetailPage() {
   const params = useParams();
   const galleryId = params.id as string;
   
-  const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
   const [selectedPhotoIdsForBulk, setSelectedPhotoIdsForBulk] = useState<Set<string>>(new Set());
   const [bulkMode, setBulkMode] = useState(false);
   const [showSelectionView, setShowSelectionView] = useState(false);
   const [showUploadManager, setShowUploadManager] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
-  const [isReordering, setIsReordering] = useState(false);
+  const [, setIsReordering] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [currentPage, setCurrentPage] = useState(1);
   const photosPerPage = 50;
@@ -95,11 +94,11 @@ export default function GalleryDetailPage() {
     }
   }, [gallery]);
 
-  const handleSelectionUpdate = useCallback((update: { photoId: string; action: 'add' | 'remove'; selectionCount: number }) => {
+  const handleSelectionUpdate = useCallback((_update: { photoId: string; action: 'add' | 'remove'; selectionCount: number }) => {
     mutate();
   }, [mutate]);
 
-  const isAblyConnected = useAblyConnection();
+  const _isAblyConnected = useAblyConnection();
   useSelectionSubscription(gallery?.id || '', handleSelectionUpdate);
 
   const { data: storageData } = useSWR<{ data: { accounts: StorageAccount[] } }>(
@@ -184,17 +183,6 @@ export default function GalleryDetailPage() {
     }
   };
 
-  const toggleSelectForExport = (photoId: string) => {
-    setSelectedPhotoIds((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(photoId)) {
-        newSet.delete(photoId);
-      } else {
-        newSet.add(photoId);
-      }
-      return newSet;
-    });
-  };
 
   const toggleBulkSelect = (photoId: string) => {
     setSelectedPhotoIdsForBulk((prev) => {
@@ -245,9 +233,7 @@ export default function GalleryDetailPage() {
   }, [galleryId, mutate, selectedPhotoIdsForBulk]);
 
   const exportToTxt = () => {
-    const photosToExport = selectedPhotoIds.size > 0
-      ? gallery?.photos.filter((p) => selectedPhotoIds.has(p.id))
-      : gallery?.photos;
+    const photosToExport = gallery?.photos;
 
     if (!photosToExport || photosToExport.length === 0) {
       alert('Tidak ada foto untuk diekspor');
@@ -353,14 +339,6 @@ export default function GalleryDetailPage() {
                 >
                   📥 Export .txt (semua foto)
                 </button>
-                {selectedPhotoIds.size > 0 && (
-                  <button
-                    onClick={exportToTxt}
-                    className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-slate-200 text-sm"
-                  >
-                    📥 Export .txt (terpilih: {selectedPhotoIds.size})
-                  </button>
-                )}
               </div>
               
               {/* Selected photos grid */}

@@ -110,7 +110,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     galleryId, 
     r2AccountId, // Selected storage account
     maxConcurrent = 10, 
-    autoUpload = true, 
+    autoUpload: _autoUpload = true, 
     maxFileSize = 50 * 1024 * 1024, // 50MB default
     maxRetries = 3,
     onProgress, 
@@ -124,7 +124,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
   const [errors, setErrors] = useState<{ fileId: string; message: string; code: UploadFile['errorCode'] }[]>([]);
   const activeUploads = useRef(0);
   const abortControllers = useRef<Map<string, AbortController>>(new Map());
-  const isAutoUploading = useRef(false);
+  const _isAutoUploading = useRef(false);
   const retryTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Compress file sebelum upload
@@ -177,7 +177,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         throw new Error(presignedData.error || `Server error: ${presignedRes.status}`);
       }
 
-      const { presignedUrl, publicUrl, r2Key, uploadId } = presignedData.data || presignedData;
+      const { presignedUrl, publicUrl: _publicUrl, r2Key: _r2Key, uploadId } = presignedData.data || presignedData;
 
       // Update status: Uploading
       updateFileStatus(uploadFile.id, { status: 'uploading', progress: 10 });

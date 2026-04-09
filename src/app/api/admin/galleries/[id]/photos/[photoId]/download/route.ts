@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { generateDownloadUrl } from '@/lib/upload/presigned';

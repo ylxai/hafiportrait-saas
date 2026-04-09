@@ -1,5 +1,3 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
 import { decreaseStorageUsage } from '@/lib/storage/accounts';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 

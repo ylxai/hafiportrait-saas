@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit2, Trash2, Calendar } from 'lucide-react';
+import { Plus, Calendar } from 'lucide-react';
 
 type Client = {
   id: string;
@@ -72,6 +72,7 @@ export default function EventsPage() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination.page]);
 
   const fetchData = async () => {

@@ -11,7 +11,8 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "workers": "tsx scripts/workers.ts",
-    "workers:prod": "node dist/scripts/workers.js"
+    "workers:prod": "node dist/scripts/workers.js",
+    "prepare": "husky"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1023.0",
@@ -53,6 +54,8 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.4.11",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "husky": "^9.1.7",
     "prisma": "^5.22.0",
     "shadcn": "^4.1.2",
     "tailwindcss": "^4",

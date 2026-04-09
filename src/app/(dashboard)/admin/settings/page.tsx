@@ -68,7 +68,7 @@ export default function SettingsPage() {
       } else {
         setMessage('Failed to save settings');
       }
-    } catch (error) {
+    } catch {
       setMessage('Failed to save settings');
     }
 

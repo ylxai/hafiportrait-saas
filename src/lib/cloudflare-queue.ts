@@ -11,17 +11,13 @@
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 
-interface QueueMessage {
-  body: any;
-  delaySeconds?: number;
-}
 
 /**
  * Publish message to Cloudflare Queue via REST API
  */
 export async function publishToQueue(
   queueName: string,
-  message: any,
+  message: unknown,
   options?: { delaySeconds?: number }
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   if (!ACCOUNT_ID || !API_TOKEN) {

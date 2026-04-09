@@ -98,7 +98,7 @@ export async function POST(
     // Add all to BullMQ in bulk
     if (bullMQJobs.length > 0) {
       try {
-        await deletionQueue.addBulk(bullMQJobs as any);
+        await deletionQueue.addBulk(bullMQJobs as unknown as Parameters<typeof deletionQueue.addBulk>[0]);
         console.log(`[Delete] Queued ${bullMQJobs.length} bulk deletions to BullMQ`);
       } catch (bullMQError) {
         console.error(`[Delete] BullMQ bulk add failed:`, bullMQError);

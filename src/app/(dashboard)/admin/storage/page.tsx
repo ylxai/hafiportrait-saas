@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import useSWR from 'swr';
 
 type StorageAccount = {
@@ -40,7 +40,6 @@ function formatBytes(bytes: bigint): string {
 export default function StorageAccountsPage() {
   const { data, isLoading, mutate } = useSWR<AccountsResponse>('/api/admin/storage-accounts', fetcher);
   const { data: configData } = useSWR<EnvConfig>('/api/admin/storage-config', fetcher);
-  const { data: rotationData } = useSWR('/api/admin/storage-accounts/rotation', fetcher);
   const accounts = data?.data?.accounts ?? [];
   const envConfig = configData?.data?.cloudinary?.cloudName || configData?.data?.r2?.bucketName;
 

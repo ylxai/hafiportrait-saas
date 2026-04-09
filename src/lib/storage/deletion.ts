@@ -1,4 +1,3 @@
-import { prisma } from '@/lib/db';
 import { deleteFromR2 } from '@/lib/upload/presigned';
 import { deleteFromCloudinary, getCloudinaryPublicId } from '@/lib/storage/cloudinary';
 import { decreaseStorageUsage, getDefaultAccount } from '@/lib/storage/accounts';

@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { verifyR2Upload, updateUploadProgress, cleanupUploadSession } from '@/lib/upload/presigned';
 import { getServerSession } from 'next-auth';
@@ -36,8 +35,8 @@ export async function POST(request: Request) {
     }
 
     // Get image dimensions if not provided
-    let imgWidth = width || 0;
-    let imgHeight = height || 0;
+    const imgWidth = width || 0;
+    const imgHeight = height || 0;
 
     // Create photo record - NO THUMBNAIL GENERATION NEEDED
     // Cloudinary will auto-fetch from R2 public URL on-demand

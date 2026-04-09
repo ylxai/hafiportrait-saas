@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Package, Check, Clock, Image, Download } from 'lucide-react';
+import { Plus, Package } from 'lucide-react';
 
 type Package = {
   id: string;
@@ -169,13 +169,6 @@ export default function PackagesPage() {
     );
   };
 
-  const toggleSelectAll = () => {
-    if (selectedIds.length === packages.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(packages.map(p => p.id));
-    }
-  };
 
   const handleBulkDelete = async () => {
     if (!confirm(`Hapus ${selectedIds.length} paket ini?`)) return;

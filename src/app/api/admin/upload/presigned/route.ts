@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { generatePresignedUploadUrl } from '@/lib/upload/presigned';
 import { getServerSession } from 'next-auth';

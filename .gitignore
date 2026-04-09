@@ -68,3 +68,22 @@ temp/
 .playwright-mcp/
 SPEC.md
 let
+
+# Custom Project Test Artifacts & Logs
+/test-results/
+/playwright-report/
+/playwright/
+/logs/
+*.tsbuildinfo
+
+# Ad-hoc test scripts
+check-photos.ts
+check-photos-detail.ts
+test-cloudinary.ts
+replace_classes.py
+replace_all.py
+replace_gallery.py
+opencode.json
+skills-lock.json
+AGENTS.md
+CLAUDE.md

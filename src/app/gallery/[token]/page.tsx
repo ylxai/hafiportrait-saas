@@ -10,7 +10,7 @@ import YARLightbox from "yet-another-react-lightbox";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import "yet-another-react-lightbox/styles.css";
 import { useSelectionSubscription, useViewCountSubscription, useAblyConnection } from '@/lib/hooks/useAbly';
-import { publishSelectionUpdate, publishViewCount } from '@/lib/ably';
+import { publishSelectionUpdate } from '@/lib/ably';
 
 type Photo = {
   id: string;

@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/db';
-import { getActiveCredentials } from './rotation';
 
 type StorageAccount = {
   id: string;

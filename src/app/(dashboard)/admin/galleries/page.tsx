@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Image } from 'lucide-react';
+import { Plus, Image as ImageIcon } from 'lucide-react';
 
 type Gallery = {
   id: string;
@@ -80,13 +80,6 @@ export default function GalleriesPage() {
     );
   };
 
-  const toggleSelectAll = () => {
-    if (selectedIds.length === galleries.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(galleries.map(g => g.id));
-    }
-  };
 
   const resetForm = () => {
     setFormData({
@@ -220,7 +213,7 @@ export default function GalleriesPage() {
       ) : galleries.length === 0 ? (
         <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-12 text-center">
           <div className="w-16 h-16 rounded-xl bg-primary/20 flex items-center justify-center mx-auto mb-4">
-            <Image className="w-8 h-8 text-primary" />
+            <ImageIcon className="w-8 h-8 text-primary" />
           </div>
           <h3 className="text-xl font-bold text-foreground mb-2">Belum ada gallery</h3>
           <p className="text-base text-muted-foreground mb-6">Buat gallery pertama Anda</p>

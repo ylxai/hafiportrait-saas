@@ -1,20 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import useSWR from 'swr';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function EventDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const eventId = params.id as string;
   
-  const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
 
   const { data, isLoading, mutate } = useSWR(
@@ -24,10 +21,9 @@ export default function EventDetailPage() {
 
   const event = data?.data?.event;
 
-  const handleUpdate = async (field: string, value: any) => {
+  const handleUpdate = async (field: string, value: string | number | null) => {
     if (!event) return;
     
-    setIsSaving(true);
     setMessage('');
     
     try {
@@ -47,8 +43,6 @@ export default function EventDetailPage() {
     } catch (error) {
       console.error('Error updating event:', error);
       setMessage('Error updating event');
-    } finally {
-      setIsSaving(false);
     }
   };
 

@@ -36,9 +36,6 @@ export default function BookingPage() {
     notes: '',
   });
 
-  const handleInputChange = useCallback((field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  }, []);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
