@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import { useSelectionSubscription, useAblyConnection } from '@/lib/hooks/useAbly';
 import { UploadManager } from '@/components/upload/UploadManager';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { Upload } from 'lucide-react';
 import { PhotoImage } from '@/components/photo/PhotoImage';
 import YARLightbox from "yet-another-react-lightbox";
@@ -224,7 +225,7 @@ export default function GalleryDetailPage() {
       }
     } catch (error) {
       console.error('Error bulk deleting photos:', error);
-      alert('Terjadi kesalahan saat menghapus foto');
+      toast.error('Terjadi kesalahan saat menghapus foto');
     }
 
     setSelectedPhotoIdsForBulk(new Set());
@@ -236,7 +237,7 @@ export default function GalleryDetailPage() {
     const photosToExport = gallery?.photos;
 
     if (!photosToExport || photosToExport.length === 0) {
-      alert('Tidak ada foto untuk diekspor');
+      toast.error('Tidak ada foto untuk diekspor');
       return;
     }
 
@@ -260,11 +261,11 @@ export default function GalleryDetailPage() {
       if (res.ok) {
         mutate();
       } else {
-        alert('Gagal mengubah status kunci galeri');
+        toast.error('Gagal mengubah status kunci galeri');
       }
     } catch (error) {
       console.error(error);
-      alert('Terjadi kesalahan');
+      toast.error('Terjadi kesalahan');
     }
   };
 

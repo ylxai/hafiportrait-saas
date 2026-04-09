@@ -10,6 +10,7 @@ import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import "yet-another-react-lightbox/styles.css";
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import { toast } from 'sonner';
 import { useSelectionSubscription, useViewCountSubscription, useAblyConnection } from '@/lib/hooks/useAbly';
 import { publishSelectionUpdate } from '@/lib/ably';
 
@@ -155,6 +156,11 @@ export default function GalleryPage() {
   useSelectionSubscription(gallery?.id || '', handleSelectionUpdate);
   useViewCountSubscription(gallery?.id || '', handleViewCountUpdate);
 
+  useEffect(() => {
+    if (token) {
+      fetch(`/api/public/gallery/${token}/view`, { method: 'POST' }).catch(() => {});
+    }
+  }, [token]);
 
   const toggleSelect = useCallback((photoId: string) => {
     if (isLocked) return;
@@ -189,10 +195,10 @@ export default function GalleryPage() {
         await mutate(); // Re-fetch to update isLocked and server selections
         setShowSuccess(true);
       } else {
-        alert('Gagal mengirim seleksi. Silakan periksa kembali dan coba lagi.');
+        toast.error('Gagal mengirim seleksi. Silakan periksa kembali dan coba lagi.');
       }
     } catch {
-      alert('Terjadi kesalahan. Gagal mengirim seleksi. Coba lagi.');
+      toast.error('Terjadi kesalahan. Gagal mengirim seleksi. Coba lagi.');
     } finally {
       setSubmitting(false);
     }
@@ -205,10 +211,7 @@ export default function GalleryPage() {
     const zip = new JSZip();
     
     try {
-      for (let i = 0; i < activeSelectedPhotos.length; i++) {
-        const photo = activeSelectedPhotos[i];
-        setDownloadProgress(prev => ({ ...prev, current: i + 1 }));
-        
+      await Promise.all(activeSelectedPhotos.map(async (photo) => {
         const res = await fetch(`/api/public/gallery/${token}/photos/${photo.id}/download`);
         const data = await res.json();
         const url = data.success && data.data?.downloadUrl ? data.data.downloadUrl : photo.url;
@@ -217,13 +220,14 @@ export default function GalleryPage() {
         const blob = await imageRes.blob();
         
         zip.file(photo.filename, blob);
-      }
+        setDownloadProgress(prev => ({ ...prev, current: prev.current + 1 }));
+      }));
       
       const content = await zip.generateAsync({ type: 'blob' });
       saveAs(content, `${gallery?.namaProject || 'gallery'}-selected-photos.zip`);
     } catch (err) {
       console.error('Error creating ZIP:', err);
-      alert('Gagal mengunduh ZIP. Silakan coba lagi.');
+      toast.error('Gagal mengunduh ZIP. Silakan coba lagi.');
     } finally {
       setDownloadProgress({ active: false, current: 0, total: 0 });
     }
@@ -244,7 +248,7 @@ export default function GalleryPage() {
       document.body.removeChild(link);
     } catch (err) {
       console.error('Error downloading photo:', err);
-      alert('Gagal mengunduh foto.');
+      toast.error('Gagal mengunduh foto.');
     }
   }, [token]);
 

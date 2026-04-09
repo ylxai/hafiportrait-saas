@@ -57,11 +57,6 @@ export async function GET(
     const photoList = hasMore ? photos.slice(0, PHOTOS_PER_PAGE) : photos;
     const nextCursor = hasMore ? photoList[photoList.length - 1]?.id : null;
 
-    // Increment view count (fire and forget, don't block response)
-    prisma.gallery.update({
-      where: { id: gallery.id },
-      data: { viewCount: { increment: 1 } },
-    }).catch(() => {}); // Silently fail
 
     // Get latest selection
     const latestSelection = gallery.selections[0];

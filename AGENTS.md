@@ -130,3 +130,18 @@ No test framework configured for CI. Playwright is used for interactive/manual U
 - `/src/lib/upload/presigned.ts` - R2 presigned URL generation
 - `/src/hooks/useDirectUpload.ts` - Frontend upload hook with retry logic
 - `/src/components/upload/UploadManager.tsx` - Upload UI component
+
+## AI Agent Behavior (MCP Integration)
+
+**CRITICAL INSTRUCTION FOR AI AGENTS:**
+You MUST prioritize using configured **Model Context Protocol (MCP)** tools for testing, browser automation, data fetching, and code review over writing manual Node.js/Python scripts (e.g., `test.js` or `get_logs.js`). 
+
+Currently available MCP Servers (configured in `~/.junie/mcp/mcp.json`):
+1. **Playwright MCP**: Use for interactive end-to-end browser testing, navigating pages, capturing snapshots, and verifying UI without writing manual Playwright scripts.
+2. **Chrome DevTools MCP**: Use for inspecting DOM elements, evaluating JavaScript on live pages, and analyzing network/console logs.
+3. **GitHub MCP**: Use for pulling PRs, adding review comments, creating issues, and browsing the codebase.
+4. **Context7 MCP**: Use for fetching up-to-date documentation and code snippets for Next.js, Tailwind v4, etc.
+5. **shadcn MCP**: Use to search and load the latest shadcn/ui and base-ui components directly.
+6. **Filesystem & Memory**: Local project file manipulation and entity context storage.
+
+If an MCP tool can accomplish the task, **USE IT DIRECTLY** rather than simulating it via terminal commands.
