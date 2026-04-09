@@ -183,8 +183,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition ${
                       isActive 
-                        ? 'bg-primary/10 text-primary font-medium border border-primary/20' 
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        ? 'bg-primary text-primary-foreground font-medium shadow-[0_0_10px_rgba(245,158,11,0.3)]' 
+                        : 'text-muted-foreground hover:bg-muted0 hover:text-foreground'
                     }`}
                   >
                     {item.icon}
@@ -239,8 +239,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${
                   isActive 
-                    ? 'bg-primary/10 text-primary font-medium border border-primary/20 shadow-[inset_0_0_10px_rgba(245,158,11,0.05)]' 
-                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                    ? 'bg-primary text-primary-foreground font-medium shadow-[0_0_15px_rgba(245,158,11,0.3)]' 
+                    : 'text-muted-foreground hover:bg-muted0 hover:text-foreground'
                 } ${!sidebarOpen && 'justify-center px-0'}`}
                 title={!sidebarOpen ? item.label : undefined}
               >
@@ -282,10 +282,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 key={item.href}
                 href={item.href}
                 className={`flex flex-col items-center gap-1 transition-all flex-1 py-1 ${
-                  isActive ? 'text-primary scale-110' : 'text-muted-foreground hover:text-foreground'
+                  isActive ? 'text-foreground scale-110' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <div className={`p-1.5 rounded-full transition-all ${isActive ? 'bg-primary/20 shadow-[0_0_10px_rgba(245,158,11,0.2)]' : ''}`}>
+                <div className={`p-1.5 rounded-full transition-all ${isActive ? 'bg-primary text-primary-foreground shadow-[0_0_10px_rgba(245,158,11,0.4)]' : ''}`}>
                   {item.icon}
                 </div>
                 <span className="text-[9px] font-medium tracking-wide">{item.label}</span>

@@ -153,9 +153,9 @@ export default function GalleriesPage() {
   };
 
   const statusColors: Record<string, string> = {
-    draft: 'bg-muted text-foreground',
-    published: 'bg-green-100 text-green-800',
-    archived: 'bg-yellow-100 text-yellow-800',
+    draft: 'bg-muted text-muted-foreground',
+    published: 'bg-green-500/20 text-green-400',
+    archived: 'bg-amber-500/20 text-amber-400',
   };
 
   return (

@@ -390,8 +390,8 @@ export default function GalleryDetailPage() {
               <>
                 <button
                   onClick={() => { setBulkMode(!bulkMode); setSelectedPhotoIdsForBulk(new Set()); }}
-                  className={`px-3 py-2 sm:py-1 text-sm rounded-lg transition-smooth cursor-pointer ${
-                    bulkMode ? 'bg-muted0 text-white' : 'bg-primary/20 text-amber-700 hover:bg-amber-200'
+                  className={`px-3 py-2 sm:py-1 text-sm rounded-lg transition-smooth cursor-pointer border border-border ${
+                    bulkMode ? 'bg-green-600/80 text-white border-green-500/50' : 'bg-card text-foreground hover:bg-primary/20 hover:text-primary hover:border-primary/50'
                   }`}
                 >
                   {bulkMode ? '✓ Bulk ON' : '☐ Bulk Select'}
@@ -399,15 +399,15 @@ export default function GalleryDetailPage() {
                 {bulkMode && (
                   <button
                     onClick={selectAllPhotos}
-                    className="px-3 py-2 sm:py-1 text-sm rounded-lg transition-smooth cursor-pointer bg-muted border border-border hover:bg-card text-foreground"
+                    className="px-3 py-2 sm:py-1 text-sm rounded-lg transition-smooth cursor-pointer border border-border bg-card text-foreground hover:bg-primary/20 hover:text-primary hover:border-primary/50"
                   >
                     {selectedPhotoIdsForBulk.size === gallery.photos.length ? 'Batal Semua' : 'Pilih Semua'}
                   </button>
                 )}
                 <button
                   onClick={() => setReorderMode(!reorderMode)}
-                  className={`px-3 py-2 sm:py-1 text-sm rounded-lg transition-smooth cursor-pointer ${
-                    reorderMode ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  className={`px-3 py-2 sm:py-1 text-sm rounded-lg transition-smooth cursor-pointer border border-border ${
+                    reorderMode ? 'bg-blue-600/80 text-white border-blue-500/50' : 'bg-card text-foreground hover:bg-blue-500/20 hover:text-blue-400 hover:border-blue-500/50'
                   }`}
                 >
                   {reorderMode ? '✓ Reorder ON' : '⇅ Reorder'}
