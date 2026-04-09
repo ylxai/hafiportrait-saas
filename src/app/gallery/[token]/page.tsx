@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import useSWR from 'swr';
@@ -50,8 +49,8 @@ type GalleryData = {
 const breakpointColumns = {
   default: 4,
   1100: 3,
-  700: 2,
-  500: 1,
+  700: 3,
+  500: 2,
 };
 
 const fetcher = (url: string) => fetch(url).then((res) => {
@@ -298,12 +297,15 @@ export default function GalleryPage() {
           </div>
           <div className="flex items-center gap-2">
             {hasPickspace && !isLocked && localSelectionCount > 0 && (
-              <button onClick={handleSubmit} disabled={submitting} className="px-4 py-2 bg-primary/100 text-white text-sm font-medium rounded-lg hover:bg-primary/80 disabled:opacity-50">
+              <button onClick={handleSubmit} disabled={submitting} className="hidden md:block px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors">
                 {submitting ? 'Mengirim…' : `Kirim (${localSelectionCount})`}
               </button>
             )}
             {hasPickspace && isLocked && (
-              <span className="px-3 py-2 bg-green-100 text-green-700 text-xs font-medium rounded-full">✓ Terkirim</span>
+              <span className="px-3 py-1.5 bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-medium rounded-full flex items-center gap-1 shadow-[0_0_10px_rgba(34,197,94,0.2)]">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                Pilihan Dikunci
+              </span>
             )}
           </div>
         </div>
@@ -344,10 +346,10 @@ export default function GalleryPage() {
 
       {hasPickspace && (
         <div className="mx-4 mt-3 flex gap-1 bg-card rounded-lg p-1 border border-border">
-          <button onClick={() => setActiveTab('all')} className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'all' ? 'bg-primary/10 text-amber-700' : 'text-muted-foreground hover:bg-background'}`}>
+          <button onClick={() => setActiveTab('all')} className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'all' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-background hover:text-foreground'}`}>
             Semua Foto
           </button>
-          <button onClick={() => setActiveTab('selected')} className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'selected' ? 'bg-primary/10 text-amber-700' : 'text-muted-foreground hover:bg-background'}`}>
+          <button onClick={() => setActiveTab('selected')} className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'selected' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-background hover:text-foreground'}`}>
             Terpilih ({activeSelectionCount})
           </button>
         </div>
@@ -392,9 +394,9 @@ export default function GalleryPage() {
                         onClick={(e) => { e.stopPropagation(); toggleSelect(photo.id); }}
                         disabled={isLocked || !canSelect}
                         aria-label={isSelected ? 'Batal pilih' : 'Pilih foto'}
-                        className={`absolute top-2 right-2 w-7 h-7 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all ${isSelected ? 'bg-primary/100 border-primary text-white' : canSelect ? 'bg-card/80 border-slate-300 text-transparent hover:border-primary hover:text-primary' : 'bg-muted border-slate-300 cursor-not-allowed'}`}
+                        className={`absolute top-3 right-3 w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm transition-all shadow-md ${isSelected ? 'bg-primary border-primary text-primary-foreground shadow-[0_0_10px_rgba(var(--primary),0.5)] scale-110' : canSelect ? 'bg-black/40 border-white/50 text-transparent hover:border-white hover:text-white hover:bg-black/60 backdrop-blur-sm' : 'bg-muted/80 border-muted-foreground/30 text-transparent cursor-not-allowed'}`}
                       >
-                        ✓
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
                       </button>
                     )}
                   </div>
@@ -482,7 +484,37 @@ export default function GalleryPage() {
         )}
       </main>
 
-      <footer className="py-6 text-center text-xs text-slate-400">© {new Date().getFullYear()} PhotoStudio</footer>
+      <footer className="py-6 pb-28 text-center text-xs text-muted-foreground">© {new Date().getFullYear()} PhotoStudio</footer>
+
+      {hasPickspace && !isLocked && localSelectionCount > 0 && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border z-40 transform transition-transform duration-300">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-foreground">
+              {localSelectionCount} dari {maxSelection} dipilih
+            </span>
+            <span className={`text-xs ${isMaxed ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+              {isMaxed ? 'Kuota penuh' : 'Bisa tambah lagi'}
+            </span>
+          </div>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="w-full py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 disabled:opacity-50 flex justify-center items-center gap-2 shadow-[0_0_15px_rgba(var(--primary),0.3)] transition-all"
+          >
+            {submitting ? (
+              <>
+                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Mengirim...
+              </>
+            ) : (
+              'Kirim Hasil Seleksi'
+            )}
+          </button>
+        </div>
+      )}
 
       <YARLightbox
         open={lightboxIndex >= 0}
@@ -492,22 +524,25 @@ export default function GalleryPage() {
         slides={photos.map((p) => ({ src: p.url, alt: p.filename }))}
         plugins={[Zoom]}
         carousel={{ finite: false }}
+        toolbar={hasPickspace && !isLocked && photos[lightboxIndex] ? {
+          buttons: [
+            <button
+              key="select-button"
+              type="button"
+              aria-label="Pilih foto"
+              onClick={(e) => { e.stopPropagation(); toggleSelect(photos[lightboxIndex].id); }}
+              className={`mr-4 px-4 py-1.5 rounded-full text-sm font-semibold transition-all border ${
+                selectedIds.has(photos[lightboxIndex].id)
+                  ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_15px_rgba(var(--primary),0.5)]'
+                  : 'bg-black/50 text-white border-white/50 hover:bg-white/20'
+              }`}
+            >
+              {selectedIds.has(photos[lightboxIndex].id) ? '✓ Terpilih' : 'Pilih Foto'}
+            </button>,
+            "close",
+          ],
+        } : undefined}
       />
-      {lightboxIndex >= 0 && hasPickspace && !isLocked && photos[lightboxIndex] && typeof document !== 'undefined' && createPortal(
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999999] pointer-events-auto">
-          <button
-            onClick={(e) => { e.stopPropagation(); toggleSelect(photos[lightboxIndex].id); }}
-            className={`px-8 py-3 rounded-full text-sm font-bold transition-all shadow-xl backdrop-blur-md border ${
-              selectedIds.has(photos[lightboxIndex].id)
-                ? 'bg-primary text-white border-primary shadow-primary/20 scale-105'
-                : 'bg-black/60 text-white border-white/20 hover:bg-black/80 hover:border-white/40'
-            }`}
-          >
-            {selectedIds.has(photos[lightboxIndex].id) ? '✓ Dipilih' : 'Pilih Foto Ini'}
-          </button>
-        </div>,
-        document.body
-      )}
     </div>
   );
 }
