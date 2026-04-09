@@ -34,7 +34,7 @@ type Photo = {
 type Selection = {
   id: string;
   submittedAt: string;
-  photos: { photoId: string }[];
+  photos: { photoId: string; photo: Photo }[];
 };
 
 type Gallery = {
@@ -51,7 +51,6 @@ type Gallery = {
   isSelectionLocked: boolean;
   viewCount: number;
   event: { kodeBooking: string; client: { nama: string } };
-  photos: Photo[];
   selections: Selection[];
 };
 
@@ -84,6 +83,13 @@ export default function GalleryDetailPage() {
   );
   
   const gallery = data?.data?.gallery ?? null;
+
+  const { data: photosRes, isLoading: photosLoading, mutate: mutatePhotos } = useSWR<{ data: { photos: Photo[], pagination: { total: number, pages: number } } }>(
+    galleryId ? `/api/admin/galleries/${galleryId}/photos?page=${currentPage}&limit=${photosPerPage}` : null,
+    fetcher
+  );
+  const photos = photosRes?.data?.photos || [];
+  const pagination = photosRes?.data?.pagination;
   
   // Update settings state when gallery data loads
   useEffect(() => {
@@ -123,11 +129,11 @@ export default function GalleryDetailPage() {
       await fetch(`/api/admin/galleries/${galleryId}/photos/${photoId}`, {
         method: 'DELETE',
       });
-      mutate();
+      mutatePhotos();
     } catch (error) {
       console.error('Error deleting photo:', error);
     }
-  }, [galleryId, mutate]);
+  }, [galleryId, mutatePhotos]);
   
   // Save gallery settings
   const handleSaveSettings = async () => {
@@ -173,7 +179,7 @@ export default function GalleryDetailPage() {
       });
       
       if (response.ok) {
-        mutate(); // Refresh gallery data
+        mutatePhotos(); // Refresh photos
       } else {
         console.error('Failed to reorder photo');
       }
@@ -198,11 +204,11 @@ export default function GalleryDetailPage() {
   };
 
   const selectAllPhotos = () => {
-    if (!gallery) return;
-    if (selectedPhotoIdsForBulk.size === gallery.photos.length) {
+    if (!photos) return;
+    if (selectedPhotoIdsForBulk.size === photos.length) {
       setSelectedPhotoIdsForBulk(new Set());
     } else {
-      setSelectedPhotoIdsForBulk(new Set(gallery.photos.map((p) => p.id)));
+      setSelectedPhotoIdsForBulk(new Set(photos.map((p) => p.id)));
     }
   };
 
@@ -230,11 +236,11 @@ export default function GalleryDetailPage() {
 
     setSelectedPhotoIdsForBulk(new Set());
     setBulkMode(false);
-    mutate();
-  }, [galleryId, mutate, selectedPhotoIdsForBulk]);
+    mutatePhotos();
+  }, [galleryId, mutatePhotos, selectedPhotoIdsForBulk]);
 
   const exportToTxt = () => {
-    const photosToExport = gallery?.photos;
+    const photosToExport = photos;
 
     if (!photosToExport || photosToExport.length === 0) {
       toast.error('Tidak ada foto untuk diekspor');
@@ -274,14 +280,11 @@ export default function GalleryDetailPage() {
   const selectedPhotoIdsFromServer = latestSelection?.photos.map((p) => p.photoId) || [];
 
   // Pagination logic
-  const totalPhotos = gallery?.photos.length || 0;
-  const totalPages = Math.ceil(totalPhotos / photosPerPage);
-  const paginatedPhotos = gallery?.photos.slice(
-    (currentPage - 1) * photosPerPage,
-    currentPage * photosPerPage
-  ) || [];
+  const totalPhotos = pagination?.total || 0;
+  const totalPages = pagination?.pages || 0;
+  const paginatedPhotos = photos;
 
-  if (isLoading) {
+  if (isLoading || photosLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
@@ -374,9 +377,10 @@ export default function GalleryDetailPage() {
               
               {/* Selected photos grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                {gallery.photos
-                  .filter((p) => selectedPhotoIdsFromServer.includes(p.id))
-                  .map((photo, idx) => (
+                {gallery.selections[0]?.photos
+                  .map((item, idx) => {
+                    const photo = item.photo;
+                    return (
                     <div key={photo.id} className="relative group">
                       <PhotoImage
                         src={photo.url}
@@ -392,16 +396,16 @@ export default function GalleryDetailPage() {
                         <span className="text-white text-xs">{photo.filename}</span>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
               </div>
 
               {/* Filename list */}
               <div className="mt-4 p-3 bg-card text-card-foreground rounded-lg">
                 <p className="text-xs font-medium text-muted-foreground mb-2">Daftar filename:</p>
                 <div className="text-xs text-muted-foreground font-mono max-h-32 overflow-y-auto">
-                  {gallery.photos
-                    .filter((p) => selectedPhotoIdsFromServer.includes(p.id))
-                    .map((p) => p.filename)
+                  {gallery.selections[0]?.photos
+                    .map((item) => item.photo.filename)
                     .join('\n')}
                 </div>
               </div>
@@ -423,8 +427,8 @@ export default function GalleryDetailPage() {
       <div className="bg-card text-card-foreground rounded-xl border border-champagne-100 p-4 sm:p-6 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <h2 className="font-semibold text-lg text-foreground">Photos ({gallery.photos.length})</h2>
-            {gallery.photos.length > 0 && (
+            <h2 className="font-semibold text-lg text-foreground">Photos ({totalPhotos})</h2>
+            {totalPhotos > 0 && (
               <>
                 <button
                   onClick={() => { setBulkMode(!bulkMode); setSelectedPhotoIdsForBulk(new Set()); }}
@@ -439,7 +443,7 @@ export default function GalleryDetailPage() {
                     onClick={selectAllPhotos}
                     className="px-3 py-2 sm:py-1 text-sm rounded-lg transition-smooth cursor-pointer border border-border bg-card text-foreground hover:bg-primary/20 hover:text-primary hover:border-primary/50"
                   >
-                    {selectedPhotoIdsForBulk.size === gallery.photos.length ? 'Batal Semua' : 'Pilih Semua'}
+                    {selectedPhotoIdsForBulk.size === photos.length ? 'Batal Semua' : 'Pilih Semua'}
                   </button>
                 )}
                 <button
@@ -485,7 +489,7 @@ export default function GalleryDetailPage() {
           r2Accounts={r2Accounts}
         />
 
-        {gallery.photos.length === 0 ? (
+        {photos.length === 0 ? (
           <div className="text-center py-8 sm:py-12 border-2 border-dashed border-champagne-200 rounded-lg">
             <p className="text-muted-foreground">Belum ada foto. Upload foto untuk gallery ini.</p>
           </div>
@@ -493,12 +497,12 @@ export default function GalleryDetailPage() {
           <>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3">
             {paginatedPhotos.map((photo, index) => {
-              const globalIndex = (currentPage - 1) * photosPerPage + index;
+              const localIndex = index;
               return (
               <div key={photo.id} className="relative group aspect-square">
                 <div 
                   className="w-full h-full cursor-pointer"
-                  onClick={() => setLightboxIndex(globalIndex)}
+                  onClick={() => setLightboxIndex(localIndex)}
                 >
                   <PhotoImage
                     src={photo.url}
@@ -528,11 +532,11 @@ export default function GalleryDetailPage() {
                   >
                     <div className="flex flex-col items-center gap-2">
                       <span className="text-sm font-bold bg-muted0 text-white px-2 py-1 rounded shadow-lg">
-                        Order: {photo.order || globalIndex + 1}
+                        Order: {photo.order || (currentPage - 1) * photosPerPage + localIndex + 1}
                       </span>
                       <input
                         type="number"
-                        defaultValue={photo.order || globalIndex + 1}
+                        defaultValue={photo.order || (currentPage - 1) * photosPerPage + localIndex + 1}
                         onBlur={(e) => handleReorderPhoto(photo.id, parseInt(e.target.value) || 0)}
                         className="w-16 px-2 py-1 text-center font-bold text-black border-2 border-white rounded shadow-lg"
                         min="1"
@@ -622,7 +626,7 @@ export default function GalleryDetailPage() {
         open={lightboxIndex >= 0}
         index={lightboxIndex >= 0 ? lightboxIndex : 0}
         close={() => setLightboxIndex(-1)}
-        slides={gallery?.photos?.map(p => ({ src: p.url })) || []}
+        slides={photos?.map(p => ({ src: p.url })) || []}
         plugins={[Zoom]}
         controller={{ closeOnBackdropClick: true }}
         styles={{

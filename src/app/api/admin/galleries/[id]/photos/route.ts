@@ -2,20 +2,84 @@ import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { uploadToR2 } from '@/lib/storage/r2';
 import { uploadToCloudinary, generateThumbnailUrl } from '@/lib/storage/cloudinary';
+import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
 import { getDefaultAccount, updateStorageUsage, findWorkingAccount } from '@/lib/storage/accounts';
 import imageSize from 'image-size';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { NextResponse } from 'next/server';
+
+async function checkAuth() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return errorResponse('Unauthorized', 401);
+  }
+  return session;
+}
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const auth = await checkAuth();
+    if (auth instanceof NextResponse) return auth;
+
+    const { id: galleryId } = await params;
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const skip = (page - 1) * limit;
+
+    const [photos, total] = await Promise.all([
+      prisma.photo.findMany({
+        where: { galleryId },
+        orderBy: { order: 'asc' },
+        skip,
+        take: limit,
+      }),
+      prisma.photo.count({
+        where: { galleryId },
+      }),
+    ]);
+
+    const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
+    const cloudName = cloudinaryAccount?.cloudName || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+
+    const serializedPhotos = photos.map(photo => {
+      let thumbnailUrl = photo.thumbnailUrl;
+      if (!thumbnailUrl && cloudName) {
+        thumbnailUrl = getCloudinaryThumbnailUrl(photo.url, { width: 400, cloudName });
+      }
+      return {
+        ...photo,
+        thumbnailUrl: thumbnailUrl || photo.url,
+        fileSize: photo.fileSize?.toString() || null,
+      };
+    });
+
+    return successResponse({
+      photos: serializedPhotos,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching photos:', error);
+    return serverErrorResponse('Failed to fetch photos');
+  }
+}
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return errorResponse('Unauthorized', 401);
-    }
+    const auth = await checkAuth();
+    if (auth instanceof NextResponse) return auth;
 
     const { id: galleryId } = await params;
     const formData = await request.formData();
@@ -27,14 +91,10 @@ export async function POST(
       return errorResponse('No file provided', 400);
     }
 
-    // Get file size
     const fileSize = BigInt(file.size);
-
-    // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Get actual image dimensions
     let width = 0;
     let height = 0;
     try {
@@ -45,7 +105,6 @@ export async function POST(
       console.warn('Could not get image dimensions:', dimError);
     }
 
-    // Get Cloudinary account
     let cloudinaryAccount = null;
     if (cloudinaryAccountId) {
       cloudinaryAccount = await prisma.storageAccount.findUnique({
@@ -56,7 +115,6 @@ export async function POST(
       cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
     }
 
-    // Get R2 account
     let r2Account = null;
     if (r2AccountId) {
       r2Account = await prisma.storageAccount.findUnique({
@@ -67,7 +125,6 @@ export async function POST(
       r2Account = await getDefaultAccount('R2');
     }
 
-    // Upload to R2
     let r2Key = '';
     let originalUrl = '';
     let lastFailedR2Id: string | undefined;
@@ -101,7 +158,6 @@ export async function POST(
       }
     }
 
-    // Upload to Cloudinary
     let publicId = '';
     let thumbnailUrl = '';
     let lastFailedCloudinaryId: string | undefined;
@@ -127,22 +183,18 @@ export async function POST(
         lastFailedCloudinaryId = cloudinaryAccount?.id;
         cloudinaryAccount = await findWorkingAccount('CLOUDINARY', lastFailedCloudinaryId);
         if (!cloudinaryAccount) {
-          // If Cloudinary fails but R2 succeeded, continue without thumbnail
           console.error('All Cloudinary accounts failed, continuing without thumbnail');
           break;
         }
       }
     }
 
-    // Determine which account to use for tracking
     const primaryStorageAccountId = r2Account?.id || null;
 
-    // Update storage usage
     if (primaryStorageAccountId) {
       await updateStorageUsage(primaryStorageAccountId, fileSize);
     }
 
-    // Create photo record
     const photo = await prisma.photo.create({
       data: {
         galleryId,
@@ -159,7 +211,6 @@ export async function POST(
       },
     });
 
-    // Serialize BigInt for JSON response
     const serializedPhoto = {
       ...photo,
       fileSize: photo.fileSize?.toString() || null,

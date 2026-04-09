@@ -19,38 +19,36 @@ export async function GET(
       ? cursor 
       : undefined;
 
-    // Fetch gallery info and photos in parallel
-    const [gallery, photos] = await Promise.all([
-      // Get gallery with event info
-      prisma.gallery.findUnique({
-        where: { clientToken: token },
-        include: {
-          event: {
-            include: {
-              client: true,
-            },
-          },
-          selections: {
-            orderBy: { submittedAt: 'desc' },
-            take: 1,
+    // Get gallery with event info
+    const gallery = await prisma.gallery.findUnique({
+      where: { clientToken: token },
+      include: {
+        event: {
+          include: {
+            client: true,
           },
         },
-      }),
-      // Get paginated photos
-      prisma.photo.findMany({
-        where: { 
-          gallery: { clientToken: token }
+        selections: {
+          orderBy: { submittedAt: 'desc' },
+          take: 1,
         },
-        orderBy: [{ order: 'asc' }, { id: 'asc' }],
-        take: PHOTOS_PER_PAGE + 1, // Take one extra to check if there's more
-        skip: cursorId ? 1 : 0,
-        cursor: cursorId ? { id: cursorId } : undefined,
-      }),
-    ]);
+      },
+    });
 
     if (!gallery) {
       return notFoundResponse('Gallery not found');
     }
+
+    // Get paginated photos using the gallery ID to optimize index usage
+    const photos = await prisma.photo.findMany({
+      where: { 
+        galleryId: gallery.id
+      },
+      orderBy: [{ order: 'asc' }, { id: 'asc' }],
+      take: PHOTOS_PER_PAGE + 1, // Take one extra to check if there's more
+      skip: cursorId ? 1 : 0,
+      cursor: cursorId ? { id: cursorId } : undefined,
+    });
 
     // Check if there's a next page
     const hasMore = photos.length > PHOTOS_PER_PAGE;

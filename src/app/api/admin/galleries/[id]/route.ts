@@ -4,8 +4,6 @@ import { successResponse, notFoundResponse, serverErrorResponse, errorResponse }
 import { updateGallerySchema } from '@/lib/api/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { getDefaultAccount } from '@/lib/storage/accounts';
-import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -33,13 +31,14 @@ export async function GET(
             client: true,
           },
         },
-        photos: {
-          orderBy: { order: 'asc' },
-        },
         selections: {
           orderBy: { submittedAt: 'desc' },
           include: {
-            photos: true,
+            photos: {
+              include: {
+                photo: true
+              }
+            },
           },
         },
       },
@@ -49,23 +48,11 @@ export async function GET(
       return notFoundResponse('Gallery not found');
     }
 
-    const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
-    const cloudName = cloudinaryAccount?.cloudName || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-
     // Serialize BigInt fields for JSON
     const serializedGallery = {
       ...gallery,
-      photos: gallery.photos.map(photo => {
-        let thumbnailUrl = photo.thumbnailUrl;
-        if (!thumbnailUrl && cloudName) {
-          thumbnailUrl = getCloudinaryThumbnailUrl(photo.url, { width: 400, cloudName });
-        }
-        return {
-          ...photo,
-          thumbnailUrl: thumbnailUrl || photo.url,
-          fileSize: photo.fileSize?.toString() || null,
-        };
-      }),
+      // photos are now fetched via a separate paginated endpoint
+      photos: [],
     };
 
     return successResponse({ gallery: serializedGallery });
