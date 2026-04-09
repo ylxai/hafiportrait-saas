@@ -97,7 +97,7 @@ export async function GET(
         ...gallery,
         photos: serializedPhotos,
         selections,
-        isSelectionLocked: latestSelection !== null,
+        isSelectionLocked: gallery.isSelectionLocked,
         pagination: {
           hasMore,
           nextCursor,

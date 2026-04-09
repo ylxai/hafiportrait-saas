@@ -250,6 +250,24 @@ export default function GalleryDetailPage() {
     URL.revokeObjectURL(url);
   };
 
+  const toggleLock = async () => {
+    try {
+      const res = await fetch(`/api/admin/galleries/${galleryId}/toggle-lock`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isSelectionLocked: !gallery?.isSelectionLocked }),
+      });
+      if (res.ok) {
+        mutate();
+      } else {
+        alert('Gagal mengubah status kunci galeri');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Terjadi kesalahan');
+    }
+  };
+
   // Get selected photos from latest selection
   const latestSelection = gallery?.selections[0];
   const selectedPhotoIdsFromServer = latestSelection?.photos.map((p) => p.photoId) || [];
@@ -325,7 +343,19 @@ export default function GalleryDetailPage() {
       {/* Selection View - Admin sees client selections */}
       {showSelectionView && (
         <div className="mb-6 bg-muted border border-amber-200 rounded-xl p-4">
-          <h2 className="font-semibold text-slate-900 mb-3">📋 Seleksi dari Client</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <h2 className="font-semibold text-slate-900">📋 Seleksi dari Client</h2>
+            <button
+              onClick={toggleLock}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border flex items-center gap-2 w-fit ${
+                gallery.isSelectionLocked
+                  ? 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200'
+                  : 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200'
+              }`}
+            >
+              {gallery.isSelectionLocked ? '🔓 Buka Kunci (Klien bisa memilih lagi)' : '🔒 Kunci Seleksi (Klien tidak bisa memilih)'}
+            </button>
+          </div>
           {gallery.isSelectionLocked ? (
             <div>
               <p className="text-sm text-muted-foreground mb-3">
@@ -376,7 +406,14 @@ export default function GalleryDetailPage() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Belum ada seleksi dari client</p>
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-muted-foreground">Status seleksi saat ini sedang <strong className="text-green-600">Terbuka</strong>. Klien masih dapat mengubah dan mengirimkan pilihan foto.</p>
+              {selectedPhotoIdsFromServer.length > 0 && (
+                <p className="text-sm font-medium text-amber-600">
+                  Pilihan terakhir klien: {selectedPhotoIdsFromServer.length} foto.
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}

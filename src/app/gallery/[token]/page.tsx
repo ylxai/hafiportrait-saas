@@ -152,11 +152,6 @@ export default function GalleryPage() {
   useSelectionSubscription(gallery?.id || '', handleSelectionUpdate);
   useViewCountSubscription(gallery?.id || '', handleViewCountUpdate);
 
-  useEffect(() => {
-    if (gallery?.id) {
-      fetch(`/api/admin/galleries/${gallery.id}/view`, { method: 'POST' }).catch(console.error);
-    }
-  }, [gallery?.id]);
 
   const toggleSelect = useCallback((photoId: string) => {
     if (isLocked) return;
