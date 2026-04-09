@@ -195,6 +195,13 @@ export async function queuePhotosDeletionForEntities(whereCriteria: Prisma.Photo
   
   const photos = await prisma.photo.findMany({
     where: whereCriteria,
+    select: {
+      id: true,
+      r2Key: true,
+      thumbnailUrl: true,
+      storageAccountId: true,
+      fileSize: true,
+    }
   });
 
   if (photos.length === 0) return;

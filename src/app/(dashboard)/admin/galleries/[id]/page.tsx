@@ -376,8 +376,7 @@ export default function GalleryDetailPage() {
               
               {/* Selected photos grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                {gallery.selections[0]?.photos
-                  .map((item, idx) => {
+                {gallery.selections[0]?.photos?.map((item, idx) => {
                     const photo = item.photo;
                     return (
                     <div key={photo.id} className="relative group">
@@ -403,8 +402,7 @@ export default function GalleryDetailPage() {
               <div className="mt-4 p-3 bg-card text-card-foreground rounded-lg">
                 <p className="text-xs font-medium text-muted-foreground mb-2">Daftar filename:</p>
                 <div className="text-xs text-muted-foreground font-mono max-h-32 overflow-y-auto">
-                  {gallery.selections[0]?.photos
-                    .map((item) => item.photo.filename)
+                  {gallery.selections[0]?.photos?.map((item) => item.photo.filename)
                     .join('\n')}
                 </div>
               </div>
