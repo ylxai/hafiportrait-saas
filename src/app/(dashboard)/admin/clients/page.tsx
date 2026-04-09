@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { LazyImage } from '@/components/ui/lazy-image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -235,7 +236,19 @@ export default function ClientsPage() {
                       onCheckedChange={() => toggleSelect(client.id)}
                     />
                   </td>
-                  <td className="px-4 py-4 text-slate-800 font-medium">{client.nama}</td>
+                  <td className="px-4 py-4 text-slate-800 font-medium">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-100 shrink-0 relative">
+                        <LazyImage
+                          src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(client.nama || 'User')}&backgroundColor=f1f5f9&textColor=0f172a`}
+                          alt={client.nama || 'User'}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <span>{client.nama}</span>
+                    </div>
+                  </td>
                   <td className="px-4 py-4 text-slate-500">{client.email}</td>
                   <td className="px-4 py-4 text-slate-500">{client.phone || '-'}</td>
                   <td className="px-4 py-4 text-slate-500">{client.instagram || '-'}</td>

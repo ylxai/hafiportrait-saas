@@ -2,10 +2,7 @@ import { prisma } from '@/lib/db';
 import { successResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-
-// Simple in-memory cache
-const cache = new Map<string, { data: unknown; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+import { getCachedData } from '@/lib/cache';
 
 export async function GET(request: Request) {
   try {
@@ -22,13 +19,8 @@ export async function GET(request: Request) {
     const limit = Number.isNaN(limitRaw) ? 20 : Math.min(50, Math.max(1, limitRaw));
     const skip = (page - 1) * limit;
 
-    // Check cache for summary data (page 1 only)
-    const cacheKey = 'analytics:summary';
-    const cached = cache.get(cacheKey);
-    const isCacheValid = cached && Date.now() - cached.timestamp < CACHE_TTL;
-
-    // Fetch galleries with pagination
-    const [galleries, summary, publishedCount, totalSelections] = await Promise.all([
+    // Fetch galleries and summary (cached) concurrently
+    const [galleries, summaryData] = await Promise.all([
       prisma.gallery.findMany({
         select: {
           id: true,
@@ -44,33 +36,24 @@ export async function GET(request: Request) {
         take: limit,
         skip,
       }),
-      // Use cache for summary on page 1
-      page === 1 && isCacheValid
-        ? Promise.resolve(cached!.data as { _count: { id: number }; _sum: { viewCount: number | null } })
-        : prisma.gallery.aggregate({
-            _count: { id: true },
-            _sum: { viewCount: true },
-          }),
-      page === 1 && isCacheValid
-        ? Promise.resolve((cached!.data as { publishedCount: number }).publishedCount)
-        : prisma.gallery.count({ where: { status: 'published' } }),
-      page === 1 && isCacheValid
-        ? Promise.resolve((cached!.data as { totalSelections: number }).totalSelections)
-        : prisma.selection.count(),
+      getCachedData(
+        'analytics:summary',
+        async () => {
+          const [summary, publishedCount, totalSelections] = await Promise.all([
+            prisma.gallery.aggregate({
+              _count: { id: true },
+              _sum: { viewCount: true },
+            }),
+            prisma.gallery.count({ where: { status: 'published' } }),
+            prisma.selection.count(),
+          ]);
+          return { summary, publishedCount, totalSelections };
+        },
+        300
+      )
     ]);
 
-    // Update cache if not using cache
-    if (page === 1 && !isCacheValid) {
-      cache.set(cacheKey, {
-        data: { ...summary, publishedCount, totalSelections },
-        timestamp: Date.now(),
-      });
-    }
-
-    // Get total count for pagination
-    const total = page === 1 && isCacheValid
-      ? (summary as { _count: { id: number } })._count.id
-      : await prisma.gallery.count();
+    const total = summaryData.summary._count.id;
 
     const analytics = galleries.map((g) => ({
       id: g.id,
@@ -87,10 +70,10 @@ export async function GET(request: Request) {
 
     const summaryResult = {
       totalGalleries: total,
-      publishedGalleries: publishedCount as number,
-      totalViews: (summary as { _sum: { viewCount: number | null } })._sum.viewCount || 0,
-      avgViews: total > 0 ? Math.round(((summary as { _sum: { viewCount: number | null } })._sum.viewCount || 0) / total) : 0,
-      totalSelections: totalSelections as number,
+      publishedGalleries: summaryData.publishedCount,
+      totalViews: summaryData.summary._sum.viewCount || 0,
+      avgViews: total > 0 ? Math.round((summaryData.summary._sum.viewCount || 0) / total) : 0,
+      totalSelections: summaryData.totalSelections,
     };
 
     return successResponse({

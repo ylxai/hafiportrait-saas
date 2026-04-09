@@ -40,6 +40,16 @@ export async function GET(request: Request) {
         include: {
           client: true,
           package: true,
+          galleries: {
+            take: 1,
+            select: {
+              photos: {
+                take: 1,
+                orderBy: { order: 'asc' },
+                select: { url: true, thumbnailUrl: true }
+              }
+            }
+          }
         },
         orderBy: { eventDate: 'desc' },
         take: limit,

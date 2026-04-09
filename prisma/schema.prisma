@@ -28,7 +28,6 @@ model Client {
   updatedAt DateTime @updatedAt
   events    Event[]
 
-  @@index([email])
   @@index([createdAt])
   @@index([nama])
 }
@@ -53,7 +52,6 @@ model Event {
   galleries     Gallery[]
 
   @@index([clientId])
-  @@index([status])
   @@index([eventDate])
   @@index([paymentStatus])
   @@index([createdAt])
@@ -74,7 +72,6 @@ model Package {
   updatedAt    DateTime @updatedAt
   events       Event[]
 
-  @@index([isActive])
   @@index([createdAt])
   @@index([isActive, createdAt])
 }
@@ -101,8 +98,6 @@ model Gallery {
   selections        Selection[]
 
   @@index([eventId])
-  @@index([status])
-  @@index([clientToken])
   @@index([createdAt])
   @@index([status, createdAt])
 }
@@ -127,7 +122,6 @@ model Photo {
   
   selections      PhotoSelection[]
 
-  @@index([galleryId])
   @@index([storageAccountId])
   @@index([publicId])
   @@index([galleryId, order])
@@ -153,7 +147,6 @@ model PhotoSelection {
   photo        Photo     @relation(fields: [photoId], references: [id], onDelete: Cascade)
 
   @@unique([selectionId, photoId])
-  @@index([selectionId])
   @@index([photoId])
 }
 
