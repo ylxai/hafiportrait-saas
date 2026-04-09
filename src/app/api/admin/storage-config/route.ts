@@ -1,16 +1,19 @@
-import { env } from '@/lib/env';
+import { getDefaultAccount } from '@/lib/storage/accounts';
 import { successResponse } from '@/lib/api/response';
 
 export async function GET() {
+  const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
+  const r2Account = await getDefaultAccount('R2');
+
   const config = {
     cloudinary: {
-      cloudName: env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || '',
+      cloudName: cloudinaryAccount?.cloudName || '',
     },
     r2: {
-      accountId: env.R2_ACCOUNT_ID || '',
-      bucketName: env.R2_BUCKET_NAME || '',
-      publicUrl: env.R2_PUBLIC_URL || '',
-      endpoint: env.R2_ENDPOINT || '',
+      accountId: r2Account?.accountId || '',
+      bucketName: r2Account?.bucketName || '',
+      publicUrl: r2Account?.publicUrl || '',
+      endpoint: r2Account?.endpoint || '',
     },
   };
 

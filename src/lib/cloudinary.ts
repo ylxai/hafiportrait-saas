@@ -14,16 +14,18 @@ export function getCloudinaryThumbnailUrl(
     height?: number;
     quality?: 'auto' | number;
     format?: 'auto' | 'webp' | 'jpg' | 'png';
+    cloudName?: string;
   } = {}
 ): string {
   const { 
     width = 400, 
     height, 
     quality = 'auto',
-    format = 'auto' 
+    format = 'auto',
+    cloudName: explicitCloudName
   } = options;
 
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const cloudName = explicitCloudName || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   
   if (!cloudName) {
     console.error('Cloudinary cloud name not configured');
@@ -52,11 +54,11 @@ export function getCloudinaryThumbnailUrl(
 /**
  * Get different thumbnail sizes
  */
-export function getThumbnailSizes(r2Url: string) {
+export function getThumbnailSizes(r2Url: string, cloudName?: string) {
   return {
-    small: getCloudinaryThumbnailUrl(r2Url, { width: 200, height: 200 }),
-    medium: getCloudinaryThumbnailUrl(r2Url, { width: 400, height: 400 }),
-    large: getCloudinaryThumbnailUrl(r2Url, { width: 800, height: 800 }),
+    small: getCloudinaryThumbnailUrl(r2Url, { width: 200, height: 200, cloudName }),
+    medium: getCloudinaryThumbnailUrl(r2Url, { width: 400, height: 400, cloudName }),
+    large: getCloudinaryThumbnailUrl(r2Url, { width: 800, height: 800, cloudName }),
     original: r2Url,
   };
 }

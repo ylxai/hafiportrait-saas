@@ -8,6 +8,10 @@ import { UploadManager } from '@/components/upload/UploadManager';
 import { Button } from '@/components/ui/button';
 import { Upload } from 'lucide-react';
 import { PhotoImage } from '@/components/photo/PhotoImage';
+import YARLightbox from "yet-another-react-lightbox";
+import Zoom from "yet-another-react-lightbox/plugins/zoom";
+import "yet-another-react-lightbox/styles.css";
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 type StorageAccount = {
   id: string;
@@ -61,6 +65,9 @@ export default function GalleryDetailPage() {
   const [showUploadManager, setShowUploadManager] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(-1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const photosPerPage = 50;
   
   // Gallery settings state
   const [gallerySettings, setGallerySettings] = useState({
@@ -213,14 +220,23 @@ export default function GalleryDetailPage() {
   const deleteSelectedPhotos = useCallback(async () => {
     if (!confirm(`Hapus ${selectedPhotoIdsForBulk.size} foto yang dipilih?`)) return;
 
-    for (const photoId of selectedPhotoIdsForBulk) {
-      try {
-        await fetch(`/api/admin/galleries/${galleryId}/photos/${photoId}`, {
-          method: 'DELETE',
-        });
-      } catch (error) {
-        console.error('Error deleting photo:', error);
+    try {
+      const response = await fetch(`/api/admin/galleries/${galleryId}/photos/bulk`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          photoIds: Array.from(selectedPhotoIdsForBulk),
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to bulk delete photos');
       }
+    } catch (error) {
+      console.error('Error bulk deleting photos:', error);
+      alert('Terjadi kesalahan saat menghapus foto');
     }
 
     setSelectedPhotoIdsForBulk(new Set());
@@ -252,6 +268,14 @@ export default function GalleryDetailPage() {
   const latestSelection = gallery?.selections[0];
   const selectedPhotoIdsFromServer = latestSelection?.photos.map((p) => p.photoId) || [];
 
+  // Pagination logic
+  const totalPhotos = gallery?.photos.length || 0;
+  const totalPages = Math.ceil(totalPhotos / photosPerPage);
+  const paginatedPhotos = gallery?.photos.slice(
+    (currentPage - 1) * photosPerPage,
+    currentPage * photosPerPage
+  ) || [];
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -267,40 +291,47 @@ export default function GalleryDetailPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-900">{gallery.namaProject}</h1>
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-              gallery.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-muted text-muted-foreground'
+            <h1 className="text-xl font-bold text-foreground">{gallery.namaProject}</h1>
+            <span className={`px-2 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider ${
+              gallery.status === 'published' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
             }`}>
               {gallery.status}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
-            {gallery.event.client.nama} • {gallery.event.kodeBooking} • {gallery.viewCount} views
+          <p className="text-sm text-muted-foreground mt-2 flex flex-wrap items-center gap-2">
+            <span className="font-medium text-foreground">{gallery.event.client.nama}</span> 
+            <span className="text-border">•</span> 
+            {gallery.event.kodeBooking} 
+            <span className="text-border">•</span> 
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-500"></span>
+              👁️ {gallery.viewCount} views
+            </span>
+            <span className="text-border">•</span> 
+            <span className="flex items-center gap-1 text-green-500">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
               Live
             </span>
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto mt-2 sm:mt-0">
           <a
             href={`/gallery/${gallery.clientToken}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            className="flex-1 sm:flex-none text-center px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
           >
-            Link Galeri
+            <span>🔗</span> Link Galeri
           </a>
           <button
             onClick={() => setShowSelectionView(!showSelectionView)}
-            className={`px-4 py-2 rounded-lg ${
-              showSelectionView ? 'bg-muted0 text-white' : 'bg-muted text-foreground'
+            className={`flex-1 sm:flex-none px-4 py-2 text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2 ${
+              showSelectionView ? 'bg-amber-100 text-amber-800' : 'bg-card border border-border hover:bg-muted text-foreground'
             }`}
           >
-            👁️ Lihat Seleksi Client
+            <span>📋</span> Seleksi Client
           </button>
         </div>
       </div>
@@ -387,6 +418,14 @@ export default function GalleryDetailPage() {
                 >
                   {bulkMode ? '✓ Bulk ON' : '☐ Bulk Select'}
                 </button>
+                {bulkMode && (
+                  <button
+                    onClick={selectAllPhotos}
+                    className="px-3 py-2 sm:py-1 text-sm rounded-lg transition-smooth cursor-pointer bg-muted border border-border hover:bg-card text-foreground"
+                  >
+                    {selectedPhotoIdsForBulk.size === gallery.photos.length ? 'Batal Semua' : 'Pilih Semua'}
+                  </button>
+                )}
                 <button
                   onClick={() => setReorderMode(!reorderMode)}
                   className={`px-3 py-2 sm:py-1 text-sm rounded-lg transition-smooth cursor-pointer ${
@@ -435,59 +474,145 @@ export default function GalleryDetailPage() {
             <p className="text-muted-foreground">Belum ada foto. Upload foto untuk gallery ini.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3">
-            {gallery.photos.map((photo, index) => (
+          <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3">
+            {paginatedPhotos.map((photo, index) => {
+              const globalIndex = (currentPage - 1) * photosPerPage + index;
+              return (
               <div key={photo.id} className="relative group aspect-square">
-                {bulkMode && (
-                  <input
-                    type="checkbox"
-                    checked={selectedPhotoIdsForBulk.has(photo.id)}
-                    onChange={() => toggleBulkSelect(photo.id)}
-                    className="absolute top-2 left-2 z-10 w-5 h-5 rounded cursor-pointer"
+                <div 
+                  className="w-full h-full cursor-pointer"
+                  onClick={() => setLightboxIndex(globalIndex)}
+                >
+                  <PhotoImage
+                    src={photo.url}
+                    alt={photo.filename}
+                    fill
+                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 20vw, 12vw"
+                    className="object-cover rounded-lg"
                   />
-                )}
-                {reorderMode && (
-                  <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
-                    <span className="text-xs bg-muted0 text-white px-1 rounded">
-                      {photo.order || index + 1}
-                    </span>
+                </div>
+                {bulkMode && (
+                  <div 
+                    className="absolute inset-0 z-10 flex items-start justify-start p-2 cursor-pointer"
+                    onClick={(e) => { e.stopPropagation(); toggleBulkSelect(photo.id); }}
+                  >
                     <input
-                      type="number"
-                      defaultValue={photo.order || index + 1}
-                      onBlur={(e) => handleReorderPhoto(photo.id, parseInt(e.target.value) || 0)}
-                      className="w-12 px-1 py-0.5 text-xs border border-border rounded"
-                      min="1"
+                      type="checkbox"
+                      checked={selectedPhotoIdsForBulk.has(photo.id)}
+                      readOnly
+                      className="w-6 h-6 rounded border-2 border-white shadow-md cursor-pointer pointer-events-none"
                     />
                   </div>
                 )}
-                <PhotoImage
-                  src={photo.url}
-                  alt={photo.filename}
-                  fill
-                  sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 16vw, 12vw"
-                  className="object-cover rounded-lg"
-                />
-                {/* Selection indicator */}
-                {selectedPhotoIdsFromServer.includes(photo.id) && (
-                  <div className="absolute top-1 right-1 w-5 h-5 sm:w-6 sm:h-6 bg-muted0 rounded-full flex items-center justify-center text-white text-xs">
+                {reorderMode && (
+                  <div 
+                    className="absolute inset-0 z-10 bg-black/40 flex items-center justify-center p-2 cursor-pointer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="text-sm font-bold bg-muted0 text-white px-2 py-1 rounded shadow-lg">
+                        Order: {photo.order || globalIndex + 1}
+                      </span>
+                      <input
+                        type="number"
+                        defaultValue={photo.order || globalIndex + 1}
+                        onBlur={(e) => handleReorderPhoto(photo.id, parseInt(e.target.value) || 0)}
+                        className="w-16 px-2 py-1 text-center font-bold text-black border-2 border-white rounded shadow-lg"
+                        min="1"
+                      />
+                    </div>
+                  </div>
+                )}
+                {/* Selection indicator from Client */}
+                {!bulkMode && !reorderMode && selectedPhotoIdsFromServer.includes(photo.id) && (
+                  <div className="absolute bottom-2 right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs shadow-md pointer-events-none">
                     ✓
                   </div>
                 )}
-                <button
-                  onClick={() => deletePhoto(photo.id)}
-                  aria-label={`Hapus ${photo.filename}`}
-                  className="absolute top-1 left-1 w-5 h-5 sm:w-6 sm:h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition-smooth cursor-pointer"
-                >
-                  ✕
-                </button>
-                <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-white text-xs truncate rounded-b-lg opacity-0 group-hover:opacity-100 transition-smooth">
-                  {photo.filename}
-                </div>
+                {!bulkMode && !reorderMode && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); deletePhoto(photo.id); }}
+                    aria-label={`Hapus ${photo.filename}`}
+                    className="absolute top-2 right-2 z-10 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white text-sm opacity-0 group-hover:opacity-100 transition-smooth shadow-md cursor-pointer hover:scale-110"
+                  >
+                    ✕
+                  </button>
+                )}
+                {!bulkMode && !reorderMode && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-white text-xs truncate rounded-b-lg opacity-0 group-hover:opacity-100 transition-smooth pointer-events-none text-center">
+                    {photo.filename}
+                  </div>
+                )}
               </div>
-            ))}
+            )})}
           </div>
+
+          {totalPages > 1 && (
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border pt-4">
+              <div className="text-sm text-muted-foreground">
+                Menampilkan {(currentPage - 1) * photosPerPage + 1} - {Math.min(currentPage * photosPerPage, totalPhotos)} dari {totalPhotos} foto
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="h-8 border-border text-foreground hover:bg-muted"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+                </Button>
+                <div className="flex items-center gap-1 overflow-x-auto max-w-[200px] sm:max-w-none no-scrollbar">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) pageNum = i + 1;
+                    else if (currentPage <= 3) pageNum = i + 1;
+                    else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                    else pageNum = currentPage - 2 + i;
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`min-w-8 h-8 px-2 flex items-center justify-center rounded-lg text-sm transition-colors ${
+                          currentPage === pageNum 
+                            ? 'bg-primary text-primary-foreground font-medium' 
+                            : 'hover:bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-8 border-border text-foreground hover:bg-muted"
+                >
+                  Next <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
+          </>
         )}
       </div>
+
+      <YARLightbox
+        open={lightboxIndex >= 0}
+        index={lightboxIndex >= 0 ? lightboxIndex : 0}
+        close={() => setLightboxIndex(-1)}
+        slides={gallery?.photos?.map(p => ({ src: p.url })) || []}
+        plugins={[Zoom]}
+        controller={{ closeOnBackdropClick: true }}
+        styles={{
+          container: { backgroundColor: "rgba(0, 0, 0, 0.9)", backdropFilter: "blur(10px)" }
+        }}
+      />
 
       {/* Settings */}
       <div className="bg-card/50 backdrop-blur-xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.2)] rounded-3xl p-4 sm:p-6">

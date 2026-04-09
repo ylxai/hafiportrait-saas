@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import { deleteFromR2 } from '@/lib/upload/presigned';
 import { deleteFromCloudinary, getCloudinaryPublicId } from '@/lib/storage/cloudinary';
-import { decreaseStorageUsage } from '@/lib/storage/accounts';
+import { decreaseStorageUsage, getDefaultAccount } from '@/lib/storage/accounts';
 
 interface DeletionJobData {
   photoId: string;
@@ -42,7 +42,18 @@ export async function performPhotoDeletion(data: DeletionJobData): Promise<void>
     try {
       const publicId = getCloudinaryPublicId(thumbnailUrl);
       if (publicId) {
-        await deleteFromCloudinary(publicId);
+        const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
+        if (!cloudinaryAccount) {
+          throw new Error('No active Cloudinary storage account configured in database');
+        }
+
+        const cloudinaryCreds = {
+          cloudName: cloudinaryAccount.cloudName || '',
+          apiKey: cloudinaryAccount.apiKey || '',
+          apiSecret: cloudinaryAccount.apiSecret || '',
+        };
+
+        await deleteFromCloudinary(publicId, cloudinaryCreds);
         console.log(`[DeletionWorker] Cloudinary file deleted: ${publicId}`);
         cloudinaryDeleted = true;
       }

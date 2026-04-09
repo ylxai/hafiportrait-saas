@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import useSWR from 'swr';
@@ -68,7 +69,7 @@ export default function GalleryPage() {
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const { data, error, isLoading } = useSWR<{ data: GalleryData }>(
+  const { data, error, isLoading, mutate } = useSWR<{ data: GalleryData }>(
     token ? `/api/public/gallery/${token}` : null,
     fetcher,
     { 
@@ -188,16 +189,17 @@ export default function GalleryPage() {
           selectionCount: localSelectionCount,
           clientToken: token,
         });
+        await mutate(); // Re-fetch to update isLocked and server selections
+        setShowSuccess(true);
+      } else {
+        alert('Gagal mengirim seleksi. Silakan periksa kembali dan coba lagi.');
       }
-      
-      setSelectedIds(new Set());
-      setShowSuccess(true);
     } catch {
-      alert('Gagal mengirim seleksi. Coba lagi.');
+      alert('Terjadi kesalahan. Gagal mengirim seleksi. Coba lagi.');
     } finally {
       setSubmitting(false);
     }
-  }, [localSelectionCount, submitting, isLocked, token, selectedIds, gallery]);
+  }, [localSelectionCount, submitting, isLocked, token, selectedIds, gallery, mutate]);
 
   const handleDownload = useCallback(async () => {
     if (activeSelectedPhotos.length === 0) return;
@@ -307,11 +309,13 @@ export default function GalleryPage() {
         </div>
         {hasPickspace && !isLocked && localSelectionCount > 0 && (
           <div className="px-4 pb-3">
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                 <div className={`h-full rounded-full transition-all ${isMaxed ? 'bg-red-500' : 'bg-primary/100'}`} style={{ width: `${Math.min((localSelectionCount / maxSelection) * 100, 100)}%` }} />
               </div>
-              <span className="text-xs text-muted-foreground">{localSelectionCount}/{maxSelection}</span>
+              <span className={`text-xs font-semibold ${isMaxed ? 'text-red-500' : 'text-foreground'}`}>
+                {localSelectionCount} dari {maxSelection} foto dipilih
+              </span>
             </div>
           </div>
         )}
@@ -480,32 +484,29 @@ export default function GalleryPage() {
 
       <footer className="py-6 text-center text-xs text-slate-400">© {new Date().getFullYear()} PhotoStudio</footer>
 
-      {lightboxIndex >= 0 && (
-        <>
-          <YARLightbox
-            open={lightboxIndex >= 0}
-            close={closeLightbox}
-            index={lightboxIndex}
-            on={{ view: ({ index }) => setLightboxIndex(index) }}
-            slides={photos.map((p) => ({ src: p.url, alt: p.filename }))}
-            plugins={[Zoom]}
-            carousel={{ finite: false }}
-          />
-          {hasPickspace && !isLocked && photos[lightboxIndex] && (
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[10000]">
-              <button
-                onClick={(e) => { e.stopPropagation(); toggleSelect(photos[lightboxIndex].id); }}
-                className={`px-8 py-3 rounded-full text-sm font-bold transition-all shadow-xl backdrop-blur-md border ${
-                  selectedIds.has(photos[lightboxIndex].id)
-                    ? 'bg-primary text-white border-primary shadow-primary/20 scale-105'
-                    : 'bg-black/60 text-white border-white/20 hover:bg-black/80 hover:border-white/40'
-                }`}
-              >
-                {selectedIds.has(photos[lightboxIndex].id) ? '✓ Dipilih' : 'Pilih Foto Ini'}
-              </button>
-            </div>
-          )}
-        </>
+      <YARLightbox
+        open={lightboxIndex >= 0}
+        close={closeLightbox}
+        index={lightboxIndex >= 0 ? lightboxIndex : 0}
+        on={{ view: ({ index }) => setLightboxIndex(index) }}
+        slides={photos.map((p) => ({ src: p.url, alt: p.filename }))}
+        plugins={[Zoom]}
+        carousel={{ finite: false }}
+      />
+      {lightboxIndex >= 0 && hasPickspace && !isLocked && photos[lightboxIndex] && typeof document !== 'undefined' && createPortal(
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999999] pointer-events-auto">
+          <button
+            onClick={(e) => { e.stopPropagation(); toggleSelect(photos[lightboxIndex].id); }}
+            className={`px-8 py-3 rounded-full text-sm font-bold transition-all shadow-xl backdrop-blur-md border ${
+              selectedIds.has(photos[lightboxIndex].id)
+                ? 'bg-primary text-white border-primary shadow-primary/20 scale-105'
+                : 'bg-black/60 text-white border-white/20 hover:bg-black/80 hover:border-white/40'
+            }`}
+          >
+            {selectedIds.has(photos[lightboxIndex].id) ? '✓ Dipilih' : 'Pilih Foto Ini'}
+          </button>
+        </div>,
+        document.body
       )}
     </div>
   );

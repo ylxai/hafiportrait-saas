@@ -1,15 +1,4 @@
 import { v2 as cloudinary } from 'cloudinary';
-import { env } from '@/lib/env';
-
-const DEFAULT_CLOUD_NAME = env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? '';
-const DEFAULT_API_KEY = env.CLOUDINARY_API_KEY ?? '';
-const DEFAULT_API_SECRET = env.CLOUDINARY_API_SECRET ?? '';
-
-cloudinary.config({
-  cloud_name: DEFAULT_CLOUD_NAME,
-  api_key: DEFAULT_API_KEY,
-  api_secret: DEFAULT_API_SECRET,
-});
 
 export { cloudinary };
 
@@ -20,14 +9,14 @@ interface CloudinaryCredentials {
 }
 
 interface CloudinaryConfig {
-  cloud_name?: string;
-  api_key?: string;
-  api_secret?: string;
+  cloud_name: string;
+  api_key: string;
+  api_secret: string;
 }
 
-export function getCloudinaryClient(credentials?: CloudinaryCredentials): CloudinaryConfig {
-  if (!credentials) {
-    return {};
+export function getCloudinaryClient(credentials: CloudinaryCredentials): CloudinaryConfig {
+  if (!credentials || !credentials.cloudName || !credentials.apiKey || !credentials.apiSecret) {
+    throw new Error('Invalid or missing Cloudinary credentials from database');
   }
 
   return {
@@ -37,7 +26,9 @@ export function getCloudinaryClient(credentials?: CloudinaryCredentials): Cloudi
   };
 }
 
-export function generateThumbnailUrl(publicId: string, width = 400, height = 400): string {
+export function generateThumbnailUrl(publicId: string, width = 400, height = 400, credentials?: CloudinaryCredentials): string {
+  const config = credentials ? getCloudinaryClient(credentials) : undefined;
+  
   return cloudinary.url(publicId, {
     width,
     height,
@@ -45,33 +36,43 @@ export function generateThumbnailUrl(publicId: string, width = 400, height = 400
     quality: 'auto',
     format: 'auto',
     fetch_format: 'auto',
+    cloud_name: config?.cloud_name,
+    secure: true,
   });
 }
 
-export function generateMediumUrl(publicId: string, width = 800): string {
+export function generateMediumUrl(publicId: string, width = 800, credentials?: CloudinaryCredentials): string {
+  const config = credentials ? getCloudinaryClient(credentials) : undefined;
+
   return cloudinary.url(publicId, {
     width,
     crop: 'limit',
     quality: 'auto',
     format: 'auto',
     fetch_format: 'auto',
+    cloud_name: config?.cloud_name,
+    secure: true,
   });
 }
 
-export function generatePreviewUrl(publicId: string, width = 200): string {
+export function generatePreviewUrl(publicId: string, width = 200, credentials?: CloudinaryCredentials): string {
+  const config = credentials ? getCloudinaryClient(credentials) : undefined;
+
   return cloudinary.url(publicId, {
     width,
     crop: 'scale',
     quality: 'auto:low',
     format: 'auto',
     fetch_format: 'auto',
+    cloud_name: config?.cloud_name,
+    secure: true,
   });
 }
 
 export async function uploadToCloudinary(
   file: Buffer,
   folder: string = 'photos',
-  credentials?: CloudinaryCredentials
+  credentials: CloudinaryCredentials
 ): Promise<{ publicId: string; url: string }> {
   const clientConfig = getCloudinaryClient(credentials);
 
@@ -103,7 +104,15 @@ export async function uploadToCloudinary(
   });
 }
 
-export async function deleteFromCloudinary(publicId: string): Promise<void> {
+export async function deleteFromCloudinary(publicId: string, credentials: CloudinaryCredentials): Promise<void> {
+  const clientConfig = getCloudinaryClient(credentials);
+  
+  cloudinary.config({
+    cloud_name: clientConfig.cloud_name,
+    api_key: clientConfig.api_key,
+    api_secret: clientConfig.api_secret,
+  });
+
   await cloudinary.uploader.destroy(publicId);
 }
 

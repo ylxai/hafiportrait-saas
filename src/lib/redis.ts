@@ -33,7 +33,7 @@ function createRedisConfig() {
           const delay = Math.min(times * 50, 2000);
           return delay;
         },
-        maxRetriesPerRequest: 3,
+        maxRetriesPerRequest: null,
         enableReadyCheck: true,
       };
     }
@@ -50,7 +50,7 @@ function createRedisConfig() {
         const delay = Math.min(times * 50, 2000);
         return delay;
       },
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: null,
       enableReadyCheck: true,
     };
   }
@@ -63,7 +63,7 @@ function createRedisConfig() {
       const delay = Math.min(times * 50, 2000);
       return delay;
     },
-    maxRetriesPerRequest: 3,
+    maxRetriesPerRequest: null,
   };
 }
 

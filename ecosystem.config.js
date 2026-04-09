@@ -52,7 +52,7 @@ module.exports = {
       name: 'photostudio-workers',
       script: './scripts/workers.ts',
       interpreter: './node_modules/.bin/tsx',
-      instances: 1,
+      instances: 2,
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',

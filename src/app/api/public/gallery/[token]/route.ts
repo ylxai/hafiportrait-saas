@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
+import { getDefaultAccount } from '@/lib/storage/accounts';
+import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
 
 const PHOTOS_PER_PAGE = 100;
 
@@ -72,11 +74,23 @@ export async function GET(
 
     const selections = selectedPhotoIds.map((s) => s.photoId);
 
-    // Serialize BigInt fields for JSON
-    const serializedPhotos = photoList.map(photo => ({
-      ...photo,
-      fileSize: photo.fileSize?.toString() || null,
-    }));
+    // Get Cloudinary config for dynamic thumbnails
+    const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
+    const cloudName = cloudinaryAccount?.cloudName || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+
+    // Serialize BigInt fields for JSON and compute thumbnails if missing
+    const serializedPhotos = photoList.map(photo => {
+      let thumbnailUrl = photo.thumbnailUrl;
+      if (!thumbnailUrl && cloudName) {
+        thumbnailUrl = getCloudinaryThumbnailUrl(photo.url, { width: 400, cloudName });
+      }
+      
+      return {
+        ...photo,
+        thumbnailUrl: thumbnailUrl || photo.url,
+        fileSize: photo.fileSize?.toString() || null,
+      };
+    });
 
     return successResponse({
       gallery: {

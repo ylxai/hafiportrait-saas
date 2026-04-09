@@ -28,6 +28,7 @@ export function PhotoImage({
 }: PhotoImageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
 
   // Generate Cloudinary thumbnail URL from R2 URL
   const thumbnailUrl = getCloudinaryThumbnailUrl(src, {
@@ -37,10 +38,12 @@ export function PhotoImage({
     format: 'auto',
   });
 
+  const finalSrc = useFallback ? src : (thumbnailUrl || src);
+
   if (hasError) {
     return (
-      <div className={`bg-slate-100 flex items-center justify-center ${className}`}>
-        <span className="text-slate-400 text-xs">Failed to load</span>
+      <div className={`bg-card flex items-center justify-center border border-border rounded-lg ${className}`}>
+        <span className="text-muted-foreground text-xs">Failed to load</span>
       </div>
     );
   }
@@ -48,12 +51,12 @@ export function PhotoImage({
   return (
     <div className={`relative ${className}`}>
       {isLoading && (
-        <div className="absolute inset-0 bg-slate-50 flex items-center justify-center z-10">
-          <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+        <div className="absolute inset-0 bg-muted flex items-center justify-center z-10 rounded-lg">
+          <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
         </div>
       )}
       <Image
-        src={thumbnailUrl}
+        src={finalSrc}
         alt={alt}
         fill={fill}
         width={!fill ? width : undefined}
@@ -62,11 +65,16 @@ export function PhotoImage({
         className={`${className} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
         onLoad={() => setIsLoading(false)}
         onError={() => {
-          setIsLoading(false);
-          setHasError(true);
+          if (!useFallback) {
+            setUseFallback(true);
+            setIsLoading(true);
+          } else {
+            setIsLoading(false);
+            setHasError(true);
+          }
         }}
         priority={priority}
-        unoptimized // Cloudinary already optimized
+        unoptimized
       />
     </div>
   );

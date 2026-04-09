@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
-import { getSignedDownloadUrl, getPublicUrl } from '@/lib/storage/r2';
+import { getPublicUrl } from '@/lib/storage/r2';
+import { generateDownloadUrl } from '@/lib/upload/presigned';
 
 export async function GET(
   request: Request,
@@ -20,7 +21,7 @@ export async function GET(
 
     // Check if R2 key exists
     if (photo.r2Key) {
-      const signedUrl = await getSignedDownloadUrl(photo.r2Key);
+      const signedUrl = await generateDownloadUrl(photo.r2Key);
       return successResponse({ downloadUrl: signedUrl });
     }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
-import { getSignedDownloadUrl } from '@/lib/storage/r2';
+import { generateDownloadUrl } from '@/lib/upload/presigned';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 
@@ -29,7 +29,7 @@ export async function GET(
       return notFoundResponse('Original file not available');
     }
 
-    const signedUrl = await getSignedDownloadUrl(photo.r2Key);
+    const signedUrl = await generateDownloadUrl(photo.r2Key);
 
     return successResponse({ downloadUrl: signedUrl });
   } catch (error) {

@@ -14,6 +14,7 @@
  *   pm2 start scripts/workers.ts --name "photostudio-workers"
  */
 
+import 'dotenv/config';
 import '../src/lib/workers';
 
 console.log('[Worker Process] Starting...');

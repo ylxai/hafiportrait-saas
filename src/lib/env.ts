@@ -30,7 +30,7 @@ const envSchema = z.object({
   REDIS_PASSWORD: z.string().optional(),
 });
 
-const parsed = envSchema.safeParse(process.env);
+const parsed = typeof window === 'undefined' ? envSchema.safeParse(process.env) : { success: true, data: process.env as any } as any;
 
 if (!parsed.success) {
   console.error('Invalid environment variables:', parsed.error.flatten().fieldErrors);

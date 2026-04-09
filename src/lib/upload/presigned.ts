@@ -1,14 +1,11 @@
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getR2Client, R2Credentials, defaultR2Client } from '@/lib/storage/r2';
+import { getR2Client, R2Credentials } from '@/lib/storage/r2';
 import { redis } from '@/lib/redis';
 import { prisma } from '@/lib/db';
 
-const R2_BUCKET = process.env.R2_BUCKET_NAME || 'photo';
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
-
 // Get R2 account credentials from database
-async function getR2Credentials(accountId?: string): Promise<{ credentials?: R2Credentials; bucket: string }> {
+async function getR2Credentials(accountId?: string): Promise<{ credentials: R2Credentials; bucket: string }> {
   // If specific account requested
   if (accountId) {
     const account = await prisma.storageAccount.findUnique({
@@ -25,7 +22,7 @@ async function getR2Credentials(accountId?: string): Promise<{ credentials?: R2C
           publicUrl: account.publicUrl || '',
           endpoint: account.endpoint || undefined,
         },
-        bucket: account.bucketName || R2_BUCKET,
+        bucket: account.bucketName || '',
       };
     }
   }
@@ -45,12 +42,11 @@ async function getR2Credentials(accountId?: string): Promise<{ credentials?: R2C
         publicUrl: defaultAccount.publicUrl || '',
         endpoint: defaultAccount.endpoint || undefined,
       },
-      bucket: defaultAccount.bucketName || R2_BUCKET,
+      bucket: defaultAccount.bucketName || '',
     };
   }
   
-  // Fallback to env vars
-  return { bucket: R2_BUCKET };
+  throw new Error('No active R2 storage account configured in database');
 }
 
 // Generate presigned URL untuk direct upload ke R2
@@ -67,7 +63,7 @@ export async function generatePresignedUploadUrl(
   r2AccountId: string | null;
 }> {
   const { credentials, bucket } = await getR2Credentials(r2AccountId);
-  const client = credentials ? getR2Client(credentials) : defaultR2Client;
+  const client = getR2Client(credentials);
   
   // Generate unique key
   const timestamp = Date.now();
@@ -101,9 +97,7 @@ export async function generatePresignedUploadUrl(
     expiresIn: 900 // 15 minutes
   });
   
-  const publicUrl = credentials?.publicUrl 
-    ? `${credentials.publicUrl}/${r2Key}`
-    : `${R2_PUBLIC_URL}/${r2Key}`;
+  const publicUrl = `${credentials.publicUrl}/${r2Key}`;
   
   // Simpan upload session di Redis (30 menit)
   await redis.setex(`upload:${uploadId}`, 1800, JSON.stringify({
@@ -210,8 +204,16 @@ export async function deleteFromR2(
   r2Key: string,
   credentials?: R2Credentials
 ): Promise<void> {
-  const client = credentials ? getR2Client(credentials) : defaultR2Client;
-  const bucket = credentials?.bucketName || R2_BUCKET;
+  let finalCredentials = credentials;
+  let bucket = credentials?.bucketName;
+
+  if (!finalCredentials) {
+    const { credentials: defaultCreds, bucket: defaultBucket } = await getR2Credentials();
+    finalCredentials = defaultCreds;
+    bucket = defaultBucket;
+  }
+
+  const client = getR2Client(finalCredentials);
   
   const command = new DeleteObjectCommand({
     Bucket: bucket,
@@ -226,8 +228,16 @@ export async function generateDownloadUrl(
   r2Key: string,
   credentials?: R2Credentials
 ): Promise<string> {
-  const client = credentials ? getR2Client(credentials) : defaultR2Client;
-  const bucket = credentials?.bucketName || R2_BUCKET;
+  let finalCredentials = credentials;
+  let bucket = credentials?.bucketName;
+
+  if (!finalCredentials) {
+    const { credentials: defaultCreds, bucket: defaultBucket } = await getR2Credentials();
+    finalCredentials = defaultCreds;
+    bucket = defaultBucket;
+  }
+
+  const client = getR2Client(finalCredentials);
   
   const command = new GetObjectCommand({
     Bucket: bucket,

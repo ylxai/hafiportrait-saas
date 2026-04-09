@@ -74,14 +74,18 @@ export async function POST(
 
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const r2Creds = r2Account ? {
+        if (!r2Account) {
+          throw new Error('No active R2 storage account configured in database');
+        }
+
+        const r2Creds = {
           accountId: r2Account.accountId || '',
           accessKey: r2Account.accessKey || '',
           secretKey: r2Account.secretKey || '',
           bucketName: r2Account.bucketName || '',
           publicUrl: r2Account.publicUrl || '',
           endpoint: r2Account.endpoint || undefined,
-        } : undefined;
+        };
 
         const result = await uploadToR2(buffer, file.name, file.type, r2Creds);
         r2Key = result.key;
@@ -104,15 +108,19 @@ export async function POST(
 
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const cloudinaryCreds = cloudinaryAccount ? {
+        if (!cloudinaryAccount) {
+          throw new Error('No active Cloudinary storage account configured in database');
+        }
+
+        const cloudinaryCreds = {
           cloudName: cloudinaryAccount.cloudName || '',
           apiKey: cloudinaryAccount.apiKey || '',
           apiSecret: cloudinaryAccount.apiSecret || '',
-        } : undefined;
+        };
 
         const result = await uploadToCloudinary(buffer, `gallery/${galleryId}`, cloudinaryCreds);
         publicId = result.publicId;
-        thumbnailUrl = generateThumbnailUrl(publicId, 400, 400);
+        thumbnailUrl = generateThumbnailUrl(publicId, 400, 400, cloudinaryCreds);
         break;
       } catch (cloudinaryError) {
         console.error('Cloudinary upload failed, trying next account:', cloudinaryError);

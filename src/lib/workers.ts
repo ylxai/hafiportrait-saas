@@ -17,8 +17,28 @@ export const uploadWorker = new Worker(
     console.log(`[UploadWorker] Processing upload ${uploadId} for gallery ${galleryId}`);
 
     try {
+      // Get R2 account untuk tracking (use provided or default)
+      let r2AccountId = storageAccountId;
+      let r2Account = r2AccountId ? await getStorageAccountById(r2AccountId) : await getDefaultAccount('R2');
+      if (!r2Account && !r2AccountId) {
+        r2Account = await getDefaultAccount('R2');
+      }
+      if (!r2Account) {
+        throw new Error('No active R2 storage account configured in database');
+      }
+      r2AccountId = r2Account.id;
+
+      const r2Creds = {
+        accountId: r2Account.accountId || '',
+        accessKey: r2Account.accessKey || '',
+        secretKey: r2Account.secretKey || '',
+        bucketName: r2Account.bucketName || '',
+        publicUrl: r2Account.publicUrl || '',
+        endpoint: r2Account.endpoint || undefined,
+      };
+
       // Download dari R2 untuk generate thumbnail
-      const fileBuffer = await downloadFromR2(r2Key);
+      const fileBuffer = await downloadFromR2(r2Key, r2Creds);
 
       // Get image dimensions
       let imgWidth = 0;
@@ -33,13 +53,15 @@ export const uploadWorker = new Worker(
 
       // Get Cloudinary account
       const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
-      const cloudinaryCreds = cloudinaryAccount
-        ? {
-            cloudName: cloudinaryAccount.cloudName || '',
-            apiKey: cloudinaryAccount.apiKey || '',
-            apiSecret: cloudinaryAccount.apiSecret || '',
-          }
-        : undefined;
+      if (!cloudinaryAccount) {
+        throw new Error('No active Cloudinary storage account configured in database');
+      }
+      
+      const cloudinaryCreds = {
+        cloudName: cloudinaryAccount.cloudName || '',
+        apiKey: cloudinaryAccount.apiKey || '',
+        apiSecret: cloudinaryAccount.apiSecret || '',
+      };
 
       // Upload ke Cloudinary untuk thumbnail
       const cloudinaryResult = await uploadToCloudinary(
@@ -49,14 +71,7 @@ export const uploadWorker = new Worker(
       );
 
       // Generate thumbnail URL
-      const thumbnailUrl = generateThumbnailUrl(cloudinaryResult.publicId, 400, 400);
-
-      // Get R2 account untuk tracking (use provided or default)
-      let r2AccountId = storageAccountId;
-      if (!r2AccountId) {
-        const r2Account = await getDefaultAccount('R2');
-        r2AccountId = r2Account?.id;
-      }
+      const thumbnailUrl = generateThumbnailUrl(cloudinaryResult.publicId, 400, 400, cloudinaryCreds);
 
       // Create photo record
       const photo = await prisma.photo.create({
@@ -112,18 +127,35 @@ export const thumbnailWorker = new Worker(
     console.log(`[ThumbnailWorker] Regenerating thumbnail for photo ${photoId}`);
 
     try {
+      // Get R2 account
+      const r2Account = await getDefaultAccount('R2');
+      if (!r2Account) {
+        throw new Error('No active R2 storage account configured in database');
+      }
+
+      const r2Creds = {
+        accountId: r2Account.accountId || '',
+        accessKey: r2Account.accessKey || '',
+        secretKey: r2Account.secretKey || '',
+        bucketName: r2Account.bucketName || '',
+        publicUrl: r2Account.publicUrl || '',
+        endpoint: r2Account.endpoint || undefined,
+      };
+
       // Download from R2
-      const fileBuffer = await downloadFromR2(r2Key);
+      const fileBuffer = await downloadFromR2(r2Key, r2Creds);
 
       // Get Cloudinary account
       const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
-      const cloudinaryCreds = cloudinaryAccount
-        ? {
-            cloudName: cloudinaryAccount.cloudName || '',
-            apiKey: cloudinaryAccount.apiKey || '',
-            apiSecret: cloudinaryAccount.apiSecret || '',
-          }
-        : undefined;
+      if (!cloudinaryAccount) {
+        throw new Error('No active Cloudinary storage account configured in database');
+      }
+      
+      const cloudinaryCreds = {
+        cloudName: cloudinaryAccount.cloudName || '',
+        apiKey: cloudinaryAccount.apiKey || '',
+        apiSecret: cloudinaryAccount.apiSecret || '',
+      };
 
       // Upload to Cloudinary
       const cloudinaryResult = await uploadToCloudinary(
@@ -133,7 +165,7 @@ export const thumbnailWorker = new Worker(
       );
 
       // Generate new thumbnail URL
-      const thumbnailUrl = generateThumbnailUrl(cloudinaryResult.publicId, 400, 400);
+      const thumbnailUrl = generateThumbnailUrl(cloudinaryResult.publicId, 400, 400, cloudinaryCreds);
 
       // Update photo record
       await prisma.photo.update({
