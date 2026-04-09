@@ -1,7 +1,14 @@
 import { getDefaultAccount } from '@/lib/storage/accounts';
-import { successResponse } from '@/lib/api/response';
+import { successResponse, errorResponse } from '@/lib/api/response';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/options';
 
 export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return errorResponse('Unauthorized', 401);
+  }
+
   const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
   const r2Account = await getDefaultAccount('R2');
 
