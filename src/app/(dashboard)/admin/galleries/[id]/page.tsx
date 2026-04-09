@@ -534,7 +534,7 @@ export default function GalleryDetailPage() {
                       <input
                         type="number"
                         defaultValue={photo.order || (currentPage - 1) * photosPerPage + localIndex + 1}
-                        onBlur={(e) => handleReorderPhoto(photo.id, parseInt(e.target.value) || 0)}
+                        onBlur={(e) => handleReorderPhoto(photo.id, parseInt(e.target.value, 10) || 0)}
                         className="w-16 px-2 py-1 text-center font-bold text-background bg-foreground border-2 border-border rounded shadow-lg"
                         min="1"
                       />
@@ -640,7 +640,7 @@ export default function GalleryDetailPage() {
             <input
               type="number"
               value={gallerySettings.maxSelection}
-              onChange={(e) => setGallerySettings(prev => ({ ...prev, maxSelection: parseInt(e.target.value) || 20 }))}
+              onChange={(e) => setGallerySettings(prev => ({ ...prev, maxSelection: parseInt(e.target.value, 10) || 20 }))}
               className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
               placeholder="20"
             />

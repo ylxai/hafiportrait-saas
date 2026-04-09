@@ -12,8 +12,10 @@ export async function GET(request: Request) {
 
     // Parse pagination params
     const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
+    const pageRaw = parseInt(searchParams.get('page') || '1', 10);
+    const page = isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
+    const limitRaw = parseInt(searchParams.get('limit') || '20', 10);
+    const limit = isNaN(limitRaw) ? 20 : Math.min(100, Math.max(1, limitRaw));
     const skip = (page - 1) * limit;
 
     const [events, totalAgg, paidAgg, pendingAgg, revenueByMonthRaw] = await Promise.all([
@@ -41,13 +43,13 @@ export async function GET(request: Request) {
       }),
       // Paid stats
       prisma.event.aggregate({
-        where: { paymentStatus: 'PAID' },
+        where: { paymentStatus: 'paid' },
         _sum: { totalPrice: true },
         _count: { id: true },
       }),
       // Pending stats
       prisma.event.aggregate({
-        where: { paymentStatus: { not: 'PAID' } },
+        where: { paymentStatus: { not: 'paid' } },
         _sum: { totalPrice: true },
         _count: { id: true },
       }),
@@ -57,7 +59,7 @@ export async function GET(request: Request) {
           TO_CHAR("eventDate", 'YYYY Mon') as month,
           SUM("totalPrice") as revenue
         FROM "Event"
-        WHERE "paymentStatus" = 'PAID'
+        WHERE "paymentStatus" = 'paid'
         GROUP BY TO_CHAR("eventDate", 'YYYY Mon'), DATE_TRUNC('month', "eventDate")
         ORDER BY DATE_TRUNC('month', "eventDate") DESC
         LIMIT 12

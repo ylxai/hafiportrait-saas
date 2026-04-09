@@ -1,0 +1,297 @@
+Command finished with exit code 0.
+Command output:
+diff --git a/src/app/(dashboard)/admin/galleries/[id]/page.tsx b/src/app/(dashboard)/admin/galleries/[id]/page.tsx
+index 61553eb..297a6a4 100644
+--- a/src/app/(dashboard)/admin/galleries/[id]/page.tsx
++++ b/src/app/(dashboard)/admin/galleries/[id]/page.tsx
+@@ -534,7 +534,7 @@ export default function GalleryDetailPage() {
+                       <input
+                         type="number"
+                         defaultValue={photo.order || (currentPage - 1) * photosPerPage + localIndex + 1}
+-                        onBlur={(e) => handleReorderPhoto(photo.id, parseInt(e.target.value) || 0)}
++                        onBlur={(e) => handleReorderPhoto(photo.id, parseInt(e.target.value, 10) || 0)}
+                         className="w-16 px-2 py-1 text-center font-bold text-background bg-foreground border-2 border-border rounded shadow-lg"
+                         min="1"
+                       />
+@@ -640,7 +640,7 @@ export default function GalleryDetailPage() {
+             <input
+               type="number"
+               value={gallerySettings.maxSelection}
+-              onChange={(e) => setGallerySettings(prev => ({ ...prev, maxSelection: parseInt(e.target.value) || 20 }))}
++              onChange={(e) => setGallerySettings(prev => ({ ...prev, maxSelection: parseInt(e.target.value, 10) || 20 }))}
+               className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+               placeholder="20"
+             />
+diff --git a/src/app/(dashboard)/admin/storage/page.tsx b/src/app/(dashboard)/admin/storage/page.tsx
+index 57a8ea1..cb57e5e 100644
+--- a/src/app/(dashboard)/admin/storage/page.tsx
++++ b/src/app/(dashboard)/admin/storage/page.tsx
+@@ -288,6 +288,7 @@ export default function StorageAccountsPage() {
+       <div className="flex items-center justify-between mb-6">
+         <h1 className="text-2xl font-bold text-slate-900">Storage Accounts</h1>
+         <button
++          type="button"
+           onClick={() => { resetForm(); setShowModal(true); }}
+           className="px-4 py-2 bg-muted0 hover:bg-amber-600 text-white font-medium rounded-lg transition"
+         >
+@@ -355,17 +356,18 @@ export default function StorageAccountsPage() {
+                   )}
+                   <div className="flex flex-wrap gap-2">
+                     <button
++                      type="button"
+                       onClick={() => handleToggleActive(account)}
+                       className={`text-xs px-2 py-1 rounded cursor-pointer ${account.isActive ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
+                     >
+                       {account.isActive ? 'Aktif' : 'Nonaktif'}
+                     </button>
+-                    <button onClick={() => openRotationModal(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Key Rotation</button>
++                    <button type="button" onClick={() => openRotationModal(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Key Rotation</button>
+                     {!account.isDefault && (
+-                      <button onClick={() => handleSetDefault(account)} className="text-xs text-primary hover:underline cursor-pointer">Jadikan Default</button>
++                      <button type="button" onClick={() => handleSetDefault(account)} className="text-xs text-primary hover:underline cursor-pointer">Jadikan Default</button>
+                     )}
+-                    <button onClick={() => openEdit(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Edit</button>
+-                    <button onClick={() => handleDelete(account.id)} className="text-xs text-red-600 hover:underline cursor-pointer">Hapus</button>
++                    <button type="button" onClick={() => openEdit(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Edit</button>
++                    <button type="button" onClick={() => handleDelete(account.id)} className="text-xs text-red-600 hover:underline cursor-pointer">Hapus</button>
+                   </div>
+                 </div>
+               ))}
+@@ -405,17 +407,18 @@ export default function StorageAccountsPage() {
+                   )}
+                   <div className="flex flex-wrap gap-2">
+                     <button
++                      type="button"
+                       onClick={() => handleToggleActive(account)}
+                       className={`text-xs px-2 py-1 rounded cursor-pointer ${account.isActive ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
+                     >
+                       {account.isActive ? 'Aktif' : 'Nonaktif'}
+                     </button>
+-                    <button onClick={() => openRotationModal(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Key Rotation</button>
++                    <button type="button" onClick={() => openRotationModal(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Key Rotation</button>
+                     {!account.isDefault && (
+-                      <button onClick={() => handleSetDefault(account)} className="text-xs text-primary hover:underline cursor-pointer">Jadikan Default</button>
++                      <button type="button" onClick={() => handleSetDefault(account)} className="text-xs text-primary hover:underline cursor-pointer">Jadikan Default</button>
+                     )}
+-                    <button onClick={() => openEdit(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Edit</button>
+-                    <button onClick={() => handleDelete(account.id)} className="text-xs text-red-600 hover:underline cursor-pointer">Hapus</button>
++                    <button type="button" onClick={() => openEdit(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Edit</button>
++                    <button type="button" onClick={() => handleDelete(account.id)} className="text-xs text-red-600 hover:underline cursor-pointer">Hapus</button>
+                   </div>
+                 </div>
+               ))}
+@@ -627,6 +630,7 @@ export default function StorageAccountsPage() {
+                   </div>
+                   
+                   <button
++                    type="button"
+                     onClick={handleEnableRotation}
+                     disabled={submitting}
+                     className="w-full px-4 py-2 bg-muted0 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50"
+@@ -637,6 +641,7 @@ export default function StorageAccountsPage() {
+               ) : (
+                 <>
+                   <button
++                    type="button"
+                     onClick={() => handleRotateNow(rotationAccount.id)}
+                     className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                   >
+@@ -644,6 +649,7 @@ export default function StorageAccountsPage() {
+                   </button>
+                   
+                   <button
++                    type="button"
+                     onClick={() => handleDisableRotation(rotationAccount.id)}
+                     className="w-full px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50"
+                   >
+@@ -708,6 +714,7 @@ export default function StorageAccountsPage() {
+               )}
+               
+               <button
++                type="button"
+                 onClick={handleSetSecondaryCredentials}
+                 disabled={submitting}
+                 className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
+diff --git a/src/app/api/admin/analytics/route.ts b/src/app/api/admin/analytics/route.ts
+index 681c1b1..2679a63 100644
+--- a/src/app/api/admin/analytics/route.ts
++++ b/src/app/api/admin/analytics/route.ts
+@@ -16,8 +16,10 @@ export async function GET(request: Request) {
+ 
+     // Parse pagination params
+     const { searchParams } = new URL(request.url);
+-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+-    const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
++    const pageRaw = parseInt(searchParams.get('page') || '1', 10);
++    const page = isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
++    const limitRaw = parseInt(searchParams.get('limit') || '20', 10);
++    const limit = isNaN(limitRaw) ? 20 : Math.min(50, Math.max(1, limitRaw));
+     const skip = (page - 1) * limit;
+ 
+     // Check cache for summary data (page 1 only)
+diff --git a/src/app/api/admin/clients/route.ts b/src/app/api/admin/clients/route.ts
+index 4eb439b..129ad5c 100644
+--- a/src/app/api/admin/clients/route.ts
++++ b/src/app/api/admin/clients/route.ts
+@@ -20,8 +20,10 @@ export async function GET(request: Request) {
+     if (auth instanceof NextResponse) return auth;
+ 
+     const { searchParams } = new URL(request.url);
+-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
++    const pageRaw = parseInt(searchParams.get('page') || '1', 10);
++    const page = isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
++    const limitRaw = parseInt(searchParams.get('limit') || '20', 10);
++    const limit = isNaN(limitRaw) ? 20 : Math.min(100, Math.max(1, limitRaw));
+     const skip = (page - 1) * limit;
+ 
+     const [clients, total] = await Promise.all([
+diff --git a/src/app/api/admin/events/route.ts b/src/app/api/admin/events/route.ts
+index 74fff26..37e1433 100644
+--- a/src/app/api/admin/events/route.ts
++++ b/src/app/api/admin/events/route.ts
+@@ -29,8 +29,10 @@ export async function GET(request: Request) {
+     if (auth instanceof NextResponse) return auth;
+ 
+     const { searchParams } = new URL(request.url);
+-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
++    const pageRaw = parseInt(searchParams.get('page') || '1', 10);
++    const page = isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
++    const limitRaw = parseInt(searchParams.get('limit') || '20', 10);
++    const limit = isNaN(limitRaw) ? 20 : Math.min(100, Math.max(1, limitRaw));
+     const skip = (page - 1) * limit;
+ 
+     const [events, total] = await Promise.all([
+diff --git a/src/app/api/admin/finance/route.ts b/src/app/api/admin/finance/route.ts
+index 3e13c0c..e6f8581 100644
+--- a/src/app/api/admin/finance/route.ts
++++ b/src/app/api/admin/finance/route.ts
+@@ -12,8 +12,10 @@ export async function GET(request: Request) {
+ 
+     // Parse pagination params
+     const { searchParams } = new URL(request.url);
+-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
++    const pageRaw = parseInt(searchParams.get('page') || '1', 10);
++    const page = isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
++    const limitRaw = parseInt(searchParams.get('limit') || '20', 10);
++    const limit = isNaN(limitRaw) ? 20 : Math.min(100, Math.max(1, limitRaw));
+     const skip = (page - 1) * limit;
+ 
+     const [events, totalAgg, paidAgg, pendingAgg, revenueByMonthRaw] = await Promise.all([
+@@ -41,13 +43,13 @@ export async function GET(request: Request) {
+       }),
+       // Paid stats
+       prisma.event.aggregate({
+-        where: { paymentStatus: 'PAID' },
++        where: { paymentStatus: 'paid' },
+         _sum: { totalPrice: true },
+         _count: { id: true },
+       }),
+       // Pending stats
+       prisma.event.aggregate({
+-        where: { paymentStatus: { not: 'PAID' } },
++        where: { paymentStatus: { not: 'paid' } },
+         _sum: { totalPrice: true },
+         _count: { id: true },
+       }),
+@@ -57,7 +59,7 @@ export async function GET(request: Request) {
+           TO_CHAR("eventDate", 'YYYY Mon') as month,
+           SUM("totalPrice") as revenue
+         FROM "Event"
+-        WHERE "paymentStatus" = 'PAID'
++        WHERE "paymentStatus" = 'paid'
+         GROUP BY TO_CHAR("eventDate", 'YYYY Mon'), DATE_TRUNC('month', "eventDate")
+         ORDER BY DATE_TRUNC('month', "eventDate") DESC
+         LIMIT 12
+diff --git a/src/app/api/admin/galleries/[id]/photos/route.ts b/src/app/api/admin/galleries/[id]/photos/route.ts
+index e22a8a0..906837c 100644
+--- a/src/app/api/admin/galleries/[id]/photos/route.ts
++++ b/src/app/api/admin/galleries/[id]/photos/route.ts
+@@ -27,8 +27,10 @@ export async function GET(
+ 
+     const { id: galleryId } = await params;
+     const { searchParams } = new URL(request.url);
+-    const page = parseInt(searchParams.get('page') || '1', 10);
+-    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
++    const pageRaw = parseInt(searchParams.get('page') || '1', 10);
++    const page = isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
++    const limitRaw = parseInt(searchParams.get('limit') || '50', 10);
++    const limit = isNaN(limitRaw) ? 50 : Math.min(100, Math.max(1, limitRaw));
+     const skip = (page - 1) * limit;
+ 
+     const [photos, total] = await Promise.all([
+diff --git a/src/app/api/admin/galleries/route.ts b/src/app/api/admin/galleries/route.ts
+index 80d8638..f870d38 100644
+--- a/src/app/api/admin/galleries/route.ts
++++ b/src/app/api/admin/galleries/route.ts
+@@ -20,8 +20,10 @@ export async function GET(request: Request) {
+     if (auth instanceof NextResponse) return auth;
+ 
+     const { searchParams } = new URL(request.url);
+-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
++    const pageRaw = parseInt(searchParams.get('page') || '1', 10);
++    const page = isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
++    const limitRaw = parseInt(searchParams.get('limit') || '20', 10);
++    const limit = isNaN(limitRaw) ? 20 : Math.min(100, Math.max(1, limitRaw));
+     const skip = (page - 1) * limit;
+ 
+     const [galleries, total] = await Promise.all([
+@@ -46,8 +48,7 @@ export async function GET(request: Request) {
+       prisma.gallery.count(),
+     ]);
+ 
+-    return NextResponse.json({
+-      success: true,
++    return successResponse({
+       galleries,
+       pagination: {
+         page,
+@@ -55,13 +56,10 @@ export async function GET(request: Request) {
+         total,
+         pages: Math.ceil(total / limit),
+       },
+-    }, { status: 200 });
++    });
+   } catch (error) {
+     console.error('Error fetching galleries:', error);
+-    return NextResponse.json(
+-      { success: false, error: 'Failed to fetch galleries' },
+-      { status: 500 }
+-    );
++    return errorResponse('Failed to fetch galleries', 500);
+   }
+ }
+ 
+diff --git a/src/app/api/admin/packages/route.ts b/src/app/api/admin/packages/route.ts
+index ea401b8..849de90 100644
+--- a/src/app/api/admin/packages/route.ts
++++ b/src/app/api/admin/packages/route.ts
+@@ -19,8 +19,10 @@ export async function GET(request: Request) {
+     if (auth instanceof NextResponse) return auth;
+ 
+     const { searchParams } = new URL(request.url);
+-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
++    const pageRaw = parseInt(searchParams.get('page') || '1', 10);
++    const page = isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
++    const limitRaw = parseInt(searchParams.get('limit') || '20', 10);
++    const limit = isNaN(limitRaw) ? 20 : Math.min(100, Math.max(1, limitRaw));
+     const skip = (page - 1) * limit;
+ 
+     const [packages, total] = await Promise.all([
+diff --git a/src/app/api/admin/stats/route.ts b/src/app/api/admin/stats/route.ts
+index 17a374a..3777b7e 100644
+--- a/src/app/api/admin/stats/route.ts
++++ b/src/app/api/admin/stats/route.ts
+@@ -39,7 +39,7 @@ export async function GET() {
+ 
+     const revenueResult = await prisma.event.aggregate({
+       _sum: { totalPrice: true },
+-      where: { paymentStatus: 'PAID' },
++      where: { paymentStatus: 'paid' },
+     });
+ 
+     const stats = {

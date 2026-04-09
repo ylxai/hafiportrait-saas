@@ -288,6 +288,7 @@ export default function StorageAccountsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Storage Accounts</h1>
         <button
+          type="button"
           onClick={() => { resetForm(); setShowModal(true); }}
           className="px-4 py-2 bg-muted0 hover:bg-amber-600 text-white font-medium rounded-lg transition"
         >
@@ -355,17 +356,18 @@ export default function StorageAccountsPage() {
                   )}
                   <div className="flex flex-wrap gap-2">
                     <button
+                      type="button"
                       onClick={() => handleToggleActive(account)}
                       className={`text-xs px-2 py-1 rounded cursor-pointer ${account.isActive ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
                     >
                       {account.isActive ? 'Aktif' : 'Nonaktif'}
                     </button>
-                    <button onClick={() => openRotationModal(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Key Rotation</button>
+                    <button type="button" onClick={() => openRotationModal(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Key Rotation</button>
                     {!account.isDefault && (
-                      <button onClick={() => handleSetDefault(account)} className="text-xs text-primary hover:underline cursor-pointer">Jadikan Default</button>
+                      <button type="button" onClick={() => handleSetDefault(account)} className="text-xs text-primary hover:underline cursor-pointer">Jadikan Default</button>
                     )}
-                    <button onClick={() => openEdit(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Edit</button>
-                    <button onClick={() => handleDelete(account.id)} className="text-xs text-red-600 hover:underline cursor-pointer">Hapus</button>
+                    <button type="button" onClick={() => openEdit(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Edit</button>
+                    <button type="button" onClick={() => handleDelete(account.id)} className="text-xs text-red-600 hover:underline cursor-pointer">Hapus</button>
                   </div>
                 </div>
               ))}
@@ -405,17 +407,18 @@ export default function StorageAccountsPage() {
                   )}
                   <div className="flex flex-wrap gap-2">
                     <button
+                      type="button"
                       onClick={() => handleToggleActive(account)}
                       className={`text-xs px-2 py-1 rounded cursor-pointer ${account.isActive ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
                     >
                       {account.isActive ? 'Aktif' : 'Nonaktif'}
                     </button>
-                    <button onClick={() => openRotationModal(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Key Rotation</button>
+                    <button type="button" onClick={() => openRotationModal(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Key Rotation</button>
                     {!account.isDefault && (
-                      <button onClick={() => handleSetDefault(account)} className="text-xs text-primary hover:underline cursor-pointer">Jadikan Default</button>
+                      <button type="button" onClick={() => handleSetDefault(account)} className="text-xs text-primary hover:underline cursor-pointer">Jadikan Default</button>
                     )}
-                    <button onClick={() => openEdit(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Edit</button>
-                    <button onClick={() => handleDelete(account.id)} className="text-xs text-red-600 hover:underline cursor-pointer">Hapus</button>
+                    <button type="button" onClick={() => openEdit(account)} className="text-xs text-blue-600 hover:underline cursor-pointer">Edit</button>
+                    <button type="button" onClick={() => handleDelete(account.id)} className="text-xs text-red-600 hover:underline cursor-pointer">Hapus</button>
                   </div>
                 </div>
               ))}
@@ -627,6 +630,7 @@ export default function StorageAccountsPage() {
                   </div>
                   
                   <button
+                    type="button"
                     onClick={handleEnableRotation}
                     disabled={submitting}
                     className="w-full px-4 py-2 bg-muted0 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50"
@@ -637,6 +641,7 @@ export default function StorageAccountsPage() {
               ) : (
                 <>
                   <button
+                    type="button"
                     onClick={() => handleRotateNow(rotationAccount.id)}
                     className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                   >
@@ -644,6 +649,7 @@ export default function StorageAccountsPage() {
                   </button>
                   
                   <button
+                    type="button"
                     onClick={() => handleDisableRotation(rotationAccount.id)}
                     className="w-full px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50"
                   >
@@ -708,6 +714,7 @@ export default function StorageAccountsPage() {
               )}
               
               <button
+                type="button"
                 onClick={handleSetSecondaryCredentials}
                 disabled={submitting}
                 className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"

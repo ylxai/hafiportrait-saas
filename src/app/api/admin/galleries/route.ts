@@ -20,8 +20,10 @@ export async function GET(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
+    const pageRaw = parseInt(searchParams.get('page') || '1', 10);
+    const page = isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
+    const limitRaw = parseInt(searchParams.get('limit') || '20', 10);
+    const limit = isNaN(limitRaw) ? 20 : Math.min(100, Math.max(1, limitRaw));
     const skip = (page - 1) * limit;
 
     const [galleries, total] = await Promise.all([
@@ -46,8 +48,7 @@ export async function GET(request: Request) {
       prisma.gallery.count(),
     ]);
 
-    return NextResponse.json({
-      success: true,
+    return successResponse({
       galleries,
       pagination: {
         page,
@@ -55,13 +56,10 @@ export async function GET(request: Request) {
         total,
         pages: Math.ceil(total / limit),
       },
-    }, { status: 200 });
+    });
   } catch (error) {
     console.error('Error fetching galleries:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch galleries' },
-      { status: 500 }
-    );
+    return errorResponse('Failed to fetch galleries', 500);
   }
 }
 

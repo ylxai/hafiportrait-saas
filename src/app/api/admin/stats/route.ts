@@ -39,7 +39,7 @@ export async function GET() {
 
     const revenueResult = await prisma.event.aggregate({
       _sum: { totalPrice: true },
-      where: { paymentStatus: 'PAID' },
+      where: { paymentStatus: 'paid' },
     });
 
     const stats = {
