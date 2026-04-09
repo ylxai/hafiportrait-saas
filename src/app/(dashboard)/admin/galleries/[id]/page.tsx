@@ -241,12 +241,12 @@ export default function GalleryDetailPage() {
 
   const handleExport = () => {
     // Only exports actual selection file names
-    const photosToExport = gallery?.selections?.[0]?.photos?.map((p: { photo: { filename: string } }) => p.photo) || [];
+    const photosToExport = latestSelection?.photos?.map((p) => p.photo) || [];
     if (photosToExport.length === 0) {
       toast.error('Tidak ada foto seleksi klien untuk diekspor');
       return;
     }
-    const content = photosToExport.map((p: { filename: string }) => p.filename).join('\n');
+    const content = photosToExport.map((p) => p.filename).join('\n');
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -376,7 +376,7 @@ export default function GalleryDetailPage() {
               
               {/* Selected photos grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                {gallery.selections[0]?.photos?.map((item, idx) => {
+                {latestSelection?.photos?.map((item, idx) => {
                     const photo = item.photo;
                     return (
                     <div key={photo.id} className="relative group">
@@ -402,7 +402,7 @@ export default function GalleryDetailPage() {
               <div className="mt-4 p-3 bg-card text-card-foreground rounded-lg">
                 <p className="text-xs font-medium text-muted-foreground mb-2">Daftar filename:</p>
                 <div className="text-xs text-muted-foreground font-mono max-h-32 overflow-y-auto">
-                  {gallery.selections[0]?.photos?.map((item) => item.photo.filename)
+                  {latestSelection?.photos?.map((item) => item.photo.filename)
                     .join('\n')}
                 </div>
               </div>

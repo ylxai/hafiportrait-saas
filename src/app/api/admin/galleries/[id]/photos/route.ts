@@ -43,13 +43,23 @@ export async function GET(
       }),
     ]);
 
-    const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
-    const cloudName = cloudinaryAccount?.cloudName || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const uniqueStorageAccountIds = Array.from(new Set(photos.map(p => p.storageAccountId).filter(Boolean))) as string[];
+    const storageAccounts = await prisma.storageAccount.findMany({
+      where: { id: { in: uniqueStorageAccountIds }, provider: 'CLOUDINARY' }
+    });
+
+    const cloudinaryAccountMap = new Map(storageAccounts.map(a => [a.id, a]));
+    const defaultCloudinaryAccount = await getDefaultAccount('CLOUDINARY');
+    const defaultCloudName = defaultCloudinaryAccount?.cloudName || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 
     const serializedPhotos = photos.map(photo => {
       let thumbnailUrl = photo.thumbnailUrl;
-      if (!thumbnailUrl && cloudName) {
-        thumbnailUrl = getCloudinaryThumbnailUrl(photo.url, { width: 400, cloudName });
+      if (!thumbnailUrl) {
+        const account = photo.storageAccountId ? cloudinaryAccountMap.get(photo.storageAccountId) : null;
+        const cloudName = account?.cloudName || defaultCloudName;
+        if (cloudName) {
+          thumbnailUrl = getCloudinaryThumbnailUrl(photo.url, { width: 400, cloudName });
+        }
       }
       return {
         ...photo,

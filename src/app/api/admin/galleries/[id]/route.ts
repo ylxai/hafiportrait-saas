@@ -59,7 +59,7 @@ export async function GET(
           ...p,
           photo: {
             ...p.photo,
-            fileSize: p.photo.fileSize?.toString() || '0'
+            fileSize: p.photo.fileSize?.toString() || null
           }
         }))
       }))
