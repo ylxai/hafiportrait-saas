@@ -145,3 +145,24 @@ Currently available MCP Servers (configured in `~/.junie/mcp/mcp.json`):
 6. **Filesystem & Memory**: Local project file manipulation and entity context storage.
 
 If an MCP tool can accomplish the task, **USE IT DIRECTLY** rather than simulating it via terminal commands.
+
+## Security Rules
+1. **No Secrets in Code**: Never commit sensitive tokens (e.g., `CLOUDFLARE_API_TOKEN`, `VPS_WEBHOOK_SECRET`) to the repository. Use `.gitignore` for `.dev.vars`, `.env`, and secret files.
+2. **Denial of Service (DoS) Prevention**: Always cap API query parameters. For example, limit pagination sizes using `Math.min(limit, 100)` and enforce radix `10` in `parseInt`.
+3. **Authentication**: All Admin API routes (`/api/admin/*`) MUST implement session authentication checks (e.g., `getServerSession()`).
+4. **Webhook Verification**: Webhooks from Cloudflare Edge MUST validate `VPS_WEBHOOK_SECRET` before processing.
+
+## Explicit Prohibitions
+1. **NO Bash for Filesystem**: Do NOT use bash commands like `cat`, `ls`, `grep` for reading or searching files. Always use the built-in MCP filesystem tools (`open`, `search_contents_by_grep`, `search_paths_by_glob`).
+2. **NO Custom Test Scripts**: Do NOT write custom Node.js/Python scripts (e.g., `test.js`, `get_logs.js`) to test UI or API. Always use **Playwright MCP** or **Chrome DevTools MCP** directly for interactive testing.
+3. **NO Blocking UI**: Do NOT use `alert()` or blocking dialogues. Use `sonner` `toast()` for non-blocking UI notifications.
+4. **NO Over-fetching**: Do NOT fetch unbounded relationships (e.g., 10,000 photos at once) in Admin dashboard APIs to prevent Out-Of-Memory. Always use Server-Side Pagination.
+5. **NO Legacy Tailwind**: Do NOT use `rgba(var(--primary))` syntax in Tailwind v4 shadows; use direct RGB values. Do NOT use light-mode static colors for the Aura Noir theme.
+6. **NO Redis/BullMQ**: Do NOT use or install `bullmq`, `ioredis`, or `PM2` for background jobs. This project strictly uses Cloudflare Queues + Cloudflare Workers (Native Edge).
+
+## Coding Style & Best Practices
+1. **TypeScript Strictness**: Always use TypeScript with strict `no-any` types. Avoid using `any` at all costs; use `unknown` or specific interfaces.
+2. **Aura Noir Design System**: Strictly use Tailwind v4 OKLCH semantic colors (`bg-background`, `bg-card`, `text-foreground`). The UI should be dominant dark, luxurious, and OLED-friendly.
+3. **Next.js 15 Compatibility**: Route `params` and `searchParams` must be awaited as `Promise` before destructured.
+4. **Dynamic Storage Credentials**: Cloudinary and Cloudflare R2 credentials must be dynamically fetched from the `StorageAccount` table in PostgreSQL, not hardcoded from `.env`.
+5. **Continuous Learning**: Always load and check `.junie/memory/errors.md` and `.junie/memory/tasks.md` across sessions to persist context and rules.
