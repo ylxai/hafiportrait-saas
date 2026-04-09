@@ -37,16 +37,32 @@ export async function POST(
       return errorResponse('Photos not found or unauthorized', 404);
     }
 
-    // Get default cloudinary account if needed
+    // Mengumpulkan semua storageAccountId unik dari foto-foto yang akan dihapus
+    const uniqueStorageAccountIds = Array.from(new Set(photos.map(p => p.storageAccountId).filter(Boolean))) as string[];
+
+    // Mengambil semua akun penyimpanan yang relevan dalam satu query
+    const storageAccounts = await prisma.storageAccount.findMany({
+      where: { id: { in: uniqueStorageAccountIds } }
+    });
+
+    // Membuat map dari storageAccountId ke kredensial Cloudinary yang sesuai
+    const cloudinaryCredentialsMap = new Map<string, { cloudName: string | null; apiKey: string | null; apiSecret: string | null } | null>();
+    
+    storageAccounts.forEach(account => {
+      cloudinaryCredentialsMap.set(account.id, {
+        cloudName: account.cloudName,
+        apiKey: account.apiKey,
+        apiSecret: account.apiSecret,
+      });
+    });
+
+    // Ambil default cloudinary account sebagai fallback jika storage account tidak memilikinya
     const defaultCloudinaryAccount = await prisma.storageAccount.findFirst({
-      where: { 
-        provider: 'CLOUDINARY',
-        isActive: true,
-      },
+      where: { provider: 'CLOUDINARY', isActive: true },
       orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }],
     });
 
-    const cloudinaryCredentials = defaultCloudinaryAccount ? {
+    const defaultCloudinaryCredentials = defaultCloudinaryAccount ? {
       cloudName: defaultCloudinaryAccount.cloudName,
       apiKey: defaultCloudinaryAccount.apiKey,
       apiSecret: defaultCloudinaryAccount.apiSecret,
@@ -57,6 +73,15 @@ export async function POST(
 
     for (const photo of photos) {
       if (photo.r2Key || photo.thumbnailUrl) {
+        // Gunakan kredensial dari map berdasarkan storageAccountId, atau fallback ke default
+        let cloudinaryCredentials = defaultCloudinaryCredentials;
+        if (photo.storageAccountId && cloudinaryCredentialsMap.has(photo.storageAccountId)) {
+          const accountCreds = cloudinaryCredentialsMap.get(photo.storageAccountId);
+          if (accountCreds && accountCreds.cloudName && accountCreds.apiKey) {
+            cloudinaryCredentials = accountCreds;
+          }
+        }
+
         deletionJobs.push({
           photoId: photo.id,
           r2Key: photo.r2Key,
