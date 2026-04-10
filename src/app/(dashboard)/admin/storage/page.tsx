@@ -275,7 +275,7 @@ export default function StorageAccountsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -290,7 +290,7 @@ export default function StorageAccountsPage() {
         <button
           type="button"
           onClick={() => { resetForm(); setShowModal(true); }}
-          className="px-4 py-2 bg-muted0 hover:bg-amber-600 text-white font-medium rounded-lg transition"
+          className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-lg transition"
         >
           + Tambah Akun
         </button>
@@ -333,11 +333,11 @@ export default function StorageAccountsPage() {
           ) : (
             <div className="space-y-3">
               {cloudinaryAccounts.map((account) => (
-                <div key={account.id} className={`p-4 rounded-lg border ${account.isDefault ? 'border-champagne-500 bg-muted' : 'border-champagne-100'}`}>
+                <div key={account.id} className={`p-4 rounded-lg border ${account.isDefault ? 'border-primary bg-muted' : 'border-border'}`}>
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <span className="font-medium text-foreground">{account.name}</span>
-                      {account.isDefault && <span className="ml-2 text-xs bg-muted0 text-white px-2 py-0.5 rounded">Default</span>}
+                      {account.isDefault && <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">Default</span>}
                       {account.rotationEnabled && (
                         <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">🔄 Auto-rotate</span>
                       )}
@@ -384,11 +384,11 @@ export default function StorageAccountsPage() {
           ) : (
             <div className="space-y-3">
               {r2Accounts.map((account) => (
-                <div key={account.id} className={`p-4 rounded-lg border ${account.isDefault ? 'border-champagne-500 bg-muted' : 'border-champagne-100'}`}>
+                <div key={account.id} className={`p-4 rounded-lg border ${account.isDefault ? 'border-primary bg-muted' : 'border-border'}`}>
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <span className="font-medium text-foreground">{account.name}</span>
-                      {account.isDefault && <span className="ml-2 text-xs bg-muted0 text-white px-2 py-0.5 rounded">Default</span>}
+                      {account.isDefault && <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">Default</span>}
                       {account.rotationEnabled && (
                         <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">🔄 Auto-rotate</span>
                       )}
@@ -442,7 +442,7 @@ export default function StorageAccountsPage() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                  className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   placeholder="Akun Utama / Backup 1"
                 />
               </div>
@@ -451,7 +451,7 @@ export default function StorageAccountsPage() {
                 <select
                   value={formData.provider}
                   onChange={(e) => setFormData({ ...formData, provider: e.target.value as 'CLOUDINARY' | 'R2' })}
-                  className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                  className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="CLOUDINARY">Cloudinary (Thumbnails)</option>
                   <option value="R2">Cloudflare R2 (Original)</option>
@@ -464,7 +464,7 @@ export default function StorageAccountsPage() {
                     type="number"
                     value={formData.priority}
                     onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 0 })}
-                    className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                    className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     placeholder="0"
                   />
                 </div>
@@ -490,7 +490,7 @@ export default function StorageAccountsPage() {
                       type="text"
                       value={formData.cloudName}
                       onChange={(e) => setFormData({ ...formData, cloudName: e.target.value })}
-                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                   <div>
@@ -499,7 +499,7 @@ export default function StorageAccountsPage() {
                       type="text"
                       value={formData.apiKey}
                       onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                   <div>
@@ -508,7 +508,7 @@ export default function StorageAccountsPage() {
                       type="password"
                       value={formData.apiSecret}
                       onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })}
-                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                   <div>
@@ -517,7 +517,7 @@ export default function StorageAccountsPage() {
                       type="text"
                       value={formData.uploadPreset}
                       onChange={(e) => setFormData({ ...formData, uploadPreset: e.target.value })}
-                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                 </div>
@@ -532,7 +532,7 @@ export default function StorageAccountsPage() {
                       type="text"
                       value={formData.accountId}
                       onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
-                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                   <div>
@@ -541,7 +541,7 @@ export default function StorageAccountsPage() {
                       type="text"
                       value={formData.accessKey}
                       onChange={(e) => setFormData({ ...formData, accessKey: e.target.value })}
-                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                   <div>
@@ -550,7 +550,7 @@ export default function StorageAccountsPage() {
                       type="password"
                       value={formData.secretKey}
                       onChange={(e) => setFormData({ ...formData, secretKey: e.target.value })}
-                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                   <div>
@@ -559,7 +559,7 @@ export default function StorageAccountsPage() {
                       type="text"
                       value={formData.bucketName}
                       onChange={(e) => setFormData({ ...formData, bucketName: e.target.value })}
-                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                   <div>
@@ -568,7 +568,7 @@ export default function StorageAccountsPage() {
                       type="text"
                       value={formData.publicUrl}
                       onChange={(e) => setFormData({ ...formData, publicUrl: e.target.value })}
-                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                   <div>
@@ -577,17 +577,17 @@ export default function StorageAccountsPage() {
                       type="text"
                       value={formData.endpoint}
                       onChange={(e) => setFormData({ ...formData, endpoint: e.target.value })}
-                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                 </div>
               )}
 
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-champagne-200 text-foreground rounded-lg hover:bg-muted">
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-border text-foreground rounded-lg hover:bg-muted">
                   Batal
                 </button>
-                <button type="submit" disabled={submitting} className="flex-1 px-4 py-2 bg-muted0 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50">
+                <button type="submit" disabled={submitting} className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50">
                   {submitting ? 'Menyimpan...' : 'Simpan'}
                 </button>
               </div>
@@ -621,7 +621,7 @@ export default function StorageAccountsPage() {
                     <select
                       value={rotationForm.schedule}
                       onChange={(e) => setRotationForm({ ...rotationForm, schedule: e.target.value })}
-                      className="w-full px-4 py-2 border border-champagne-200 rounded-lg"
+                      className="w-full px-4 py-2 border border-border rounded-lg"
                     >
                       <option value="daily">Daily</option>
                       <option value="weekly">Weekly</option>
@@ -633,7 +633,7 @@ export default function StorageAccountsPage() {
                     type="button"
                     onClick={handleEnableRotation}
                     disabled={submitting}
-                    className="w-full px-4 py-2 bg-muted0 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50"
+                    className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
                   >
                     Aktifkan Auto-Rotation
                   </button>
@@ -658,7 +658,7 @@ export default function StorageAccountsPage() {
                 </>
               )}
 
-              <hr className="border-champagne-200" />
+              <hr className="border-border" />
               
               <h3 className="font-medium text-foreground">Set Secondary Credentials</h3>
               <p className="text-xs text-muted-foreground">
@@ -673,7 +673,7 @@ export default function StorageAccountsPage() {
                       type="text"
                       value={rotationForm.secondaryApiKey}
                       onChange={(e) => setRotationForm({ ...rotationForm, secondaryApiKey: e.target.value })}
-                      className="w-full px-3 py-2 border border-champagne-200 rounded-lg text-sm"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm"
                       placeholder="API Key baru"
                     />
                   </div>
@@ -683,7 +683,7 @@ export default function StorageAccountsPage() {
                       type="password"
                       value={rotationForm.secondaryApiSecret}
                       onChange={(e) => setRotationForm({ ...rotationForm, secondaryApiSecret: e.target.value })}
-                      className="w-full px-3 py-2 border border-champagne-200 rounded-lg text-sm"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm"
                       placeholder="API Secret baru"
                     />
                   </div>
@@ -696,7 +696,7 @@ export default function StorageAccountsPage() {
                       type="text"
                       value={rotationForm.secondaryAccessKey}
                       onChange={(e) => setRotationForm({ ...rotationForm, secondaryAccessKey: e.target.value })}
-                      className="w-full px-3 py-2 border border-champagne-200 rounded-lg text-sm"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm"
                       placeholder="Access Key baru"
                     />
                   </div>
@@ -706,7 +706,7 @@ export default function StorageAccountsPage() {
                       type="password"
                       value={rotationForm.secondarySecretKey}
                       onChange={(e) => setRotationForm({ ...rotationForm, secondarySecretKey: e.target.value })}
-                      className="w-full px-3 py-2 border border-champagne-200 rounded-lg text-sm"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm"
                       placeholder="Secret Key baru"
                     />
                   </div>
@@ -723,8 +723,8 @@ export default function StorageAccountsPage() {
               </button>
             </div>
             
-            <div className="flex gap-3 pt-4 mt-4 border-t border-champagne-200">
-              <button type="button" onClick={() => setShowRotationModal(false)} className="flex-1 px-4 py-2 border border-champagne-200 text-foreground rounded-lg hover:bg-muted">
+            <div className="flex gap-3 pt-4 mt-4 border-t border-border">
+              <button type="button" onClick={() => setShowRotationModal(false)} className="flex-1 px-4 py-2 border border-border text-foreground rounded-lg hover:bg-muted">
                 Tutup
               </button>
             </div>

@@ -527,7 +527,7 @@ export default function EventsPage() {
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 resize-none"
+                className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 resize-none"
                 placeholder="Catatan tambahan..."
               />
             </div>
@@ -566,7 +566,7 @@ export default function EventsPage() {
               <Button type="button" variant="outline" onClick={() => { setShowModal(false); resetForm(); }}>
                 Batal
               </Button>
-              <Button type="submit" disabled={submitting} className="bg-muted0 hover:bg-amber-600">
+              <Button type="submit" disabled={submitting} className="bg-primary text-primary-foreground hover:bg-primary/90">
                 {submitting ? 'Menyimpan...' : editingEvent ? 'Simpan Perubahan' : 'Buat Event'}
               </Button>
             </DialogFooter>

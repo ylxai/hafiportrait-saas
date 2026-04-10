@@ -160,7 +160,7 @@ export default function GalleriesPage() {
   const statusColors: Record<string, string> = {
     draft: 'bg-muted text-muted-foreground',
     published: 'bg-green-500/20 text-green-400',
-    archived: 'bg-amber-500/20 text-amber-400',
+    archived: 'bg-primary/20 text-primary',
   };
 
   return (
@@ -222,7 +222,7 @@ export default function GalleriesPage() {
           </div>
           <h3 className="text-xl font-bold text-foreground mb-2">Belum ada gallery</h3>
           <p className="text-base text-muted-foreground mb-6">Buat gallery pertama Anda</p>
-          <Button onClick={() => setShowModal(true)} className="bg-muted0 text-white hover:bg-amber-600">
+          <Button onClick={() => setShowModal(true)} className="bg-primary text-primary-foreground hover:bg-primary/90">
             <Plus className="w-4 h-4 mr-2" />
             + Buat Gallery
           </Button>
@@ -230,9 +230,9 @@ export default function GalleriesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {galleries.map((gallery) => (
-            <div key={gallery.id} className={`bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl overflow-hidden hover:shadow-lg transition-all ${selectedIds.includes(gallery.id) ? 'ring-2 ring-champagne-500' : ''}`}>
-              <div className="h-32 bg-gradient-to-r from-champagne-200 to-champagne-300 flex items-center justify-center relative">
-                <svg className="w-12 h-12 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <div key={gallery.id} className={`bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl overflow-hidden hover:shadow-lg transition-all ${selectedIds.includes(gallery.id) ? 'ring-2 ring-primary' : ''}`}>
+              <div className="h-32 bg-gradient-to-r from-primary/10 to-primary/20 flex items-center justify-center relative">
+                <svg className="w-12 h-12 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <div className="absolute top-2 left-2">
