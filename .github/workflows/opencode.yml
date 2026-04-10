@@ -8,6 +8,8 @@ on:
 
 jobs:
   opencode:
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     if: |
       contains(github.event.comment.body, ' /oc') ||
       startsWith(github.event.comment.body, '/oc') ||
@@ -21,7 +23,7 @@ jobs:
       issues: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
           persist-credentials: false
@@ -30,6 +32,7 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: fireworks-ai/accounts/fireworks/routers/kimi-k2p5-turbo
-          token: ${{ secrets.GITHUB_TOKEN }}
+          use_github_token: true
