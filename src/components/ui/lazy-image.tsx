@@ -63,25 +63,30 @@ export function LazyImage({
 
   const displaySrc = getOptimizedSrc(hasError && fallbackSrc ? fallbackSrc : src);
 
+  const getStyleValue = (val: number | string | undefined, defaultVal: string) => {
+    if (val === undefined || val === null) return defaultVal;
+    return typeof val === 'number' ? `${val}px` : val;
+  };
+
   return (
     <div
       ref={imgRef}
       className={`relative overflow-hidden ${fill ? 'w-full h-full absolute inset-0' : ''} ${wrapperClassName}`}
-      style={!fill ? { width: width || '100%', height: height || '100%' } : {}}
+      style={!fill ? { width: getStyleValue(width, '100%'), height: getStyleValue(height, '100%') } : {}}
     >
-      {(!isLoaded || hasError) && (
+      {(!isLoaded || (hasError && !fallbackSrc)) && (
         <div className={`absolute inset-0 flex items-center justify-center bg-muted/30 animate-pulse ${skeletonClassName}`}>
           <ImageIcon className="w-8 h-8 text-muted-foreground/30" />
         </div>
       )}
 
-      {(isIntersecting || priority) && !hasError && (
+      {(isIntersecting || priority) && (!hasError || fallbackSrc) && (
         <Image
           src={displaySrc}
           alt={alt}
           fill={fill}
-          width={fill ? undefined : width}
-          height={fill ? undefined : height}
+          width={fill ? undefined : (width || 500)}
+          height={fill ? undefined : (height || 500)}
           className={`transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'} ${className}`}
           onLoad={() => setIsLoaded(true)}
           onError={() => setHasError(true)}

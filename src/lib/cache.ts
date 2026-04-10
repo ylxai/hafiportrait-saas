@@ -63,10 +63,27 @@ export async function getCachedData<T>(
 export async function invalidateCache(prefix: string) {
   try {
     if (!redisCache) return;
-    const keys = await redisCache.keys(`${prefix}*`);
-    if (keys.length > 0) {
-      await redisCache.del(...keys);
-    }
+
+    return new Promise<void>((resolve, reject) => {
+      const stream = redisCache!.scanStream({
+        match: `${prefix}*`,
+        count: 100
+      });
+      
+      const promises: Promise<number>[] = [];
+      
+      stream.on('data', (keys: string[]) => {
+        if (keys.length > 0) {
+          promises.push(redisCache!.del(...keys));
+        }
+      });
+      
+      stream.on('end', () => {
+        Promise.all(promises).then(() => resolve()).catch(reject);
+      });
+      
+      stream.on('error', (err) => reject(err));
+    });
   } catch (error) {
     console.error(`Redis cache error on INVALIDATE ${prefix}:`, error);
   }

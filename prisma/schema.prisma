@@ -124,6 +124,7 @@ model Photo {
 
   @@index([storageAccountId])
   @@index([publicId])
+  @@index([galleryId])
   @@index([galleryId, order])
   @@index([galleryId, createdAt])
 }
@@ -147,6 +148,7 @@ model PhotoSelection {
   photo        Photo     @relation(fields: [photoId], references: [id], onDelete: Cascade)
 
   @@unique([selectionId, photoId])
+  @@index([selectionId])
   @@index([photoId])
 }
 
