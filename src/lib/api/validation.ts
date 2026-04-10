@@ -23,7 +23,7 @@ export const eventSchema = z.object({
   packageId: z.string().nullish(),  // Accept null or undefined
   namaProject: z.string().min(1, 'Nama project wajib diisi'),
   eventDate: z.string()
-    .refine((str) => !isNaN(Date.parse(str)), { message: 'Invalid date format' })
+    .refine((str) => !isNaN(Date.parse(str)), { message: 'Format tanggal tidak valid' })
     .transform((str) => new Date(str)),
   location: z.string().nullish(),  // Accept null or undefined
   notes: z.string().nullish(),  // Accept null or undefined
@@ -51,7 +51,7 @@ export const bookingSchema = z.object({
   instagram: z.string().optional(),
   packageId: z.string().optional(),
   eventDate: z.string()
-    .refine((str) => !isNaN(Date.parse(str)), { message: 'Invalid date format' })
+    .refine((str) => !isNaN(Date.parse(str)), { message: 'Format tanggal tidak valid' })
     .transform((str) => new Date(str)),
   location: z.string().optional(),
   notes: z.string().optional(),
