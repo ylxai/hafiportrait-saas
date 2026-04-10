@@ -52,7 +52,16 @@ export function LazyImage({
     };
   }, [priority]);
 
-  const displaySrc = hasError && fallbackSrc ? fallbackSrc : src;
+  // Automatically apply Cloudinary f_auto, q_auto optimizations
+  const getOptimizedSrc = (url: string) => {
+    if (!url) return url;
+    if (url.includes('cloudinary.com') && !url.includes('f_auto')) {
+      return url.replace('/upload/', '/upload/f_auto,q_auto/');
+    }
+    return url;
+  };
+
+  const displaySrc = getOptimizedSrc(hasError && fallbackSrc ? fallbackSrc : src);
 
   return (
     <div
@@ -77,7 +86,6 @@ export function LazyImage({
           onLoad={() => setIsLoaded(true)}
           onError={() => setHasError(true)}
           priority={priority}
-          unoptimized
           {...props}
         />
       )}

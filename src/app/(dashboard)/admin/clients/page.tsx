@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { LazyImage } from '@/components/ui/lazy-image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -155,7 +154,7 @@ export default function ClientsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Clients</h1>
+        <h1 className="text-2xl font-bold text-foreground">Clients</h1>
         <Button onClick={() => { resetForm(); setShowModal(true); }}>
           <Plus className="w-5 h-5 mr-2" />
           <span className="hidden sm:inline">Tambah Client</span>
@@ -174,7 +173,7 @@ export default function ClientsPage() {
 
       {selectedIds.length > 0 && (
         <div className="glass-card mb-4 p-3 flex items-center justify-between">
-          <span className="text-sm text-slate-800 font-medium">
+          <span className="text-sm text-foreground font-medium">
             {selectedIds.length} item dipilih
           </span>
           <div className="flex gap-2">
@@ -200,8 +199,8 @@ export default function ClientsPage() {
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-6 shadow-inner">
             <User className="w-10 h-10 text-amber-600" />
           </div>
-          <h3 className="text-2xl font-bold text-slate-800 mb-3">Belum ada client</h3>
-          <p className="text-base text-slate-500 mb-8 max-w-sm mx-auto">Tambah client pertama Anda untuk memulai mengelola data klien dengan mudah.</p>
+          <h3 className="text-2xl font-bold text-foreground mb-3">Belum ada client</h3>
+          <p className="text-base text-muted-foreground mb-8 max-w-sm mx-auto">Tambah client pertama Anda untuk memulai mengelola data klien dengan mudah.</p>
           <Button onClick={() => setShowModal(true)} size="lg">
             <Plus className="w-5 h-5 mr-2" />
             Tambah Client
@@ -219,12 +218,12 @@ export default function ClientsPage() {
                     onCheckedChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Nama</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Email</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Phone</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Instagram</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Dibuat</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Aksi</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Nama</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Email</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Phone</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Instagram</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Dibuat</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-champagne-100">
@@ -236,23 +235,23 @@ export default function ClientsPage() {
                       onCheckedChange={() => toggleSelect(client.id)}
                     />
                   </td>
-                  <td className="px-4 py-4 text-slate-800 font-medium">
+                  <td className="px-4 py-4 text-foreground font-medium">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-100 shrink-0 relative">
-                        <LazyImage
-                          src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(client.nama || 'User')}&backgroundColor=f1f5f9&textColor=0f172a`}
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-muted shrink-0 relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(client.nama || 'User')}&backgroundColor=transparent&textColor=ffffff`}
                           alt={client.nama || 'User'}
-                          fill
-                          className="object-cover"
+                          className="w-full h-full object-cover"
                         />
                       </div>
                       <span>{client.nama}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-4 text-slate-500">{client.email}</td>
-                  <td className="px-4 py-4 text-slate-500">{client.phone || '-'}</td>
-                  <td className="px-4 py-4 text-slate-500">{client.instagram || '-'}</td>
-                  <td className="px-4 py-4 text-slate-500 text-sm">
+                  <td className="px-4 py-4 text-muted-foreground">{client.email}</td>
+                  <td className="px-4 py-4 text-muted-foreground">{client.phone || '-'}</td>
+                  <td className="px-4 py-4 text-muted-foreground">{client.instagram || '-'}</td>
+                  <td className="px-4 py-4 text-muted-foreground text-sm">
                     {new Date(client.createdAt).toLocaleDateString('id-ID')}
                   </td>
                   <td className="px-4 py-4 text-right">

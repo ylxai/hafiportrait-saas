@@ -16,7 +16,7 @@ export const redisCache = globalForRedis.redis ?? (REDIS_URL ? new Redis(REDIS_U
     }
     return Math.min(times * 50, 2000);
   },
-  tls: REDIS_URL.startsWith('rediss://') ? { rejectUnauthorized: false } : undefined,
+  tls: REDIS_URL.startsWith('rediss://') ? {} : undefined,
 }) : undefined);
 
 if (process.env.NODE_ENV !== 'production') {
