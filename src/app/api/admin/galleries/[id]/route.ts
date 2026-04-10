@@ -92,6 +92,9 @@ export async function PATCH(
     return successResponse({ gallery });
   } catch (error) {
     console.error('Error updating gallery:', error);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return notFoundResponse('Gallery not found');
+    }
     return serverErrorResponse('Failed to update gallery');
   }
 }

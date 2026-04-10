@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
+import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
 import { eventSchema, eventUpdateSchema } from '@/lib/api/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
+import { generateKodeBooking } from '@/lib/utils';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -12,15 +13,6 @@ async function checkAuth() {
     return errorResponse('Unauthorized', 401);
   }
   return session;
-}
-
-function generateKodeBooking(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let result = '';
-  for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
 }
 
 export async function GET(request: Request) {
@@ -81,29 +73,52 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validated = eventSchema.parse(body);
 
-    let kodeBooking = generateKodeBooking();
-    let exists = await prisma.event.findUnique({ where: { kodeBooking } });
-    while (exists) {
-      kodeBooking = generateKodeBooking();
-      exists = await prisma.event.findUnique({ where: { kodeBooking } });
+    // Atomic creation with retry on unique constraint violation
+    // This eliminates race conditions by letting the database enforce uniqueness
+    const MAX_RETRIES = 5;
+    let event = null;
+    let lastError = null;
+    
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const kodeBooking = generateKodeBooking();
+      
+      try {
+        event = await prisma.event.create({
+          data: {
+            kodeBooking,
+            ...validated,
+            status: 'pending',
+            paymentStatus: 'unpaid',
+          },
+          include: {
+            client: true,
+            package: true,
+          },
+        });
+        break; // Success, exit retry loop
+      } catch (error) {
+        // Check if it's a unique constraint violation (P2002)
+        if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+          console.warn(`Kode booking collision (attempt ${attempt + 1}/${MAX_RETRIES}), retrying...`);
+          lastError = error;
+          continue; // Retry with new kodeBooking
+        }
+        // For other errors, throw immediately
+        throw error;
+      }
     }
 
-    const event = await prisma.event.create({
-      data: {
-        kodeBooking,
-        ...validated,
-        status: 'pending',
-        paymentStatus: 'unpaid',
-      },
-      include: {
-        client: true,
-        package: true,
-      },
-    });
+    if (!event) {
+      console.error('Failed to generate unique kode booking after', MAX_RETRIES, 'attempts. Last error:', lastError);
+      return serverErrorResponse('Failed to generate unique booking code');
+    }
 
     return successResponse({ event }, 201);
   } catch (error) {
     console.error('Error creating event:', error);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2003') {
+      return notFoundResponse('Client or package not found');
+    }
     return serverErrorResponse('Failed to create event');
   }
 }
@@ -132,6 +147,9 @@ export async function PATCH(request: Request) {
     return successResponse({ event });
   } catch (error) {
     console.error('Error updating event:', error);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return notFoundResponse('Event not found');
+    }
     return serverErrorResponse('Failed to update event');
   }
 }
@@ -155,6 +173,9 @@ export async function DELETE(request: Request) {
     return successResponse({ success: true });
   } catch (error) {
     console.error('Error deleting event:', error);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return notFoundResponse('Event not found');
+    }
     return serverErrorResponse('Failed to delete event');
   }
 }
