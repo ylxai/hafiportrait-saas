@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -49,7 +50,7 @@ export default function EventDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <LoadingSpinner size="md" />
       </div>
     );
   }
