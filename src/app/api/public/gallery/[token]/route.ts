@@ -7,7 +7,7 @@ import { z } from 'zod';
 const PHOTOS_PER_PAGE = 100;
 
 // Validate token format (CUID)
-const tokenSchema = z.string().cuid2().or(z.string().min(10).max(50));
+const tokenSchema = z.string().cuid().or(z.string().min(10).max(50));
 
 export async function GET(
   request: Request,

@@ -1,7 +1,14 @@
 import { z } from 'zod';
 
 // Helper to sanitize string (trim and basic XSS prevention)
-const sanitizeString = (str: string) => str.trim().replace(/[<>]/g, '');
+// Note: For production, consider using DOMPurify for more robust sanitization
+const sanitizeString = (str: string) => {
+  return str
+    .trim()
+    .replace(/[<>]/g, '') // Remove < and > to prevent HTML tags
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/on\w+=/gi, ''); // Remove event handlers (onclick, onerror, etc.)
+};
 
 // Email regex for stricter validation
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -26,7 +33,7 @@ export const clientSchema = z.object({
     }),
   instagram: z.string()
     .nullish()
-    .refine((val) => val === null || val === undefined || /^[a-zA-Z0-9._]{1,30}$/.test(val), {
+    .refine((val) => val === null || val === undefined || /^@?[a-zA-Z0-9._]{1,30}$/.test(val), {
       message: 'Format Instagram tidak valid',
     }),
 });
