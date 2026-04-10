@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -49,7 +50,7 @@ export default function EventDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+        <LoadingSpinner size="md" />
       </div>
     );
   }
@@ -93,7 +94,7 @@ export default function EventDetailPage() {
                 type="text"
                 defaultValue={event.namaProject}
                 onBlur={(e) => handleUpdate('namaProject', e.target.value)}
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
@@ -102,7 +103,7 @@ export default function EventDetailPage() {
                 type="date"
                 defaultValue={event.eventDate?.split('T')[0]}
                 onBlur={(e) => handleUpdate('eventDate', e.target.value)}
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
@@ -111,7 +112,7 @@ export default function EventDetailPage() {
                 type="text"
                 defaultValue={event.location || ''}
                 onBlur={(e) => handleUpdate('location', e.target.value)}
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
@@ -119,7 +120,7 @@ export default function EventDetailPage() {
               <select
                 value={event.status}
                 onChange={(e) => handleUpdate('status', e.target.value)}
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               >
                 <option value="pending">Pending</option>
                 <option value="confirmed">Confirmed</option>
@@ -166,7 +167,7 @@ export default function EventDetailPage() {
               <select
                 value={event.paymentStatus}
                 onChange={(e) => handleUpdate('paymentStatus', e.target.value)}
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               >
                 <option value="unpaid">Unpaid</option>
                 <option value="partial">Partial</option>

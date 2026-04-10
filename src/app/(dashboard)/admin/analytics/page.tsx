@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
+import { LoadingSpinner } from '@/components/ui/loading';
 
 type Analytics = {
   id: string;
@@ -43,7 +44,7 @@ export default function AnalyticsPage() {
   if (status === 'loading' || isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+        <LoadingSpinner size="md" />
       </div>
     );
   }
@@ -87,12 +88,12 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl">
-        <div className="p-4 border-b border-champagne-100 flex items-center justify-between">
+        <div className="p-4 border-b border-border flex items-center justify-between">
           <h2 className="font-semibold text-foreground">Gallery Performance</h2>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="glass-input px-3 py-2 text-sm w-auto"
+            className="px-3 py-2 text-sm w-auto bg-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           >
             <option value="all">All</option>
             <option value="published">Published</option>

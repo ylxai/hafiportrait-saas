@@ -209,7 +209,7 @@ export default function PackagesPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Packages</h1>
+        <h1 className="text-2xl font-bold text-foreground">Packages</h1>
         <Button onClick={() => { resetForm(); setShowModal(true); }}>
           <Plus className="w-5 h-5 mr-2" />
           <span className="hidden sm:inline">Tambah Paket</span>
@@ -220,7 +220,7 @@ export default function PackagesPage() {
       <Button
         onClick={() => { resetForm(); setShowModal(true); }}
         size="icon"
-        className="fab bg-amber-500 text-white sm:hidden fixed bottom-6 right-6"
+        className="fab bg-primary text-primary-foreground sm:hidden fixed bottom-6 right-6"
         aria-label="Tambah Paket Baru"
       >
         <Plus className="w-6 h-6" />
@@ -228,7 +228,7 @@ export default function PackagesPage() {
 
       {selectedIds.length > 0 && (
         <div className="glass-card mb-4 p-3 flex items-center justify-between">
-          <span className="text-sm text-slate-800 font-medium">
+          <span className="text-sm text-foreground font-medium">
             {selectedIds.length} item dipilih
           </span>
           <div className="flex gap-2">
@@ -258,11 +258,11 @@ export default function PackagesPage() {
         </div>
       ) : packages.length === 0 ? (
         <div className="glass-card p-16 text-center">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-6 shadow-inner">
-            <Package className="w-10 h-10 text-amber-600" />
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center mx-auto mb-6 shadow-inner">
+            <Package className="w-10 h-10 text-primary" />
           </div>
-          <h3 className="text-2xl font-bold text-slate-800 mb-3">Belum ada paket</h3>
-          <p className="text-base text-slate-500 mb-8 max-w-sm mx-auto">Tambah paket fotografi pertama Anda untuk menawarkan layanan kepada klien.</p>
+          <h3 className="text-2xl font-bold text-foreground mb-3">Belum ada paket</h3>
+          <p className="text-base text-muted-foreground mb-8 max-w-sm mx-auto">Tambah paket fotografi pertama Anda untuk menawarkan layanan kepada klien.</p>
           <Button onClick={() => setShowModal(true)} size="lg">
             <Plus className="w-5 h-5 mr-2" />
             Tambah Paket
@@ -279,34 +279,34 @@ export default function PackagesPage() {
                 />
                 <div className="flex-1">
                   <div className="flex items-start justify-between">
-                    <h3 className="font-semibold text-slate-800">{pkg.nama}</h3>
+                    <h3 className="font-semibold text-foreground">{pkg.nama}</h3>
                     <Badge variant={pkg.isActive ? 'default' : 'secondary'}>
                       {pkg.isActive ? 'Aktif' : 'Nonaktif'}
                     </Badge>
                   </div>
                 </div>
               </div>
-              {pkg.description && <p className="text-sm text-slate-500 mb-3">{pkg.description}</p>}
-              <div className="text-2xl font-bold text-amber-600 mb-2">
+              {pkg.description && <p className="text-sm text-muted-foreground mb-3">{pkg.description}</p>}
+              <div className="text-2xl font-bold text-primary mb-2">
                 Rp {pkg.price.toLocaleString('id-ID')}
               </div>
-              <div className="text-xs text-slate-400 mb-3 space-y-1">
+              <div className="text-xs text-muted-foreground mb-3 space-y-1">
                 {pkg.duration && <div className="flex items-center gap-2"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> {pkg.duration} menit</div>}
                 <div className="flex items-center gap-2"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.76-.9l.814-1.74A2 2 0 0111.52 4H17a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg> Max Seleksi: {pkg.maxSelection}</div>
                 {pkg.maxDownload > 0 && <div className="flex items-center gap-2"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg> Max Download: {pkg.maxDownload}</div>}
               </div>
               {pkg.fitur.length > 0 && (
-                <ul className="text-sm text-slate-500 space-y-1 mb-4">
+                <ul className="text-sm text-muted-foreground space-y-1 mb-4">
                   {pkg.fitur.map((f, i) => (
                     <li key={i} className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> {f}
+                      <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> {f}
                     </li>
                   ))}
                 </ul>
               )}
-              <div className="flex gap-2 pt-3 border-t border-champagne-100">
+              <div className="flex gap-2 pt-3 border-t border-border">
                 <Button variant="ghost" size="sm" onClick={() => openEdit(pkg)} className="flex-1">Edit</Button>
-                <Button variant="ghost" size="sm" onClick={() => handleToggleActive(pkg)} className="flex-1 text-slate-500">
+                <Button variant="ghost" size="sm" onClick={() => handleToggleActive(pkg)} className="flex-1 text-muted-foreground">
                   {pkg.isActive ? 'Nonaktifkan' : 'Aktifkan'}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => handleDelete(pkg.id)} className="flex-1 text-red-600">Hapus</Button>

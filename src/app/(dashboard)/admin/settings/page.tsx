@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/ui/loading';
 
 type Settings = {
   namaStudio: string;
@@ -82,7 +83,7 @@ export default function SettingsPage() {
   if (status === 'loading' || isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+        <LoadingSpinner size="md" />
       </div>
     );
   }
@@ -105,7 +106,7 @@ export default function SettingsPage() {
                 type="text"
                 value={formData.namaStudio}
                 onChange={(e) => handleChange('namaStudio', e.target.value)}
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
@@ -114,7 +115,7 @@ export default function SettingsPage() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleChange('email', e.target.value)}
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
@@ -123,7 +124,7 @@ export default function SettingsPage() {
                 type="text"
                 value={formData.phone}
                 onChange={(e) => handleChange('phone', e.target.value)}
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
@@ -132,14 +133,14 @@ export default function SettingsPage() {
                 type="text"
                 value={formData.logoUrl}
                 onChange={(e) => handleChange('logoUrl', e.target.value)}
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
           </div>
         </div>
 
         <div className="bg-card text-card-foreground rounded-xl p-6 border border-border shadow-sm">
-          <h2 className="font-semibold text-slate-900 mb-4">Address</h2>
+          <h2 className="font-semibold text-foreground mb-4">Address</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Studio Address</label>
@@ -147,7 +148,7 @@ export default function SettingsPage() {
                 value={formData.address}
                 onChange={(e) => handleChange('address', e.target.value)}
                 rows={3}
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                 placeholder="Enter your studio address..."
               />
             </div>
@@ -155,7 +156,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="bg-card text-card-foreground rounded-xl p-6 border border-border shadow-sm">
-          <h2 className="font-semibold text-slate-900 mb-4">JSON Settings</h2>
+          <h2 className="font-semibold text-foreground mb-4">JSON Settings</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Social Media (JSON)</label>
@@ -170,7 +171,7 @@ export default function SettingsPage() {
                   }
                 }}
                 rows={4}
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 font-mono text-sm"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 font-mono text-sm"
                 placeholder='{"instagram": "@yourstudio", "facebook": "..."}'
               />
             </div>
@@ -178,7 +179,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="flex items-center gap-4">
-          <Button type="submit" disabled={saving} className="bg-muted0 hover:bg-amber-600">
+          <Button type="submit" disabled={saving}>
             {saving ? 'Saving...' : 'Save Settings'}
           </Button>
           {message && (

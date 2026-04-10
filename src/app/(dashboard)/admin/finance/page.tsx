@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { Plus, Save, X } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading';
 
 type Summary = {
   totalEvents: number;
@@ -48,7 +49,7 @@ export default function FinancePage() {
   if (status === 'loading' || isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+        <LoadingSpinner size="md" />
       </div>
     );
   }

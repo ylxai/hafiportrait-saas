@@ -411,7 +411,7 @@ export default function GalleryDetailPage() {
             <div className="flex flex-col gap-2">
               <p className="text-sm text-muted-foreground">Status seleksi saat ini sedang <strong className="text-green-600">Terbuka</strong>. Klien masih dapat mengubah dan mengirimkan pilihan foto.</p>
               {selectedPhotoIdsFromServer.length > 0 && (
-                <p className="text-sm font-medium text-amber-600">
+                <p className="text-sm font-medium text-primary">
                   Pilihan terakhir klien: {selectedPhotoIdsFromServer.length} foto.
                 </p>
               )}
