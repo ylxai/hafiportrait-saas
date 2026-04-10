@@ -36,7 +36,12 @@ type Pagination = {
   pages: number;
 };
 
-type GalleriesResponse = { galleries: Gallery[]; pagination?: Pagination };
+type GalleriesResponse = { 
+  data: { 
+    galleries: Gallery[]; 
+    pagination?: Pagination 
+  } 
+};
 type EventsResponse = { data: { events: Event[] } };
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -46,8 +51,8 @@ export default function GalleriesPage() {
   const limit = 20;
   
   const { data, isLoading, mutate } = useSWR<GalleriesResponse>(`/api/admin/galleries?page=${page}&limit=${limit}`, fetcher);
-  const galleries = data?.galleries ?? [];
-  const pagination = data?.pagination;
+  const galleries = data?.data?.galleries ?? [];
+  const pagination = data?.data?.pagination;
 
   // Fetch events for the create form
   const { data: eventsData } = useSWR<EventsResponse>('/api/admin/events?limit=100', fetcher);
