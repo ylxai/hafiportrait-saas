@@ -47,7 +47,7 @@ export async function GET() {
       totalClients,
       totalGalleries,
       totalPhotos,
-      totalRevenue: revenueResult._sum.totalPrice ? Number(revenueResult._sum.totalPrice) : 0,
+      totalRevenue: revenueResult._sum.totalPrice?.toString() ?? "0",
       recentEvents: recentEvents.map(e => ({
         id: e.id,
         namaProject: e.namaProject,
