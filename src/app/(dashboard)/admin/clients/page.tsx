@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import { createAvatar } from '@dicebear/core';
 import { initials } from '@dicebear/collection';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -28,11 +29,11 @@ const ClientAvatar = ({ name }: { name: string }) => {
   }, [name]);
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <Image
       src={avatar}
       alt={name || 'User'}
-      className="w-full h-full object-cover"
+      fill
+      className="object-cover"
     />
   );
 };

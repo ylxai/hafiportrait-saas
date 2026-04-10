@@ -23,13 +23,15 @@ if (process.env.NODE_ENV !== 'production') {
   globalForRedis.redis = redisCache;
 }
 
+const DEFAULT_TTL_SECONDS = 300; // 5 minutes
+
 /**
  * Get data from cache, or fetch it and cache the result
  */
 export async function getCachedData<T>(
   key: string,
   fetcher: () => Promise<T>,
-  ttlSeconds: number = 300 // default 5 minutes
+  ttlSeconds: number = DEFAULT_TTL_SECONDS
 ): Promise<T> {
   try {
     if (redisCache) {
@@ -82,7 +84,7 @@ export async function invalidateCache(prefix: string) {
         Promise.all(promises).then(() => resolve()).catch(reject);
       });
       
-      stream.on('error', (err) => reject(err));
+      stream.on('error', (err: Error) => reject(err));
     });
   } catch (error) {
     console.error(`Redis cache error on INVALIDATE ${prefix}:`, error);
