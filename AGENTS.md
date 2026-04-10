@@ -158,7 +158,7 @@ If an MCP tool can accomplish the task, **USE IT DIRECTLY** rather than simulati
 3. **NO Blocking UI**: Do NOT use `alert()` or blocking dialogues. Use `sonner` `toast()` for non-blocking UI notifications.
 4. **NO Over-fetching**: Do NOT fetch unbounded relationships (e.g., 10,000 photos at once) in Admin dashboard APIs to prevent Out-Of-Memory. Always use Server-Side Pagination.
 5. **NO Legacy Tailwind**: Do NOT use `rgba(var(--primary))` syntax in Tailwind v4 shadows; use direct RGB values. Do NOT use light-mode static colors for the Aura Noir theme.
-6. **NO Redis/BullMQ**: Do NOT use or install `bullmq`, `ioredis`, or `PM2` for background jobs. This project strictly uses Cloudflare Queues + Cloudflare Workers (Native Edge).
+6. **NO Redis/BullMQ for Background Jobs**: Do NOT use or install `bullmq` or `PM2` for background jobs. This project strictly uses Cloudflare Queues + Cloudflare Workers (Native Edge). Note: `ioredis` and Valkey are permitted STRICTLY for caching layers, not for task queues.
 
 ## Coding Style & Best Practices
 1. **TypeScript Strictness**: Always use TypeScript with strict `no-any` types. Avoid using `any` at all costs; use `unknown` or specific interfaces.

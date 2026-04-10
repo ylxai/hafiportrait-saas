@@ -115,3 +115,11 @@
 ## 8. Cloudflare R2 Direct Upload & CORS
 - **Error**: Photo uploads fail with 400 Bad Request or get blocked by the client's browser.
 - **Fix/Rule**: Clients upload directly to R2 presigned URLs. If this fails, the FIRST thing to check is the bucket's CORS configuration (it must allow PUT methods and the correct Allowed Origins).
+
+## 9. Background Jobs vs Caching (Valkey/Redis)
+- **Error**: Using `bullmq` or `PM2` for background jobs, or wrongly assuming `ioredis` is banned entirely.
+- **Fix/Rule**: Background tasks MUST use Cloudflare Queues + Workers. `ioredis` and Valkey are permitted STRICTLY for caching layers (e.g., caching API responses), but NEVER for task queues.
+
+## 10. OpenCode CI & Node.js Actions Deprecation
+- **Error**: OpenCode workflow failing due to missing `write` permissions, missing `GITHUB_TOKEN`, or Node.js 20 deprecation warnings.
+- **Fix/Rule**: Always provide `write` permissions (`contents`, `pull-requests`, `issues`, `id-token`) and use `use_github_token: true` with `token: ${{ secrets.GITHUB_TOKEN }}`. To fix Node.js 20 deprecations, set `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true` in the workflow environment.

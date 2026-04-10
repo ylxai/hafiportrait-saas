@@ -24,6 +24,15 @@ When opening a new Pull Request:
 4. Reply to the bot's comments (to mark the thread as resolved).
 5. Trigger another review using `/gemini review` if necessary before merging.
 
+## 10. Dependency Management & Package Lock SOP
+When encountering vulnerabilities or instructions to update dependencies:
+1. **Avoid `npm audit fix --force`**: This can forcibly upgrade `next` to an incompatible version (e.g., `^15.5.x`), breaking the strict requirement for Next.js `15.4.11`.
+2. If the `package.json` gets unexpectedly overwritten, use `git restore package.json package-lock.json` and re-run `npm install` to revert.
+
+## 11. Code Analysis & PR Quality Checks
+1. **Codacy has been deprecated/removed**: Do NOT use the Codacy MCP or configure Codacy `.codacy.yml`. Use standard Next.js Build and ESLint.
+2. **Branch Protection**: If a PR cannot be merged due to "approving review required" and you are the author, request the User to approve it manually via the GitHub UI. AI agents cannot self-approve PRs.
+
 ---
 
 ## TODO FROM CODEBASE AUDIT (April 2026)
