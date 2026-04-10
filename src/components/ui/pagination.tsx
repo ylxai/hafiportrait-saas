@@ -64,6 +64,7 @@ export function Pagination({
 interface PaginationInfo {
   page: number;
   limit: number;
+  skip: number;
   total: number;
   pages: number;
 }
@@ -74,7 +75,7 @@ export function getPaginationInfo(searchParams: URLSearchParams): PaginationInfo
   const limitRaw = parseInt(searchParams.get('limit') ?? '20', 10);
   const limit = Number.isNaN(limitRaw) ? 20 : Math.min(100, Math.max(1, limitRaw));
   
-  return { page, limit, skip: (page - 1) * limit, pages: 1, total: 0 } as PaginationInfo;
+  return { page, limit, skip: (page - 1) * limit, pages: 1, total: 0 };
 }
 
 export function calculatePages(total: number, limit: number): number {

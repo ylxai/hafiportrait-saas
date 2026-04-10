@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/ui/loading';
 
 type Settings = {
   namaStudio: string;
@@ -82,7 +83,7 @@ export default function SettingsPage() {
   if (status === 'loading' || isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <LoadingSpinner size="md" />
       </div>
     );
   }
@@ -178,7 +179,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="flex items-center gap-4">
-          <Button type="submit" disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button type="submit" disabled={saving}>
             {saving ? 'Saving...' : 'Save Settings'}
           </Button>
           {message && (
