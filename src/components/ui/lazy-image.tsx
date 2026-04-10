@@ -56,7 +56,7 @@ export function LazyImage({
   const getOptimizedSrc = (url: string) => {
     if (!url) return url;
     if (url.includes('cloudinary.com') && !url.includes('f_auto')) {
-      return url.replace('/upload/', '/upload/f_auto,q_auto/');
+      return url.replace(/\/upload\/(v\d+\/)?/, '/upload/f_auto,q_auto/$1');
     }
     return url;
   };

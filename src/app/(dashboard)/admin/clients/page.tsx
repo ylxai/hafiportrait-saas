@@ -187,7 +187,7 @@ export default function ClientsPage() {
       <Button
         onClick={() => { resetForm(); setShowModal(true); }}
         size="icon"
-        className="fab bg-amber-500 text-white sm:hidden fixed bottom-6 right-6"
+        className="fab bg-primary text-primary-foreground sm:hidden fixed bottom-6 right-6"
         aria-label="Tambah Client Baru"
       >
         <Plus className="w-6 h-6" />
@@ -218,8 +218,8 @@ export default function ClientsPage() {
         </div>
       ) : clients.length === 0 ? (
         <div className="glass-card p-16 text-center">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-6 shadow-inner">
-            <User className="w-10 h-10 text-amber-600" />
+          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6 shadow-inner">
+            <User className="w-10 h-10 text-primary" />
           </div>
           <h3 className="text-2xl font-bold text-foreground mb-3">Belum ada client</h3>
           <p className="text-base text-muted-foreground mb-8 max-w-sm mx-auto">Tambah client pertama Anda untuk memulai mengelola data klien dengan mudah.</p>
@@ -232,7 +232,7 @@ export default function ClientsPage() {
         <div className="glass-card overflow-hidden">
           <div className="table-mobile-scroll">
             <table className="w-full">
-            <thead className="bg-amber-50/50 border-b border-champagne-100">
+            <thead className="bg-muted/50 border-b border-border">
               <tr>
                 <th className="px-4 py-3 text-left">
                   <Checkbox
@@ -248,9 +248,9 @@ export default function ClientsPage() {
                 <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-champagne-100">
+            <tbody className="divide-y divide-border">
               {clients.filter(c => c && c.id).map((client) => (
-                <tr key={client.id} className={`hover:bg-amber-50/30 transition-smooth ${selectedIds.includes(client.id) ? 'bg-amber-50' : ''}`}>
+                <tr key={client.id} className={`hover:bg-muted/30 transition-smooth ${selectedIds.includes(client.id) ? 'bg-muted' : ''}`}>
                   <td className="px-4 py-4">
                     <Checkbox
                       checked={selectedIds.includes(client.id)}

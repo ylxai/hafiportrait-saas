@@ -1,6 +1,6 @@
 import Redis from 'ioredis';
 
-const REDIS_URL = process.env.REDIS_URL || '';
+const REDIS_URL = process.env.NEXT_SERVER_REDIS_URL || process.env.REDIS_URL || '';
 
 // Singleton instance to prevent multiple connections in development (HMR)
 const globalForRedis = globalThis as unknown as {
