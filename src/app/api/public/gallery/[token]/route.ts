@@ -1,9 +1,13 @@
 import { prisma } from '@/lib/db';
-import { successResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
+import { successResponse, notFoundResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { getDefaultAccount } from '@/lib/storage/accounts';
 import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
+import { z } from 'zod';
 
 const PHOTOS_PER_PAGE = 100;
+
+// Validate token format (CUID)
+const tokenSchema = z.string().cuid2().or(z.string().min(10).max(50));
 
 export async function GET(
   request: Request,
@@ -11,6 +15,13 @@ export async function GET(
 ) {
   try {
     const { token } = await params;
+    
+    // Validate token format
+    const tokenValidation = tokenSchema.safeParse(token);
+    if (!tokenValidation.success) {
+      return errorResponse('Invalid gallery token format', 400);
+    }
+    
     const { searchParams } = new URL(request.url);
     const cursor = searchParams.get('cursor');
     
