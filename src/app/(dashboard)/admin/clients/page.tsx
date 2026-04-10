@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { createAvatar } from '@dicebear/core';
+import { initials } from '@dicebear/collection';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +16,25 @@ type Client = {
   phone: string | null;
   instagram: string | null;
   createdAt: string;
+};
+
+const ClientAvatar = ({ name }: { name: string }) => {
+  const avatar = useMemo(() => {
+    return createAvatar(initials, {
+      seed: name || 'User',
+      backgroundColor: ['transparent'],
+      textColor: ['ffffff'],
+    }).toDataUri();
+  }, [name]);
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={avatar}
+      alt={name || 'User'}
+      className="w-full h-full object-cover"
+    />
+  );
 };
 
 export default function ClientsPage() {
@@ -238,12 +259,7 @@ export default function ClientsPage() {
                   <td className="px-4 py-4 text-foreground font-medium">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full overflow-hidden bg-muted shrink-0 relative">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(client.nama || 'User')}&backgroundColor=transparent&textColor=ffffff`}
-                          alt={client.nama || 'User'}
-                          className="w-full h-full object-cover"
-                        />
+                        <ClientAvatar name={client.nama} />
                       </div>
                       <span>{client.nama}</span>
                     </div>
