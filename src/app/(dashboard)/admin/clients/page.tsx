@@ -1,6 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
+import { createAvatar } from '@dicebear/core';
+import { initials } from '@dicebear/collection';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +17,26 @@ type Client = {
   phone: string | null;
   instagram: string | null;
   createdAt: string;
+};
+
+const ClientAvatar = ({ name }: { name: string }) => {
+  const avatar = useMemo(() => {
+    return createAvatar(initials, {
+      seed: name || 'User',
+      backgroundColor: ['transparent'],
+      textColor: ['ffffff'],
+    }).toDataUri();
+  }, [name]);
+
+  return (
+    <Image
+      src={avatar}
+      alt={name || 'User'}
+      fill
+      unoptimized={true}
+      className="object-cover"
+    />
+  );
 };
 
 export default function ClientsPage() {
@@ -154,7 +177,7 @@ export default function ClientsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Clients</h1>
+        <h1 className="text-2xl font-bold text-foreground">Clients</h1>
         <Button onClick={() => { resetForm(); setShowModal(true); }}>
           <Plus className="w-5 h-5 mr-2" />
           <span className="hidden sm:inline">Tambah Client</span>
@@ -165,7 +188,7 @@ export default function ClientsPage() {
       <Button
         onClick={() => { resetForm(); setShowModal(true); }}
         size="icon"
-        className="fab bg-amber-500 text-white sm:hidden fixed bottom-6 right-6"
+        className="fab bg-primary text-primary-foreground sm:hidden fixed bottom-6 right-6"
         aria-label="Tambah Client Baru"
       >
         <Plus className="w-6 h-6" />
@@ -173,7 +196,7 @@ export default function ClientsPage() {
 
       {selectedIds.length > 0 && (
         <div className="glass-card mb-4 p-3 flex items-center justify-between">
-          <span className="text-sm text-slate-800 font-medium">
+          <span className="text-sm text-foreground font-medium">
             {selectedIds.length} item dipilih
           </span>
           <div className="flex gap-2">
@@ -196,11 +219,11 @@ export default function ClientsPage() {
         </div>
       ) : clients.length === 0 ? (
         <div className="glass-card p-16 text-center">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-6 shadow-inner">
-            <User className="w-10 h-10 text-amber-600" />
+          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6 shadow-inner">
+            <User className="w-10 h-10 text-primary" />
           </div>
-          <h3 className="text-2xl font-bold text-slate-800 mb-3">Belum ada client</h3>
-          <p className="text-base text-slate-500 mb-8 max-w-sm mx-auto">Tambah client pertama Anda untuk memulai mengelola data klien dengan mudah.</p>
+          <h3 className="text-2xl font-bold text-foreground mb-3">Belum ada client</h3>
+          <p className="text-base text-muted-foreground mb-8 max-w-sm mx-auto">Tambah client pertama Anda untuk memulai mengelola data klien dengan mudah.</p>
           <Button onClick={() => setShowModal(true)} size="lg">
             <Plus className="w-5 h-5 mr-2" />
             Tambah Client
@@ -210,7 +233,7 @@ export default function ClientsPage() {
         <div className="glass-card overflow-hidden">
           <div className="table-mobile-scroll">
             <table className="w-full">
-            <thead className="bg-amber-50/50 border-b border-champagne-100">
+            <thead className="bg-muted/50 border-b border-border">
               <tr>
                 <th className="px-4 py-3 text-left">
                   <Checkbox
@@ -218,28 +241,35 @@ export default function ClientsPage() {
                     onCheckedChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Nama</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Email</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Phone</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Instagram</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Dibuat</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Aksi</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Nama</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Email</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Phone</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Instagram</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Dibuat</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-champagne-100">
+            <tbody className="divide-y divide-border">
               {clients.filter(c => c && c.id).map((client) => (
-                <tr key={client.id} className={`hover:bg-amber-50/30 transition-smooth ${selectedIds.includes(client.id) ? 'bg-amber-50' : ''}`}>
+                <tr key={client.id} className={`hover:bg-muted/30 transition-smooth ${selectedIds.includes(client.id) ? 'bg-muted' : ''}`}>
                   <td className="px-4 py-4">
                     <Checkbox
                       checked={selectedIds.includes(client.id)}
                       onCheckedChange={() => toggleSelect(client.id)}
                     />
                   </td>
-                  <td className="px-4 py-4 text-slate-800 font-medium">{client.nama}</td>
-                  <td className="px-4 py-4 text-slate-500">{client.email}</td>
-                  <td className="px-4 py-4 text-slate-500">{client.phone || '-'}</td>
-                  <td className="px-4 py-4 text-slate-500">{client.instagram || '-'}</td>
-                  <td className="px-4 py-4 text-slate-500 text-sm">
+                  <td className="px-4 py-4 text-foreground font-medium">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-muted shrink-0 relative">
+                        <ClientAvatar name={client.nama} />
+                      </div>
+                      <span>{client.nama}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 text-muted-foreground">{client.email}</td>
+                  <td className="px-4 py-4 text-muted-foreground">{client.phone || '-'}</td>
+                  <td className="px-4 py-4 text-muted-foreground">{client.instagram || '-'}</td>
+                  <td className="px-4 py-4 text-muted-foreground text-sm">
                     {new Date(client.createdAt).toLocaleDateString('id-ID')}
                   </td>
                   <td className="px-4 py-4 text-right">

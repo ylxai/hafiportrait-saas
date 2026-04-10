@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
+import { LazyImage } from '@/components/ui/lazy-image';
 import useSWR from 'swr';
 import Masonry from 'react-masonry-css';
 import YARLightbox from "yet-another-react-lightbox";
@@ -412,7 +412,7 @@ export default function GalleryPage() {
                     tabIndex={0}
                   >
                     <div className="absolute inset-0">
-                      <Image
+                      <LazyImage
                         src={photo.thumbnailUrl || photo.url}
                         alt={photo.filename}
                         fill
@@ -476,8 +476,8 @@ export default function GalleryPage() {
                   {activeSelectedPhotos.map((photo, idx) => {
                     const originalIndex = photos.findIndex((p) => p.id === photo.id);
                     return (
-                      <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden bg-muted">
-                        <Image
+                      <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer">
+                        <LazyImage
                           src={photo.thumbnailUrl || photo.url}
                           alt={photo.filename}
                           fill

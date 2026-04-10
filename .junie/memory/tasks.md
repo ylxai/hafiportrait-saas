@@ -32,3 +32,29 @@ When encountering vulnerabilities or instructions to update dependencies:
 ## 11. Code Analysis & PR Quality Checks
 1. **Codacy has been deprecated/removed**: Do NOT use the Codacy MCP or configure Codacy `.codacy.yml`. Use standard Next.js Build and ESLint.
 2. **Branch Protection**: If a PR cannot be merged due to "approving review required" and you are the author, request the User to approve it manually via the GitHub UI. AI agents cannot self-approve PRs.
+
+---
+
+## TODO FROM CODEBASE AUDIT (April 2026)
+
+### Immediate Fixes (Do First)
+- [ ] Fix Button Component colors - ganti ke semantic OKLCH tokens
+- [ ] Fix Stats API route - gunakan helper functions
+- [ ] Fix Clients page data access pattern - konsisten dengan Events page
+- [ ] Add BigInt serialization di Stats route
+
+### Short-term (This Week)
+- [ ] Fix middleware matcher - tambahkan /api/admin/*
+- [ ] Upgrade TypeScript target ke ES2022
+- [ ] Remove ioredis dari dependencies
+- [ ] Remove unused Prisma import dari cloudflare-queue.ts
+- [ ] Implement pagination di Clients page
+- [ ] Add rate limiting middleware
+
+### Long-term (This Month)
+- [ ] Fix Cloudflare Worker type imports
+- [ ] Ganti console.log dengan structured logging
+- [ ] Fix ESLint suppression di Events page
+- [ ] Fix Dashboard hardcoded colors
+- [ ] Implement caching layer
+- [ ] Add monitoring/observability tools

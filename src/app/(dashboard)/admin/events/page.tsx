@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Calendar } from 'lucide-react';
+import { Plus, Calendar, Image as ImageIcon } from 'lucide-react';
+import { LazyImage } from '@/components/ui/lazy-image';
 
 type Client = {
   id: string;
@@ -36,6 +37,7 @@ type Event = {
   totalPrice: number;
   client: { id: string; nama: string };
   package: { id: string; nama: string; maxSelection: number; maxDownload: number } | null;
+  galleries?: { photos: { url: string; thumbnailUrl: string | null }[] }[];
 };
 
 type Pagination = {
@@ -366,7 +368,25 @@ export default function EventsPage() {
                       {event.kodeBooking}
                     </Link>
                   </td>
-                  <td className="px-4 py-4 text-foreground">{event.namaProject}</td>
+                  <td className="px-4 py-4 text-foreground">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-md overflow-hidden bg-muted/50 border border-border relative shrink-0">
+                        {event.galleries?.[0]?.photos?.[0] ? (
+                          <LazyImage
+                            src={event.galleries[0].photos[0].thumbnailUrl || event.galleries[0].photos[0].url}
+                            alt={event.namaProject}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-muted">
+                            <ImageIcon className="w-4 h-4 text-muted-foreground/50" />
+                          </div>
+                        )}
+                      </div>
+                      <span className="font-medium">{event.namaProject}</span>
+                    </div>
+                  </td>
                   <td className="px-4 py-4 text-muted-foreground">{event.client?.nama || '-'}</td>
                   <td className="px-4 py-4 text-muted-foreground">
                     {new Date(event.eventDate).toLocaleDateString('id-ID')}
