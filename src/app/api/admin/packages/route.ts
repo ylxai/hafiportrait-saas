@@ -90,6 +90,9 @@ export async function PATCH(request: Request) {
     return successResponse({ package: pkg });
   } catch (error) {
     console.error('Error updating package:', error);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return errorResponse('Package not found', 404);
+    }
     return serverErrorResponse('Failed to update package');
   }
 }
@@ -111,6 +114,9 @@ export async function DELETE(request: Request) {
     return successResponse({ success: true });
   } catch (error) {
     console.error('Error deleting package:', error);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return errorResponse('Package not found', 404);
+    }
     return serverErrorResponse('Failed to delete package');
   }
 }
