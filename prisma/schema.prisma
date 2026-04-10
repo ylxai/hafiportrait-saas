@@ -100,6 +100,7 @@ model Gallery {
   @@index([eventId])
   @@index([createdAt])
   @@index([status, createdAt])
+  @@index([clientToken])
 }
 
 model Photo {

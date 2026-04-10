@@ -33,6 +33,7 @@ const ClientAvatar = ({ name }: { name: string }) => {
       src={avatar}
       alt={name || 'User'}
       fill
+      unoptimized={true}
       className="object-cover"
     />
   );

@@ -37,7 +37,7 @@ export async function GET(request: Request) {
         skip,
       }),
       getCachedData(
-        'analytics:summary',
+        `analytics:summary:${session.user.email || 'admin'}`,
         async () => {
           const [summary, publishedCount, totalSelections] = await Promise.all([
             prisma.gallery.aggregate({
@@ -71,8 +71,8 @@ export async function GET(request: Request) {
     const summaryResult = {
       totalGalleries: total,
       publishedGalleries: summaryData.publishedCount,
-      totalViews: summaryData.summary._sum.viewCount || 0,
-      avgViews: total > 0 ? Math.round((summaryData.summary._sum.viewCount || 0) / total) : 0,
+      totalViews: Number(summaryData.summary._sum.viewCount || 0),
+      avgViews: total > 0 ? Math.round(Number(summaryData.summary._sum.viewCount || 0) / total) : 0,
       totalSelections: summaryData.totalSelections,
     };
 
