@@ -61,10 +61,10 @@ export async function getCachedData<T>(
 }
 
 export async function invalidateCache(prefix: string) {
-  try {
-    if (!redisCache) return;
+  if (!redisCache) return;
 
-    return new Promise<void>((resolve, reject) => {
+  try {
+    await new Promise<void>((resolve, reject) => {
       const stream = redisCache!.scanStream({
         match: `${prefix}*`,
         count: 100
