@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
+import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
 import { eventSchema, eventUpdateSchema } from '@/lib/api/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
@@ -116,13 +116,8 @@ export async function POST(request: Request) {
     return successResponse({ event }, 201);
   } catch (error) {
     console.error('Error creating event:', error);
-    if (error && typeof error === 'object' && 'code' in error) {
-      if (error.code === 'P2002') {
-        return errorResponse('Booking code already exists', 409);
-      }
-      if (error.code === 'P2003') {
-        return errorResponse('Client or package not found', 404);
-      }
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2003') {
+      return notFoundResponse('Client or package not found');
     }
     return serverErrorResponse('Failed to create event');
   }
@@ -153,7 +148,7 @@ export async function PATCH(request: Request) {
   } catch (error) {
     console.error('Error updating event:', error);
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
-      return errorResponse('Event not found', 404);
+      return notFoundResponse('Event not found');
     }
     return serverErrorResponse('Failed to update event');
   }
@@ -179,7 +174,7 @@ export async function DELETE(request: Request) {
   } catch (error) {
     console.error('Error deleting event:', error);
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
-      return errorResponse('Event not found', 404);
+      return notFoundResponse('Event not found');
     }
     return serverErrorResponse('Failed to delete event');
   }

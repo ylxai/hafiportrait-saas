@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
+import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
 import { packageSchema } from '@/lib/api/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
@@ -91,7 +91,7 @@ export async function PATCH(request: Request) {
   } catch (error) {
     console.error('Error updating package:', error);
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
-      return errorResponse('Package not found', 404);
+      return notFoundResponse('Package not found');
     }
     return serverErrorResponse('Failed to update package');
   }
@@ -115,7 +115,7 @@ export async function DELETE(request: Request) {
   } catch (error) {
     console.error('Error deleting package:', error);
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
-      return errorResponse('Package not found', 404);
+      return notFoundResponse('Package not found');
     }
     return serverErrorResponse('Failed to delete package');
   }
