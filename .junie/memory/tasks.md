@@ -38,10 +38,10 @@ When encountering vulnerabilities or instructions to update dependencies:
 ## TODO FROM CODEBASE AUDIT (April 2026)
 
 ### Immediate Fixes (Do First)
-- [ ] Fix Button Component colors - ganti ke semantic OKLCH tokens
-- [ ] Fix Stats API route - gunakan helper functions
-- [ ] Fix Clients page data access pattern - konsisten dengan Events page
-- [ ] Add BigInt serialization di Stats route
+- [x] Fix Button Component colors - ganti ke semantic OKLCH tokens
+- [x] Fix Stats API route - gunakan helper functions
+- [x] Fix Clients page data access pattern - konsisten dengan Events page
+- [x] Add BigInt serialization di Stats route (use .toString() not Number())
 
 ### Short-term (This Week)
 - [ ] Fix middleware matcher - tambahkan /api/admin/*

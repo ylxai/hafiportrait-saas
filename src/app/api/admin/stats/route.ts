@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { successResponse } from '@/lib/api/response';
+import { successResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 
@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      return errorResponse('Unauthorized', 401);
     }
 
     const [
@@ -47,7 +47,7 @@ export async function GET() {
       totalClients,
       totalGalleries,
       totalPhotos,
-      totalRevenue: revenueResult._sum.totalPrice || 0,
+      totalRevenue: revenueResult._sum.totalPrice?.toString() ?? "0",
       recentEvents: recentEvents.map(e => ({
         id: e.id,
         namaProject: e.namaProject,
@@ -68,6 +68,6 @@ export async function GET() {
     return successResponse(stats);
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
-    return Response.json({ error: 'Failed to fetch stats' }, { status: 500 });
+    return errorResponse('Failed to fetch stats', 500);
   }
 }
