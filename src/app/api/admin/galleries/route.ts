@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('Error fetching galleries:', error);
-    return errorResponse('Failed to fetch galleries', 500);
+    return serverErrorResponse('Failed to fetch galleries');
   }
 }
 

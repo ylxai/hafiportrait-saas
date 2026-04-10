@@ -22,7 +22,9 @@ export const eventSchema = z.object({
   clientId: z.string().min(1, 'Client wajib dipilih'),
   packageId: z.string().nullish(),  // Accept null or undefined
   namaProject: z.string().min(1, 'Nama project wajib diisi'),
-  eventDate: z.string().transform((str) => new Date(str)),
+  eventDate: z.string()
+    .refine((str) => !isNaN(Date.parse(str)), { message: 'Invalid date format' })
+    .transform((str) => new Date(str)),
   location: z.string().nullish(),  // Accept null or undefined
   notes: z.string().nullish(),  // Accept null or undefined
   totalPrice: z.number().int().min(0).default(0),
@@ -48,7 +50,9 @@ export const bookingSchema = z.object({
   phone: z.string().min(1, 'Nomor WhatsApp wajib diisi'),
   instagram: z.string().optional(),
   packageId: z.string().optional(),
-  eventDate: z.string().transform((str) => new Date(str)),
+  eventDate: z.string()
+    .refine((str) => !isNaN(Date.parse(str)), { message: 'Invalid date format' })
+    .transform((str) => new Date(str)),
   location: z.string().optional(),
   notes: z.string().optional(),
 });

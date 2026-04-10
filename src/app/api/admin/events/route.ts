@@ -132,6 +132,9 @@ export async function PATCH(request: Request) {
     return successResponse({ event });
   } catch (error) {
     console.error('Error updating event:', error);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return errorResponse('Event not found', 404);
+    }
     return serverErrorResponse('Failed to update event');
   }
 }
@@ -155,6 +158,9 @@ export async function DELETE(request: Request) {
     return successResponse({ success: true });
   } catch (error) {
     console.error('Error deleting event:', error);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return errorResponse('Event not found', 404);
+    }
     return serverErrorResponse('Failed to delete event');
   }
 }

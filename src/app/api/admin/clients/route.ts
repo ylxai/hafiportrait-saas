@@ -92,6 +92,9 @@ export async function PATCH(request: Request) {
     return successResponse({ client });
   } catch (error) {
     console.error('Error updating client:', error);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return errorResponse('Client not found', 404);
+    }
     return serverErrorResponse('Failed to update client');
   }
 }
@@ -115,6 +118,9 @@ export async function DELETE(request: Request) {
     return successResponse({ success: true });
   } catch (error) {
     console.error('Error deleting client:', error);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return errorResponse('Client not found', 404);
+    }
     return serverErrorResponse('Failed to delete client');
   }
 }

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { successResponse, errorResponse } from '@/lib/api/response';
+import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 
@@ -68,6 +68,6 @@ export async function GET() {
     return successResponse(stats);
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
-    return errorResponse('Failed to fetch stats', 500);
+    return serverErrorResponse('Failed to fetch stats');
   }
 }
