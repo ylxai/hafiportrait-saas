@@ -12,7 +12,7 @@ type Stats = {
   totalClients: number;
   totalGalleries: number;
   totalPhotos: number;
-  totalRevenue: number;
+  totalRevenue: string | number; // BigInt serialized as string from API
   recentEvents: {
     id: string;
     namaProject: string;
@@ -65,8 +65,11 @@ export default function DashboardPage() {
     return null;
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount);
+  const formatCurrency = (amount: string | number | undefined) => {
+    if (amount === undefined || amount === null) return 'Rp 0';
+    // Handle BigInt string from API
+    const numAmount = typeof amount === 'string' ? parseInt(amount, 10) : amount;
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(numAmount);
   };
 
   return (
