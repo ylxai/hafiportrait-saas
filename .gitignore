@@ -88,4 +88,7 @@ skills-lock.json
 AGENTS.md
 CLAUDE.md
 
+# AI Agent Memory (task lists, errors - exclude from PRs)
+.junie/memory/
+
 workers/.dev.vars
