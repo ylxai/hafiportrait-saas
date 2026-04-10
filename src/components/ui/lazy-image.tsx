@@ -85,8 +85,8 @@ export function LazyImage({
           src={displaySrc}
           alt={alt}
           fill={fill}
-          width={fill ? undefined : (width || 500)}
-          height={fill ? undefined : (height || 500)}
+          width={fill ? undefined : width}
+          height={fill ? undefined : height}
           className={`transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'} ${className}`}
           onLoad={() => setIsLoaded(true)}
           onError={() => setHasError(true)}

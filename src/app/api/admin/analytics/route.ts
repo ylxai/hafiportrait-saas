@@ -71,7 +71,7 @@ export async function GET(request: Request) {
     const summaryResult = {
       totalGalleries: total,
       publishedGalleries: summaryData.publishedCount,
-      totalViews: Number(summaryData.summary._sum.viewCount || 0),
+      totalViews: (summaryData.summary._sum.viewCount || 0).toString(),
       avgViews: total > 0 ? Math.round(Number(summaryData.summary._sum.viewCount || 0) / total) : 0,
       totalSelections: summaryData.totalSelections,
     };

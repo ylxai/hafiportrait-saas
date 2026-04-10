@@ -47,19 +47,23 @@ export async function getCachedData<T>(
 
   const data = await fetcher();
 
+  if (data === undefined || data === null) {
+    return data;
+  }
+
+  const serialized = JSON.stringify(data, (_, value) =>
+    typeof value === 'bigint' ? value.toString() : value
+  );
+
   try {
-    // Only cache if data exists and redis is configured
-    if (redisCache && data !== undefined && data !== null) {
-      // For Prisma BigInt serialization, pass replacer to stringify if needed.
-      await redisCache.setex(key, ttlSeconds, JSON.stringify(data, (_, value) =>
-        typeof value === 'bigint' ? value.toString() : value
-      ));
+    if (redisCache) {
+      await redisCache.setex(key, ttlSeconds, serialized);
     }
   } catch (error) {
     console.error(`Redis cache error on SET ${key}:`, error);
   }
 
-  return data;
+  return JSON.parse(serialized) as T;
 }
 
 export async function invalidateCache(prefix: string) {

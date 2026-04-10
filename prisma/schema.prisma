@@ -55,6 +55,7 @@ model Event {
   @@index([eventDate])
   @@index([paymentStatus])
   @@index([createdAt])
+  @@index([status])
   @@index([status, createdAt])
 }
 
