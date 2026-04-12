@@ -3,23 +3,17 @@ import { generatePresignedUploadUrl } from '@/lib/upload/presigned';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
+import {
+  MAX_FILE_SIZE_BYTES,
+  MAX_FILE_SIZE_MB,
+  STORAGE_QUOTA_PER_CLIENT_BYTES,
+  STORAGE_QUOTA_PER_CLIENT_GB,
+  PRESIGNED_URL_EXPIRY_SECONDS,
+  ALLOWED_EXTENSIONS,
+  ALLOWED_MIME_TYPES,
+} from '@/lib/upload/constants';
 
-// Allowed MIME types
-const ALLOWED_MIME_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/heic',
-  'image/heif',
-  'image/x-canon-cr2',
-  'image/x-nikon-nef',
-  'image/x-sony-arw',
-  'image/x-adobe-dng',
-  'image/x-raw',
-];
 
-// Allowed extensions
-const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.nef', '.cr2', '.arw', '.dng', '.raw'];
 
 // Validate file type
 function validateFileType(filename: string, contentType: string): { valid: boolean; error?: string } {
@@ -67,16 +61,57 @@ export async function POST(request: Request) {
     // Validasi gallery exists (no ownership check - admin/manager has full access)
     const gallery = await prisma.gallery.findUnique({
       where: { id: galleryId },
+      select: {
+        id: true,
+        event: {
+          select: {
+            clientId: true,
+          },
+        },
+      },
     });
 
     if (!gallery) {
       return errorResponse('Gallery not found', 404);
     }
 
+    // CRITICAL FIX: Optimized storage quota check using aggregation (no N+1 query)
+    const clientId = gallery.event.clientId;
+    const storageUsage = await prisma.photo.aggregate({
+      where: {
+        gallery: {
+          event: {
+            clientId,
+          },
+        },
+      },
+      _sum: {
+        fileSize: true,
+      },
+    });
+
+    // Use BigInt for precision (avoid Number conversion precision loss)
+    const totalUsedStorage = storageUsage._sum.fileSize || BigInt(0);
+    const storageQuotaBytes = BigInt(STORAGE_QUOTA_PER_CLIENT_BYTES);
+    
+    // CRITICAL FIX: Validate fileSize before BigInt conversion
+    if (fileSize === undefined || fileSize === null) {
+      return errorResponse('Missing fileSize in request body', 400);
+    }
+    
+    if (totalUsedStorage + BigInt(fileSize) > storageQuotaBytes) {
+      // MEDIUM PRIORITY FIX: Use BigInt division for precision (avoid Number conversion)
+      const usedGB = (totalUsedStorage / BigInt(1073741824)).toString();
+      const usedGBFloat = parseFloat(usedGB) + (Number(totalUsedStorage % BigInt(1073741824)) / 1073741824);
+      return errorResponse(
+        `Storage quota exceeded. Used: ${usedGBFloat.toFixed(2)}GB / ${STORAGE_QUOTA_PER_CLIENT_GB}GB`,
+        413
+      );
+    }
+
     // Validasi file size from request body
-    const maxFileSize = 50 * 1024 * 1024; // 50MB
-    if (fileSize && BigInt(fileSize) > BigInt(maxFileSize)) {
-      return errorResponse('File too large. Maximum ' + (maxFileSize / 1024 / 1024) + 'MB', 413);
+    if (fileSize && BigInt(fileSize) > BigInt(MAX_FILE_SIZE_BYTES)) {
+      return errorResponse(`File too large. Maximum ${MAX_FILE_SIZE_MB}MB`, 413);
     }
 
     // Validasi R2 account if provided
@@ -114,7 +149,7 @@ export async function POST(request: Request) {
       r2Key,
       uploadId,
       r2AccountId: selectedAccountId,
-      expiresIn: 900, // 15 minutes
+      expiresIn: PRESIGNED_URL_EXPIRY_SECONDS,
     });
   } catch (error) {
     console.error('Error generating presigned URL:', error);

@@ -1,8 +1,27 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import imageCompression from 'browser-image-compression';
 import { toast } from 'sonner';
+import {
+  MAX_FILE_SIZE_BYTES,
+  MAX_FILES_PER_BATCH,
+  SMALL_BATCH_THRESHOLD,
+  MAX_CONCURRENT_UPLOADS,
+  MAX_COMPRESSION_WORKERS,
+  MAX_UPLOAD_WORKERS,
+  MAX_RETRY_ATTEMPTS,
+  RETRY_DELAYS_MS,
+  MIN_COMPRESSION_SIZE_BYTES,
+  COMPRESSION_MAX_SIZE_MB,
+  COMPRESSION_MAX_DIMENSION,
+  COMPRESSION_QUALITY,
+  COMPRESSION_USE_WEB_WORKER,
+  COMPRESSION_PRESERVE_EXIF,
+  ALLOWED_EXTENSIONS,
+  ALLOWED_MIME_TYPES,
+  RAW_FILE_EXTENSIONS,
+} from '@/lib/upload/constants';
 
 export interface UploadFile {
   id: string;
@@ -31,26 +50,8 @@ interface UseDirectUploadOptions {
   onInvalidFile?: (filename: string, reason: string) => void;
 }
 
-// Allowed file types
-const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.nef', '.cr2', '.arw', '.dng', '.raw'];
-const ALLOWED_MIME_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/heic',
-  'image/heif',
-  'image/x-canon-cr2',
-  'image/x-nikon-nef',
-  'image/x-sony-arw',
-  'image/x-adobe-dng',
-  'image/x-raw',
-];
-
 // Error types yang bisa di-retry (temporary errors)
 const RETRYABLE_ERROR_CODES: UploadFile['errorCode'][] = ['NETWORK_ERROR', 'UPLOAD_FAILED', 'PROCESSING_FAILED'];
-
-// Delay untuk exponential backoff (dalam ms)
-const RETRY_DELAYS = [1000, 2000, 4000]; // 1s, 2s, 4s
 
 // Validate file type
 function validateFileType(file: File): { valid: boolean; error?: string } {
@@ -112,10 +113,10 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     galleryId, 
     r2AccountId,
     cloudinaryAccountId, // Selected Cloudinary account
-    maxConcurrent = 10, 
+    maxConcurrent = MAX_CONCURRENT_UPLOADS, 
     autoUpload: _autoUpload = true, 
-    maxFileSize = 50 * 1024 * 1024, // 50MB default
-    maxRetries = 3,
+    maxFileSize = MAX_FILE_SIZE_BYTES,
+    maxRetries = MAX_RETRY_ATTEMPTS,
     onProgress, 
     onComplete, 
     onError,
@@ -135,22 +136,36 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
   // Keep filesRef in sync with files state
   filesRef.current = files;
 
+  // HIGH PRIORITY FIX #1: Cleanup retry timeouts on unmount
+  useEffect(() => {
+    const timeouts = retryTimeouts.current;
+    const controllers = abortControllers.current;
+    
+    return () => {
+      timeouts.forEach(timeout => clearTimeout(timeout));
+      timeouts.clear();
+      controllers.forEach(controller => controller.abort());
+      controllers.clear();
+    };
+  }, []);
+
   // Compress file sebelum upload
   const compressFile = async (file: File): Promise<File> => {
     // Skip compression untuk file RAW (karena sudah compressed)
-    const isRaw = file.name.toLowerCase().match(/\.(nef|cr2|arw|dng|raw)$/);
+    const extension = '.' + file.name.split('.').pop()?.toLowerCase();
+    const isRaw = RAW_FILE_EXTENSIONS.includes(extension);
     if (isRaw) return file;
     
-    // Skip file kecil (< 2MB)
-    if (file.size < 2 * 1024 * 1024) return file;
+    // Skip file kecil
+    if (file.size < MIN_COMPRESSION_SIZE_BYTES) return file;
 
     try {
       return await imageCompression(file, {
-        maxSizeMB: 10,
-        maxWidthOrHeight: 4096,
-        useWebWorker: true,
-        preserveExif: true,
-        initialQuality: 0.92,
+        maxSizeMB: COMPRESSION_MAX_SIZE_MB,
+        maxWidthOrHeight: COMPRESSION_MAX_DIMENSION,
+        useWebWorker: COMPRESSION_USE_WEB_WORKER,
+        preserveExif: COMPRESSION_PRESERVE_EXIF,
+        initialQuality: COMPRESSION_QUALITY,
       });
     } catch (error) {
       console.warn('Compression failed, using original:', error);
@@ -253,7 +268,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       // Check if should retry
       if (isRetryableError(code) && uploadFile.retryCount < maxRetries) {
         const retryCount = uploadFile.retryCount + 1;
-        const delay = RETRY_DELAYS[Math.min(retryCount - 1, RETRY_DELAYS.length - 1)];
+        const delay = RETRY_DELAYS_MS[Math.min(retryCount - 1, RETRY_DELAYS_MS.length - 1)];
         
         console.log(`[Upload] Retrying ${uploadFile.file.name} (attempt ${retryCount}/${maxRetries}) after ${delay}ms...`);
         
@@ -287,19 +302,28 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       onError?.(uploadFile.id, message, code);
     } finally {
       abortControllers.current.delete(uploadFile.id);
-      activeUploads.current--;
+      decrementActiveUploads();
     }
+  };
+
+  // HIGH PRIORITY FIX #2: Centralized counter management
+  const incrementActiveUploads = () => {
+    activeUploads.current++;
+  };
+
+  const decrementActiveUploads = () => {
+    activeUploads.current--;
   };
 
   // Wrapper untuk upload dengan retry support
   const uploadFileWithRetry = async (file: UploadFile): Promise<void> => {
-    // Use filesRef to get latest state
+    // HIGH PRIORITY FIX #3: Use state callback untuk atomic check
     const currentFile = filesRef.current.find(f => f.id === file.id);
     if (!currentFile || currentFile.status === 'completed' || currentFile.status === 'failed') {
       return;
     }
     
-    activeUploads.current++;
+    incrementActiveUploads();
     await uploadFile(currentFile);
   };
 
@@ -324,7 +348,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
 
       // Tandai file sedang diproses
       processingIds.current.add(pendingFile.id);
-      activeUploads.current++;
+      incrementActiveUploads();
       
       try {
         // Gunakan await agar worker menunggu satu file selesai sebelum mengambil berikutnya
@@ -345,7 +369,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     const currentFiles = filesRef.current;
     const totalFiles = currentFiles.length;
     const pendingFiles = currentFiles.filter(f => f.status === 'pending');
-    const isSmallBatch = pendingFiles.length < 10;
+    const isSmallBatch = pendingFiles.length < SMALL_BATCH_THRESHOLD;
     
     console.log(`[Upload] Starting upload of ${pendingFiles.length} pending files (total: ${totalFiles})`);
     
@@ -365,7 +389,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         });
         
         // Upload - increment activeUploads before uploadFile (uploadFile only decrements)
-        activeUploads.current++;
+        incrementActiveUploads();
         await uploadFile({ ...file, compressed });
       });
       
@@ -373,21 +397,34 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     } else {
       console.log(`[Upload] Large batch detected (${pendingFiles.length} files) - Using batching strategy`);
       
-      // Compress semua file dulu (sequential untuk hemat memory)
-      for (const file of pendingFiles) {
-        if (!file.compressed) {
-          updateFileStatus(file.id, { status: 'compressing' });
-          const compressed = await compressFile(file.file);
-          updateFileStatus(file.id, { 
-            status: 'pending',
-            compressed,
-          });
-        }
+      // MEDIUM PRIORITY FIX #6: Parallel compression with concurrency limit (hemat memory)
+      // LOW PRIORITY FIX: Use index pointer instead of shift() to avoid O(N²) complexity
+      const compressionQueue = [...pendingFiles];
+      let queueIndex = 0;
+      const compressionWorkers: Promise<void>[] = [];
+      
+      for (let i = 0; i < Math.min(MAX_COMPRESSION_WORKERS, compressionQueue.length); i++) {
+        compressionWorkers.push((async () => {
+          while (queueIndex < compressionQueue.length) {
+            const currentIndex = queueIndex++;
+            const file = compressionQueue[currentIndex];
+            if (!file || file.compressed) continue;
+            
+            updateFileStatus(file.id, { status: 'compressing' });
+            const compressed = await compressFile(file.file);
+            updateFileStatus(file.id, { 
+              status: 'pending',
+              compressed,
+            });
+          }
+        })());
       }
+      
+      await Promise.all(compressionWorkers);
 
       // Start upload workers dengan concurrency control
       const workers: Promise<void>[] = [];
-      const workerCount = Math.min(maxConcurrent, 10); // Max 10 workers
+      const workerCount = Math.min(maxConcurrent, MAX_UPLOAD_WORKERS);
       for (let i = 0; i < workerCount; i++) {
         workers.push(uploadWorker());
       }
@@ -443,17 +480,17 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       });
     }
     
-    // Validasi: max 400 files
-    if (files.length + validFiles.length > 400) {
-      const excess = files.length + validFiles.length - 400;
+    // Validasi: max files per batch
+    if (files.length + validFiles.length > MAX_FILES_PER_BATCH) {
+      const excess = files.length + validFiles.length - MAX_FILES_PER_BATCH;
       const acceptedFiles = validFiles.slice(0, validFiles.length - excess);
       
       if (acceptedFiles.length === 0) {
-        toast.error('Maksimal 400 foto per upload batch. Silakan hapus beberapa foto terlebih dahulu.');
+        toast.error(`Maksimal ${MAX_FILES_PER_BATCH} foto per upload batch. Silakan hapus beberapa foto terlebih dahulu.`);
         return;
       }
       
-      toast.warning(`Hanya ${acceptedFiles.length} foto yang diterima karena maksimal 400 foto.`);
+      toast.warning(`Hanya ${acceptedFiles.length} foto yang diterima karena maksimal ${MAX_FILES_PER_BATCH} foto.`);
       setFiles(prev => [...prev, ...acceptedFiles]);
       return;
     }

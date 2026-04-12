@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { successResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { parseAdminPagination, createAdminPaginationResponse } from '@/types/pagination';
 
 export async function GET(request: Request) {
   try {
@@ -12,11 +13,7 @@ export async function GET(request: Request) {
 
     // Parse pagination params
     const { searchParams } = new URL(request.url);
-    const pageRaw = parseInt(searchParams.get('page') ?? '1', 10);
-    const page = Number.isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
-    const limitRaw = parseInt(searchParams.get('limit') ?? '20', 10);
-    const limit = Number.isNaN(limitRaw) ? 20 : Math.min(100, Math.max(1, limitRaw));
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = parseAdminPagination(searchParams);
 
     const [events, totalAgg, paidAgg, pendingAgg, revenueByMonthRaw] = await Promise.all([
       // Paginated events list
@@ -99,12 +96,7 @@ export async function GET(request: Request) {
       summary,
       revenueByMonth,
       events: eventsList,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      pagination: createAdminPaginationResponse(page, limit, total),
     });
   } catch (error) {
     console.error('Error fetching finance:', error);

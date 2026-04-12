@@ -2,6 +2,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getR2Client, R2Credentials } from '@/lib/storage/r2';
 import { prisma } from '@/lib/db';
+import { PRESIGNED_URL_EXPIRY_SECONDS, UPLOAD_SESSION_EXPIRY_MS } from './constants';
 
 // Get R2 account credentials from database
 async function getR2Credentials(accountId?: string): Promise<{ credentials: R2Credentials; bucket: string }> {
@@ -104,7 +105,7 @@ export async function generatePresignedUploadUrl(
     actualCloudinaryAccountId = defaultCloudinary?.id || null;
   }
   
-  // Generate presigned URL (valid 15 menit)
+  // Generate presigned URL
   const command = new PutObjectCommand({
     Bucket: bucket,
     Key: r2Key,
@@ -112,10 +113,13 @@ export async function generatePresignedUploadUrl(
   });
   
   const presignedUrl = await getSignedUrl(client, command, { 
-    expiresIn: 900 // 15 minutes
+    expiresIn: PRESIGNED_URL_EXPIRY_SECONDS
   });
   
   const publicUrl = `${credentials.publicUrl}/${r2Key}`;
+  
+  // HIGH PRIORITY FIX #4: Set expiry from constants
+  const expiresAt = new Date(Date.now() + UPLOAD_SESSION_EXPIRY_MS);
   
   // Simpan upload session di PostgreSQL
   await prisma.uploadSession.create({
@@ -128,6 +132,7 @@ export async function generatePresignedUploadUrl(
       storageAccountId: actualR2AccountId,
       cloudinaryAccountId: actualCloudinaryAccountId,
       publicUrl,
+      expiresAt,
     },
   });
   
@@ -156,6 +161,12 @@ export async function verifyR2Upload(
   
   if (!session) {
     return { success: false, error: 'Upload session expired or not found' };
+  }
+  
+  // HIGH PRIORITY FIX #4: Check if session expired
+  if (session.expiresAt < new Date()) {
+    await prisma.uploadSession.delete({ where: { id: uploadId } }).catch(() => {});
+    return { success: false, error: 'Upload session expired (1 hour limit)' };
   }
   
   // Verify file actually exists in R2 using HeadObject

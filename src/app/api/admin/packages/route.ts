@@ -4,6 +4,7 @@ import { successResponse, serverErrorResponse, errorResponse, notFoundResponse }
 import { packageSchema } from '@/lib/api/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { parseAdminPagination, createAdminPaginationResponse } from '@/types/pagination';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -19,11 +20,7 @@ export async function GET(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(request.url);
-    const pageRaw = parseInt(searchParams.get('page') ?? '1', 10);
-    const page = Number.isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
-    const limitRaw = parseInt(searchParams.get('limit') ?? '20', 10);
-    const limit = Number.isNaN(limitRaw) ? 20 : Math.min(100, Math.max(1, limitRaw));
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = parseAdminPagination(searchParams);
 
     const [packages, total] = await Promise.all([
       prisma.package.findMany({
@@ -36,12 +33,7 @@ export async function GET(request: Request) {
 
     return successResponse({
       packages,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      pagination: createAdminPaginationResponse(page, limit, total),
     });
   } catch (error) {
     console.error('Error fetching packages:', error);

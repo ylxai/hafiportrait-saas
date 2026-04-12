@@ -91,4 +91,7 @@ CLAUDE.md
 # AI Agent Memory (task lists, errors - exclude from PRs)
 .junie/memory/
 
+# Bob AI Assistant
+.bob/
+
 workers/.dev.vars
