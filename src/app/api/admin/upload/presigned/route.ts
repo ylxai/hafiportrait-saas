@@ -67,10 +67,46 @@ export async function POST(request: Request) {
     // Validasi gallery exists (no ownership check - admin/manager has full access)
     const gallery = await prisma.gallery.findUnique({
       where: { id: galleryId },
+      include: {
+        event: {
+          include: {
+            client: {
+              include: {
+                events: {
+                  include: {
+                    galleries: {
+                      include: {
+                        photos: {
+                          select: {
+                            fileSize: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!gallery) {
       return errorResponse('Gallery not found', 404);
+    }
+
+    // LOW PRIORITY FIX #8: Check storage quota before upload
+    const client = gallery.event.client;
+    const allPhotos = client.events.flatMap(e => e.galleries.flatMap(g => g.photos));
+    const totalUsedStorage = allPhotos.reduce((sum, p) => sum + Number(p.fileSize || 0), 0);
+    const storageQuotaBytes = 10 * 1024 * 1024 * 1024; // 10GB per client (configurable)
+    
+    if (totalUsedStorage + fileSize > storageQuotaBytes) {
+      return errorResponse(
+        `Storage quota exceeded. Used: ${(totalUsedStorage / 1024 / 1024 / 1024).toFixed(2)}GB / ${storageQuotaBytes / 1024 / 1024 / 1024}GB`,
+        413
+      );
     }
 
     // Validasi file size from request body
