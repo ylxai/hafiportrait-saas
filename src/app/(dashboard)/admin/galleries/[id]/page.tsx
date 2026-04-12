@@ -25,6 +25,7 @@ type Photo = {
   id: string;
   filename: string;
   url: string;
+  thumbnailUrl?: string;
   publicId: string | null;
   width: number | null;
   height: number | null;
@@ -623,11 +624,26 @@ export default function GalleryDetailPage() {
         open={lightboxIndex >= 0}
         index={lightboxIndex >= 0 ? lightboxIndex : 0}
         close={() => setLightboxIndex(-1)}
-        slides={photos?.map(p => ({ src: p.url })) || []}
+        slides={photos?.map((p, idx) => {
+          // Log for debugging
+          if (!p.url) {
+            console.error(`[Lightbox] Photo ${idx} has no URL:`, p);
+          }
+          return { 
+            src: p.url || p.thumbnailUrl || '',
+            alt: p.filename,
+            width: p.width || 1200,
+            height: p.height || 800,
+          };
+        }) || []}
         plugins={[Zoom]}
         controller={{ closeOnBackdropClick: true }}
         styles={{
           container: { backgroundColor: "rgba(0, 0, 0, 0.9)", backdropFilter: "blur(10px)" }
+        }}
+        on={{ 
+          click: () => console.log('[Lightbox] Clicked'),
+          view: (index) => console.log('[Lightbox] Viewing index:', index),
         }}
       />
 
