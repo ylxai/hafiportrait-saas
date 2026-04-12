@@ -94,11 +94,17 @@ export async function POST(request: Request) {
     const totalUsedStorage = storageUsage._sum.fileSize || BigInt(0);
     const storageQuotaBytes = BigInt(STORAGE_QUOTA_PER_CLIENT_BYTES);
     
+    // CRITICAL FIX: Validate fileSize before BigInt conversion
+    if (fileSize === undefined || fileSize === null) {
+      return errorResponse('Missing fileSize in request body', 400);
+    }
+    
     if (totalUsedStorage + BigInt(fileSize) > storageQuotaBytes) {
-      // Convert to GB for user-friendly message
-      const usedGB = Number(totalUsedStorage) / (1024 * 1024 * 1024);
+      // LOW PRIORITY FIX: Use BigInt division for precision (avoid Number conversion)
+      const usedGB = (totalUsedStorage / BigInt(1024 * 1024 * 1024)).toString();
+      const usedGBFloat = parseFloat(usedGB) + (Number(totalUsedStorage % BigInt(1024 * 1024 * 1024)) / (1024 * 1024 * 1024));
       return errorResponse(
-        `Storage quota exceeded. Used: ${usedGB.toFixed(2)}GB / ${STORAGE_QUOTA_PER_CLIENT_GB}GB`,
+        `Storage quota exceeded. Used: ${usedGBFloat.toFixed(2)}GB / ${STORAGE_QUOTA_PER_CLIENT_GB}GB`,
         413
       );
     }

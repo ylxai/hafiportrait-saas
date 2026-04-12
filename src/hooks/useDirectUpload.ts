@@ -398,13 +398,16 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       console.log(`[Upload] Large batch detected (${pendingFiles.length} files) - Using batching strategy`);
       
       // MEDIUM PRIORITY FIX #6: Parallel compression with concurrency limit (hemat memory)
+      // LOW PRIORITY FIX: Use index pointer instead of shift() to avoid O(N²) complexity
       const compressionQueue = [...pendingFiles];
+      let queueIndex = 0;
       const compressionWorkers: Promise<void>[] = [];
       
       for (let i = 0; i < Math.min(MAX_COMPRESSION_WORKERS, compressionQueue.length); i++) {
         compressionWorkers.push((async () => {
-          while (compressionQueue.length > 0) {
-            const file = compressionQueue.shift();
+          while (queueIndex < compressionQueue.length) {
+            const currentIndex = queueIndex++;
+            const file = compressionQueue[currentIndex];
             if (!file || file.compressed) continue;
             
             updateFileStatus(file.id, { status: 'compressing' });
