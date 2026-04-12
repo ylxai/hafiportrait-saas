@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { successResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { createAdminPaginationResponse } from '@/types/pagination';
 import { getCachedData } from '@/lib/cache';
 
 export async function GET(request: Request) {
@@ -79,12 +80,7 @@ export async function GET(request: Request) {
     return successResponse({
       analytics,
       summary: summaryResult,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      pagination: createAdminPaginationResponse(page, limit, total),
     });
   } catch (error) {
     console.error('Error fetching analytics:', error);

@@ -7,6 +7,7 @@ import { getDefaultAccount, updateStorageUsage, findWorkingAccount } from '@/lib
 import imageSize from 'image-size';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { createAdminPaginationResponse } from '@/types/pagination';
 import { NextResponse } from 'next/server';
 
 async function checkAuth() {
@@ -72,12 +73,7 @@ export async function GET(
 
     return successResponse({
       photos: serializedPhotos,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      pagination: createAdminPaginationResponse(page, limit, total),
     });
   } catch (error) {
     console.error('Error fetching photos:', error);
