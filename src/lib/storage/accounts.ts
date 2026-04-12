@@ -65,6 +65,7 @@ export async function decreaseStorageUsage(accountId: string, fileSize: bigint) 
     await tx.storageAccount.update({
       where: { id: accountId },
       data: {
+        // Note: BigInt(0) used for ES2017 compatibility (0n requires ES2020+)
         usedStorage: newUsedStorage > BigInt(0) ? newUsedStorage : BigInt(0),
         totalPhotos: newTotalPhotos > 0 ? newTotalPhotos : 0,
       },

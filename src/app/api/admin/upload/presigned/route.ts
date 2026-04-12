@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     // Validasi file size from request body
     const maxFileSize = 50 * 1024 * 1024; // 50MB
     if (fileSize && BigInt(fileSize) > BigInt(maxFileSize)) {
-      return errorResponse('File terlalu besar. Maksimal ' + (maxFileSize / 1024 / 1024) + 'MB', 413);
+      return errorResponse('File too large. Maximum ' + (maxFileSize / 1024 / 1024) + 'MB', 413);
     }
 
     // Validasi R2 account if provided
