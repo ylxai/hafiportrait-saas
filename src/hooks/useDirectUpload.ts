@@ -176,6 +176,17 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
   // Upload single file via direct R2 dengan retry logic
   const uploadFile = async (uploadFile: UploadFile): Promise<void> => {
     const fileToUpload = uploadFile.compressed || uploadFile.file;
+    
+    // HIGH PRIORITY FIX: Validate file has required metadata
+    if (!fileToUpload.size || fileToUpload.size === 0) {
+      updateFileStatus(uploadFile.id, { 
+        status: 'failed',
+        error: 'File size is missing or zero',
+        errorCode: 'INVALID_TYPE',
+      });
+      throw new Error('File size is missing or zero');
+    }
+    
     const abortController = new AbortController();
     abortControllers.current.set(uploadFile.id, abortController);
 
@@ -188,7 +199,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           filename: fileToUpload.name,
-          contentType: fileToUpload.type,
+          contentType: fileToUpload.type || 'image/jpeg', // Fallback content type
           galleryId,
           r2AccountId,
           cloudinaryAccountId,
