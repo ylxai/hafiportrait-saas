@@ -126,6 +126,11 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
   const abortControllers = useRef<Map<string, AbortController>>(new Map());
   const _isAutoUploading = useRef(false);
   const retryTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const filesRef = useRef<UploadFile[]>([]); // Track latest files for workers
+  const processingIds = useRef<Set<string>>(new Set()); // Track files currently being processed
+  
+  // Keep filesRef in sync with files state
+  filesRef.current = files;
 
   // Compress file sebelum upload
   const compressFile = async (file: File): Promise<File> => {
@@ -283,9 +288,9 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
 
   // Wrapper untuk upload dengan retry support
   const uploadFileWithRetry = async (file: UploadFile): Promise<void> => {
-    // Pastikan file masih ada dan belum completed/cancelled
-    const currentFile = files.find(f => f.id === file.id);
-    if (!currentFile || currentFile.status === 'completed') {
+    // Use filesRef to get latest state
+    const currentFile = filesRef.current.find(f => f.id === file.id);
+    if (!currentFile || currentFile.status === 'completed' || currentFile.status === 'failed') {
       return;
     }
     
@@ -296,8 +301,14 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
   // Worker untuk upload batch
   const uploadWorker = async () => {
     while (true) {
-      // Cari file yang pending (bukan yang sedang retry)
-      const pendingFile = files.find(f => f.status === 'pending');
+      const currentFiles = filesRef.current;
+      
+      // Cari file pending yang tidak sedang diproses atau menunggu retry
+      const pendingFile = currentFiles.find(f => 
+        f.status === 'pending' && 
+        !processingIds.current.has(f.id) &&
+        !retryTimeouts.current.has(f.id)
+      );
       
       if (!pendingFile) break;
       
@@ -306,8 +317,18 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         continue;
       }
 
+      // Tandai file sedang diproses
+      processingIds.current.add(pendingFile.id);
       activeUploads.current++;
-      await uploadFile(pendingFile);
+      
+      try {
+        // Gunakan await agar worker menunggu satu file selesai sebelum mengambil berikutnya
+        await uploadFile(pendingFile);
+      } finally {
+        processingIds.current.delete(pendingFile.id);
+      }
+      
+      await sleep(10);
     }
   };
 
@@ -315,38 +336,41 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
   const startUpload = async () => {
     setIsUploading(true);
     
-    const totalFiles = files.length;
-    const isSmallBatch = totalFiles < 10;
+    // Get fresh files from ref
+    const currentFiles = filesRef.current;
+    const totalFiles = currentFiles.length;
+    const pendingFiles = currentFiles.filter(f => f.status === 'pending');
+    const isSmallBatch = pendingFiles.length < 10;
+    
+    console.log(`[Upload] Starting upload of ${pendingFiles.length} pending files (total: ${totalFiles})`);
     
     // Small batch: Upload semua parallel tanpa batching
     // Large batch: Compress dulu, baru upload dengan concurrency control
     if (isSmallBatch) {
-      console.log(`[Upload] Small batch detected (${totalFiles} files) - Uploading all at once`);
+      console.log(`[Upload] Small batch detected (${pendingFiles.length} files) - Uploading all at once`);
       
       // Compress dan upload langsung semua parallel
-      const uploadPromises = files.map(async (file) => {
-        if (file.status === 'pending') {
-          // Compress
-          updateFileStatus(file.id, { status: 'compressing' });
-          const compressed = await compressFile(file.file);
-          updateFileStatus(file.id, { 
-            status: 'pending',
-            compressed,
-          });
-          
-          // Upload
-          activeUploads.current++;
-          await uploadFile(file);
-        }
+      const uploadPromises = pendingFiles.map(async (file) => {
+        // Compress
+        updateFileStatus(file.id, { status: 'compressing' });
+        const compressed = await compressFile(file.file);
+        updateFileStatus(file.id, { 
+          status: 'pending',
+          compressed,
+        });
+        
+        // Upload
+        activeUploads.current++;
+        await uploadFile({ ...file, compressed });
       });
       
       await Promise.all(uploadPromises);
     } else {
-      console.log(`[Upload] Large batch detected (${totalFiles} files) - Using batching strategy`);
+      console.log(`[Upload] Large batch detected (${pendingFiles.length} files) - Using batching strategy`);
       
       // Compress semua file dulu (sequential untuk hemat memory)
-      for (const file of files) {
-        if (file.status === 'pending' && !file.compressed) {
+      for (const file of pendingFiles) {
+        if (!file.compressed) {
           updateFileStatus(file.id, { status: 'compressing' });
           const compressed = await compressFile(file.file);
           updateFileStatus(file.id, { 
