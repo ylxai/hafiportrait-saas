@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       return errorResponse('Unauthorized', 401);
     }
 
-    const { filename, contentType, galleryId, r2AccountId, cloudinaryAccountId } = await request.json();
+    const { filename, contentType, galleryId, r2AccountId, cloudinaryAccountId, fileSize } = await request.json();
 
     if (!filename || !contentType || !galleryId) {
       return errorResponse('Missing required fields', 400);
@@ -73,11 +73,10 @@ export async function POST(request: Request) {
       return errorResponse('Gallery not found', 404);
     }
 
-    // Validasi file size if provided in headers (client can send Content-Length) (client can send Content-Length)
-    const contentLength = request.headers.get('content-length');
+    // Validasi file size from request body
     const maxFileSize = 50 * 1024 * 1024; // 50MB
-    if (contentLength && parseInt(contentLength, 10) > maxFileSize) {
-      return errorResponse(`File terlalu besar. Maksimal ${maxFileSize / 1024 / 1024}MB`, 413);
+    if (fileSize && BigInt(fileSize) > BigInt(maxFileSize)) {
+      return errorResponse('File terlalu besar. Maksimal ' + (maxFileSize / 1024 / 1024) + 'MB', 413);
     }
 
     // Validasi R2 account if provided

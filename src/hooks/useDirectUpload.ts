@@ -177,6 +177,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
           galleryId,
           r2AccountId,
           cloudinaryAccountId,
+          fileSize: fileToUpload.size,
         }),
         signal: abortController.signal,
       });
@@ -363,7 +364,8 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
           compressed,
         });
         
-        // Upload (uploadFile handles activeUploads.current++)
+        // Upload - increment activeUploads before uploadFile (uploadFile only decrements)
+        activeUploads.current++;
         await uploadFile({ ...file, compressed });
       });
       

@@ -59,8 +59,9 @@ export async function POST(request: Request) {
     // Update storage usage (decrease)
     if (storageAccountId && fileSize && r2Deleted) {
       try {
-        const size = typeof fileSize === 'string' ? parseInt(fileSize, 10) : fileSize;
-        await decreaseStorageUsage(storageAccountId, BigInt(size));
+        // Use BigInt directly to avoid precision loss with parseInt
+        const size = typeof fileSize === 'string' ? BigInt(fileSize) : BigInt(fileSize);
+        await decreaseStorageUsage(storageAccountId, size);
         console.log(`[Webhook] Storage usage decreased for account ${storageAccountId}`);
       } catch (error) {
         console.error('[Webhook] Failed to update storage usage:', error);
