@@ -127,6 +127,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
   const _isAutoUploading = useRef(false);
   const retryTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const filesRef = useRef<UploadFile[]>([]); // Track latest files for workers
+  const processingIds = useRef<Set<string>>(new Set()); // Track files currently being processed
   
   // Keep filesRef in sync with files state
   filesRef.current = files;
@@ -299,44 +300,34 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
 
   // Worker untuk upload batch
   const uploadWorker = async () => {
-    let lastPendingCount = -1;
-    let stallCount = 0;
-    
     while (true) {
-      // Use filesRef to get latest state
       const currentFiles = filesRef.current;
-      const pendingFiles = currentFiles.filter(f => f.status === 'pending');
       
-      // Break if no pending files
-      if (pendingFiles.length === 0) break;
+      // Cari file pending yang tidak sedang diproses atau menunggu retry
+      const pendingFile = currentFiles.find(f => 
+        f.status === 'pending' && 
+        !processingIds.current.has(f.id) &&
+        !retryTimeouts.current.has(f.id)
+      );
       
-      // Detect stall (no progress being made)
-      if (pendingFiles.length === lastPendingCount) {
-        stallCount++;
-        if (stallCount > 50) { // 5 seconds stall detection
-          console.warn('[Upload] Worker stall detected, breaking loop');
-          break;
-        }
-      } else {
-        stallCount = 0;
-        lastPendingCount = pendingFiles.length;
-      }
+      if (!pendingFile) break;
       
       if (activeUploads.current >= maxConcurrent) {
         await sleep(100);
         continue;
       }
 
-      // Get next pending file
-      const pendingFile = pendingFiles[0];
+      // Tandai file sedang diproses
+      processingIds.current.add(pendingFile.id);
       activeUploads.current++;
       
-      // Upload without await to allow concurrent processing
-      uploadFile(pendingFile).then(() => {
-        // Upload completion handled in uploadFile
-      });
+      try {
+        // Gunakan await agar worker menunggu satu file selesai sebelum mengambil berikutnya
+        await uploadFile(pendingFile);
+      } finally {
+        processingIds.current.delete(pendingFile.id);
+      }
       
-      // Small delay to prevent overwhelming the system
       await sleep(10);
     }
   };
