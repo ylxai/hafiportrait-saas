@@ -135,13 +135,13 @@ No test framework configured for CI. Playwright is used for interactive/manual U
 | #12 | feat: reusable UI components + frontend consistency | ✅ MERGED |
 | #13 | fix: upload looping bug - race condition in useDirectUpload | ✅ MERGED |
 | #14 | fix: multiple upload system bugs | ✅ MERGED |
-| #15 | fix(upload): Critical bugs - memory leak, race condition, counter mismatch, session TTL | ⏳ PENDING REVIEW |
+| #15 | fix(upload): Critical bugs - memory leak, race condition, counter mismatch, session TTL | ✅ MERGED |
 
-### PR #15 - Upload System Critical Fixes (Ready for Merge)
+### PR #15 - Upload System Critical Fixes ✅ MERGED
 
 **Branch**: `fix/upload-system-critical-bugs`
-**Commits**: 7 total (24df922 → 3b80a78)
-**Status**: All 19 review issues addressed
+**Commits**: 12 total (24df922 → d3bd103)
+**Status**: ✅ **MERGED** to main (Squash commit: `7537e3f`)
 
 **High Priority Fixes**:
 - Memory leak (retry timeouts cleanup)
@@ -189,7 +189,7 @@ No test framework configured for CI. Playwright is used for interactive/manual U
 - Storage usage race condition fix
 - Webhook Zod validation
 
-### Additional Improvements (Not in PRs)
+### Additional Improvements (Added to PR #15)
 
 **BigInt Utilities (`src/lib/bigint-utils.ts`):**
 - `safeBigInt()` - Type-safe conversion from unknown
