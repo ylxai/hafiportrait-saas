@@ -1,5 +1,6 @@
 import { decreaseStorageUsage } from '@/lib/storage/accounts';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
+import { z } from 'zod';
 
 /**
  * Webhook handler for storage deletion callback from Cloudflare Workers
@@ -7,6 +8,15 @@ import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/r
  * This endpoint receives callback from Cloudflare Workers after they delete
  * files from R2 and Cloudinary. We update the database and storage usage here.
  */
+
+// Schema validation for webhook body
+const storageDeletedSchema = z.object({
+  photoId: z.string().min(1, 'photoId is required'),
+  r2Deleted: z.boolean().optional(),
+  cloudinaryDeleted: z.boolean().optional(),
+  storageAccountId: z.string().optional(),
+  fileSize: z.union([z.number(), z.string()]).optional(),
+});
 
 // Verify webhook secret
 function verifyWebhook(request: Request): boolean {
@@ -26,24 +36,32 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const {
+    
+    // Validate body schema
+    const validation = storageDeletedSchema.safeParse(body);
+    if (!validation.success) {
+      console.error('[Webhook] Invalid body schema:', validation.error.flatten());
+      return errorResponse('Invalid webhook body: ' + validation.error.errors.map(e => e.message).join(', '), 400);
+    }
+
+    const { 
       photoId,
       r2Deleted,
-      cloudinaryDeleted,
       storageAccountId,
       fileSize,
-    } = body;
+    } = validation.data;
 
     console.log(`[Webhook] Storage deletion callback for photo ${photoId}:`, {
       r2Deleted,
-      cloudinaryDeleted,
       storageAccountId,
     });
 
     // Update storage usage (decrease)
-    if (storageAccountId && fileSize && r2Deleted) {
+    if (storageAccountId && fileSize !== undefined && r2Deleted) {
       try {
-        await decreaseStorageUsage(storageAccountId, BigInt(fileSize));
+        // BigInt() handles both string and number types
+        const size = BigInt(fileSize);
+        await decreaseStorageUsage(storageAccountId, size);
         console.log(`[Webhook] Storage usage decreased for account ${storageAccountId}`);
       } catch (error) {
         console.error('[Webhook] Failed to update storage usage:', error);

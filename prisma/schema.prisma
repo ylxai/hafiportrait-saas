@@ -225,7 +225,8 @@ model UploadSession {
   fileSize        BigInt
   createdAt       DateTime @default(now())
   completedAt     DateTime?
-  storageAccountId String?
+  storageAccountId String?  // R2 account ID
+  cloudinaryAccountId String? // Cloudinary account ID
   publicUrl       String?
   
   @@index([createdAt])

@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       return errorResponse('Unauthorized', 401);
     }
 
-    const { filename, contentType, galleryId, r2AccountId } = await request.json();
+    const { filename, contentType, galleryId, r2AccountId, cloudinaryAccountId, fileSize } = await request.json();
 
     if (!filename || !contentType || !galleryId) {
       return errorResponse('Missing required fields', 400);
@@ -64,13 +64,19 @@ export async function POST(request: Request) {
       return errorResponse(typeValidation.error || 'Invalid file type', 400);
     }
 
-    // Validasi gallery exists
+    // Validasi gallery exists (no ownership check - admin/manager has full access)
     const gallery = await prisma.gallery.findUnique({
       where: { id: galleryId },
     });
 
     if (!gallery) {
       return errorResponse('Gallery not found', 404);
+    }
+
+    // Validasi file size from request body
+    const maxFileSize = 50 * 1024 * 1024; // 50MB
+    if (fileSize && BigInt(fileSize) > BigInt(maxFileSize)) {
+      return errorResponse('File too large. Maximum ' + (maxFileSize / 1024 / 1024) + 'MB', 413);
     }
 
     // Validasi R2 account if provided
@@ -83,12 +89,23 @@ export async function POST(request: Request) {
       }
     }
 
+    // Validasi Cloudinary account if provided
+    if (cloudinaryAccountId) {
+      const cloudinaryAccount = await prisma.storageAccount.findUnique({
+        where: { id: cloudinaryAccountId },
+      });
+      if (!cloudinaryAccount || cloudinaryAccount.provider !== 'CLOUDINARY') {
+        return errorResponse('Invalid Cloudinary storage account', 400);
+      }
+    }
+
     // Generate presigned URL dengan storage account selection (valid 15 menit)
     const { presignedUrl, publicUrl, r2Key, uploadId, r2AccountId: selectedAccountId } = await generatePresignedUploadUrl(
       filename,
       contentType,
       galleryId,
-      r2AccountId
+      r2AccountId,
+      cloudinaryAccountId
     );
 
     return successResponse({

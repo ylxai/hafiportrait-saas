@@ -60,7 +60,8 @@ export function UploadManager({
     progress,
   } = useDirectUpload({
     galleryId,
-    r2AccountId: selectedR2, // Pass selected R2 account
+    r2AccountId: selectedR2,
+    cloudinaryAccountId: selectedCloudinary, // Pass selected Cloudinary account
     maxConcurrent: 10,
     maxRetries: 3,
     autoUpload: true,
@@ -433,14 +434,6 @@ export function UploadManager({
             {/* Add More Files */}
             {!isUploading && (
               <div className="mt-4 flex justify-center">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
                 <Button 
                   variant="outline" 
                   onClick={() => fileInputRef.current?.click()}
