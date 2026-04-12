@@ -57,10 +57,10 @@ export async function POST(request: Request) {
     });
 
     // Update storage usage (decrease)
-    if (storageAccountId && fileSize && r2Deleted) {
+    if (storageAccountId && fileSize !== undefined && r2Deleted) {
       try {
-        // Use BigInt directly to avoid precision loss with parseInt
-        const size = typeof fileSize === 'string' ? BigInt(fileSize) : BigInt(fileSize);
+        // BigInt() handles both string and number types
+        const size = BigInt(fileSize);
         await decreaseStorageUsage(storageAccountId, size);
         console.log(`[Webhook] Storage usage decreased for account ${storageAccountId}`);
       } catch (error) {

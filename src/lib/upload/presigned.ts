@@ -71,7 +71,7 @@ export async function generatePresignedUploadUrl(
   const r2Key = `uploads/${galleryId}/${timestamp}-${sanitizedFilename}`;
   
   // Generate cryptographically secure upload ID
-  const uploadId = `${timestamp}-${crypto.randomUUID()}`;
+  const uploadId = `${timestamp}-${globalThis.crypto.randomUUID()}`;
   
   // Get the actual account ID for storage tracking
   let actualR2AccountId: string | null = r2AccountId || null;
