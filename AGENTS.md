@@ -123,6 +123,43 @@ npm run lint && npm run build
 
 No test framework configured for CI. Playwright is used for interactive/manual UI tests. Build + lint success = ready to commit.
 
+## Completed Work (April 12, 2026)
+
+### PRs Merged to Main
+
+| PR # | Title | Status |
+|------|-------|--------|
+| #9 | fix/immediate-audit-fixes | ✅ MERGED |
+| #10 | fix(galleries): type definition | ✅ MERGED |
+| #11 | fix: critical bugs - error responses, validation, race condition | ✅ MERGED |
+| #12 | feat: reusable UI components + frontend consistency | ✅ MERGED |
+| #13 | fix: upload looping bug - race condition in useDirectUpload | ✅ MERGED |
+| #14 | fix: multiple upload system bugs | ✅ MERGED |
+
+### Bugs Fixed
+
+**PR #11 - Critical API Bugs:**
+- Error response helpers inconsistency
+- Date validation missing in Zod schemas
+- Race condition in booking code
+- Missing Prisma P2025 error handling
+- Input sanitization for XSS
+
+**PR #12 - Frontend Consistency:**
+- Created reusable components: loading.tsx, empty-state.tsx, pagination.tsx
+- Fixed 44+ hardcoded amber-500 → semantic OKLCH colors
+
+**PR #13 & #14 - Upload System:**
+- Race condition in uploadWorker (processingIds + filesRef)
+- activeUploads counter fix
+- alert() → sonner toast
+- selectedCloudinary sent to API
+- uploadId uses crypto.randomUUID()
+- File size validation (BigInt)
+- R2 verification (HeadObject)
+- Storage usage race condition fix
+- Webhook Zod validation
+
 ## Key Files Reference
 
 - `/docs/DESIGN_PROPOSAL_2026.md` - Aura Noir UI/UX design specifications

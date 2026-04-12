@@ -117,6 +117,9 @@ export async function generatePresignedUploadUrl(
   
   const publicUrl = `${credentials.publicUrl}/${r2Key}`;
   
+  // HIGH PRIORITY FIX #4: Set expiry to 1 hour from now
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  
   // Simpan upload session di PostgreSQL
   await prisma.uploadSession.create({
     data: {
@@ -128,6 +131,7 @@ export async function generatePresignedUploadUrl(
       storageAccountId: actualR2AccountId,
       cloudinaryAccountId: actualCloudinaryAccountId,
       publicUrl,
+      expiresAt,
     },
   });
   
@@ -156,6 +160,12 @@ export async function verifyR2Upload(
   
   if (!session) {
     return { success: false, error: 'Upload session expired or not found' };
+  }
+  
+  // HIGH PRIORITY FIX #4: Check if session expired
+  if (session.expiresAt < new Date()) {
+    await prisma.uploadSession.delete({ where: { id: uploadId } }).catch(() => {});
+    return { success: false, error: 'Upload session expired (1 hour limit)' };
   }
   
   // Verify file actually exists in R2 using HeadObject

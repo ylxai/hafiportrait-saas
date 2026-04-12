@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import imageCompression from 'browser-image-compression';
 import { toast } from 'sonner';
 
@@ -134,6 +134,16 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
   
   // Keep filesRef in sync with files state
   filesRef.current = files;
+
+  // HIGH PRIORITY FIX #1: Cleanup retry timeouts on unmount
+  useEffect(() => {
+    return () => {
+      retryTimeouts.current.forEach(timeout => clearTimeout(timeout));
+      retryTimeouts.current.clear();
+      abortControllers.current.forEach(controller => controller.abort());
+      abortControllers.current.clear();
+    };
+  }, []);
 
   // Compress file sebelum upload
   const compressFile = async (file: File): Promise<File> => {
@@ -287,19 +297,28 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       onError?.(uploadFile.id, message, code);
     } finally {
       abortControllers.current.delete(uploadFile.id);
-      activeUploads.current--;
+      decrementActiveUploads();
     }
+  };
+
+  // HIGH PRIORITY FIX #2: Centralized counter management
+  const incrementActiveUploads = () => {
+    activeUploads.current++;
+  };
+
+  const decrementActiveUploads = () => {
+    activeUploads.current--;
   };
 
   // Wrapper untuk upload dengan retry support
   const uploadFileWithRetry = async (file: UploadFile): Promise<void> => {
-    // Use filesRef to get latest state
+    // HIGH PRIORITY FIX #3: Use state callback untuk atomic check
     const currentFile = filesRef.current.find(f => f.id === file.id);
     if (!currentFile || currentFile.status === 'completed' || currentFile.status === 'failed') {
       return;
     }
     
-    activeUploads.current++;
+    incrementActiveUploads();
     await uploadFile(currentFile);
   };
 
@@ -324,7 +343,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
 
       // Tandai file sedang diproses
       processingIds.current.add(pendingFile.id);
-      activeUploads.current++;
+      incrementActiveUploads();
       
       try {
         // Gunakan await agar worker menunggu satu file selesai sebelum mengambil berikutnya
@@ -365,7 +384,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         });
         
         // Upload - increment activeUploads before uploadFile (uploadFile only decrements)
-        activeUploads.current++;
+        incrementActiveUploads();
         await uploadFile({ ...file, compressed });
       });
       
