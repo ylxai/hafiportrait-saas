@@ -1,5 +1,5 @@
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getR2Client, R2Credentials } from '@/lib/storage/r2';
 import { prisma } from '@/lib/db';
 
@@ -53,7 +53,8 @@ export async function generatePresignedUploadUrl(
   filename: string,
   contentType: string,
   galleryId: string,
-  r2AccountId?: string
+  r2AccountId?: string,
+  cloudinaryAccountId?: string
 ): Promise<{
   presignedUrl: string;
   publicUrl: string;
@@ -69,20 +70,38 @@ export async function generatePresignedUploadUrl(
   const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
   const r2Key = `uploads/${galleryId}/${timestamp}-${sanitizedFilename}`;
   
-  // Generate upload ID untuk tracking
-  const uploadId = `upload_${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
+  // Generate cryptographically secure upload ID
+  const uploadId = `${timestamp}-${crypto.randomUUID()}`;
   
   // Get the actual account ID for storage tracking
-  let actualAccountId: string | null = r2AccountId || null;
-  if (!actualAccountId && credentials) {
-    const account = await prisma.storageAccount.findFirst({
+  let actualR2AccountId: string | null = r2AccountId || null;
+  if (!actualR2AccountId && credentials) {
+    const r2Account = await prisma.storageAccount.findFirst({
       where: { 
         provider: 'R2', 
         isActive: true,
         accountId: credentials.accountId || undefined,
       },
     });
-    actualAccountId = account?.id || null;
+    actualR2AccountId = r2Account?.id || null;
+  }
+
+  // Validate Cloudinary account if provided
+  let actualCloudinaryAccountId: string | null = cloudinaryAccountId || null;
+  if (cloudinaryAccountId) {
+    const cloudinaryAccount = await prisma.storageAccount.findUnique({
+      where: { id: cloudinaryAccountId },
+    });
+    if (!cloudinaryAccount || cloudinaryAccount.provider !== 'CLOUDINARY') {
+      throw new Error('Invalid Cloudinary storage account');
+    }
+    actualCloudinaryAccountId = cloudinaryAccountId;
+  } else {
+    // Use default Cloudinary account
+    const defaultCloudinary = await prisma.storageAccount.findFirst({
+      where: { provider: 'CLOUDINARY', isActive: true, isDefault: true },
+    });
+    actualCloudinaryAccountId = defaultCloudinary?.id || null;
   }
   
   // Generate presigned URL (valid 15 menit)
@@ -106,12 +125,13 @@ export async function generatePresignedUploadUrl(
       filename,
       galleryId,
       fileSize: 0,
-      storageAccountId: actualAccountId,
+      storageAccountId: actualR2AccountId,
+      cloudinaryAccountId: actualCloudinaryAccountId,
       publicUrl,
     },
   });
   
-  return { presignedUrl, publicUrl, r2Key, uploadId, r2AccountId: actualAccountId };
+  return { presignedUrl, publicUrl, r2Key, uploadId, r2AccountId: actualR2AccountId };
 }
 
 // Verifikasi upload ke R2 berhasil
@@ -127,6 +147,7 @@ export async function verifyR2Upload(
   filename?: string;
   galleryId?: string;
   storageAccountId?: string | null;
+  cloudinaryAccountId?: string | null;
   error?: string;
 }> {
   const session = await prisma.uploadSession.findUnique({
@@ -135,6 +156,24 @@ export async function verifyR2Upload(
   
   if (!session) {
     return { success: false, error: 'Upload session expired or not found' };
+  }
+  
+  // Verify file actually exists in R2 using HeadObject
+  try {
+    const { credentials, bucket } = await getR2Credentials(session.storageAccountId || undefined);
+    const client = getR2Client(credentials);
+    
+    const command = new HeadObjectCommand({
+      Bucket: bucket,
+      Key: session.r2Key,
+    });
+    
+    await client.send(command);
+  } catch (error) {
+    console.error('R2 verification failed - file not found:', error);
+    // Clean up the orphaned upload session
+    await prisma.uploadSession.delete({ where: { id: uploadId } }).catch(() => {});
+    return { success: false, error: 'File tidak ditemukan di storage. Upload mungkin gagal.' };
   }
   
   await prisma.uploadSession.update({
@@ -154,6 +193,7 @@ export async function verifyR2Upload(
     filename: session.filename,
     galleryId: session.galleryId,
     storageAccountId: session.storageAccountId,
+    cloudinaryAccountId: session.cloudinaryAccountId,
   };
 }
 

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import imageCompression from 'browser-image-compression';
+import { toast } from 'sonner';
 
 export interface UploadFile {
   id: string;
@@ -18,7 +19,8 @@ export interface UploadFile {
 
 interface UseDirectUploadOptions {
   galleryId: string;
-  r2AccountId?: string; // Selected R2 storage account
+  r2AccountId?: string;
+  cloudinaryAccountId?: string; // Selected Cloudinary storage account
   maxConcurrent?: number;
   autoUpload?: boolean;
   maxFileSize?: number; // in bytes, default 50MB
@@ -108,7 +110,8 @@ function isRetryableError(errorCode: UploadFile['errorCode']): boolean {
 export function useDirectUpload(options: UseDirectUploadOptions) {
   const { 
     galleryId, 
-    r2AccountId, // Selected storage account
+    r2AccountId,
+    cloudinaryAccountId, // Selected Cloudinary account
     maxConcurrent = 10, 
     autoUpload: _autoUpload = true, 
     maxFileSize = 50 * 1024 * 1024, // 50MB default
@@ -172,7 +175,8 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
           filename: fileToUpload.name,
           contentType: fileToUpload.type,
           galleryId,
-          r2AccountId, // Pass selected storage account
+          r2AccountId,
+          cloudinaryAccountId,
         }),
         signal: abortController.signal,
       });
@@ -359,8 +363,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
           compressed,
         });
         
-        // Upload
-        activeUploads.current++;
+        // Upload (uploadFile handles activeUploads.current++)
         await uploadFile({ ...file, compressed });
       });
       
@@ -444,11 +447,11 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       const acceptedFiles = validFiles.slice(0, validFiles.length - excess);
       
       if (acceptedFiles.length === 0) {
-        alert('Maksimal 400 foto per upload batch. Silakan hapus beberapa foto terlebih dahulu.');
+        toast.error('Maksimal 400 foto per upload batch. Silakan hapus beberapa foto terlebih dahulu.');
         return;
       }
       
-      alert(`Hanya ${acceptedFiles.length} foto yang diterima karena maksimal 400 foto.`);
+      toast.warning(`Hanya ${acceptedFiles.length} foto yang diterima karena maksimal 400 foto.`);
       setFiles(prev => [...prev, ...acceptedFiles]);
       return;
     }

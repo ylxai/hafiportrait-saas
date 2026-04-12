@@ -42,6 +42,7 @@ export async function getStorageAccountById(id: string): Promise<StorageAccount 
 }
 
 export async function updateStorageUsage(accountId: string, fileSize: bigint) {
+  // Use atomic increment - race condition safe
   await prisma.storageAccount.update({
     where: { id: accountId },
     data: {
@@ -52,12 +53,22 @@ export async function updateStorageUsage(accountId: string, fileSize: bigint) {
 }
 
 export async function decreaseStorageUsage(accountId: string, fileSize: bigint) {
-  await prisma.storageAccount.update({
-    where: { id: accountId },
-    data: {
-      usedStorage: { decrement: fileSize },
-      totalPhotos: { decrement: 1 },
-    },
+  // Use transaction to ensure consistency
+  await prisma.$transaction(async (tx) => {
+    const account = await tx.storageAccount.findUnique({ where: { id: accountId } });
+    if (!account) return;
+    
+    // Only decrement if we have enough storage
+    const newUsedStorage = account.usedStorage - fileSize;
+    const newTotalPhotos = account.totalPhotos - 1;
+    
+    await tx.storageAccount.update({
+      where: { id: accountId },
+      data: {
+        usedStorage: newUsedStorage > BigInt(0) ? newUsedStorage : BigInt(0),
+        totalPhotos: newTotalPhotos > 0 ? newTotalPhotos : 0,
+      },
+    });
   });
 }
 
