@@ -137,11 +137,14 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
 
   // HIGH PRIORITY FIX #1: Cleanup retry timeouts on unmount
   useEffect(() => {
+    const timeouts = retryTimeouts.current;
+    const controllers = abortControllers.current;
+    
     return () => {
-      retryTimeouts.current.forEach(timeout => clearTimeout(timeout));
-      retryTimeouts.current.clear();
-      abortControllers.current.forEach(controller => controller.abort());
-      abortControllers.current.clear();
+      timeouts.forEach(timeout => clearTimeout(timeout));
+      timeouts.clear();
+      controllers.forEach(controller => controller.abort());
+      controllers.clear();
     };
   }, []);
 
