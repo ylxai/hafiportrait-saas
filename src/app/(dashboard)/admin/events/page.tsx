@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Calendar, Image as ImageIcon } from 'lucide-react';
 import { LazyImage } from '@/components/ui/lazy-image';
+import { AdminPaginationResponse } from '@/types/pagination';
 
 type Client = {
   id: string;
@@ -40,13 +41,6 @@ type Event = {
   galleries?: { photos: { url: string; thumbnailUrl: string | null }[] }[];
 };
 
-type Pagination = {
-  page: number;
-  limit: number;
-  total: number;
-  pages: number;
-};
-
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -59,7 +53,7 @@ export default function EventsPage() {
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkAction, setBulkAction] = useState<'delete' | 'status' | 'payment' | ''>('');
   const [bulkValue, setBulkValue] = useState('');
-  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, pages: 0 });
+  const [pagination, setPagination] = useState<AdminPaginationResponse>({ page: 1, limit: 20, total: 0, pages: 0 });
   const [formData, setFormData] = useState({
     clientId: '',
     packageId: '',

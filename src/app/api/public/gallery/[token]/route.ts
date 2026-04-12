@@ -3,6 +3,7 @@ import { successResponse, notFoundResponse, serverErrorResponse, errorResponse }
 import { getDefaultAccount } from '@/lib/storage/accounts';
 import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
 import { z } from 'zod';
+import { parseCursor, createPublicPaginationResponse } from '@/types/pagination';
 
 const PHOTOS_PER_PAGE = 100;
 
@@ -23,12 +24,7 @@ export async function GET(
     }
     
     const { searchParams } = new URL(request.url);
-    const cursor = searchParams.get('cursor');
-    
-    // Parse and validate cursor
-    const cursorId = cursor && cursor !== 'null' && cursor !== 'undefined' 
-      ? cursor 
-      : undefined;
+    const cursor = parseCursor(searchParams);
 
     // Get gallery with event info
     const gallery = await prisma.gallery.findUnique({
@@ -57,15 +53,13 @@ export async function GET(
       },
       orderBy: [{ order: 'asc' }, { id: 'asc' }],
       take: PHOTOS_PER_PAGE + 1, // Take one extra to check if there's more
-      skip: cursorId ? 1 : 0,
-      cursor: cursorId ? { id: cursorId } : undefined,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
     });
 
-    // Check if there's a next page
-    const hasMore = photos.length > PHOTOS_PER_PAGE;
-    const photoList = hasMore ? photos.slice(0, PHOTOS_PER_PAGE) : photos;
-    const nextCursor = hasMore ? photoList[photoList.length - 1]?.id : null;
-
+    // Create pagination response
+    const pagination = createPublicPaginationResponse(photos, PHOTOS_PER_PAGE);
+    const photoList = photos.slice(0, PHOTOS_PER_PAGE);
 
     // Get latest selection
     const latestSelection = gallery.selections[0];
@@ -102,11 +96,7 @@ export async function GET(
         photos: serializedPhotos,
         selections,
         isSelectionLocked: gallery.isSelectionLocked,
-        pagination: {
-          hasMore,
-          nextCursor,
-          perPage: PHOTOS_PER_PAGE,
-        },
+        pagination,
       },
     });
   } catch (error) {
