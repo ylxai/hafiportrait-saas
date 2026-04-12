@@ -44,9 +44,8 @@ export async function getUploadMetrics(
   startDate?: Date,
   endDate?: Date
 ): Promise<UploadMetrics> {
-  // This would query from analytics table
-  // Placeholder implementation
-  const photos = await prisma.photo.findMany({
+  // HIGH PRIORITY FIX: Use Prisma aggregation instead of findMany (performance optimization)
+  const aggregation = await prisma.photo.aggregate({
     where: {
       galleryId,
       createdAt: {
@@ -54,13 +53,14 @@ export async function getUploadMetrics(
         lte: endDate,
       },
     },
-    select: {
+    _count: true,
+    _sum: {
       fileSize: true,
     },
   });
   
-  const totalUploads = photos.length;
-  const totalBytesUploaded = photos.reduce((sum, p) => sum + (p.fileSize || BigInt(0)), BigInt(0));
+  const totalUploads = aggregation._count;
+  const totalBytesUploaded = aggregation._sum.fileSize || BigInt(0);
   const averageFileSize = totalUploads > 0 ? Number(totalBytesUploaded) / totalUploads : 0;
   
   return {

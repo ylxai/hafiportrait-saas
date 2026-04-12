@@ -100,9 +100,9 @@ export async function POST(request: Request) {
     }
     
     if (totalUsedStorage + BigInt(fileSize) > storageQuotaBytes) {
-      // LOW PRIORITY FIX: Use BigInt division for precision (avoid Number conversion)
-      const usedGB = (totalUsedStorage / BigInt(1024 * 1024 * 1024)).toString();
-      const usedGBFloat = parseFloat(usedGB) + (Number(totalUsedStorage % BigInt(1024 * 1024 * 1024)) / (1024 * 1024 * 1024));
+      // MEDIUM PRIORITY FIX: Use BigInt division for precision (avoid Number conversion)
+      const usedGB = (totalUsedStorage / BigInt(1073741824)).toString();
+      const usedGBFloat = parseFloat(usedGB) + (Number(totalUsedStorage % BigInt(1073741824)) / 1073741824);
       return errorResponse(
         `Storage quota exceeded. Used: ${usedGBFloat.toFixed(2)}GB / ${STORAGE_QUOTA_PER_CLIENT_GB}GB`,
         413

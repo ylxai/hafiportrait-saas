@@ -40,8 +40,68 @@ export async function getUploadAnalyticsDashboard(
       break;
   }
   
-  // MEDIUM PRIORITY FIX: Use select to fetch only needed fields (performance optimization)
-  const photos = await prisma.photo.findMany({
+  // HIGH PRIORITY FIX: Use Prisma aggregation instead of findMany (performance optimization)
+  // Get total count and sum in one query
+  const aggregation = await prisma.photo.aggregate({
+    where: {
+      createdAt: {
+        gte: startDate,
+        lte: now,
+      },
+    },
+    _count: true,
+    _sum: {
+      fileSize: true,
+    },
+  });
+  
+  const totalUploads = aggregation._count;
+  const totalBytesUploaded = aggregation._sum.fileSize || BigInt(0);
+  const averageFileSize = totalUploads > 0 ? Number(totalBytesUploaded) / totalUploads : 0;
+  
+  // HIGH PRIORITY FIX: Use groupBy for gallery aggregation (database-level)
+  const galleryGroups = await prisma.photo.groupBy({
+    by: ['galleryId'],
+    where: {
+      createdAt: {
+        gte: startDate,
+        lte: now,
+      },
+    },
+    _count: true,
+    orderBy: {
+      _count: {
+        galleryId: 'desc',
+      },
+    },
+    take: 10, // Top 10
+  });
+  
+  // Fetch gallery names for top 10
+  const galleryIds = galleryGroups.map(g => g.galleryId);
+  const galleries = await prisma.gallery.findMany({
+    where: {
+      id: {
+        in: galleryIds,
+      },
+    },
+    select: {
+      id: true,
+      namaProject: true,
+    },
+  });
+  
+  const galleryNameMap = new Map(galleries.map(g => [g.id, g.namaProject]));
+  
+  const uploadsByGallery = galleryGroups.map(g => ({
+    galleryId: g.galleryId,
+    galleryName: galleryNameMap.get(g.galleryId) || 'Unknown',
+    count: g._count,
+  }));
+  
+  // For uploadsByHour, we still need to fetch createdAt (no native hour grouping in Prisma)
+  // But only fetch the hour field, not entire records
+  const photosForHourly = await prisma.photo.findMany({
     where: {
       createdAt: {
         gte: startDate,
@@ -49,61 +109,19 @@ export async function getUploadAnalyticsDashboard(
       },
     },
     select: {
-      fileSize: true,
       createdAt: true,
-      galleryId: true,
-      gallery: {
-        select: {
-          id: true,
-          namaProject: true,
-        },
-      },
     },
   });
   
-  const totalUploads = photos.length;
-  
-  // Handle BigInt overflow safely
-  let totalBytesUploaded = BigInt(0);
-  try {
-    totalBytesUploaded = photos.reduce((sum, p) => sum + (p.fileSize || BigInt(0)), BigInt(0));
-  } catch (error) {
-    console.error('[Analytics] BigInt overflow in totalBytesUploaded calculation:', error);
-    totalBytesUploaded = BigInt(0);
-  }
-  
-  const averageFileSize = totalUploads > 0 ? Number(totalBytesUploaded) / totalUploads : 0;
-  
-  // LOW PRIORITY FIX: Optimize hour grouping - O(N) instead of O(N*24)
   const uploadsByHour = Array.from({ length: 24 }, (_, hour) => ({
     hour,
     count: 0,
   }));
   
-  photos.forEach(p => {
+  photosForHourly.forEach(p => {
     const hour = p.createdAt.getHours();
     uploadsByHour[hour].count++;
   });
-  
-  // Group by gallery
-  const galleryMap = new Map<string, { name: string; count: number }>();
-  photos.forEach(p => {
-    const existing = galleryMap.get(p.galleryId);
-    if (existing) {
-      existing.count++;
-    } else {
-      galleryMap.set(p.galleryId, { name: p.gallery.namaProject, count: 1 });
-    }
-  });
-  
-  const uploadsByGallery = Array.from(galleryMap.entries())
-    .map(([galleryId, data]) => ({
-      galleryId,
-      galleryName: data.name,
-      count: data.count,
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10); // Top 10
   
   return {
     period,
