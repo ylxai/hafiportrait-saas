@@ -99,28 +99,23 @@ export async function getUploadAnalyticsDashboard(
     count: g._count,
   }));
   
-  // For uploadsByHour, we still need to fetch createdAt (no native hour grouping in Prisma)
-  // But only fetch the hour field, not entire records
-  const photosForHourly = await prisma.photo.findMany({
-    where: {
-      createdAt: {
-        gte: startDate,
-        lte: now,
-      },
-    },
-    select: {
-      createdAt: true,
-    },
-  });
+  // MEDIUM PRIORITY FIX: Use raw SQL for hourly grouping (better performance)
+  // Instead of fetching all photos and grouping in JavaScript
+  const hourlyData = await prisma.$queryRaw<Array<{ hour: number; count: bigint }>>`
+    SELECT EXTRACT(HOUR FROM "createdAt")::int as hour, COUNT(*)::bigint as count
+    FROM "Photo"
+    WHERE "createdAt" >= ${startDate} AND "createdAt" <= ${now}
+    GROUP BY hour
+    ORDER BY hour
+  `;
   
   const uploadsByHour = Array.from({ length: 24 }, (_, hour) => ({
     hour,
     count: 0,
   }));
   
-  photosForHourly.forEach(p => {
-    const hour = p.createdAt.getHours();
-    uploadsByHour[hour].count++;
+  hourlyData.forEach(({ hour, count }) => {
+    uploadsByHour[hour].count = Number(count);
   });
   
   return {

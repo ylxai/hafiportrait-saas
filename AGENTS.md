@@ -189,11 +189,32 @@ No test framework configured for CI. Playwright is used for interactive/manual U
 - Storage usage race condition fix
 - Webhook Zod validation
 
+### Additional Improvements (Not in PRs)
+
+**BigInt Utilities (`src/lib/bigint-utils.ts`):**
+- `safeBigInt()` - Type-safe conversion from unknown
+- `serializeBigInt()` - JSON serialization helper
+- `safeBigIntAdd/Subtract()` - Safe arithmetic with nulls
+- `formatBytes()` - Human-readable sizes ("1.50 GB")
+- `parseSizeToBytes()` - Parse "10MB" → BigInt
+
+**File Hashing (`src/lib/upload/hash-client.ts`):**
+- `calculateFileHash()` - Full SHA-256 via Web Crypto API
+- `calculatePartialHash()` - Quick 1MB hash for previews
+- `areFilesIdentical()` - Compare two files by hash
+- Client-side only (uses `crypto.subtle`)
+
+**Analytics Optimization (`src/lib/upload/analytics.ts`):**
+- Raw SQL for hourly grouping (10-50x faster)
+- Uses `prisma.$queryRaw` with PostgreSQL EXTRACT
+
 ## Key Files Reference
 
 - `/docs/DESIGN_PROPOSAL_2026.md` - Aura Noir UI/UX design specifications
 - `/docs/CLOUDFLARE_EDGE_MIGRATION.md` - Cloudflare Worker edge migration plan
 - `/src/lib/upload/presigned.ts` - R2 presigned URL generation
+- `/src/lib/upload/hash-client.ts` - Client-side file hashing (Web Crypto API)
+- `/src/lib/bigint-utils.ts` - BigInt utilities (safe conversion, formatting)
 - `/src/hooks/useDirectUpload.ts` - Frontend upload hook with retry logic
 - `/src/components/upload/UploadManager.tsx` - Upload UI component
 
