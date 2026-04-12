@@ -395,17 +395,28 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     } else {
       console.log(`[Upload] Large batch detected (${pendingFiles.length} files) - Using batching strategy`);
       
-      // Compress semua file dulu (sequential untuk hemat memory)
-      for (const file of pendingFiles) {
-        if (!file.compressed) {
-          updateFileStatus(file.id, { status: 'compressing' });
-          const compressed = await compressFile(file.file);
-          updateFileStatus(file.id, { 
-            status: 'pending',
-            compressed,
-          });
-        }
+      // MEDIUM PRIORITY FIX #6: Parallel compression with concurrency limit (hemat memory)
+      const compressionConcurrency = 3; // Max 3 files compressed at once
+      const compressionQueue = [...pendingFiles];
+      const compressionWorkers: Promise<void>[] = [];
+      
+      for (let i = 0; i < Math.min(compressionConcurrency, compressionQueue.length); i++) {
+        compressionWorkers.push((async () => {
+          while (compressionQueue.length > 0) {
+            const file = compressionQueue.shift();
+            if (!file || file.compressed) continue;
+            
+            updateFileStatus(file.id, { status: 'compressing' });
+            const compressed = await compressFile(file.file);
+            updateFileStatus(file.id, { 
+              status: 'pending',
+              compressed,
+            });
+          }
+        })());
       }
+      
+      await Promise.all(compressionWorkers);
 
       // Start upload workers dengan concurrency control
       const workers: Promise<void>[] = [];
