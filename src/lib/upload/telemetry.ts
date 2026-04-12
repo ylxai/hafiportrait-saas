@@ -8,7 +8,7 @@ export interface UploadMetrics {
   successRate: number;
   retryRate: number;
   averageFileSize: number;
-  totalBytesUploaded: bigint;
+  totalBytesUploaded: string; // CRITICAL FIX: BigInt as string for JSON serialization
   errorBreakdown: Record<string, number>;
 }
 
@@ -70,7 +70,7 @@ export async function getUploadMetrics(
     successRate: 100,
     retryRate: 0, // Would need separate tracking
     averageFileSize,
-    totalBytesUploaded,
+    totalBytesUploaded: totalBytesUploaded.toString(), // CRITICAL FIX: Convert BigInt to string for JSON
     errorBreakdown: {},
   };
 }

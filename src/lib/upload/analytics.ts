@@ -9,7 +9,7 @@ export interface UploadAnalytics {
   successRate: number;
   averageUploadTime: number; // in seconds
   averageFileSize: number; // in bytes
-  totalBytesUploaded: bigint;
+  totalBytesUploaded: string; // CRITICAL FIX: BigInt as string for JSON serialization
   topErrorTypes: Array<{ errorCode: string; count: number }>;
   uploadsByHour: Array<{ hour: number; count: number }>;
   uploadsByGallery: Array<{ galleryId: string; galleryName: string; count: number }>;
@@ -40,7 +40,7 @@ export async function getUploadAnalyticsDashboard(
       break;
   }
   
-  // Query photos uploaded in period
+  // MEDIUM PRIORITY FIX: Use select to fetch only needed fields (performance optimization)
   const photos = await prisma.photo.findMany({
     where: {
       createdAt: {
@@ -48,7 +48,10 @@ export async function getUploadAnalyticsDashboard(
         lte: now,
       },
     },
-    include: {
+    select: {
+      fileSize: true,
+      createdAt: true,
+      galleryId: true,
       gallery: {
         select: {
           id: true,
@@ -71,11 +74,16 @@ export async function getUploadAnalyticsDashboard(
   
   const averageFileSize = totalUploads > 0 ? Number(totalBytesUploaded) / totalUploads : 0;
   
-  // Group by hour
+  // LOW PRIORITY FIX: Optimize hour grouping - O(N) instead of O(N*24)
   const uploadsByHour = Array.from({ length: 24 }, (_, hour) => ({
     hour,
-    count: photos.filter(p => p.createdAt.getHours() === hour).length,
+    count: 0,
   }));
+  
+  photos.forEach(p => {
+    const hour = p.createdAt.getHours();
+    uploadsByHour[hour].count++;
+  });
   
   // Group by gallery
   const galleryMap = new Map<string, { name: string; count: number }>();
@@ -105,7 +113,7 @@ export async function getUploadAnalyticsDashboard(
     successRate: totalUploads > 0 ? 100 : 0,
     averageUploadTime: 0, // Would need separate tracking
     averageFileSize,
-    totalBytesUploaded,
+    totalBytesUploaded: totalBytesUploaded.toString(), // CRITICAL FIX: Convert BigInt to string for JSON
     topErrorTypes: [], // Would need separate tracking
     uploadsByHour,
     uploadsByGallery,
