@@ -3,23 +3,17 @@ import { generatePresignedUploadUrl } from '@/lib/upload/presigned';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
+import {
+  MAX_FILE_SIZE_BYTES,
+  MAX_FILE_SIZE_MB,
+  STORAGE_QUOTA_PER_CLIENT_BYTES,
+  STORAGE_QUOTA_PER_CLIENT_GB,
+  PRESIGNED_URL_EXPIRY_SECONDS,
+  ALLOWED_EXTENSIONS,
+  ALLOWED_MIME_TYPES,
+} from '@/lib/upload/constants';
 
-// Allowed MIME types
-const ALLOWED_MIME_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/heic',
-  'image/heif',
-  'image/x-canon-cr2',
-  'image/x-nikon-nef',
-  'image/x-sony-arw',
-  'image/x-adobe-dng',
-  'image/x-raw',
-];
 
-// Allowed extensions
-const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.nef', '.cr2', '.arw', '.dng', '.raw'];
 
 // Validate file type
 function validateFileType(filename: string, contentType: string): { valid: boolean; error?: string } {
@@ -67,26 +61,11 @@ export async function POST(request: Request) {
     // Validasi gallery exists (no ownership check - admin/manager has full access)
     const gallery = await prisma.gallery.findUnique({
       where: { id: galleryId },
-      include: {
+      select: {
+        id: true,
         event: {
-          include: {
-            client: {
-              include: {
-                events: {
-                  include: {
-                    galleries: {
-                      include: {
-                        photos: {
-                          select: {
-                            fileSize: true,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
+          select: {
+            clientId: true,
           },
         },
       },
@@ -96,23 +75,33 @@ export async function POST(request: Request) {
       return errorResponse('Gallery not found', 404);
     }
 
-    // LOW PRIORITY FIX #8: Check storage quota before upload
-    const client = gallery.event.client;
-    const allPhotos = client.events.flatMap(e => e.galleries.flatMap(g => g.photos));
-    const totalUsedStorage = allPhotos.reduce((sum, p) => sum + Number(p.fileSize || 0), 0);
-    const storageQuotaBytes = 10 * 1024 * 1024 * 1024; // 10GB per client (configurable)
+    // CRITICAL FIX: Optimized storage quota check using aggregation (no N+1 query)
+    const clientId = gallery.event.clientId;
+    const storageUsage = await prisma.photo.aggregate({
+      where: {
+        gallery: {
+          event: {
+            clientId,
+          },
+        },
+      },
+      _sum: {
+        fileSize: true,
+      },
+    });
+
+    const totalUsedStorage = Number(storageUsage._sum.fileSize || 0);
     
-    if (totalUsedStorage + fileSize > storageQuotaBytes) {
+    if (totalUsedStorage + fileSize > STORAGE_QUOTA_PER_CLIENT_BYTES) {
       return errorResponse(
-        `Storage quota exceeded. Used: ${(totalUsedStorage / 1024 / 1024 / 1024).toFixed(2)}GB / ${storageQuotaBytes / 1024 / 1024 / 1024}GB`,
+        `Storage quota exceeded. Used: ${(totalUsedStorage / 1024 / 1024 / 1024).toFixed(2)}GB / ${STORAGE_QUOTA_PER_CLIENT_GB}GB`,
         413
       );
     }
 
     // Validasi file size from request body
-    const maxFileSize = 50 * 1024 * 1024; // 50MB
-    if (fileSize && BigInt(fileSize) > BigInt(maxFileSize)) {
-      return errorResponse('File too large. Maximum ' + (maxFileSize / 1024 / 1024) + 'MB', 413);
+    if (fileSize && BigInt(fileSize) > BigInt(MAX_FILE_SIZE_BYTES)) {
+      return errorResponse(`File too large. Maximum ${MAX_FILE_SIZE_MB}MB`, 413);
     }
 
     // Validasi R2 account if provided
@@ -150,7 +139,7 @@ export async function POST(request: Request) {
       r2Key,
       uploadId,
       r2AccountId: selectedAccountId,
-      expiresIn: 900, // 15 minutes
+      expiresIn: PRESIGNED_URL_EXPIRY_SECONDS,
     });
   } catch (error) {
     console.error('Error generating presigned URL:', error);

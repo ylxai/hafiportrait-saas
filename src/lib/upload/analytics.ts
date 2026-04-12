@@ -15,9 +15,16 @@ export interface UploadAnalytics {
   uploadsByGallery: Array<{ galleryId: string; galleryName: string; count: number }>;
 }
 
+const VALID_PERIODS = ['day', 'week', 'month'] as const;
+
 export async function getUploadAnalyticsDashboard(
   period: 'day' | 'week' | 'month' = 'week'
 ): Promise<UploadAnalytics> {
+  // Input validation
+  if (!VALID_PERIODS.includes(period)) {
+    throw new Error(`Invalid period: ${period}. Must be one of: ${VALID_PERIODS.join(', ')}`);
+  }
+
   const now = new Date();
   const startDate = new Date();
   
@@ -52,7 +59,16 @@ export async function getUploadAnalyticsDashboard(
   });
   
   const totalUploads = photos.length;
-  const totalBytesUploaded = photos.reduce((sum, p) => sum + (p.fileSize || BigInt(0)), BigInt(0));
+  
+  // Handle BigInt overflow safely
+  let totalBytesUploaded = BigInt(0);
+  try {
+    totalBytesUploaded = photos.reduce((sum, p) => sum + (p.fileSize || BigInt(0)), BigInt(0));
+  } catch (error) {
+    console.error('[Analytics] BigInt overflow in totalBytesUploaded calculation:', error);
+    totalBytesUploaded = BigInt(0);
+  }
+  
   const averageFileSize = totalUploads > 0 ? Number(totalBytesUploaded) / totalUploads : 0;
   
   // Group by hour
@@ -95,6 +111,13 @@ export async function getUploadAnalyticsDashboard(
     uploadsByGallery,
   };
 }
+
+// TODO: Add test coverage for analytics module
+// - Test period validation (valid/invalid periods)
+// - Test BigInt overflow handling
+// - Test empty photo set
+// - Test date range calculations
+// - Test aggregation logic
 
 // API route to expose this data
 // GET /api/admin/analytics/uploads?period=week

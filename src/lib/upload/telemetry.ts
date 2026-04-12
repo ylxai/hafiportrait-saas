@@ -21,14 +21,22 @@ export async function trackUploadAttempt(
 ): Promise<void> {
   // Store in a separate analytics table or log to external service
   // For now, just console log for monitoring
-  console.log('[Upload Telemetry]', {
+  const telemetryData = {
     galleryId,
     fileSize,
     success,
-    errorCode,
-    retryCount,
+    errorCode: errorCode || null,
+    retryCount: retryCount || 0,
     timestamp: new Date().toISOString(),
-  });
+  };
+  
+  console.log('[Upload Telemetry]', telemetryData);
+  
+  // TODO: Implement persistent storage for telemetry data
+  // Options:
+  // 1. Store in separate UploadTelemetry table in PostgreSQL
+  // 2. Send to external analytics service (e.g., Mixpanel, Amplitude)
+  // 3. Log to Cloudflare Analytics Engine
 }
 
 export async function getUploadMetrics(
@@ -66,3 +74,9 @@ export async function getUploadMetrics(
     errorBreakdown: {},
   };
 }
+
+// TODO: Add test coverage for telemetry module
+// - Test trackUploadAttempt with various parameters
+// - Test getUploadMetrics with date ranges
+// - Test BigInt handling in aggregations
+// - Test empty result sets

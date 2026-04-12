@@ -1,0 +1,11 @@
+{"id":"3388926a-546d-42ea-8d1c-e7af328b4071","ts":"2026-04-12T17:42:03.501Z","path":"/home/eouser/web-saas/src/lib/upload/constants.ts","version":"1.0.0","taskID":"196eff4a-f8eb-46d9-bbf8-cafc41a1728d"}
+{"id":"83acb962-deb0-4613-8792-a513a234055d","ts":"2026-04-12T17:42:20.604Z","path":"/home/eouser/web-saas/src/app/api/admin/upload/presigned/route.ts","version":"1.0.0","taskID":"196eff4a-f8eb-46d9-bbf8-cafc41a1728d"}
+{"id":"c44a82f8-bd8a-408d-ad74-fd97707d8e0b","ts":"2026-04-12T17:42:48.496Z","path":"/home/eouser/web-saas/src/hooks/useDirectUpload.ts","version":"1.0.0","taskID":"196eff4a-f8eb-46d9-bbf8-cafc41a1728d"}
+{"id":"3bb71165-fc3d-43fb-829b-6c700b22c424","ts":"2026-04-12T17:42:58.288Z","path":"/home/eouser/web-saas/src/lib/upload/presigned.ts","version":"1.0.0","taskID":"196eff4a-f8eb-46d9-bbf8-cafc41a1728d"}
+{"id":"ab4e69e9-3623-4492-80de-f1a49c5b63c8","ts":"2026-04-12T17:43:10.380Z","path":"/home/eouser/web-saas/src/lib/upload/cleanup.ts","version":"1.0.0","taskID":"196eff4a-f8eb-46d9-bbf8-cafc41a1728d"}
+{"id":"14180c07-5126-4885-b65d-ace2ca264b45","ts":"2026-04-12T17:43:15.387Z","path":"/home/eouser/web-saas/.husky/pre-commit","version":"1.0.0","taskID":"196eff4a-f8eb-46d9-bbf8-cafc41a1728d"}
+{"id":"d422bffe-3ee6-4c31-9a8c-dc37882ae0e6","ts":"2026-04-12T17:43:31.099Z","path":"/home/eouser/web-saas/src/lib/upload/duplicate-detection.ts","version":"1.0.0","taskID":"196eff4a-f8eb-46d9-bbf8-cafc41a1728d"}
+{"id":"586b628c-1550-474a-a922-67cb84965f6e","ts":"2026-04-12T17:43:52.610Z","path":"/home/eouser/web-saas/src/lib/upload/analytics.ts","version":"1.0.0","taskID":"196eff4a-f8eb-46d9-bbf8-cafc41a1728d"}
+{"id":"a8b3a3db-354b-4e06-aa8d-dfb745820a6d","ts":"2026-04-12T17:44:01.353Z","path":"/home/eouser/web-saas/src/lib/upload/telemetry.ts","version":"1.0.0","taskID":"196eff4a-f8eb-46d9-bbf8-cafc41a1728d"}
+{"id":"f824c2c1-a164-4d26-8348-75cdd086a7bc","ts":"2026-04-12T17:44:47.230Z","path":"/home/eouser/web-saas/src/hooks/useDirectUpload.ts","version":"1.0.0","taskID":"196eff4a-f8eb-46d9-bbf8-cafc41a1728d"}
+{"id":"f20b3ebd-c97c-4fca-b0ae-edbdb2c2f30f","ts":"2026-04-12T17:44:52.161Z","path":"/home/eouser/web-saas/src/lib/upload/cleanup.ts","version":"1.0.0","taskID":"196eff4a-f8eb-46d9-bbf8-cafc41a1728d"}

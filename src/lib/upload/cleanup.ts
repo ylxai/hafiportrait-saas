@@ -14,21 +14,28 @@ export async function cleanupExpiredUploadSessions(): Promise<number> {
   return result.count;
 }
 
-// Run cleanup on server startup or via cron
-export async function scheduleUploadSessionCleanup() {
-  // Run cleanup every 30 minutes
-  setInterval(async () => {
-    try {
-      const deleted = await cleanupExpiredUploadSessions();
-      if (deleted > 0) {
-        console.log(`[Cleanup] Deleted ${deleted} expired upload sessions`);
-      }
-    } catch (error) {
-      console.error('[Cleanup] Failed to cleanup upload sessions:', error);
-    }
-  }, 30 * 60 * 1000); // 30 minutes
+// CRITICAL FIX: Removed setInterval - incompatible with serverless/edge environments
+// Use Cloudflare Cron Triggers instead for scheduled cleanup
+// See: https://developers.cloudflare.com/workers/configuration/cron-triggers/
+//
+// Example wrangler.toml configuration:
+// [triggers]
+// crons = ["*/30 * * * *"]  # Every 30 minutes
+//
+// Then in your worker:
+// export default {
+//   async scheduled(event, env, ctx) {
+//     await cleanupExpiredUploadSessions();
+//   }
+// }
+//
+// For local development, call cleanupExpiredUploadSessions() manually via API endpoint
+
+export async function scheduleUploadSessionCleanup(): Promise<void> {
+  console.warn('[Cleanup] scheduleUploadSessionCleanup() is deprecated. Use Cloudflare Cron Triggers instead.');
+  console.warn('[Cleanup] See: https://developers.cloudflare.com/workers/configuration/cron-triggers/');
   
-  // Run immediately on startup
+  // Run once on startup for backward compatibility
   try {
     const deleted = await cleanupExpiredUploadSessions();
     if (deleted > 0) {
