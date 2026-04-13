@@ -53,24 +53,24 @@ export async function POST(request: Request) {
     console.log(`[Webhook/Thumbnail] Callback for photo ${photoId}: ${publicId}`);
 
     // Update the Photo record with thumbnail URLs
-    const photo = await prisma.photo.update({
-      where: { id: photoId },
-      data: {
-        thumbnailUrl,
-        publicId,
-        // Store medium/small URLs in metadata if needed (future: add columns)
-        // For now, thumbnailUrl is the primary (400px)
-      },
-      select: {
-        id: true,
-        galleryId: true,
-        thumbnailUrl: true,
-        publicId: true,
-        filename: true,
-      },
-    });
-
-    if (!photo) {
+    let photo;
+    try {
+      photo = await prisma.photo.update({
+        where: { id: photoId },
+        data: {
+          thumbnailUrl,
+          publicId,
+        },
+        select: {
+          id: true,
+          galleryId: true,
+          thumbnailUrl: true,
+          publicId: true,
+          filename: true,
+        },
+      });
+    } catch (error) {
+      // Prisma P2025: Record not found
       console.error(`[Webhook/Thumbnail] Photo ${photoId} not found`);
       return errorResponse('Photo not found', 404);
     }
