@@ -7,8 +7,7 @@ import { updateStorageUsage, getStorageAccountById } from '@/lib/storage/account
 import { publishPhotoUploaded } from '@/lib/ably';
 import { z } from 'zod';
 import {
-  STORAGE_QUOTA_PER_CLIENT_BYTES,
-  STORAGE_QUOTA_PER_CLIENT_GB,
+  DEFAULT_STORAGE_QUOTA_GB,
 } from '@/lib/upload/constants';
 import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
 import { queueThumbnailGeneration } from '@/lib/cloudflare-queue';
@@ -74,7 +73,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // RACE CONDITION FIX: Verify quota again before creating photo
+    // RACE CONDITION FIX: Re-check quota with server-side file size
     const gallery = await prisma.gallery.findUnique({
       where: { id: galleryId },
       select: {
@@ -88,6 +87,16 @@ export async function POST(request: Request) {
 
     if (gallery) {
       const clientId = gallery.event.clientId;
+
+      // Get client's storage quota (configurable per client)
+      const client = await prisma.client.findUnique({
+        where: { id: clientId },
+        select: { storageQuotaGB: true },
+      });
+
+      const storageQuotaGB = client?.storageQuotaGB ?? DEFAULT_STORAGE_QUOTA_GB;
+      const storageQuotaBytes = BigInt(storageQuotaGB * 1024 * 1024 * 1024);
+
       const storageUsage = await prisma.photo.aggregate({
         where: {
           gallery: {
@@ -102,27 +111,23 @@ export async function POST(request: Request) {
       });
 
       const totalUsedStorage = storageUsage._sum.fileSize || BigInt(0);
-      const storageQuotaBytes = BigInt(STORAGE_QUOTA_PER_CLIENT_BYTES);
 
       if (totalUsedStorage + BigInt(actualFileSize) > storageQuotaBytes) {
-        // Rollback: delete the uploaded file from R2 using correct storage account
+        // Rollback: delete the uploaded file from R2
         if (r2Key) {
           try {
-            // Get credentials for the specific storage account
             const { credentials: r2Creds } = await getR2Credentials(storageAccountId || undefined);
             await deleteFromR2(r2Key, r2Creds);
           } catch (err) {
             console.error('Failed to rollback R2 upload:', err);
           }
         }
-        
-        // Always cleanup session - if R2 delete failed, session remains for retry
+
         await cleanupUploadSession(uploadId).catch(() => {});
-        
-        const usedGB = (totalUsedStorage / BigInt(1073741824)).toString();
-        const usedGBFloat = parseFloat(usedGB) + (Number(totalUsedStorage % BigInt(1073741824)) / 1073741824);
+
+        const usedGB = Number(totalUsedStorage) / 1073741824;
         return errorResponse(
-          `Storage quota exceeded. Used: ${usedGBFloat.toFixed(2)}GB / ${STORAGE_QUOTA_PER_CLIENT_GB}GB`,
+          `Storage quota exceeded. Used: ${usedGB.toFixed(2)}GB / ${storageQuotaGB}GB`,
           413
         );
       }

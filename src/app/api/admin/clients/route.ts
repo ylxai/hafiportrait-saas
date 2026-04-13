@@ -28,6 +28,16 @@ export async function GET(request: Request) {
         orderBy: { createdAt: 'desc' },
         take: limit,
         skip,
+        select: {
+          id: true,
+          nama: true,
+          email: true,
+          phone: true,
+          instagram: true,
+          storageQuotaGB: true,
+          createdAt: true,
+          updatedAt: true,
+        },
       }),
       prisma.client.count(),
     ]);

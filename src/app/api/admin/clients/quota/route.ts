@@ -1,0 +1,127 @@
+import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
+import { prisma } from '@/lib/db';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/options';
+import { z } from 'zod';
+
+const updateQuotaSchema = z.object({
+  clientId: z.string().min(1, 'Client ID is required'),
+  storageQuotaGB: z.number()
+    .int('Quota must be a whole number')
+    .min(1, 'Minimum quota is 1 GB')
+    .max(1000, 'Maximum quota is 1000 GB'),
+});
+
+export async function PATCH(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return errorResponse('Unauthorized', 401);
+    }
+
+    const body = await request.json();
+    const validation = updateQuotaSchema.safeParse(body);
+
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+    }
+
+    const { clientId, storageQuotaGB } = validation.data;
+
+    // Verify client exists
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+      select: { id: true, nama: true, email: true },
+    });
+
+    if (!client) {
+      return errorResponse('Client not found', 404);
+    }
+
+    // Update quota
+    await prisma.client.update({
+      where: { id: clientId },
+      data: { storageQuotaGB },
+    });
+
+    console.log(`[Quota] Updated quota for ${client.nama} (${client.email}) to ${storageQuotaGB}GB`);
+
+    return successResponse({
+      clientId,
+      clientName: client.nama,
+      storageQuotaGB,
+    });
+  } catch (error) {
+    console.error('Error updating client quota:', error);
+    if (error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === 'P2025') {
+      return errorResponse('Client not found', 404);
+    }
+    return serverErrorResponse('Failed to update client quota');
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return errorResponse('Unauthorized', 401);
+    }
+
+    const { searchParams } = new URL(request.url);
+    const clientId = searchParams.get('clientId');
+
+    if (!clientId) {
+      return errorResponse('clientId query parameter is required', 400);
+    }
+
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+      select: {
+        id: true,
+        nama: true,
+        email: true,
+        storageQuotaGB: true,
+      },
+    });
+
+    if (!client) {
+      return errorResponse('Client not found', 404);
+    }
+
+    // Calculate usage
+    const usage = await prisma.photo.aggregate({
+      where: {
+        gallery: {
+          event: {
+            clientId,
+          },
+        },
+      },
+      _sum: {
+        fileSize: true,
+      },
+      _count: true,
+    });
+
+    const totalUsed = usage._sum.fileSize || BigInt(0);
+    const quotaBytes = BigInt(client.storageQuotaGB * 1024 * 1024 * 1024);
+    const usagePercent = quotaBytes > 0 ? Number((totalUsed * BigInt(100)) / quotaBytes) : 0;
+
+    return successResponse({
+      client: {
+        id: client.id,
+        nama: client.nama,
+        email: client.email,
+        storageQuotaGB: client.storageQuotaGB,
+        usedStorageBytes: totalUsed.toString(),
+        usedStorageGB: (Number(totalUsed) / 1073741824).toFixed(2),
+        usagePercent,
+        photoCount: usage._count,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching client quota:', error);
+    return serverErrorResponse('Failed to fetch client quota');
+  }
+}
