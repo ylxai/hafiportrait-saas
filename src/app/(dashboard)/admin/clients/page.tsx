@@ -57,6 +57,17 @@ export default function ClientsPage() {
     storageQuotaGB: 10,
   });
 
+  const handleQuotaChange = (value: string) => {
+    if (value === '') {
+      setFormData({ ...formData, storageQuotaGB: 0 });
+    } else {
+      const parsed = parseInt(value);
+      if (!isNaN(parsed)) {
+        setFormData({ ...formData, storageQuotaGB: parsed });
+      }
+    }
+  };
+
   useEffect(() => {
     fetchClients();
   }, []);
@@ -99,7 +110,7 @@ export default function ClientsPage() {
       email: formData.email,
       phone: formData.phone || null,
       instagram: formData.instagram || null,
-      storageQuotaGB: formData.storageQuotaGB,
+      storageQuotaGB: formData.storageQuotaGB || 10,
     };
 
     try {
@@ -340,8 +351,8 @@ export default function ClientsPage() {
                 type="number"
                 min={1}
                 max={1000}
-                value={formData.storageQuotaGB}
-                onChange={(e) => setFormData({ ...formData, storageQuotaGB: parseInt(e.target.value) || 10 })}
+                value={formData.storageQuotaGB === 0 ? '' : formData.storageQuotaGB}
+                onChange={(e) => handleQuotaChange(e.target.value)}
               />
               <p className="text-xs text-muted-foreground mt-1">Default: 10 GB. Maksimal 1000 GB.</p>
             </div>

@@ -135,17 +135,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Quota warning checks (log + notify when approaching limits)
-    const usagePercent = Number((totalUsedStorage * BigInt(100)) / storageQuotaBytes);
-    const usedGB = Number(totalUsedStorage) / 1073741824;
+    // Quota warning checks (log when crossing threshold)
+    const usagePercentBefore = Number((totalUsedStorage * BigInt(100)) / storageQuotaBytes);
+    const usagePercentAfter = Number(((totalUsedStorage + BigInt(fileSize)) * BigInt(100)) / storageQuotaBytes);
+    const usedGBAfter = Number(totalUsedStorage + BigInt(fileSize)) / 1073741824;
+
     for (const threshold of QUOTA_WARNING_THRESHOLDS) {
-      if (usagePercent >= threshold && usagePercent < threshold + 5) {
-        // Only warn once per threshold (avoid spam on every upload)
-        const prevThreshold = Math.floor(Number(totalUsedStorage * BigInt(100) / storageQuotaBytes) / 5) * 5;
-        if (prevThreshold < threshold) {
-          console.warn(`[Quota Warning] Client ${client?.nama || clientId} at ${usagePercent}% (${usedGB.toFixed(2)}GB / ${storageQuotaGB}GB)`);
-          // Future: send Ably notification to admin dashboard
-        }
+      if (usagePercentBefore < threshold && usagePercentAfter >= threshold) {
+        console.warn(`[Quota Warning] Client ${client?.nama || clientId} crossed ${threshold}% threshold (${usedGBAfter.toFixed(2)}GB / ${storageQuotaGB}GB)`);
+        // Future: send Ably notification to admin dashboard
       }
     }
 

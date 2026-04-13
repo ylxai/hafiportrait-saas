@@ -105,8 +105,9 @@ export async function GET(request: Request) {
     });
 
     const totalUsed = usage._sum.fileSize || BigInt(0);
-    const quotaBytes = BigInt(client.storageQuotaGB * 1024 * 1024 * 1024);
-    const usagePercent = quotaBytes > 0 ? Number((totalUsed * BigInt(100)) / quotaBytes) : 0;
+    const BYTES_PER_GB = BigInt(1024 * 1024 * 1024);
+    const quotaBytes = BigInt(client.storageQuotaGB) * BYTES_PER_GB;
+    const usagePercent = quotaBytes > BigInt(0) ? Number((totalUsed * BigInt(100)) / quotaBytes) : 0;
 
     return successResponse({
       client: {
@@ -116,7 +117,7 @@ export async function GET(request: Request) {
         storageQuotaGB: client.storageQuotaGB,
         usedStorageBytes: totalUsed.toString(),
         usedStorageGB: (Number(totalUsed) / 1073741824).toFixed(2),
-        usagePercent,
+        usagePercent: usagePercent.toString(),
         photoCount: usage._count,
       },
     });
