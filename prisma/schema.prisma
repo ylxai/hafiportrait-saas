@@ -121,11 +121,15 @@ model Photo {
   createdAt       DateTime @default(now())
   
   storageAccountId String?
-  storageAccount   StorageAccount? @relation(fields: [storageAccountId], references: [id])
-  
+  storageAccount   StorageAccount? @relation("StorageAccount", fields: [storageAccountId], references: [id])
+
+  cloudinaryAccountId String?
+  cloudinaryAccount   StorageAccount? @relation("CloudinaryAccount", fields: [cloudinaryAccountId], references: [id])
+
   selections      PhotoSelection[]
 
   @@index([storageAccountId])
+  @@index([cloudinaryAccountId])
   @@index([publicId])
   @@index([galleryId])
   @@index([galleryId, order])
@@ -214,7 +218,8 @@ model StorageAccount {
   
   createdAt     DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
-  photos        Photo[]
+  photos        Photo[]        @relation("StorageAccount")
+  cloudinaryPhotos Photo[]     @relation("CloudinaryAccount")
 
   @@index([provider, isActive])
   @@index([isDefault])

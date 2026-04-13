@@ -2,17 +2,44 @@ import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/r
 import { cleanupExpiredUploadSessions } from '@/lib/upload/cleanup';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { timingSafeEqual } from 'node:crypto';
+
+// Verify cleanup secret (for cron worker or external cron)
+function verifyCleanupSecret(request: Request): boolean {
+  const auth = request.headers.get('Authorization');
+  const secret = process.env.VPS_CLEANUP_SECRET || process.env.WEBHOOK_SECRET;
+  if (!secret || !auth) return false;
+
+  const expected = `Bearer ${secret}`;
+  if (auth.length !== expected.length) return false;
+
+  return timingSafeEqual(
+    Buffer.from(auth),
+    Buffer.from(expected)
+  );
+}
 
 export async function POST(request: Request) {
   try {
+    // Check auth: either NextAuth session OR cleanup secret (for cron worker)
+    let isAuthenticated = false;
+
+    // Try NextAuth session first (admin dashboard manual cleanup)
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return errorResponse('Unauthorized', 401);
+    if (session?.user?.role === 'admin') {
+      isAuthenticated = true;
     }
 
-    // Admin role check - only admins can cleanup
-    if (session.user.role !== 'admin') {
-      return errorResponse('Forbidden - Admin access required', 403);
+    // Fall back to cleanup secret (for Cloudflare cron worker or external cron)
+    if (!isAuthenticated) {
+      if (!verifyCleanupSecret(request)) {
+        return errorResponse('Unauthorized', 401);
+      }
+      isAuthenticated = true;
+    }
+
+    if (!isAuthenticated) {
+      return errorResponse('Unauthorized', 401);
     }
 
     const { searchParams } = new URL(request.url);
@@ -22,8 +49,8 @@ export async function POST(request: Request) {
     const deletedCount = await cleanupExpiredUploadSessions(dryRun);
 
     return successResponse({
-      message: dryRun 
-        ? `Would delete ${deletedCount} expired sessions` 
+      message: dryRun
+        ? `Would delete ${deletedCount} expired sessions`
         : `Deleted ${deletedCount} expired upload sessions`,
       deletedCount,
       dryRun,

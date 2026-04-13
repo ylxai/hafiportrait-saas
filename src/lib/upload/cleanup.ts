@@ -28,26 +28,15 @@ export async function cleanupExpiredUploadSessions(dryRun: boolean = false): Pro
 }
 
 // MEDIUM PRIORITY FIX: Removed setInterval - incompatible with serverless/edge environments
-// 
-// RECOMMENDED: Use Cloudflare Cron Triggers for production
-// See: https://developers.cloudflare.com/workers/configuration/cron-triggers/
 //
-// Example wrangler.toml configuration:
-// [triggers]
-// crons = ["*/30 * * * *"]  # Every 30 minutes
+// DEPLOYED: Cloudflare Cron Trigger handles cleanup every 30 minutes
+// See: workers/wrangler.toml [triggers] crons = ["*/30 * * * *"]
 //
-// Then in your Cloudflare Worker:
-// export default {
-//   async scheduled(event, env, ctx) {
-//     await cleanupExpiredUploadSessions();
-//   }
-// }
+// The deletion worker (workers/deletion-worker.ts) implements the `scheduled` handler
+// which calls POST /api/admin/upload/cleanup with VPS_CLEANUP_SECRET.
 //
-// ALTERNATIVE: For non-Edge deployments, create API endpoint:
-// GET /api/admin/cleanup/upload-sessions (protected with auth)
-// Then use external cron service (e.g., cron-job.org) to call it every 30 minutes
-//
-// NOTE: scheduleUploadSessionCleanup() below is DEPRECATED and only runs once on startup
+// ALTERNATIVE: Manual cleanup via admin dashboard (calls same endpoint with NextAuth session)
+// Or external cron service (e.g., cron-job.org) POST to /api/admin/upload/cleanup
 
 /**
  * @deprecated Use Cloudflare Cron Triggers or external cron service instead

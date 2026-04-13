@@ -3,13 +3,15 @@ import { verifyR2Upload, cleanupUploadSession, deleteFromR2, getR2Credentials } 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
-import { updateStorageUsage } from '@/lib/storage/accounts';
+import { updateStorageUsage, getStorageAccountById } from '@/lib/storage/accounts';
 import { publishPhotoUploaded } from '@/lib/ably';
 import { z } from 'zod';
 import {
   STORAGE_QUOTA_PER_CLIENT_BYTES,
   STORAGE_QUOTA_PER_CLIENT_GB,
 } from '@/lib/upload/constants';
+import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
+import { queueThumbnailGeneration } from '@/lib/cloudflare-queue';
 
 
 // Zod validation schema for upload complete request
@@ -129,17 +131,42 @@ export async function POST(request: Request) {
     const imgWidth = width || 0;
     const imgHeight = height || 0;
 
+    // Two-stage thumbnail strategy:
+    // 1. IMMEDIATE: Construct Cloudinary image/fetch URL (works instantly, slow on first hit)
+    // 2. ASYNC: Queue worker to upload real thumbnail to Cloudinary (replaces fetch URL)
+    const cloudinaryAccountId = verification.cloudinaryAccountId || null;
+    let thumbnailUrl: string | null = null;
+    let cloudinaryAccount: Awaited<ReturnType<typeof getStorageAccountById>> | null = null;
+
+    if (cloudinaryAccountId) {
+      cloudinaryAccount = await getStorageAccountById(cloudinaryAccountId);
+      if (cloudinaryAccount?.cloudName) {
+        // Stage 1: Temporary fetch URL (will be replaced by worker)
+        thumbnailUrl = getCloudinaryThumbnailUrl(publicUrl, {
+          width: 400,
+          height: 400,
+          cloudName: cloudinaryAccount.cloudName,
+        });
+      }
+    }
+
+    // publicId is null until worker generates real thumbnail
+    const publicId: string | null = null;
+
     const photo = await prisma.photo.create({
       data: {
         galleryId,
         filename,
         url: publicUrl,
         r2Key: r2Key,
+        thumbnailUrl,
+        publicId,
         width: imgWidth,
         height: imgHeight,
         fileSize: BigInt(actualFileSize),
         fileHash: photoFileHash,
         storageAccountId: storageAccountId || null,
+        cloudinaryAccountId: cloudinaryAccountId || null,
       },
     });
 
@@ -147,10 +174,29 @@ export async function POST(request: Request) {
       await updateStorageUsage(storageAccountId, BigInt(actualFileSize));
     }
 
+    // Stage 2: Queue async thumbnail generation
+    // Worker will fetch from R2, upload to Cloudinary, and update DB
+    if (cloudinaryAccount?.cloudName && cloudinaryAccount.apiKey && cloudinaryAccount.apiSecret) {
+      await queueThumbnailGeneration({
+        photoId: photo.id,
+        r2Url: publicUrl,
+        galleryId,
+        filename,
+        cloudinaryCredentials: {
+          cloudName: cloudinaryAccount.cloudName,
+          apiKey: cloudinaryAccount.apiKey,
+          apiSecret: cloudinaryAccount.apiSecret,
+        },
+      }).catch((err) => {
+        console.error('[Upload] Failed to queue thumbnail generation:', err);
+        // Non-critical — image/fetch URL still works as fallback
+      });
+    }
+
     await publishPhotoUploaded(galleryId, {
       photoId: photo.id,
       filename: photo.filename,
-      thumbnailUrl: null,
+      thumbnailUrl: thumbnailUrl,
     });
 
     await cleanupUploadSession(uploadId);
@@ -160,6 +206,8 @@ export async function POST(request: Request) {
         id: photo.id,
         filename: photo.filename,
         url: photo.url,
+        thumbnailUrl: photo.thumbnailUrl,
+        publicId: photo.publicId,
         width: photo.width,
         height: photo.height,
         fileSize: photo.fileSize?.toString() || null,
