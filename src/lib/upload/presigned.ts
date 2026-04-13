@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db';
 import { PRESIGNED_URL_EXPIRY_SECONDS, UPLOAD_SESSION_EXPIRY_MS } from './constants';
 
 // Get R2 account credentials from database
-async function getR2Credentials(accountId?: string): Promise<{ credentials: R2Credentials; bucket: string }> {
+export async function getR2Credentials(accountId?: string): Promise<{ credentials: R2Credentials; bucket: string }> {
   // If specific account requested
   if (accountId) {
     const account = await prisma.storageAccount.findUnique({

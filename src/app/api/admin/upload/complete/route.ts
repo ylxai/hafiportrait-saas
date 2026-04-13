@@ -1,5 +1,5 @@
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
-import { verifyR2Upload, cleanupUploadSession, deleteFromR2 } from '@/lib/upload/presigned';
+import { verifyR2Upload, cleanupUploadSession, deleteFromR2, getR2Credentials } from '@/lib/upload/presigned';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
@@ -103,22 +103,19 @@ export async function POST(request: Request) {
       const storageQuotaBytes = BigInt(STORAGE_QUOTA_PER_CLIENT_BYTES);
 
       if (totalUsedStorage + BigInt(actualFileSize) > storageQuotaBytes) {
-        // Rollback: delete the uploaded file from R2
-        // Only cleanup session if R2 delete succeeds
-        let r2Deleted = false;
+        // Rollback: delete the uploaded file from R2 using correct storage account
         if (r2Key) {
           try {
-            await deleteFromR2(r2Key);
-            r2Deleted = true;
+            // Get credentials for the specific storage account
+            const { credentials: r2Creds } = await getR2Credentials(storageAccountId || undefined);
+            await deleteFromR2(r2Key, r2Creds);
           } catch (err) {
             console.error('Failed to rollback R2 upload:', err);
           }
         }
         
-        // Only delete session if R2 was successfully cleaned up
-        if (r2Deleted) {
-          await cleanupUploadSession(uploadId);
-        }
+        // Always cleanup session - if R2 delete failed, session remains for retry
+        await cleanupUploadSession(uploadId).catch(() => {});
         
         const usedGB = (totalUsedStorage / BigInt(1073741824)).toString();
         const usedGBFloat = parseFloat(usedGB) + (Number(totalUsedStorage % BigInt(1073741824)) / 1073741824);
