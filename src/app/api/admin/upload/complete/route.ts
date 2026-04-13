@@ -1,5 +1,5 @@
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
-import { verifyR2Upload, cleanupUploadSession } from '@/lib/upload/presigned';
+import { verifyR2Upload, cleanupUploadSession, deleteFromR2 } from '@/lib/upload/presigned';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
@@ -108,7 +108,12 @@ export async function POST(request: Request) {
 
       if (totalUsedStorage + BigInt(fileSize) > storageQuotaBytes) {
         // Rollback: delete the uploaded file from R2
+        if (r2Key) {
+          await deleteFromR2(r2Key).catch(err => console.error('Failed to rollback R2 upload:', err));
+        }
         await cleanupUploadSession(uploadId);
+        
+        // Use String for BigInt to avoid precision loss
         const usedGB = (totalUsedStorage / BigInt(1073741824)).toString();
         const usedGBFloat = parseFloat(usedGB) + (Number(totalUsedStorage % BigInt(1073741824)) / 1073741824);
         return errorResponse(

@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const dryRun = searchParams.get('dryRun') === 'true';
 
     // Cleanup expired upload sessions
-    const deletedCount = await cleanupExpiredUploadSessions();
+    const deletedCount = await cleanupExpiredUploadSessions(dryRun);
 
     return successResponse({
       message: dryRun 

@@ -29,9 +29,9 @@ const PresignedRequestSchema = z.object({
       (val) => ALLOWED_MIME_TYPES.includes(val) || val.startsWith('image/'),
       'Invalid content type'
     ),
-  galleryId: z.string().uuid('Invalid gallery ID'),
-  r2AccountId: z.string().uuid().optional(),
-  cloudinaryAccountId: z.string().uuid().optional(),
+  galleryId: z.string().min(1, 'Invalid gallery ID'),
+  r2AccountId: z.string().optional(),
+  cloudinaryAccountId: z.string().optional(),
   fileSize: z.number()
     .int('File size must be integer')
     .positive('File size must be positive')
@@ -52,14 +52,6 @@ function validateFileType(filename: string, _contentType: string): { valid: bool
     return {
       valid: false,
       error: `Format file tidak didukung: ${extension}. Format yang diizinkan: ${ALLOWED_EXTENSIONS.join(', ')}`,
-    };
-  }
-  
-  // Check MIME type - already validated by Zod, but double-check extension
-  if (!ALLOWED_EXTENSIONS.includes(extension)) {
-    return {
-      valid: false,
-      error: `Extension not allowed: ${extension}`,
     };
   }
   

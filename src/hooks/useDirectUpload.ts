@@ -187,6 +187,8 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       if (!fileHash) {
         try {
           fileHash = await calculateFileHash(fileToUpload);
+          // Save hash to state so it doesn't need to be recalculated on retry
+          updateFileStatus(uploadFile.id, { fileHash });
         } catch (hashError) {
           console.warn('Failed to calculate file hash, proceeding without integrity check:', hashError);
         }

@@ -1,7 +1,20 @@
 // MEDIUM PRIORITY FIX #5: Cleanup expired upload sessions
 import { prisma } from '@/lib/db';
 
-export async function cleanupExpiredUploadSessions(): Promise<number> {
+export async function cleanupExpiredUploadSessions(dryRun: boolean = false): Promise<number> {
+  if (dryRun) {
+    // Count expired sessions without deleting
+    const count = await prisma.uploadSession.count({
+      where: {
+        expiresAt: {
+          lt: new Date(),
+        },
+        completedAt: null,
+      },
+    });
+    return count;
+  }
+
   const result = await prisma.uploadSession.deleteMany({
     where: {
       expiresAt: {
