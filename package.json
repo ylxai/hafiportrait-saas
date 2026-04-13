@@ -10,8 +10,6 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "workers": "tsx scripts/workers.ts",
-    "workers:prod": "node dist/scripts/workers.js",
     "prepare": "husky"
   },
   "dependencies": {

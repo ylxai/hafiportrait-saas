@@ -39,7 +39,6 @@ const PresignedRequestSchema = z.object({
   fileHash: z.string().optional(), // Optional SHA-256 hash for integrity verification
 });
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type _PresignedRequest = z.infer<typeof PresignedRequestSchema>;
 
 

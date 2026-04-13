@@ -30,8 +30,13 @@ queue = "storage-deletion"
 max_batch_size = 20
 max_retries = 3
 
+# Cron trigger for upload session cleanup (every 30 minutes)
+[triggers]
+crons = ["*/30 * * * *"]
+
 # Secrets (use `wrangler secret put` to set these):
 # - VPS_WEBHOOK_SECRET (required for webhook authentication)
+# - VPS_CLEANUP_SECRET (required for cleanup cron authentication)
 #
 # Note: CLOUDINARY_* credentials are NOT here!
 # They come from database via message body (support multiple accounts)

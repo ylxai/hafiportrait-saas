@@ -3,14 +3,74 @@ import { verifyR2Upload, cleanupUploadSession, deleteFromR2, getR2Credentials } 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
-import { updateStorageUsage } from '@/lib/storage/accounts';
+import { updateStorageUsage, getStorageAccountById } from '@/lib/storage/accounts';
 import { publishPhotoUploaded } from '@/lib/ably';
 import { z } from 'zod';
 import {
   STORAGE_QUOTA_PER_CLIENT_BYTES,
   STORAGE_QUOTA_PER_CLIENT_GB,
 } from '@/lib/upload/constants';
+import { generateThumbnailUrl, uploadToCloudinary } from '@/lib/storage/cloudinary';
+import { getR2Client, R2Credentials } from '@/lib/storage/r2';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
 
+
+// Fetch file from R2 and upload to Cloudinary for thumbnail generation
+async function generateThumbnailForPhoto(
+  r2Key: string,
+  r2Credentials: R2Credentials,
+  cloudinaryAccountId: string | null,
+  galleryId: string,
+  filename: string
+): Promise<{ thumbnailUrl: string; publicId: string } | null> {
+  try {
+    // Get Cloudinary credentials
+    if (!cloudinaryAccountId) {
+      console.warn('[Thumbnail] No Cloudinary account specified, skipping thumbnail generation');
+      return null;
+    }
+
+    const cloudinaryAccount = await getStorageAccountById(cloudinaryAccountId);
+    if (!cloudinaryAccount || !cloudinaryAccount.cloudName || !cloudinaryAccount.apiKey || !cloudinaryAccount.apiSecret) {
+      console.warn('[Thumbnail] Invalid Cloudinary account, skipping thumbnail generation');
+      return null;
+    }
+
+    const cloudinaryCredentials = {
+      cloudName: cloudinaryAccount.cloudName,
+      apiKey: cloudinaryAccount.apiKey,
+      apiSecret: cloudinaryAccount.apiSecret,
+    };
+
+    // Fetch file from R2
+    const r2Client = getR2Client(r2Credentials);
+    const getObjectCommand = new GetObjectCommand({
+      Bucket: r2Credentials.bucketName,
+      Key: r2Key,
+    });
+
+    const response = await r2Client.send(getObjectCommand);
+    if (!response.Body) {
+      console.error('[Thumbnail] Failed to fetch file from R2: empty body');
+      return null;
+    }
+
+    const fileBuffer = Buffer.from(await response.Body.transformToByteArray());
+
+    // Upload to Cloudinary
+    const folder = `photos/${galleryId}`;
+    const { publicId } = await uploadToCloudinary(fileBuffer, folder, cloudinaryCredentials);
+
+    // Generate thumbnail URL
+    const thumbnailUrl = generateThumbnailUrl(publicId, 400, 400, cloudinaryCredentials);
+
+    console.log(`[Thumbnail] Generated thumbnail for ${filename}: ${publicId}`);
+    return { thumbnailUrl, publicId };
+  } catch (error) {
+    console.error('[Thumbnail] Failed to generate thumbnail:', error);
+    return null; // Graceful fallback
+  }
+}
 
 // Zod validation schema for upload complete request
 const CompleteUploadSchema = z.object({
@@ -129,17 +189,44 @@ export async function POST(request: Request) {
     const imgWidth = width || 0;
     const imgHeight = height || 0;
 
+    // Generate thumbnail BEFORE creating photo record
+    // Get the cloudinaryAccountId from the upload session
+    const cloudinaryAccountId = verification.cloudinaryAccountId || null;
+
+    // Fetch from R2 and upload to Cloudinary for thumbnail
+    let thumbnailUrl: string | null = null;
+    let publicId: string | null = null;
+
+    if (r2Key) {
+      const { credentials: r2Creds } = await getR2Credentials(storageAccountId || undefined);
+      const thumbnail = await generateThumbnailForPhoto(
+        r2Key,
+        r2Creds,
+        cloudinaryAccountId,
+        galleryId,
+        filename
+      );
+
+      if (thumbnail) {
+        thumbnailUrl = thumbnail.thumbnailUrl;
+        publicId = thumbnail.publicId;
+      }
+    }
+
     const photo = await prisma.photo.create({
       data: {
         galleryId,
         filename,
         url: publicUrl,
         r2Key: r2Key,
+        thumbnailUrl,
+        publicId,
         width: imgWidth,
         height: imgHeight,
         fileSize: BigInt(actualFileSize),
         fileHash: photoFileHash,
         storageAccountId: storageAccountId || null,
+        cloudinaryAccountId: cloudinaryAccountId || null,
       },
     });
 
@@ -150,7 +237,7 @@ export async function POST(request: Request) {
     await publishPhotoUploaded(galleryId, {
       photoId: photo.id,
       filename: photo.filename,
-      thumbnailUrl: null,
+      thumbnailUrl: thumbnailUrl,
     });
 
     await cleanupUploadSession(uploadId);
@@ -160,6 +247,8 @@ export async function POST(request: Request) {
         id: photo.id,
         filename: photo.filename,
         url: photo.url,
+        thumbnailUrl: photo.thumbnailUrl,
+        publicId: photo.publicId,
         width: photo.width,
         height: photo.height,
         fileSize: photo.fileSize?.toString() || null,

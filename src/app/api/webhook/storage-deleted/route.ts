@@ -1,6 +1,7 @@
 import { decreaseStorageUsage } from '@/lib/storage/accounts';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { z } from 'zod';
+import { timingSafeEqual } from 'node:crypto';
 
 /**
  * Webhook handler for storage deletion callback from Cloudflare Workers
@@ -18,10 +19,19 @@ const storageDeletedSchema = z.object({
   fileSize: z.union([z.number(), z.string()]).optional(),
 });
 
-// Verify webhook secret
+// Verify webhook secret using timing-safe comparison
 function verifyWebhook(request: Request): boolean {
   const auth = request.headers.get('Authorization');
-  return auth === `Bearer ${process.env.WEBHOOK_SECRET}`;
+  const secret = process.env.VPS_WEBHOOK_SECRET || process.env.WEBHOOK_SECRET;
+  if (!secret || !auth) return false;
+
+  const expected = `Bearer ${secret}`;
+  if (auth.length !== expected.length) return false;
+
+  return timingSafeEqual(
+    Buffer.from(auth),
+    Buffer.from(expected)
+  );
 }
 
 /**

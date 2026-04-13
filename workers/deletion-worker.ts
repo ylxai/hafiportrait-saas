@@ -1,21 +1,28 @@
 /**
  * Cloudflare Workers - Storage Deletion Worker
- * 
+ *
  * This worker handles deletion of photos from:
  * 1. R2 Storage (original files)
  * 2. Cloudinary (thumbnails)
- * 
+ *
  * Cloudinary credentials are provided via message body (from database)
  * After deletion, it calls back to Vercel webhook to update database
+ *
+ * This worker also handles scheduled cleanup of expired upload sessions
+ * via Cloudflare Cron Triggers (every 30 minutes).
  */
 
 export interface Env {
   // R2 Bucket binding
   PHOTO_BUCKET: R2Bucket;
-  
+
   // Vercel webhook for database update
   VPS_WEBHOOK_URL: string;
   VPS_WEBHOOK_SECRET: string;
+
+  // VPS cleanup endpoint (for scheduled upload session cleanup)
+  VPS_CLEANUP_URL?: string;
+  VPS_CLEANUP_SECRET?: string;
 }
 
 interface DeletionJob {
@@ -34,29 +41,61 @@ interface DeletionJob {
 }
 
 export default {
+  // Handle queue messages (deletion jobs)
   async queue(batch: MessageBatch<any>, env: Env, ctx: ExecutionContext) {
     console.log(`[DeletionWorker] Processing ${batch.messages.length} deletion jobs`);
-    
+
     for (const message of batch.messages) {
       const job = message.body as DeletionJob;
-      
+
       try {
         const result = await processDeletion(job, env);
-        
+
         // Callback to Vercel to update database
         await callbackToVercel(job, result, env);
-        
+
         // Acknowledge message (mark as done)
         message.ack();
-        
+
         console.log(`[DeletionWorker] ✅ Deleted: ${job.photoId}`);
-        
+
       } catch (error) {
         console.error(`[DeletionWorker] ❌ Failed: ${job.photoId}`, error);
-        
+
         // Retry with exponential backoff (handled by Cloudflare Queue)
         message.retry();
       }
+    }
+  },
+
+  // Handle cron-triggered scheduled events (upload session cleanup)
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    console.log('[DeletionWorker] Running scheduled upload session cleanup');
+
+    if (!env.VPS_CLEANUP_URL || !env.VPS_CLEANUP_SECRET) {
+      console.warn('[DeletionWorker] VPS_CLEANUP_URL or VPS_CLEANUP_SECRET not configured, skipping cleanup');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${env.VPS_CLEANUP_URL}/api/admin/upload/cleanup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${env.VPS_CLEANUP_SECRET}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[DeletionWorker] Cleanup endpoint returned ${response.status}: ${errorText}`);
+        return;
+      }
+
+      const result = await response.json();
+      console.log(`[DeletionWorker] ✅ Cleanup successful:`, result);
+    } catch (error) {
+      console.error('[DeletionWorker] Failed to run scheduled cleanup:', error);
     }
   },
 };
