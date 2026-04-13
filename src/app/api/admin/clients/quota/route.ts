@@ -29,27 +29,18 @@ export async function PATCH(request: Request) {
 
     const { clientId, storageQuotaGB } = validation.data;
 
-    // Verify client exists
-    const client = await prisma.client.findUnique({
-      where: { id: clientId },
-      select: { id: true, nama: true, email: true },
-    });
-
-    if (!client) {
-      return errorResponse('Client not found', 404);
-    }
-
-    // Update quota
-    await prisma.client.update({
+    // Update quota directly — Prisma throws P2025 if client not found
+    const updatedClient = await prisma.client.update({
       where: { id: clientId },
       data: { storageQuotaGB },
+      select: { nama: true, email: true },
     });
 
-    console.log(`[Quota] Updated quota for ${client.nama} (${client.email}) to ${storageQuotaGB}GB`);
+    console.log(`[Quota] Updated quota for ${updatedClient.nama} (${updatedClient.email}) to ${storageQuotaGB}GB`);
 
     return successResponse({
       clientId,
-      clientName: client.nama,
+      clientName: updatedClient.nama,
       storageQuotaGB,
     });
   } catch (error) {
