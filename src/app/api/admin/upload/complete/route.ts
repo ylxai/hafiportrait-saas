@@ -15,14 +15,10 @@ import {
 // Zod validation schema for upload complete request
 const CompleteUploadSchema = z.object({
   uploadId: z.string().min(1, 'Upload ID is required'),
-  fileSize: z.number().int().positive('File size must be positive'),
   width: z.number().int().min(0).optional().default(0),
   height: z.number().int().min(0).optional().default(0),
-  fileHash: z.string().optional(), // Optional SHA-256 hash for integrity/duplicate detection
 });
 
-// Complete upload: Verify R2 upload dan save metadata
-// Thumbnail akan di-generate on-demand oleh Cloudinary (auto-fetch dari R2 public URL)
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -30,7 +26,6 @@ export async function POST(request: Request) {
       return errorResponse('Unauthorized', 401);
     }
 
-    // Parse and validate request body with Zod
     const body = await request.json();
     const validation = CompleteUploadSchema.safeParse(body);
     
@@ -39,25 +34,28 @@ export async function POST(request: Request) {
       return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
     }
 
-    const { uploadId, fileSize, width, height, fileHash } = validation.data;
+    const { uploadId, width, height } = validation.data;
 
-    // Verifikasi upload ke R2 berhasil
-    const verification = await verifyR2Upload(uploadId, fileSize, width, height);
+    const verification = await verifyR2Upload(uploadId, 0, width, height);
 
     if (!verification.success) {
       return errorResponse(verification.error || 'Upload verification failed', 400);
     }
 
-    const { r2Key, publicUrl, filename, galleryId, storageAccountId } = verification;
+    const { r2Key, publicUrl, filename, galleryId, storageAccountId, fileSize: serverFileSize, fileHash: sessionFileHash } = verification;
 
     if (!r2Key || !publicUrl || !filename || !galleryId) {
       return errorResponse('Invalid upload verification data', 400);
     }
 
-    // FILE INTEGRITY FIX: If client provided hash, verify it matches
-    // Note: Full verification requires uploading hash to R2 or comparing on download
-    // For now, we store the hash for duplicate detection and future integrity checks
-    const photoFileHash = fileHash || null;
+    // Use server-side file size from R2 (NOT client-provided)
+    const actualFileSize = serverFileSize || 0;
+    if (actualFileSize === 0) {
+      return errorResponse('Unable to verify file size from storage', 400);
+    }
+
+    // Use hash from session (NOT from client payload) - client cannot rewrite
+    const photoFileHash = sessionFileHash || null;
 
     // DUPLICATE DETECTION: Check if file with same hash already exists in gallery
     if (photoFileHash) {
@@ -70,13 +68,11 @@ export async function POST(request: Request) {
       });
 
       if (existingPhoto) {
-        // Don't block upload, but log for admin review
         console.warn(`[Duplicate Detection] Potential duplicate: ${photoFileHash} in gallery ${galleryId} (existing: ${existingPhoto.filename})`);
       }
     }
 
     // RACE CONDITION FIX: Verify quota again before creating photo
-    // Get client ID from gallery
     const gallery = await prisma.gallery.findUnique({
       where: { id: galleryId },
       select: {
@@ -106,14 +102,24 @@ export async function POST(request: Request) {
       const totalUsedStorage = storageUsage._sum.fileSize || BigInt(0);
       const storageQuotaBytes = BigInt(STORAGE_QUOTA_PER_CLIENT_BYTES);
 
-      if (totalUsedStorage + BigInt(fileSize) > storageQuotaBytes) {
+      if (totalUsedStorage + BigInt(actualFileSize) > storageQuotaBytes) {
         // Rollback: delete the uploaded file from R2
+        // Only cleanup session if R2 delete succeeds
+        let r2Deleted = false;
         if (r2Key) {
-          await deleteFromR2(r2Key).catch(err => console.error('Failed to rollback R2 upload:', err));
+          try {
+            await deleteFromR2(r2Key);
+            r2Deleted = true;
+          } catch (err) {
+            console.error('Failed to rollback R2 upload:', err);
+          }
         }
-        await cleanupUploadSession(uploadId);
         
-        // Use String for BigInt to avoid precision loss
+        // Only delete session if R2 was successfully cleaned up
+        if (r2Deleted) {
+          await cleanupUploadSession(uploadId);
+        }
+        
         const usedGB = (totalUsedStorage / BigInt(1073741824)).toString();
         const usedGBFloat = parseFloat(usedGB) + (Number(totalUsedStorage % BigInt(1073741824)) / 1073741824);
         return errorResponse(
@@ -123,40 +129,33 @@ export async function POST(request: Request) {
       }
     }
 
-    // Get image dimensions if not provided
     const imgWidth = width || 0;
     const imgHeight = height || 0;
 
-    // Create photo record - NO THUMBNAIL GENERATION NEEDED
-    // Cloudinary will auto-fetch from R2 public URL on-demand
     const photo = await prisma.photo.create({
       data: {
         galleryId,
         filename,
-        url: publicUrl, // R2 public URL (original)
+        url: publicUrl,
         r2Key: r2Key,
         width: imgWidth,
         height: imgHeight,
-        fileSize: BigInt(fileSize),
-        fileHash: photoFileHash, // Store hash for duplicate detection
+        fileSize: BigInt(actualFileSize),
+        fileHash: photoFileHash,
         storageAccountId: storageAccountId || null,
-        // thumbnailUrl will be generated on-the-fly by Cloudinary
       },
     });
 
-    // Update storage usage
     if (storageAccountId) {
-      await updateStorageUsage(storageAccountId, BigInt(fileSize));
+      await updateStorageUsage(storageAccountId, BigInt(actualFileSize));
     }
 
-    // Notify client via Ably
     await publishPhotoUploaded(galleryId, {
       photoId: photo.id,
       filename: photo.filename,
-      thumbnailUrl: null, // Will be generated on-demand
+      thumbnailUrl: null,
     });
 
-    // Cleanup session
     await cleanupUploadSession(uploadId);
 
     return successResponse({
@@ -167,7 +166,6 @@ export async function POST(request: Request) {
         width: photo.width,
         height: photo.height,
         fileSize: photo.fileSize?.toString() || null,
-        // Note: thumbnail will be generated by Cloudinary on first view
       },
     });
   } catch (error) {

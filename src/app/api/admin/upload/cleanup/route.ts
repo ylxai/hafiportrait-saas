@@ -10,6 +10,11 @@ export async function POST(request: Request) {
       return errorResponse('Unauthorized', 401);
     }
 
+    // Admin role check - only admins can cleanup
+    if (session.user.role !== 'admin') {
+      return errorResponse('Forbidden - Admin access required', 403);
+    }
+
     const { searchParams } = new URL(request.url);
     const dryRun = searchParams.get('dryRun') === 'true';
 
