@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import useSWR from 'swr';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,8 +44,6 @@ type Event = {
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -66,31 +65,36 @@ export default function EventsPage() {
     paymentStatus: 'unpaid',
   });
 
+  // SWR for clients and packages (bounded, cached, no re-fetch on every page change)
+  const { data: clientsData } = useSWR('/api/admin/clients?limit=100', (url) =>
+    fetch(url).then(res => res.json()).then(d => d.data?.clients || d.clients || []),
+    { revalidateOnFocus: false, dedupingInterval: 300000 }
+  );
+  const { data: packagesData } = useSWR('/api/admin/packages?limit=100', (url) =>
+    fetch(url).then(res => res.json()).then(d => d.data?.packages || d.packages || []),
+    { revalidateOnFocus: false, dedupingInterval: 300000 }
+  );
+
+  const clients: Client[] = clientsData || [];
+  const packages: Package[] = packagesData || [];
+
   useEffect(() => {
-    fetchData();
+    fetchEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination.page]);
 
-  const fetchData = async () => {
+  const fetchEvents = async () => {
     try {
       setLoading(true);
-      const [eventsRes, clientsRes, packagesRes] = await Promise.all([
-        fetch(`/api/admin/events?page=${pagination.page}&limit=${pagination.limit}`),
-        fetch('/api/admin/clients'),
-        fetch('/api/admin/packages'),
-      ]);
+      const eventsRes = await fetch(`/api/admin/events?page=${pagination.page}&limit=${pagination.limit}`);
       const eventsData = await eventsRes.json();
-      const clientsData = await clientsRes.json();
-      const packagesData = await packagesRes.json();
-      
+
       setEvents(eventsData.data?.events || eventsData.events || []);
       if (eventsData.data?.pagination || eventsData.pagination) {
         setPagination(eventsData.data?.pagination || eventsData.pagination);
       }
-      setClients(clientsData.data?.clients || clientsData.clients || []);
-      setPackages(packagesData.data?.packages || packagesData.packages || []);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching events:', error);
     } finally {
       setLoading(false);
     }

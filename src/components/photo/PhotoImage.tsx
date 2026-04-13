@@ -74,7 +74,6 @@ export function PhotoImage({
           }
         }}
         priority={priority}
-        unoptimized
       />
     </div>
   );
