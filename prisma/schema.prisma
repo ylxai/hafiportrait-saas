@@ -131,6 +131,7 @@ model Photo {
   @@index([galleryId, order])
   @@index([galleryId, createdAt])
   @@index([fileHash])
+  @@index([galleryId, fileHash]) // For duplicate detection performance
 }
 
 model Selection {
