@@ -10,67 +10,8 @@ import {
   STORAGE_QUOTA_PER_CLIENT_BYTES,
   STORAGE_QUOTA_PER_CLIENT_GB,
 } from '@/lib/upload/constants';
-import { generateThumbnailUrl, uploadToCloudinary } from '@/lib/storage/cloudinary';
-import { getR2Client, R2Credentials } from '@/lib/storage/r2';
-import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
 
-
-// Fetch file from R2 and upload to Cloudinary for thumbnail generation
-async function generateThumbnailForPhoto(
-  r2Key: string,
-  r2Credentials: R2Credentials,
-  cloudinaryAccountId: string | null,
-  galleryId: string,
-  filename: string
-): Promise<{ thumbnailUrl: string; publicId: string } | null> {
-  try {
-    // Get Cloudinary credentials
-    if (!cloudinaryAccountId) {
-      console.warn('[Thumbnail] No Cloudinary account specified, skipping thumbnail generation');
-      return null;
-    }
-
-    const cloudinaryAccount = await getStorageAccountById(cloudinaryAccountId);
-    if (!cloudinaryAccount || !cloudinaryAccount.cloudName || !cloudinaryAccount.apiKey || !cloudinaryAccount.apiSecret) {
-      console.warn('[Thumbnail] Invalid Cloudinary account, skipping thumbnail generation');
-      return null;
-    }
-
-    const cloudinaryCredentials = {
-      cloudName: cloudinaryAccount.cloudName,
-      apiKey: cloudinaryAccount.apiKey,
-      apiSecret: cloudinaryAccount.apiSecret,
-    };
-
-    // Fetch file from R2
-    const r2Client = getR2Client(r2Credentials);
-    const getObjectCommand = new GetObjectCommand({
-      Bucket: r2Credentials.bucketName,
-      Key: r2Key,
-    });
-
-    const response = await r2Client.send(getObjectCommand);
-    if (!response.Body) {
-      console.error('[Thumbnail] Failed to fetch file from R2: empty body');
-      return null;
-    }
-
-    const fileBuffer = Buffer.from(await response.Body.transformToByteArray());
-
-    // Upload to Cloudinary
-    const folder = `photos/${galleryId}`;
-    const { publicId } = await uploadToCloudinary(fileBuffer, folder, cloudinaryCredentials);
-
-    // Generate thumbnail URL
-    const thumbnailUrl = generateThumbnailUrl(publicId, 400, 400, cloudinaryCredentials);
-
-    console.log(`[Thumbnail] Generated thumbnail for ${filename}: ${publicId}`);
-    return { thumbnailUrl, publicId };
-  } catch (error) {
-    console.error('[Thumbnail] Failed to generate thumbnail:', error);
-    return null; // Graceful fallback
-  }
-}
 
 // Zod validation schema for upload complete request
 const CompleteUploadSchema = z.object({
@@ -189,29 +130,25 @@ export async function POST(request: Request) {
     const imgWidth = width || 0;
     const imgHeight = height || 0;
 
-    // Generate thumbnail BEFORE creating photo record
-    // Get the cloudinaryAccountId from the upload session
+    // Generate thumbnail URL using Cloudinary image/fetch
+    // Cloudinary auto-fetches from R2, resizes, caches, and compresses
+    // NO server upload needed — just construct the URL
     const cloudinaryAccountId = verification.cloudinaryAccountId || null;
-
-    // Fetch from R2 and upload to Cloudinary for thumbnail
     let thumbnailUrl: string | null = null;
-    let publicId: string | null = null;
 
-    if (r2Key) {
-      const { credentials: r2Creds } = await getR2Credentials(storageAccountId || undefined);
-      const thumbnail = await generateThumbnailForPhoto(
-        r2Key,
-        r2Creds,
-        cloudinaryAccountId,
-        galleryId,
-        filename
-      );
-
-      if (thumbnail) {
-        thumbnailUrl = thumbnail.thumbnailUrl;
-        publicId = thumbnail.publicId;
+    if (cloudinaryAccountId) {
+      const cloudinaryAccount = await getStorageAccountById(cloudinaryAccountId);
+      if (cloudinaryAccount?.cloudName) {
+        thumbnailUrl = getCloudinaryThumbnailUrl(publicUrl, {
+          width: 400,
+          height: 400,
+          cloudName: cloudinaryAccount.cloudName,
+        });
       }
     }
+
+    // publicId is null for direct uploads (Cloudinary fetch, not stored)
+    const publicId: string | null = null;
 
     const photo = await prisma.photo.create({
       data: {
