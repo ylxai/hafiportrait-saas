@@ -55,7 +55,8 @@ export async function generatePresignedUploadUrl(
   contentType: string,
   galleryId: string,
   r2AccountId?: string,
-  cloudinaryAccountId?: string
+  cloudinaryAccountId?: string,
+  fileHash?: string // Optional: SHA-256 hash for integrity verification
 ): Promise<{
   presignedUrl: string;
   publicUrl: string;
@@ -129,6 +130,7 @@ export async function generatePresignedUploadUrl(
       filename,
       galleryId,
       fileSize: 0,
+      fileHash, // Store hash for integrity verification
       storageAccountId: actualR2AccountId,
       cloudinaryAccountId: actualCloudinaryAccountId,
       publicUrl,
