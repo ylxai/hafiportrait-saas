@@ -16,7 +16,9 @@ type Client = {
   email: string;
   phone: string | null;
   instagram: string | null;
+  storageQuotaGB: number;
   createdAt: string;
+  updatedAt: string;
 };
 
 const ClientAvatar = ({ name }: { name: string }) => {
@@ -52,7 +54,19 @@ export default function ClientsPage() {
     email: '',
     phone: '',
     instagram: '',
+    storageQuotaGB: 10,
   });
+
+  const handleQuotaChange = (value: string) => {
+    if (value === '') {
+      setFormData({ ...formData, storageQuotaGB: 0 });
+    } else {
+      const parsed = parseInt(value, 10);
+      if (!isNaN(parsed)) {
+        setFormData({ ...formData, storageQuotaGB: parsed });
+      }
+    }
+  };
 
   useEffect(() => {
     fetchClients();
@@ -71,7 +85,7 @@ export default function ClientsPage() {
   };
 
   const resetForm = () => {
-    setFormData({ nama: '', email: '', phone: '', instagram: '' });
+    setFormData({ nama: '', email: '', phone: '', instagram: '', storageQuotaGB: 10 });
     setEditingClient(null);
   };
 
@@ -82,6 +96,7 @@ export default function ClientsPage() {
       email: client.email,
       phone: client.phone || '',
       instagram: client.instagram || '',
+      storageQuotaGB: client.storageQuotaGB || 10,
     });
     setShowModal(true);
   };
@@ -95,6 +110,7 @@ export default function ClientsPage() {
       email: formData.email,
       phone: formData.phone || null,
       instagram: formData.instagram || null,
+      storageQuotaGB: formData.storageQuotaGB || 10,
     };
 
     try {
@@ -245,6 +261,7 @@ export default function ClientsPage() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Email</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Phone</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Instagram</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Quota</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Dibuat</th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Aksi</th>
               </tr>
@@ -269,6 +286,7 @@ export default function ClientsPage() {
                   <td className="px-4 py-4 text-muted-foreground">{client.email}</td>
                   <td className="px-4 py-4 text-muted-foreground">{client.phone || '-'}</td>
                   <td className="px-4 py-4 text-muted-foreground">{client.instagram || '-'}</td>
+                  <td className="px-4 py-4 text-muted-foreground text-sm font-medium">{client.storageQuotaGB || 10} GB</td>
                   <td className="px-4 py-4 text-muted-foreground text-sm">
                     {new Date(client.createdAt).toLocaleDateString('id-ID')}
                   </td>
@@ -326,6 +344,17 @@ export default function ClientsPage() {
                 value={formData.instagram}
                 onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Storage Quota (GB)</label>
+              <Input
+                type="number"
+                min={1}
+                max={1000}
+                value={formData.storageQuotaGB === 0 ? '' : formData.storageQuotaGB}
+                onChange={(e) => handleQuotaChange(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Default: 10 GB. Maksimal 1000 GB.</p>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => { setShowModal(false); resetForm(); }}>

@@ -36,6 +36,11 @@ export const clientSchema = z.object({
     .refine((val) => val === null || val === undefined || /^@?[a-zA-Z0-9._]{1,30}$/.test(val), {
       message: 'Format Instagram tidak valid',
     }),
+  storageQuotaGB: z.number()
+    .int('Kuota harus berupa bilangan bulat')
+    .min(1, 'Kuota minimal 1 GB')
+    .max(1000, 'Kuota maksimal 1000 GB')
+    .optional(),
 });
 
 export const packageSchema = z.object({

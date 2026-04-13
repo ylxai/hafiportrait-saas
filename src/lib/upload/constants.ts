@@ -10,9 +10,13 @@ export const MIN_COMPRESSION_SIZE_BYTES = 2 * 1024 * 1024; // 2MB - skip compres
 export const MAX_FILES_PER_BATCH = 400;
 export const SMALL_BATCH_THRESHOLD = 10; // Files count threshold for batch strategy
 
-// Storage quota
-export const STORAGE_QUOTA_PER_CLIENT_BYTES = 10 * 1024 * 1024 * 1024; // 10GB per client
-export const STORAGE_QUOTA_PER_CLIENT_GB = 10;
+// Storage quota (default per client, now configurable per-client in DB)
+export const BYTES_PER_GB = 1024 * 1024 * 1024;
+export const DEFAULT_STORAGE_QUOTA_GB = 10;
+export const DEFAULT_STORAGE_QUOTA_BYTES = DEFAULT_STORAGE_QUOTA_GB * BYTES_PER_GB;
+
+// Quota warning thresholds
+export const QUOTA_WARNING_THRESHOLDS = [80, 90, 95] as const;
 
 // Concurrency limits
 export const MAX_CONCURRENT_UPLOADS = 10;

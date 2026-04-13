@@ -7,8 +7,9 @@ import { z } from 'zod';
 import {
   MAX_FILE_SIZE_BYTES,
   MAX_FILE_SIZE_MB,
-  STORAGE_QUOTA_PER_CLIENT_BYTES,
-  STORAGE_QUOTA_PER_CLIENT_GB,
+  DEFAULT_STORAGE_QUOTA_GB,
+  QUOTA_WARNING_THRESHOLDS,
+  BYTES_PER_GB,
   PRESIGNED_URL_EXPIRY_SECONDS,
   ALLOWED_EXTENSIONS,
   ALLOWED_MIME_TYPES,
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
       return errorResponse(typeValidation.error || 'Invalid file type', 400);
     }
 
-    // Validasi gallery exists (no ownership check - admin/manager has full access)
+    // CRITICAL FIX: Per-client storage quota check from database
     const gallery = await prisma.gallery.findUnique({
       where: { id: galleryId },
       select: {
@@ -90,6 +91,9 @@ export async function POST(request: Request) {
         event: {
           select: {
             clientId: true,
+            client: {
+              select: { storageQuotaGB: true, nama: true, email: true },
+            },
           },
         },
       },
@@ -99,8 +103,12 @@ export async function POST(request: Request) {
       return errorResponse('Gallery not found', 404);
     }
 
-    // CRITICAL FIX: Optimized storage quota check using aggregation (no N+1 query)
     const clientId = gallery.event.clientId;
+    const client = gallery.event.client;
+    const storageQuotaGB = client?.storageQuotaGB ?? DEFAULT_STORAGE_QUOTA_GB;
+    const storageQuotaBytes = BigInt(storageQuotaGB * BYTES_PER_GB);
+
+    // Calculate current usage
     const storageUsage = await prisma.photo.aggregate({
       where: {
         gallery: {
@@ -114,18 +122,26 @@ export async function POST(request: Request) {
       },
     });
 
-    // Use BigInt for precision (avoid Number conversion precision loss)
     const totalUsedStorage = storageUsage._sum.fileSize || BigInt(0);
-    const storageQuotaBytes = BigInt(STORAGE_QUOTA_PER_CLIENT_BYTES);
-    
+
     if (totalUsedStorage + BigInt(fileSize) > storageQuotaBytes) {
-      // Use BigInt division for precision (avoid Number conversion)
-      const usedGB = (totalUsedStorage / BigInt(1073741824)).toString();
-      const usedGBFloat = parseFloat(usedGB) + (Number(totalUsedStorage % BigInt(1073741824)) / 1073741824);
+      const usedGB = Number(totalUsedStorage) / 1073741824;
       return errorResponse(
-        `Storage quota exceeded. Used: ${usedGBFloat.toFixed(2)}GB / ${STORAGE_QUOTA_PER_CLIENT_GB}GB`,
+        `Storage quota exceeded. Used: ${usedGB.toFixed(2)}GB / ${storageQuotaGB}GB`,
         413
       );
+    }
+
+    // Quota warning checks (log when crossing threshold)
+    const usagePercentBefore = Number((totalUsedStorage * BigInt(100)) / storageQuotaBytes);
+    const usagePercentAfter = Number(((totalUsedStorage + BigInt(fileSize)) * BigInt(100)) / storageQuotaBytes);
+    const usedGBAfter = Number(totalUsedStorage + BigInt(fileSize)) / BYTES_PER_GB;
+
+    for (const threshold of QUOTA_WARNING_THRESHOLDS) {
+      if (usagePercentBefore < threshold && usagePercentAfter >= threshold) {
+        console.warn(`[Quota Warning] Client ${client?.nama || clientId} crossed ${threshold}% threshold (${usedGBAfter.toFixed(2)}GB / ${storageQuotaGB}GB)`);
+        // Future: send Ably notification to admin dashboard
+      }
     }
 
     // NOTE: Race condition fix - also validate in complete route before photo creation
