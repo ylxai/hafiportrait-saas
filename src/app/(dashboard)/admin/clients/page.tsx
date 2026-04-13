@@ -61,7 +61,7 @@ export default function ClientsPage() {
     if (value === '') {
       setFormData({ ...formData, storageQuotaGB: 0 });
     } else {
-      const parsed = parseInt(value);
+      const parsed = parseInt(value, 10);
       if (!isNaN(parsed)) {
         setFormData({ ...formData, storageQuotaGB: parsed });
       }

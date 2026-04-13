@@ -8,6 +8,7 @@ import { publishPhotoUploaded } from '@/lib/ably';
 import { z } from 'zod';
 import {
   DEFAULT_STORAGE_QUOTA_GB,
+  BYTES_PER_GB,
 } from '@/lib/upload/constants';
 import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
 import { queueThumbnailGeneration } from '@/lib/cloudflare-queue';
@@ -80,6 +81,9 @@ export async function POST(request: Request) {
         event: {
           select: {
             clientId: true,
+            client: {
+              select: { storageQuotaGB: true },
+            },
           },
         },
       },
@@ -87,15 +91,8 @@ export async function POST(request: Request) {
 
     if (gallery) {
       const clientId = gallery.event.clientId;
-
-      // Get client's storage quota (configurable per client)
-      const client = await prisma.client.findUnique({
-        where: { id: clientId },
-        select: { storageQuotaGB: true },
-      });
-
-      const storageQuotaGB = client?.storageQuotaGB ?? DEFAULT_STORAGE_QUOTA_GB;
-      const storageQuotaBytes = BigInt(storageQuotaGB * 1024 * 1024 * 1024);
+      const storageQuotaGB = gallery.event.client?.storageQuotaGB ?? DEFAULT_STORAGE_QUOTA_GB;
+      const storageQuotaBytes = BigInt(storageQuotaGB * BYTES_PER_GB);
 
       const storageUsage = await prisma.photo.aggregate({
         where: {

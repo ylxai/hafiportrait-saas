@@ -11,8 +11,9 @@ export const MAX_FILES_PER_BATCH = 400;
 export const SMALL_BATCH_THRESHOLD = 10; // Files count threshold for batch strategy
 
 // Storage quota (default per client, now configurable per-client in DB)
+export const BYTES_PER_GB = 1024 * 1024 * 1024;
 export const DEFAULT_STORAGE_QUOTA_GB = 10;
-export const DEFAULT_STORAGE_QUOTA_BYTES = DEFAULT_STORAGE_QUOTA_GB * 1024 * 1024 * 1024;
+export const DEFAULT_STORAGE_QUOTA_BYTES = DEFAULT_STORAGE_QUOTA_GB * BYTES_PER_GB;
 
 // Quota warning thresholds
 export const QUOTA_WARNING_THRESHOLDS = [80, 90, 95] as const;

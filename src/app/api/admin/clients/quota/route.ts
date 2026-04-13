@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { z } from 'zod';
+import { BYTES_PER_GB } from '@/lib/upload/constants';
 
 const updateQuotaSchema = z.object({
   clientId: z.string().min(1, 'Client ID is required'),
@@ -96,9 +97,9 @@ export async function GET(request: Request) {
     });
 
     const totalUsed = usage._sum.fileSize || BigInt(0);
-    const BYTES_PER_GB = BigInt(1024 * 1024 * 1024);
-    const quotaBytes = BigInt(client.storageQuotaGB) * BYTES_PER_GB;
-    const usagePercent = quotaBytes > BigInt(0) ? Number((totalUsed * BigInt(100)) / quotaBytes) : 0;
+    const quotaBytes = BigInt(client.storageQuotaGB) * BigInt(BYTES_PER_GB);
+    // Multiply by 10000 before division for decimal precision, then divide back
+    const usagePercent = quotaBytes > BigInt(0) ? Number((totalUsed * BigInt(10000)) / quotaBytes) / 100 : 0;
 
     return successResponse({
       client: {
@@ -107,7 +108,7 @@ export async function GET(request: Request) {
         email: client.email,
         storageQuotaGB: client.storageQuotaGB,
         usedStorageBytes: totalUsed.toString(),
-        usedStorageGB: (Number(totalUsed) / 1073741824).toFixed(2),
+        usedStorageGB: (Number(totalUsed) / BYTES_PER_GB).toFixed(2),
         usagePercent: usagePercent.toString(),
         photoCount: usage._count,
       },

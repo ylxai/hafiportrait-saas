@@ -9,6 +9,7 @@ import {
   MAX_FILE_SIZE_MB,
   DEFAULT_STORAGE_QUOTA_GB,
   QUOTA_WARNING_THRESHOLDS,
+  BYTES_PER_GB,
   PRESIGNED_URL_EXPIRY_SECONDS,
   ALLOWED_EXTENSIONS,
   ALLOWED_MIME_TYPES,
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
       return errorResponse(typeValidation.error || 'Invalid file type', 400);
     }
 
-    // Validasi gallery exists (no ownership check - admin/manager has full access)
+    // CRITICAL FIX: Per-client storage quota check from database
     const gallery = await prisma.gallery.findUnique({
       where: { id: galleryId },
       select: {
@@ -90,6 +91,9 @@ export async function POST(request: Request) {
         event: {
           select: {
             clientId: true,
+            client: {
+              select: { storageQuotaGB: true, nama: true, email: true },
+            },
           },
         },
       },
@@ -99,17 +103,10 @@ export async function POST(request: Request) {
       return errorResponse('Gallery not found', 404);
     }
 
-    // CRITICAL FIX: Per-client storage quota check from database
     const clientId = gallery.event.clientId;
-
-    // Get client's storage quota (configurable per client)
-    const client = await prisma.client.findUnique({
-      where: { id: clientId },
-      select: { storageQuotaGB: true, nama: true, email: true },
-    });
-
+    const client = gallery.event.client;
     const storageQuotaGB = client?.storageQuotaGB ?? DEFAULT_STORAGE_QUOTA_GB;
-    const storageQuotaBytes = BigInt(storageQuotaGB * 1024 * 1024 * 1024);
+    const storageQuotaBytes = BigInt(storageQuotaGB * BYTES_PER_GB);
 
     // Calculate current usage
     const storageUsage = await prisma.photo.aggregate({
@@ -138,7 +135,7 @@ export async function POST(request: Request) {
     // Quota warning checks (log when crossing threshold)
     const usagePercentBefore = Number((totalUsedStorage * BigInt(100)) / storageQuotaBytes);
     const usagePercentAfter = Number(((totalUsedStorage + BigInt(fileSize)) * BigInt(100)) / storageQuotaBytes);
-    const usedGBAfter = Number(totalUsedStorage + BigInt(fileSize)) / 1073741824;
+    const usedGBAfter = Number(totalUsedStorage + BigInt(fileSize)) / BYTES_PER_GB;
 
     for (const threshold of QUOTA_WARNING_THRESHOLDS) {
       if (usagePercentBefore < threshold && usagePercentAfter >= threshold) {
