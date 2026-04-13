@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db';
 import { PRESIGNED_URL_EXPIRY_SECONDS, UPLOAD_SESSION_EXPIRY_MS } from './constants';
 
 // Get R2 account credentials from database
-async function getR2Credentials(accountId?: string): Promise<{ credentials: R2Credentials; bucket: string }> {
+export async function getR2Credentials(accountId?: string): Promise<{ credentials: R2Credentials; bucket: string }> {
   // If specific account requested
   if (accountId) {
     const account = await prisma.storageAccount.findUnique({
@@ -55,7 +55,8 @@ export async function generatePresignedUploadUrl(
   contentType: string,
   galleryId: string,
   r2AccountId?: string,
-  cloudinaryAccountId?: string
+  cloudinaryAccountId?: string,
+  fileHash?: string // Optional: SHA-256 hash for integrity verification
 ): Promise<{
   presignedUrl: string;
   publicUrl: string;
@@ -129,6 +130,7 @@ export async function generatePresignedUploadUrl(
       filename,
       galleryId,
       fileSize: 0,
+      fileHash, // Store hash for integrity verification
       storageAccountId: actualR2AccountId,
       cloudinaryAccountId: actualCloudinaryAccountId,
       publicUrl,
@@ -142,7 +144,7 @@ export async function generatePresignedUploadUrl(
 // Verifikasi upload ke R2 berhasil
 export async function verifyR2Upload(
   uploadId: string,
-  fileSize: number,
+  _fileSize: number, // Now ignored - use server-side size
   _width?: number,
   _height?: number
 ): Promise<{
@@ -153,6 +155,8 @@ export async function verifyR2Upload(
   galleryId?: string;
   storageAccountId?: string | null;
   cloudinaryAccountId?: string | null;
+  fileSize?: number; // Server-side file size from R2
+  fileHash?: string | null; // Hash from session
   error?: string;
 }> {
   const session = await prisma.uploadSession.findUnique({
@@ -169,7 +173,8 @@ export async function verifyR2Upload(
     return { success: false, error: 'Upload session expired (1 hour limit)' };
   }
   
-  // Verify file actually exists in R2 using HeadObject
+  // Verify file exists and get server-side size from R2 using HeadObject
+  let serverFileSize: number | undefined;
   try {
     const { credentials, bucket } = await getR2Credentials(session.storageAccountId || undefined);
     const client = getR2Client(credentials);
@@ -179,7 +184,9 @@ export async function verifyR2Upload(
       Key: session.r2Key,
     });
     
-    await client.send(command);
+    const response = await client.send(command);
+    // Use R2's ContentLength as authoritative size (NOT client-provided)
+    serverFileSize = response.ContentLength ? Number(response.ContentLength) : undefined;
   } catch (error) {
     console.error('R2 verification failed - file not found:', error);
     // Clean up the orphaned upload session
@@ -187,10 +194,11 @@ export async function verifyR2Upload(
     return { success: false, error: 'File tidak ditemukan di storage. Upload mungkin gagal.' };
   }
   
+  // Update session with server-side size, not client-provided
   await prisma.uploadSession.update({
     where: { id: uploadId },
     data: {
-      fileSize: BigInt(Math.floor(fileSize)),
+      fileSize: serverFileSize ? BigInt(serverFileSize) : BigInt(0),
       completedAt: new Date(),
     }
   });
@@ -205,6 +213,8 @@ export async function verifyR2Upload(
     galleryId: session.galleryId,
     storageAccountId: session.storageAccountId,
     cloudinaryAccountId: session.cloudinaryAccountId,
+    fileSize: serverFileSize, // Return server-side size
+    fileHash: session.fileHash, // Return session hash (authoritative)
   };
 }
 

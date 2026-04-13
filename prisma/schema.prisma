@@ -117,6 +117,7 @@ model Photo {
   height          Int?
   order           Int      @default(0)
   fileSize        BigInt?
+  fileHash        String?  // SHA-256 hash for duplicate detection
   createdAt       DateTime @default(now())
   
   storageAccountId String?
@@ -129,6 +130,8 @@ model Photo {
   @@index([galleryId])
   @@index([galleryId, order])
   @@index([galleryId, createdAt])
+  @@index([fileHash])
+  @@index([galleryId, fileHash]) // For duplicate detection performance
 }
 
 model Selection {
@@ -223,6 +226,7 @@ model UploadSession {
   r2Key           String
   filename        String
   fileSize        BigInt
+  fileHash        String?  // SHA-256 hash for integrity verification
   createdAt       DateTime @default(now())
   completedAt     DateTime?
   expiresAt       DateTime @default(dbgenerated("NOW() + INTERVAL '1 hour'")) // HIGH PRIORITY FIX #4: Add TTL (1 hour from creation)

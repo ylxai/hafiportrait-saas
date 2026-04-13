@@ -3,6 +3,7 @@ import { generatePresignedUploadUrl } from '@/lib/upload/presigned';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
+import { z } from 'zod';
 import {
   MAX_FILE_SIZE_BYTES,
   MAX_FILE_SIZE_MB,
@@ -14,9 +15,36 @@ import {
 } from '@/lib/upload/constants';
 
 
+// Zod validation schema for presigned upload request
+const PresignedRequestSchema = z.object({
+  filename: z.string()
+    .min(1, 'Filename is required')
+    .max(255, 'Filename too long')
+    .refine(
+      (val) => /^[a-zA-Z0-9._\-\s]+$/.test(val),
+      'Filename contains invalid characters'
+    ),
+  contentType: z.string()
+    .refine(
+      (val) => ALLOWED_MIME_TYPES.includes(val) || val.startsWith('image/'),
+      'Invalid content type'
+    ),
+  galleryId: z.string().min(1, 'Invalid gallery ID'),
+  r2AccountId: z.string().optional(),
+  cloudinaryAccountId: z.string().optional(),
+  fileSize: z.number()
+    .int('File size must be integer')
+    .positive('File size must be positive')
+    .max(MAX_FILE_SIZE_BYTES, `File too large. Maximum ${MAX_FILE_SIZE_MB}MB`),
+  fileHash: z.string().optional(), // Optional SHA-256 hash for integrity verification
+});
 
-// Validate file type
-function validateFileType(filename: string, contentType: string): { valid: boolean; error?: string } {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type _PresignedRequest = z.infer<typeof PresignedRequestSchema>;
+
+
+// Validate file type - now using Zod in the main handler
+function validateFileType(filename: string, _contentType: string): { valid: boolean; error?: string } {
   const extension = '.' + filename.split('.').pop()?.toLowerCase();
   
   // Check extension
@@ -24,14 +52,6 @@ function validateFileType(filename: string, contentType: string): { valid: boole
     return {
       valid: false,
       error: `Format file tidak didukung: ${extension}. Format yang diizinkan: ${ALLOWED_EXTENSIONS.join(', ')}`,
-    };
-  }
-  
-  // Check MIME type
-  if (!ALLOWED_MIME_TYPES.includes(contentType) && !contentType.startsWith('image/')) {
-    return {
-      valid: false,
-      error: `Tipe file tidak valid: ${contentType}`,
     };
   }
   
@@ -46,13 +66,18 @@ export async function POST(request: Request) {
       return errorResponse('Unauthorized', 401);
     }
 
-    const { filename, contentType, galleryId, r2AccountId, cloudinaryAccountId, fileSize } = await request.json();
-
-    if (!filename || !contentType || !galleryId) {
-      return errorResponse('Missing required fields', 400);
+    // Parse and validate request body with Zod
+    const body = await request.json();
+    const validation = PresignedRequestSchema.safeParse(body);
+    
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
     }
 
-    // Validasi file type
+    const { filename, contentType, galleryId, r2AccountId, cloudinaryAccountId, fileSize, fileHash } = validation.data;
+
+    // Validate file extension (double-check after Zod)
     const typeValidation = validateFileType(filename, contentType);
     if (!typeValidation.valid) {
       return errorResponse(typeValidation.error || 'Invalid file type', 400);
@@ -94,13 +119,8 @@ export async function POST(request: Request) {
     const totalUsedStorage = storageUsage._sum.fileSize || BigInt(0);
     const storageQuotaBytes = BigInt(STORAGE_QUOTA_PER_CLIENT_BYTES);
     
-    // CRITICAL FIX: Validate fileSize before BigInt conversion
-    if (fileSize === undefined || fileSize === null) {
-      return errorResponse('Missing fileSize in request body', 400);
-    }
-    
     if (totalUsedStorage + BigInt(fileSize) > storageQuotaBytes) {
-      // MEDIUM PRIORITY FIX: Use BigInt division for precision (avoid Number conversion)
+      // Use BigInt division for precision (avoid Number conversion)
       const usedGB = (totalUsedStorage / BigInt(1073741824)).toString();
       const usedGBFloat = parseFloat(usedGB) + (Number(totalUsedStorage % BigInt(1073741824)) / 1073741824);
       return errorResponse(
@@ -109,10 +129,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validasi file size from request body
-    if (fileSize && BigInt(fileSize) > BigInt(MAX_FILE_SIZE_BYTES)) {
-      return errorResponse(`File too large. Maximum ${MAX_FILE_SIZE_MB}MB`, 413);
-    }
+    // NOTE: Race condition fix - also validate in complete route before photo creation
+    // This provides a second checkpoint to prevent quota exceeded after upload
 
     // Validasi R2 account if provided
     if (r2AccountId) {
@@ -140,7 +158,8 @@ export async function POST(request: Request) {
       contentType,
       galleryId,
       r2AccountId,
-      cloudinaryAccountId
+      cloudinaryAccountId,
+      fileHash // Pass hash for integrity verification
     );
 
     return successResponse({

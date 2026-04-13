@@ -22,11 +22,13 @@ import {
   ALLOWED_MIME_TYPES,
   RAW_FILE_EXTENSIONS,
 } from '@/lib/upload/constants';
+import { calculateFileHash } from '@/lib/upload/hash-client';
 
 export interface UploadFile {
   id: string;
   file: File;
   compressed?: File;
+  fileHash?: string; // SHA-256 hash for integrity/duplicate detection
   status: 'pending' | 'compressing' | 'uploading' | 'processing' | 'completed' | 'failed';
   progress: number;
   error?: string;
@@ -180,7 +182,19 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     abortControllers.current.set(uploadFile.id, abortController);
 
     try {
-      // Step 1: Get presigned URL dari server
+      // Step 1: Calculate file hash for integrity verification (only if not already calculated)
+      let fileHash = uploadFile.fileHash;
+      if (!fileHash) {
+        try {
+          fileHash = await calculateFileHash(fileToUpload);
+          // Save hash to state so it doesn't need to be recalculated on retry
+          updateFileStatus(uploadFile.id, { fileHash });
+        } catch (hashError) {
+          console.warn('Failed to calculate file hash, proceeding without integrity check:', hashError);
+        }
+      }
+
+      // Step 2: Get presigned URL dari server
       updateFileStatus(uploadFile.id, { status: 'uploading', progress: 5 });
       
       const presignedRes = await fetch('/api/admin/upload/presigned', {
@@ -193,6 +207,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
           r2AccountId,
           cloudinaryAccountId,
           fileSize: fileToUpload.size,
+          fileHash, // Include hash for integrity verification
         }),
         signal: abortController.signal,
       });
@@ -207,7 +222,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       // Update status: Uploading
       updateFileStatus(uploadFile.id, { status: 'uploading', progress: 10 });
 
-      // Step 2: Upload langsung ke R2 (bypass server!)
+      // Step 3: Upload langsung ke R2 (bypass server!)
       const r2Res = await fetch(presignedUrl, {
         method: 'PUT',
         body: fileToUpload,
@@ -225,13 +240,14 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       // Update status: Processing thumbnail
       updateFileStatus(uploadFile.id, { status: 'processing', progress: 50 });
 
-      // Step 3: Notify server untuk generate thumbnail
+      // Step 4: Notify server untuk generate thumbnail
       const completeRes = await fetch('/api/admin/upload/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           uploadId,
           fileSize: fileToUpload.size,
+          fileHash, // Include hash for integrity verification
         }),
         signal: abortController.signal,
       });
@@ -467,6 +483,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       validFiles.push({
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         file,
+        fileHash: undefined, // Will be calculated before upload
         status: 'pending',
         progress: 0,
         retryCount: 0,
