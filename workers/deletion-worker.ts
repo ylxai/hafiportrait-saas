@@ -40,29 +40,58 @@ interface DeletionJob {
   };
 }
 
-export default {
-  // Handle queue messages (deletion jobs)
-  async queue(batch: MessageBatch<any>, env: Env, ctx: ExecutionContext) {
-    console.log(`[DeletionWorker] Processing ${batch.messages.length} deletion jobs`);
+interface ThumbnailJob {
+  type: 'thumbnail-generation';
+  photoId: string;
+  r2Url: string;
+  galleryId: string;
+  filename: string;
+  // Cloudinary credentials from database (via message)
+  cloudinaryCredentials: {
+    cloudName: string;
+    apiKey: string;
+    apiSecret: string;
+  };
+}
 
-    for (const message of batch.messages) {
+type QueueMessage = DeletionJob | ThumbnailJob;
+
+export default {
+  // Handle queue messages (deletion + thumbnail jobs)
+  async queue(batch: MessageBatch<QueueMessage>, env: Env, ctx: ExecutionContext) {
+    const deletionMessages = batch.messages.filter(m => m.body.type === 'storage-deletion');
+    const thumbnailMessages = batch.messages.filter(m => m.body.type === 'thumbnail-generation');
+
+    console.log(`[DeletionWorker] Processing ${deletionMessages.length} deletion jobs, ${thumbnailMessages.length} thumbnail jobs`);
+
+    // Process deletion jobs
+    for (const message of deletionMessages) {
       const job = message.body as DeletionJob;
 
       try {
         const result = await processDeletion(job, env);
-
-        // Callback to Vercel to update database
         await callbackToVercel(job, result, env);
-
-        // Acknowledge message (mark as done)
         message.ack();
-
         console.log(`[DeletionWorker] ✅ Deleted: ${job.photoId}`);
-
       } catch (error) {
         console.error(`[DeletionWorker] ❌ Failed: ${job.photoId}`, error);
+        message.retry();
+      }
+    }
 
-        // Retry with exponential backoff (handled by Cloudflare Queue)
+    // Process thumbnail jobs
+    for (const message of thumbnailMessages) {
+      const job = message.body as ThumbnailJob;
+
+      try {
+        const result = await processThumbnail(job, env);
+        if (result) {
+          await callbackThumbnailToVercel(job, result, env);
+        }
+        message.ack();
+        console.log(`[DeletionWorker] ✅ Thumbnail generated: ${job.photoId}`);
+      } catch (error) {
+        console.error(`[DeletionWorker] ❌ Thumbnail failed: ${job.photoId}`, error);
         message.retry();
       }
     }
@@ -146,6 +175,181 @@ async function processDeletion(job: DeletionJob, env: Env): Promise<{
 
   return result;
 }
+
+// ─── Thumbnail Generation ───────────────────────────────────────
+
+async function processThumbnail(
+  job: ThumbnailJob,
+  env: Env
+): Promise<{ thumbnailUrl: string; publicId: string; mediumUrl: string; smallUrl: string } | null> {
+  const { r2Url, cloudinaryCredentials, galleryId, filename } = job;
+  const { cloudName, apiKey, apiSecret } = cloudinaryCredentials;
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    console.warn(`[Thumbnail] Missing credentials for ${job.photoId}`);
+    return null;
+  }
+
+  // Fetch image from R2 public URL
+  const fetchResponse = await fetch(r2Url);
+  if (!fetchResponse.ok) {
+    throw new Error(`Failed to fetch R2 image: ${fetchResponse.status} ${fetchResponse.statusText}`);
+  }
+
+  const imageBuffer = await fetchResponse.arrayBuffer();
+
+  // Upload to Cloudinary with transformations
+  const publicId = await uploadToCloudinaryWithTransform(
+    imageBuffer,
+    `photos/${galleryId}`,
+    filename,
+    cloudName,
+    apiKey,
+    apiSecret
+  );
+
+  if (!publicId) {
+    throw new Error('Cloudinary upload returned no publicId');
+  }
+
+  // Generate thumbnail URLs for different sizes
+  const thumbnailUrl = generateCloudinaryUrl(publicId, {
+    cloudName,
+    width: 400,
+    height: 400,
+    quality: 'auto',
+    format: 'auto',
+    crop: 'fill',
+  });
+
+  const mediumUrl = generateCloudinaryUrl(publicId, {
+    cloudName,
+    width: 800,
+    quality: 'auto',
+    format: 'auto',
+    crop: 'limit',
+  });
+
+  const smallUrl = generateCloudinaryUrl(publicId, {
+    cloudName,
+    width: 200,
+    quality: 'auto:low',
+    format: 'auto',
+    crop: 'scale',
+  });
+
+  console.log(`[Thumbnail] Generated for ${filename}: ${publicId}`);
+  return { thumbnailUrl, publicId, mediumUrl, smallUrl };
+}
+
+async function uploadToCloudinaryWithTransform(
+  imageBuffer: ArrayBuffer,
+  folder: string,
+  filename: string,
+  cloudName: string,
+  apiKey: string,
+  apiSecret: string
+): Promise<string | null> {
+  const timestamp = Math.round(Date.now() / 1000);
+  const publicIdBase = filename.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const publicId = `${folder}/${publicIdBase}`;
+
+  // Build upload params for signed upload
+  const paramsToSign: Record<string, string> = {
+    timestamp: timestamp.toString(),
+    folder,
+    public_id: publicId,
+    quality: 'auto',
+    fetch_format: 'auto',
+    resource_type: 'image',
+  };
+
+  const signature = await generateCloudinarySignature(paramsToSign, apiSecret);
+
+  // Build form data
+  const formData = new FormData();
+  formData.append('file', new Blob([imageBuffer]), filename);
+  formData.append('api_key', apiKey);
+  formData.append('timestamp', paramsToSign.timestamp);
+  formData.append('folder', folder);
+  formData.append('public_id', publicId);
+  formData.append('quality', 'auto');
+  formData.append('fetch_format', 'auto');
+  formData.append('signature', signature);
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+    {
+      method: 'POST',
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Cloudinary upload failed: ${error}`);
+  }
+
+  const data = await response.json() as { public_id: string };
+  return data.public_id || null;
+}
+
+function generateCloudinaryUrl(
+  publicId: string,
+  options: {
+    cloudName: string;
+    width?: number;
+    height?: number;
+    quality?: string;
+    format?: string;
+    crop?: string;
+  }
+): string {
+  const { cloudName, width, height, quality = 'auto', format = 'auto', crop = 'fill' } = options;
+
+  const transforms: string[] = [];
+  if (width) transforms.push(`w_${width}`);
+  if (height) transforms.push(`h_${height}`);
+  transforms.push(`c_${crop}`);
+  transforms.push(`q_${quality}`);
+  transforms.push(`f_${format}`);
+
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${transforms.join(',')}/${publicId}`;
+}
+
+async function callbackThumbnailToVercel(
+  job: ThumbnailJob,
+  result: { thumbnailUrl: string; publicId: string; mediumUrl: string; smallUrl: string },
+  env: Env
+): Promise<void> {
+  const webhookUrl = `${env.VPS_WEBHOOK_URL}/thumbnail-generated`;
+
+  const payload = {
+    photoId: job.photoId,
+    thumbnailUrl: result.thumbnailUrl,
+    mediumUrl: result.mediumUrl,
+    smallUrl: result.smallUrl,
+    publicId: result.publicId,
+  };
+
+  const response = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${env.VPS_WEBHOOK_SECRET}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Thumbnail callback failed: ${error}`);
+  }
+
+  console.log(`[Thumbnail] ✅ Callback to Vercel successful for ${job.photoId}`);
+}
+
+// ─── Cloudinary Helpers ─────────────────────────────────────────
 
 async function deleteFromCloudinary(
   publicId: string,

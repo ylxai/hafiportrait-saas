@@ -104,3 +104,19 @@ export async function publishPhotoUploaded(galleryId: string, data: {
     console.error('Failed to publish photo upload:', error);
   }
 }
+
+/**
+ * Publish photo thumbnail generated event (for real-time dashboard update)
+ */
+export async function publishPhotoThumbnailGenerated(galleryId: string, data: {
+  photoId: string;
+  thumbnailUrl: string;
+  filename: string;
+}) {
+  try {
+    const client = getAblyRestClient();
+    await client.channels.get(CHANNELS.UPLOADS(galleryId)).publish('photo-thumbnail-generated', data);
+  } catch (error) {
+    console.error('Failed to publish photo thumbnail generated:', error);
+  }
+}

@@ -11,6 +11,7 @@ import {
   STORAGE_QUOTA_PER_CLIENT_GB,
 } from '@/lib/upload/constants';
 import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
+import { queueThumbnailGeneration } from '@/lib/cloudflare-queue';
 
 
 // Zod validation schema for upload complete request
@@ -130,15 +131,17 @@ export async function POST(request: Request) {
     const imgWidth = width || 0;
     const imgHeight = height || 0;
 
-    // Generate thumbnail URL using Cloudinary image/fetch
-    // Cloudinary auto-fetches from R2, resizes, caches, and compresses
-    // NO server upload needed — just construct the URL
+    // Two-stage thumbnail strategy:
+    // 1. IMMEDIATE: Construct Cloudinary image/fetch URL (works instantly, slow on first hit)
+    // 2. ASYNC: Queue worker to upload real thumbnail to Cloudinary (replaces fetch URL)
     const cloudinaryAccountId = verification.cloudinaryAccountId || null;
     let thumbnailUrl: string | null = null;
+    let cloudinaryAccount: Awaited<ReturnType<typeof getStorageAccountById>> | null = null;
 
     if (cloudinaryAccountId) {
-      const cloudinaryAccount = await getStorageAccountById(cloudinaryAccountId);
+      cloudinaryAccount = await getStorageAccountById(cloudinaryAccountId);
       if (cloudinaryAccount?.cloudName) {
+        // Stage 1: Temporary fetch URL (will be replaced by worker)
         thumbnailUrl = getCloudinaryThumbnailUrl(publicUrl, {
           width: 400,
           height: 400,
@@ -147,7 +150,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // publicId is null for direct uploads (Cloudinary fetch, not stored)
+    // publicId is null until worker generates real thumbnail
     const publicId: string | null = null;
 
     const photo = await prisma.photo.create({
@@ -169,6 +172,25 @@ export async function POST(request: Request) {
 
     if (storageAccountId) {
       await updateStorageUsage(storageAccountId, BigInt(actualFileSize));
+    }
+
+    // Stage 2: Queue async thumbnail generation
+    // Worker will fetch from R2, upload to Cloudinary, and update DB
+    if (cloudinaryAccount?.cloudName && cloudinaryAccount.apiKey && cloudinaryAccount.apiSecret) {
+      await queueThumbnailGeneration({
+        photoId: photo.id,
+        r2Url: publicUrl,
+        galleryId,
+        filename,
+        cloudinaryCredentials: {
+          cloudName: cloudinaryAccount.cloudName,
+          apiKey: cloudinaryAccount.apiKey,
+          apiSecret: cloudinaryAccount.apiSecret,
+        },
+      }).catch((err) => {
+        console.error('[Upload] Failed to queue thumbnail generation:', err);
+        // Non-critical — image/fetch URL still works as fallback
+      });
     }
 
     await publishPhotoUploaded(galleryId, {

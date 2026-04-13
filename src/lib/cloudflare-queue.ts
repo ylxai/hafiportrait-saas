@@ -179,6 +179,72 @@ export async function queueStorageDeletionBulk(dataList: Array<{
 }
 
 /**
+ * Queue thumbnail generation job
+ */
+export async function queueThumbnailGeneration(data: {
+  photoId: string;
+  r2Url: string;
+  galleryId: string;
+  filename: string;
+  cloudinaryCredentials: {
+    cloudName: string | null;
+    apiKey: string | null;
+    apiSecret: string | null;
+  };
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  if (!data.cloudinaryCredentials.cloudName || !data.cloudinaryCredentials.apiKey || !data.cloudinaryCredentials.apiSecret) {
+    console.warn('[Queue/Thumbnail] Missing Cloudinary credentials, skipping thumbnail generation');
+    return { success: false, error: 'Missing Cloudinary credentials' };
+  }
+
+  return publishToQueue('thumbnail-generation', {
+    type: 'thumbnail-generation',
+    timestamp: Date.now(),
+    photoId: data.photoId,
+    r2Url: data.r2Url,
+    galleryId: data.galleryId,
+    filename: data.filename,
+    cloudinaryCredentials: {
+      cloudName: data.cloudinaryCredentials.cloudName,
+      apiKey: data.cloudinaryCredentials.apiKey,
+      apiSecret: data.cloudinaryCredentials.apiSecret,
+    },
+  });
+}
+
+/**
+ * Queue multiple thumbnail generation jobs in bulk
+ */
+export async function queueThumbnailGenerationBulk(dataList: Array<{
+  photoId: string;
+  r2Url: string;
+  galleryId: string;
+  filename: string;
+  cloudinaryCredentials: {
+    cloudName: string | null;
+    apiKey: string | null;
+    apiSecret: string | null;
+  };
+}>): Promise<{ success: boolean; error?: string }> {
+  const timestamp = Date.now();
+  const messages = dataList.map(data => ({
+    type: 'thumbnail-generation',
+    timestamp,
+    photoId: data.photoId,
+    r2Url: data.r2Url,
+    galleryId: data.galleryId,
+    filename: data.filename,
+    cloudinaryCredentials: {
+      cloudName: data.cloudinaryCredentials.cloudName,
+      apiKey: data.cloudinaryCredentials.apiKey,
+      apiSecret: data.cloudinaryCredentials.apiSecret,
+    },
+  }));
+
+  return publishToQueueBulk('thumbnail-generation', messages);
+}
+
+/**
  * Check if Cloudflare Queue is configured
  */
 export function isQueueConfigured(): boolean {

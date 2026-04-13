@@ -20,7 +20,7 @@ VPS_WEBHOOK_URL = "http://124.197.42.88:3000/api/webhook"
 binding = "PHOTO_BUCKET"
 bucket_name = "photo"
 
-# Queue: untuk kirim dan terima message
+# Queue: Storage Deletion
 [[queues.producers]]
 queue = "storage-deletion"
 binding = "DELETION_QUEUE"
@@ -28,6 +28,16 @@ binding = "DELETION_QUEUE"
 [[queues.consumers]]
 queue = "storage-deletion"
 max_batch_size = 20
+max_retries = 3
+
+# Queue: Thumbnail Generation
+[[queues.producers]]
+queue = "thumbnail-generation"
+binding = "THUMBNAIL_QUEUE"
+
+[[queues.consumers]]
+queue = "thumbnail-generation"
+max_batch_size = 10
 max_retries = 3
 
 # Cron trigger for upload session cleanup (every 30 minutes)
