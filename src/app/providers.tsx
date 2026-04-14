@@ -3,7 +3,13 @@
 import { SessionProvider } from 'next-auth/react';
 import { SWRConfig } from 'swr';
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+const fetcher = async (url: string): Promise<unknown> => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
+  }
+  return res.json() as unknown;
+};
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (

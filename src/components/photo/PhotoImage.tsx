@@ -39,6 +39,9 @@ export function PhotoImage({
   });
 
   const finalSrc = useFallback ? src : (thumbnailUrl || src);
+  // Cloudinary URLs are already optimized (f_auto, q_auto), skip Next.js optimization
+  // R2 fallback URLs need Next.js optimization since R2 has no image processing
+  const isCloudinaryUrl = finalSrc.includes('res.cloudinary.com');
 
   if (hasError) {
     return (
@@ -74,6 +77,7 @@ export function PhotoImage({
           }
         }}
         priority={priority}
+        unoptimized={isCloudinaryUrl}
       />
     </div>
   );

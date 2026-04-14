@@ -73,7 +73,7 @@ export async function GET() {
       300 // 5 minutes TTL
     );
 
-    return successResponse(stats);
+    return successResponse({ stats });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
     return serverErrorResponse('Failed to fetch stats');

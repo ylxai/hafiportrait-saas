@@ -66,17 +66,17 @@ export default function EventsPage() {
   });
 
   // SWR for clients and packages (bounded, cached, no re-fetch on every page change)
-  const { data: clientsData } = useSWR('/api/admin/clients?limit=100', (url) =>
-    fetch(url).then(res => res.json()).then(d => d.data?.clients || d.clients || []),
-    { revalidateOnFocus: false, dedupingInterval: 300000 }
-  );
-  const { data: packagesData } = useSWR('/api/admin/packages?limit=100', (url) =>
-    fetch(url).then(res => res.json()).then(d => d.data?.packages || d.packages || []),
-    { revalidateOnFocus: false, dedupingInterval: 300000 }
-  );
+  const { data: clientsData } = useSWR('/api/admin/clients?limit=100', {
+    revalidateOnFocus: false,
+    dedupingInterval: 300000,
+  });
+  const { data: packagesData } = useSWR('/api/admin/packages?limit=100', {
+    revalidateOnFocus: false,
+    dedupingInterval: 300000,
+  });
 
-  const clients: Client[] = clientsData || [];
-  const packages: Package[] = packagesData || [];
+  const clients: Client[] = clientsData?.data?.clients || clientsData?.clients || [];
+  const packages: Package[] = packagesData?.data?.packages || packagesData?.packages || [];
 
   useEffect(() => {
     fetchEvents();
