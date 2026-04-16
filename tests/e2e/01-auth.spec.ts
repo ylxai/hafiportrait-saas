@@ -9,7 +9,7 @@ test.describe('Authentication Flow', () => {
     await page.click('button[type="submit"]');
     
     await page.waitForURL('/admin');
-    expect(page.url()).toContain('/admin');
+    await expect(page).toHaveURL(/\/admin/);
   });
 
   test('should reject invalid credentials', async ({ page }) => {
@@ -26,20 +26,19 @@ test.describe('Authentication Flow', () => {
     await page.reload();
     
     await page.waitForURL('/admin');
-    expect(page.url()).toContain('/admin');
+    await expect(page).toHaveURL(/\/admin/);
   });
 
   test('should logout successfully', async ({ page }) => {
     await login(page);
     await logout(page);
     
-    expect(page.url()).toContain('/login');
+    await expect(page).toHaveURL(/\/login/);
   });
 
   test('should redirect to login when accessing protected route', async ({ page }) => {
     await page.goto('/admin/galleries');
     await page.waitForURL('/login');
-    
-    expect(page.url()).toContain('/login');
+    await expect(page).toHaveURL(/\/login/);
   });
 });

@@ -16,7 +16,7 @@ test.describe('Security and Authorization', () => {
     for (const route of adminRoutes) {
       await page.goto(route);
       await page.waitForURL('/login');
-      expect(page.url()).toContain('/login');
+      await expect(page).toHaveURL(/\/login/);
     }
   });
 
@@ -29,15 +29,14 @@ test.describe('Security and Authorization', () => {
     await page.goto('/gallery/test-token-123');
     
     // Should not redirect to login
-    expect(page.url()).toContain('/gallery/');
-    expect(page.url()).not.toContain('/login');
+    await expect(page).toHaveURL(/\/gallery\//);
   });
 
   test('should allow public booking access without auth', async ({ page }) => {
     await page.goto('/booking');
     
-    expect(page.url()).toContain('/booking');
-    expect(page.url()).not.toContain('/login');
+    await expect(page).toHaveURL(/\/booking/);
+    await expect(page).not.toHaveURL(/\/login/);
   });
 
   test('should validate gallery token', async ({ page }) => {
@@ -48,15 +47,15 @@ test.describe('Security and Authorization', () => {
 
   test('should prevent XSS in search input', async ({ page, context }) => {
     await context.addInitScript(() => {
-      window.xssTriggered = false;
-      window.alert = () => { window.xssTriggered = true; };
+      (window as { xssTriggered?: boolean }).xssTriggered = false;
+      window.alert = () => { (window as { xssTriggered?: boolean }).xssTriggered = true; };
     });
     
     await page.goto('/admin');
     await page.fill('[data-testid="global-search"]', '<script>alert("XSS")</script>');
     await page.keyboard.press('Enter');
     
-    const xssTriggered = await page.evaluate(() => window.xssTriggered);
+    const xssTriggered = await page.evaluate(() => (window as { xssTriggered?: boolean }).xssTriggered);
     expect(xssTriggered).toBe(false);
   });
 
@@ -79,6 +78,6 @@ test.describe('Security and Authorization', () => {
     }
     
     await page.goto('/admin');
-    expect(page.url()).toMatch(/^https:/);
+    await expect(page).toHaveURL(/^https:/);
   });
 });
