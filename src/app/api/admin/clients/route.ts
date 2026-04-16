@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
-import { clientSchema, clientUpdateSchema } from '@/lib/api/validation';
+import { clientSchema, clientUpdateSchema, idSchema, validateRequest } from '@/lib/api/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
@@ -77,18 +77,25 @@ export async function PATCH(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     const body = await request.json();
-    const { id, ...data } = body;
-
-    if (!id) {
-      return errorResponse('Client ID required', 400);
+    
+    // Validate ID
+    const idValidation = validateRequest(idSchema, body);
+    if (!idValidation.success) {
+      return errorResponse(idValidation.error, 400);
     }
 
+    const { id } = idValidation.data;
+    const { id: _, ...data } = body;
+
     // Validate update data
-    const validated = clientUpdateSchema.parse(data);
+    const dataValidation = validateRequest(clientUpdateSchema, data);
+    if (!dataValidation.success) {
+      return errorResponse(dataValidation.error, 400);
+    }
 
     const client = await prisma.client.update({
       where: { id },
-      data: validated,
+      data: dataValidation.data,
     });
 
     return successResponse({ client });
@@ -107,11 +114,14 @@ export async function DELETE(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-      return errorResponse('Client ID required', 400);
+    
+    // Validate ID
+    const idValidation = validateRequest(idSchema, { id: searchParams.get('id') });
+    if (!idValidation.success) {
+      return errorResponse(idValidation.error, 400);
     }
+
+    const { id } = idValidation.data;
 
     await queuePhotosDeletionForEntities({ gallery: { event: { clientId: id } } });
 

@@ -1,5 +1,20 @@
 import { z } from 'zod';
 
+// Common validation schemas
+export const idSchema = z.object({
+  id: z.string().min(1, 'ID is required'),
+});
+
+export const paginationSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const searchQuerySchema = z.object({
+  q: z.string().min(1, 'Search query required').max(200),
+  type: z.enum(['clients', 'events', 'galleries', 'photos']).optional(),
+});
+
 // Helper to sanitize string (trim and basic XSS prevention)
 // Note: For production, consider using DOMPurify for more robust sanitization
 const sanitizeString = (str: string) => {
@@ -186,3 +201,19 @@ export const loginSchema = z.object({
 export const eventUpdateSchema = eventSchema.partial();
 export const clientUpdateSchema = clientSchema.partial();
 export const packageUpdateSchema = packageSchema.partial();
+
+// Helper function to validate and return error response
+export function validateRequest<T>(
+  schema: z.ZodSchema<T>,
+  data: unknown
+): { success: true; data: T } | { success: false; error: string } {
+  const result = schema.safeParse(data);
+  if (!result.success) {
+    const firstError = result.error.errors[0];
+    return {
+      success: false,
+      error: `${firstError.path.join('.')}: ${firstError.message}`,
+    };
+  }
+  return { success: true, data: result.data };
+}

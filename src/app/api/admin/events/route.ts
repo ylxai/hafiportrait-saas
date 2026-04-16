@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
-import { eventSchema, eventUpdateSchema } from '@/lib/api/validation';
+import { eventSchema, eventUpdateSchema, idSchema, validateRequest } from '@/lib/api/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
@@ -121,13 +121,17 @@ export async function PATCH(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     const body = await request.json();
-    const { id, ...data } = body;
-
-    if (!id) {
-      return errorResponse('Event ID required', 400);
+    
+    // Validate ID
+    const idValidation = validateRequest(idSchema, body);
+    if (!idValidation.success) {
+      return errorResponse(idValidation.error, 400);
     }
 
-    // Validate update data
+    const { id } = idValidation.data;
+    const { id: _, ...data } = body;
+
+    // Validate update data - use parse directly for complex schemas with transforms
     const validated = eventUpdateSchema.parse(data);
 
     const event = await prisma.event.update({
@@ -152,11 +156,14 @@ export async function DELETE(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-      return errorResponse('Event ID required', 400);
+    
+    // Validate ID
+    const idValidation = validateRequest(idSchema, { id: searchParams.get('id') });
+    if (!idValidation.success) {
+      return errorResponse(idValidation.error, 400);
     }
+
+    const { id } = idValidation.data;
 
     await queuePhotosDeletionForEntities({ gallery: { eventId: id } });
 
