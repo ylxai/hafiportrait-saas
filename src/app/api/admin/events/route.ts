@@ -131,16 +131,11 @@ export async function PATCH(request: Request) {
     const { id } = idValidation.data;
     const { id: _, ...data } = body;
 
-    // Validate update data - use safeParse for schemas with transforms
-    const dataValidation = eventUpdateSchema.safeParse(data);
+    // Validate update data
+    // @ts-expect-error - eventUpdateSchema has transforms, type inference is complex
+    const dataValidation = validateRequest(eventUpdateSchema, data);
     if (!dataValidation.success) {
-      const firstError = dataValidation.error.errors[0];
-      return errorResponse(
-        firstError.path.length > 0
-          ? `${firstError.path.join('.')}: ${firstError.message}`
-          : firstError.message,
-        400
-      );
+      return errorResponse(dataValidation.error, 400);
     }
 
     const event = await prisma.event.update({

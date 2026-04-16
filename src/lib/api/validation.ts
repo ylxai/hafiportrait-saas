@@ -207,7 +207,7 @@ export function validateRequest<T>(
   schema: z.ZodSchema<T>,
   data: unknown
 ): { success: true; data: T } | { success: false; error: string } {
-  const result = schema.safeParse(data);
+  const result = schema.safeParse(data) as z.SafeParseReturnType<unknown, T>;
   if (!result.success) {
     const firstError = result.error.errors[0];
     return {
