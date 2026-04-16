@@ -17,12 +17,10 @@ type ErrorCode = typeof ERROR_CODES[keyof typeof ERROR_CODES];
 
 interface ErrorResponse {
   success: false;
-  error: {
-    code: ErrorCode;
-    message: string;
-    details?: unknown;
-    timestamp: string;
-  };
+  error: string; // Keep backward compatibility
+  errorCode?: ErrorCode;
+  details?: unknown;
+  timestamp?: string;
 }
 
 export function successResponse<T>(data: T, status = 200) {
@@ -32,18 +30,16 @@ export function successResponse<T>(data: T, status = 200) {
 export function errorResponse(
   message: string, 
   status = 400, 
-  code: ErrorCode = ERROR_CODES.BAD_REQUEST,
+  code?: ErrorCode,
   details?: unknown
 ): NextResponse<ErrorResponse> {
   return NextResponse.json(
     { 
       success: false, 
-      error: {
-        code,
-        message,
-        details,
-        timestamp: new Date().toISOString(),
-      }
+      error: message, // Keep as string for backward compatibility
+      errorCode: code,
+      details,
+      timestamp: new Date().toISOString(),
     }, 
     { status }
   );
@@ -100,12 +96,12 @@ export function handlePrismaError(error: unknown) {
         return errorResponse('Cannot delete record with related data', 400);
       
       default:
-        console.error('Prisma error:', error);
+        console.error('[API] Prisma error:', error);
         return serverErrorResponse('Database operation failed');
     }
   }
   
-  console.error('Unknown error:', error);
+  console.error('[API] Unknown error:', error);
   return serverErrorResponse();
 }
 

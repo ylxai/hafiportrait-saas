@@ -6,7 +6,6 @@ import { generateClientToken } from '@/lib/utils';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { parseAdminPagination, createAdminPaginationResponse } from '@/types/pagination';
-import { z } from 'zod';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -77,9 +76,6 @@ export async function POST(request: Request) {
 
     return successResponse({ gallery }, 201);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return validationError(error);
-    }
     console.error('[API] Error creating gallery:', error);
     return handlePrismaError(error);
   }
