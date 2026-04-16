@@ -1,7 +1,7 @@
 import { Page } from '@playwright/test';
 
 export const TEST_USER = {
-  email: 'admin@photostudio.test',
+  email: 'admin@photostudio.com',
   password: 'admin123',
 };
 
