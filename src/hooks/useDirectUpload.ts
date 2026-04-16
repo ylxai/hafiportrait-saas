@@ -339,8 +339,16 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       return;
     }
     
+    // Prevent duplicate processing across all upload paths
+    if (processingIds.current.has(file.id)) return;
+    processingIds.current.add(file.id);
+    
     incrementActiveUploads();
-    await uploadFile(currentFile);
+    try {
+      await uploadFile(currentFile);
+    } finally {
+      processingIds.current.delete(file.id);
+    }
   };
 
   // Worker untuk upload batch
@@ -397,17 +405,25 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       
       // Compress dan upload langsung semua parallel
       const uploadPromises = pendingFiles.map(async (file) => {
-        // Compress
-        updateFileStatus(file.id, { status: 'compressing' });
-        const compressed = await compressFile(file.file);
-        updateFileStatus(file.id, { 
-          status: 'pending',
-          compressed,
-        });
+        // Prevent duplicate processing
+        if (processingIds.current.has(file.id)) return;
+        processingIds.current.add(file.id);
         
-        // Upload - increment activeUploads before uploadFile (uploadFile only decrements)
-        incrementActiveUploads();
-        await uploadFile({ ...file, compressed });
+        try {
+          // Compress
+          updateFileStatus(file.id, { status: 'compressing' });
+          const compressed = await compressFile(file.file);
+          updateFileStatus(file.id, { 
+            status: 'pending',
+            compressed,
+          });
+          
+          // Upload - increment activeUploads before uploadFile (uploadFile only decrements)
+          incrementActiveUploads();
+          await uploadFile({ ...file, compressed });
+        } finally {
+          processingIds.current.delete(file.id);
+        }
       });
       
       await Promise.all(uploadPromises);
