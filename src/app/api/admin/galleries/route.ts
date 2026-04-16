@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
+import { successResponse, unauthorizedResponse, handlePrismaError, validationError } from '@/lib/api/response';
 import { gallerySchema } from '@/lib/api/validation';
 import { generateClientToken } from '@/lib/utils';
 import { getServerSession } from 'next-auth';
@@ -10,7 +10,7 @@ import { parseAdminPagination, createAdminPaginationResponse } from '@/types/pag
 async function checkAuth() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
-    return errorResponse('Unauthorized', 401);
+    return unauthorizedResponse();
   }
   return session;
 }
@@ -50,8 +50,8 @@ export async function GET(request: Request) {
       pagination: createAdminPaginationResponse(page, limit, total),
     });
   } catch (error) {
-    console.error('Error fetching galleries:', error);
-    return serverErrorResponse('Failed to fetch galleries');
+    console.error('[API] Error fetching galleries:', error);
+    return handlePrismaError(error);
   }
 }
 
@@ -61,18 +61,22 @@ export async function POST(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     const body = await request.json();
-    const validated = gallerySchema.parse(body);
+    const result = gallerySchema.safeParse(body);
+    
+    if (!result.success) {
+      return validationError(result.error);
+    }
 
     const gallery = await prisma.gallery.create({
       data: {
-        ...validated,
+        ...result.data,
         clientToken: generateClientToken(),
       },
     });
 
     return successResponse({ gallery }, 201);
   } catch (error) {
-    console.error('Error creating gallery:', error);
-    return serverErrorResponse('Failed to create gallery');
+    console.error('[API] Error creating gallery:', error);
+    return handlePrismaError(error);
   }
 }
