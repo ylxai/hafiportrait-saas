@@ -58,6 +58,7 @@ model Event {
   @@index([createdAt])
   @@index([status])
   @@index([status, createdAt])
+  @@index([clientId, eventDate]) // Composite index for client event lookups
 }
 
 model Package {
