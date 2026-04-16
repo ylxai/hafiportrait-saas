@@ -333,7 +333,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
 
   // Wrapper untuk upload dengan retry support
   const uploadFileWithRetry = async (file: UploadFile): Promise<void> => {
-    // HIGH PRIORITY FIX #3: Use state callback untuk atomic check
+    // HIGH PRIORITY FIX #3: Use latest file state to prevent stale data
     const currentFile = filesRef.current.find(f => f.id === file.id);
     if (!currentFile || currentFile.status === 'completed' || currentFile.status === 'failed') {
       return;
@@ -370,6 +370,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         // Gunakan await agar worker menunggu satu file selesai sebelum mengambil berikutnya
         await uploadFile(pendingFile);
       } finally {
+        // HIGH PRIORITY FIX #4: Always cleanup processingIds to prevent memory leak
         processingIds.current.delete(pendingFile.id);
       }
       
