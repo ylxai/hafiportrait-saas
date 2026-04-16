@@ -34,7 +34,8 @@ export async function GET(request: Request) {
 
     // Parallel queries for better performance
     const [galleries, events, clients] = await Promise.all([
-      (type === 'all' || type === 'galleries') ? prisma.gallery.findMany({
+      (type === 'all' || type === 'galleries')
+        ? prisma.gallery.findMany({
       where: {
         OR: [
           { namaProject: { contains: query, mode: 'insensitive' } },
@@ -54,8 +55,10 @@ export async function GET(request: Request) {
         },
       },
         take: 10,
-      }) : Promise.resolve([]),
-      (type === 'all' || type === 'events') ? prisma.event.findMany({
+      })
+        : Promise.resolve([]),
+      (type === 'all' || type === 'events')
+        ? prisma.event.findMany({
       where: {
         OR: [
           { namaProject: { contains: query, mode: 'insensitive' } },
@@ -72,8 +75,10 @@ export async function GET(request: Request) {
         client: { select: { nama: true } },
       },
         take: 10,
-      }) : Promise.resolve([]),
-      (type === 'all' || type === 'clients') ? prisma.client.findMany({
+      })
+        : Promise.resolve([]),
+      (type === 'all' || type === 'clients')
+        ? prisma.client.findMany({
       where: {
         OR: [
           { nama: { contains: query, mode: 'insensitive' } },
@@ -89,7 +94,8 @@ export async function GET(request: Request) {
         createdAt: true,
       },
         take: 10,
-      }) : Promise.resolve([]),
+      })
+        : Promise.resolve([]),
     ]);
 
     return successResponse({

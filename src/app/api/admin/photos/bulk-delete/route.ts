@@ -4,7 +4,7 @@ import { successResponse, unauthorizedResponse, handlePrismaError, validationErr
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { z } from 'zod';
-import { queueStorageDeletion } from '@/lib/cloudflare-queue';
+import { queueStorageDeletionBulk } from '@/lib/cloudflare-queue';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 const bulkDeleteSchema = z.object({
@@ -78,12 +78,12 @@ export async function POST(request: Request) {
     });
 
     // Queue storage deletion with credentials
-    for (const photo of photos) {
-      if (photo.r2Key || photo.thumbnailUrl) {
-        // Use cloudinaryAccount credentials if available, fallback to storageAccount
+    const deletionJobs = photos
+      .filter(photo => photo.r2Key || photo.thumbnailUrl)
+      .map(photo => {
         const cloudinaryCredentials = photo.cloudinaryAccount || photo.storageAccount;
         
-        await queueStorageDeletion({
+        return {
           photoId: photo.id,
           r2Key: photo.r2Key || undefined,
           thumbnailUrl: photo.thumbnailUrl || undefined,
@@ -94,8 +94,11 @@ export async function POST(request: Request) {
             apiKey: cloudinaryCredentials.apiKey,
             apiSecret: cloudinaryCredentials.apiSecret,
           } : undefined,
-        });
-      }
+        };
+      });
+
+    if (deletionJobs.length > 0) {
+      await queueStorageDeletionBulk(deletionJobs);
     }
 
     return successResponse({

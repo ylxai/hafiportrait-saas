@@ -118,6 +118,5 @@ if (typeof process !== 'undefined') {
   
   process.on('SIGINT', async () => {
     await closeRedisConnection();
-    process.exit(0);
   });
 }
