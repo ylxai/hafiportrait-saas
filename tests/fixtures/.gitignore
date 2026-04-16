@@ -1,0 +1,8 @@
+# Test fixtures (large files)
+test-photo.jpg
+test-photo.png
+test-photo.heic
+large-file.jpg
+
+# Keep invalid-file.txt (small)
+!invalid-file.txt
