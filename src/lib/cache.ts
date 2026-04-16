@@ -94,3 +94,29 @@ export async function invalidateCache(prefix: string) {
     console.error(`Redis cache error on INVALIDATE ${prefix}:`, error);
   }
 }
+
+/**
+ * Close Redis connection gracefully
+ * Call this on server shutdown (SIGTERM/SIGINT)
+ */
+export async function closeRedisConnection() {
+  if (redisCache) {
+    try {
+      await redisCache.quit();
+      console.log('[Redis] Connection closed gracefully');
+    } catch (error) {
+      console.error('[Redis] Error closing connection:', error);
+    }
+  }
+}
+
+// Register graceful shutdown handlers
+if (typeof process !== 'undefined') {
+  process.on('SIGTERM', async () => {
+    await closeRedisConnection();
+  });
+  
+  process.on('SIGINT', async () => {
+    await closeRedisConnection();
+  });
+}
