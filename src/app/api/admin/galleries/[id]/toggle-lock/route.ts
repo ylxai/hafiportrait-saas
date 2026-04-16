@@ -3,6 +3,12 @@ import { successResponse, notFoundResponse, serverErrorResponse, errorResponse }
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { validateRequest } from '@/lib/api/validation';
+
+const toggleLockSchema = z.object({
+  isSelectionLocked: z.boolean(),
+});
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -22,11 +28,14 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { isSelectionLocked } = body;
-
-    if (typeof isSelectionLocked !== 'boolean') {
-      return errorResponse('Invalid payload', 400);
+    
+    // Validate payload
+    const validation = validateRequest(toggleLockSchema, body);
+    if (!validation.success) {
+      return errorResponse(validation.error, 400);
     }
+
+    const { isSelectionLocked } = validation.data;
 
     const gallery = await prisma.gallery.findUnique({
       where: { id },
