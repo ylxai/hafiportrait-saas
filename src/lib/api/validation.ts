@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // Common validation schemas
 export const idSchema = z.object({
-  id: z.string().min(1, 'ID is required'),
+  id: z.string().trim().min(1, 'ID is required'),
 });
 
 export const paginationSchema = z.object({
@@ -212,7 +212,9 @@ export function validateRequest<T>(
     const firstError = result.error.errors[0];
     return {
       success: false,
-      error: `${firstError.path.join('.')}: ${firstError.message}`,
+      error: firstError.path.length > 0
+        ? `${firstError.path.join('.')}: ${firstError.message}`
+        : firstError.message,
     };
   }
   return { success: true, data: result.data };

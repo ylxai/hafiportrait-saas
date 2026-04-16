@@ -131,12 +131,21 @@ export async function PATCH(request: Request) {
     const { id } = idValidation.data;
     const { id: _, ...data } = body;
 
-    // Validate update data - use parse directly for complex schemas with transforms
-    const validated = eventUpdateSchema.parse(data);
+    // Validate update data - use safeParse for schemas with transforms
+    const dataValidation = eventUpdateSchema.safeParse(data);
+    if (!dataValidation.success) {
+      const firstError = dataValidation.error.errors[0];
+      return errorResponse(
+        firstError.path.length > 0
+          ? `${firstError.path.join('.')}: ${firstError.message}`
+          : firstError.message,
+        400
+      );
+    }
 
     const event = await prisma.event.update({
       where: { id },
-      data: validated,
+      data: dataValidation.data,
       include: { client: true, package: true },
     });
 
