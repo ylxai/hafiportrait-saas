@@ -3,6 +3,12 @@ import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/r
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { queueStorageDeletionBulk, isQueueConfigured } from '@/lib/cloudflare-queue';
+import { z } from 'zod';
+import { validateRequest } from '@/lib/api/validation';
+
+const bulkDeleteSchema = z.object({
+  photoIds: z.array(z.string()).min(1, 'At least one photo ID required'),
+});
 
 export async function POST(
   request: Request,
@@ -16,11 +22,14 @@ export async function POST(
 
     const { id: galleryId } = await params;
     const body = await request.json();
-    const { photoIds } = body;
-
-    if (!Array.isArray(photoIds) || photoIds.length === 0) {
-      return errorResponse('No photos selected for deletion', 400);
+    
+    // Validate payload
+    const validation = validateRequest(bulkDeleteSchema, body);
+    if (!validation.success) {
+      return errorResponse(validation.error, 400);
     }
+
+    const { photoIds } = validation.data;
 
     // Get photos with storage accounts
     const photos = await prisma.photo.findMany({
