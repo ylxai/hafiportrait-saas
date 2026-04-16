@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { successResponse, unauthorizedResponse, handlePrismaError, validationError } from '@/lib/api/response';
+import { successResponse, unauthorizedResponse, handlePrismaError, validationError, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { z } from 'zod';
 import { queueStorageDeletion } from '@/lib/cloudflare-queue';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 const bulkDeleteSchema = z.object({
   photoIds: z.array(z.string()).min(1).max(100),
@@ -23,6 +24,12 @@ export async function POST(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
+    // Rate limiting
+    const rateLimit = await checkRateLimit(auth.user.email, RATE_LIMITS.BULK_DELETE);
+    if (!rateLimit.success) {
+      return errorResponse('Too many requests. Please try again later.', 429);
+    }
+
     const body = await request.json();
     const result = bulkDeleteSchema.safeParse(body);
     
@@ -32,19 +39,37 @@ export async function POST(request: Request) {
 
     const { photoIds } = result.data;
 
-    // Get photos with storage info
+    // Get photos with storage credentials
     const photos = await prisma.photo.findMany({
       where: { id: { in: photoIds } },
       select: {
         id: true,
         r2Key: true,
         publicId: true,
+        thumbnailUrl: true,
+        fileSize: true,
         galleryId: true,
+        storageAccountId: true,
+        cloudinaryAccountId: true,
+        storageAccount: {
+          select: {
+            cloudName: true,
+            apiKey: true,
+            apiSecret: true,
+          },
+        },
+        cloudinaryAccount: {
+          select: {
+            cloudName: true,
+            apiKey: true,
+            apiSecret: true,
+          },
+        },
       },
     });
 
     if (photos.length === 0) {
-      return validationError({ photoIds: ['No photos found'] });
+      return errorResponse('No photos found', 404);
     }
 
     // Delete from database
@@ -52,13 +77,23 @@ export async function POST(request: Request) {
       where: { id: { in: photoIds } },
     });
 
-    // Queue storage deletion for each photo
+    // Queue storage deletion with credentials
     for (const photo of photos) {
-      if (photo.r2Key || photo.publicId) {
+      if (photo.r2Key || photo.thumbnailUrl) {
+        // Use cloudinaryAccount credentials if available, fallback to storageAccount
+        const cloudinaryCredentials = photo.cloudinaryAccount || photo.storageAccount;
+        
         await queueStorageDeletion({
           photoId: photo.id,
           r2Key: photo.r2Key || undefined,
-          cloudinaryPublicId: photo.publicId || undefined,
+          thumbnailUrl: photo.thumbnailUrl || undefined,
+          fileSize: photo.fileSize?.toString(),
+          storageAccountId: photo.storageAccountId || undefined,
+          cloudinaryCredentials: cloudinaryCredentials ? {
+            cloudName: cloudinaryCredentials.cloudName,
+            apiKey: cloudinaryCredentials.apiKey,
+            apiSecret: cloudinaryCredentials.apiSecret,
+          } : undefined,
         });
       }
     }

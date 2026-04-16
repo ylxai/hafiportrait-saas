@@ -3,7 +3,7 @@ import { verifyR2Upload, cleanupUploadSession, deleteFromR2, getR2Credentials } 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
-import { updateStorageUsage, getStorageAccountById } from '@/lib/storage/accounts';
+import { getStorageAccountById } from '@/lib/storage/accounts';
 import { publishPhotoUploaded } from '@/lib/ably';
 import { z } from 'zod';
 import {
@@ -155,26 +155,38 @@ export async function POST(request: Request) {
     // publicId is null until worker generates real thumbnail
     const publicId: string | null = null;
 
-    const photo = await prisma.photo.create({
-      data: {
-        galleryId,
-        filename,
-        url: publicUrl,
-        r2Key: r2Key,
-        thumbnailUrl,
-        publicId,
-        width: imgWidth,
-        height: imgHeight,
-        fileSize: BigInt(actualFileSize),
-        fileHash: photoFileHash,
-        storageAccountId: storageAccountId || null,
-        cloudinaryAccountId: cloudinaryAccountId || null,
-      },
-    });
+    // TRANSACTION: Atomic photo creation + storage usage update
+    const photo = await prisma.$transaction(async (tx) => {
+      const newPhoto = await tx.photo.create({
+        data: {
+          galleryId,
+          filename,
+          url: publicUrl,
+          r2Key: r2Key,
+          thumbnailUrl,
+          publicId,
+          width: imgWidth,
+          height: imgHeight,
+          fileSize: BigInt(actualFileSize),
+          fileHash: photoFileHash,
+          storageAccountId: storageAccountId || null,
+          cloudinaryAccountId: cloudinaryAccountId || null,
+        },
+      });
 
-    if (storageAccountId) {
-      await updateStorageUsage(storageAccountId, BigInt(actualFileSize));
-    }
+      // Update storage usage atomically
+      if (storageAccountId) {
+        await tx.storageAccount.update({
+          where: { id: storageAccountId },
+          data: {
+            usedStorage: { increment: BigInt(actualFileSize) },
+            totalPhotos: { increment: 1 },
+          },
+        });
+      }
+
+      return newPhoto;
+    });
 
     // Stage 2: Queue async thumbnail generation
     // Worker will fetch from R2, upload to Cloudinary, and update DB

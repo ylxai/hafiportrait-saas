@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { unauthorizedResponse, handlePrismaError } from '@/lib/api/response';
+import { unauthorizedResponse, handlePrismaError, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -16,6 +17,12 @@ export async function GET(request: Request) {
   try {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
+
+    // Rate limiting
+    const rateLimit = await checkRateLimit(auth.user.email, RATE_LIMITS.EXPORT);
+    if (!rateLimit.success) {
+      return errorResponse('Too many requests. Please try again later.', 429);
+    }
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
