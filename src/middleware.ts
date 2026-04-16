@@ -12,11 +12,9 @@ export function middleware(request: NextRequest) {
   const publicRoutes = [
     '/login',
     '/api/auth',
-    '/booking',
     '/api/public',
     '/api/webhook',
-    '/gallery',
-    '/'
+    '/api/admin/upload/cleanup', // Allow cleanup endpoint (uses Bearer auth)
   ];
 
   const isPublicRoute = publicRoutes.some(route => 
@@ -41,14 +39,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Add security headers
-  const response = NextResponse.next();
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('X-XSS-Protection', '1; mode=block');
-  
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {
