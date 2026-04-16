@@ -66,17 +66,19 @@ export default function EventsPage() {
   });
 
   // SWR for clients and packages (bounded, cached, no re-fetch on every page change)
-  const { data: clientsData } = useSWR('/api/admin/clients?limit=100', {
+  const { data: clientsData, error: clientsError, isLoading: clientsLoading } = useSWR('/api/admin/clients?limit=100', {
     revalidateOnFocus: false,
     dedupingInterval: 300000,
   });
-  const { data: packagesData } = useSWR('/api/admin/packages?limit=100', {
+  const { data: packagesData, error: packagesError, isLoading: packagesLoading } = useSWR('/api/admin/packages?limit=100', {
     revalidateOnFocus: false,
     dedupingInterval: 300000,
   });
 
   const clients: Client[] = clientsData?.data?.clients || clientsData?.clients || [];
   const packages: Package[] = packagesData?.data?.packages || packagesData?.packages || [];
+  const hasDataError = clientsError || packagesError;
+  const isLoadingData = clientsLoading || packagesLoading;
 
   useEffect(() => {
     fetchEvents();
@@ -473,6 +475,8 @@ export default function EventsPage() {
                   <SelectValue placeholder="Pilih client..." />
                 </SelectTrigger>
                 <SelectContent>
+                  {isLoadingData && <SelectItem value="loading" disabled>Loading...</SelectItem>}
+                  {hasDataError && <SelectItem value="error" disabled>Error loading clients</SelectItem>}
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>{client.nama}</SelectItem>
                   ))}
@@ -505,6 +509,8 @@ export default function EventsPage() {
                   <SelectValue placeholder="Pilih paket..." />
                 </SelectTrigger>
                 <SelectContent>
+                  {isLoadingData && <SelectItem value="loading" disabled>Loading...</SelectItem>}
+                  {hasDataError && <SelectItem value="error" disabled>Error loading packages</SelectItem>}
                   {packages.map((pkg) => (
                     <SelectItem key={pkg.id} value={pkg.id}>{pkg.nama} - Rp {pkg.price.toLocaleString('id-ID')}</SelectItem>
                   ))}

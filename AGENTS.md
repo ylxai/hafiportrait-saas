@@ -1,255 +1,195 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# AGENTS.md — PhotoStudio SaaS
 
-Next.js 15.4.11 with breaking changes. Read guides in `node_modules/next/dist/docs/` before writing code.
-<!-- END:nextjs-agent-rules -->
+## Project Overview
 
-# PhotoStudio SaaS - Agent Reference
+PhotoStudio SaaS — platform manajemen foto profesional untuk fotografer.
+Stack: **Next.js 15.4.11**, TypeScript (strict), Tailwind v4, Prisma + PostgreSQL, Cloudflare R2, Cloudinary, Ably.
 
-## Commands
+> ⚠️ This is NOT standard Next.js. Read `node_modules/next/dist/docs/` before writing code.
+> Route `params` and `searchParams` MUST be awaited as Promise before destructuring.
+
+## Dev Commands
 
 ```bash
-npm run dev              # Dev server (port 3000)
-npm run build            # Production build (lint + typecheck + build)
-npm run lint             # ESLint only
-npm run db:push          # Push Prisma schema to DB
-npm run db:generate      # Generate Prisma client
-npm run workers          # Start background workers (dev) - Note: Migrating to Cloudflare Edge Workers
-npm run workers:prod     # Start workers (production) - Note: Migrating to Cloudflare Edge Workers
+npm run dev          # Dev server (port 3000)
+npm run build        # Production build (lint + typecheck + build)
+npm run lint         # ESLint only
+npm run db:push      # Push Prisma schema to DB
+npm run db:generate  # Generate Prisma client
 ```
 
-## Critical UI Conventions (Aura Noir Theme)
-
-```tsx
-// ALWAYS use semantic OKLCH colors for Aura Noir (The OLED Luxury)
-text-foreground / text-muted-foreground / bg-background / bg-card / bg-card-hover
-
-// Primary actions
-bg-primary / text-primary-foreground / hover:bg-primary/90
-
-// Native inputs need explicit styling
-<input className="border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground" />
-
-// Dialog uses @base-ui/react (NOT Radix)
-import { Dialog } from '@/components/ui/dialog'
-```
-
-## Architecture - READ BEFORE MODIFYING
-
-| Directory | Purpose |
-|-----------|---------|
-| `src/app/(dashboard)/admin/` | Admin pages (require auth) |
-| `src/app/gallery/[token]/` | Public gallery (no auth) |
-| `src/app/api/admin/` | Admin API routes |
-| `src/app/api/public/` | Public API routes |
-| `src/components/ui/` | shadcn/ui components (base-ui based) |
-| `workers/` | Cloudflare Edge Workers (planned migration for background tasks) |
-| `prisma/schema.prisma` | Database schema |
-| `docs/` | **Excluded from build** - Documentation only (Migration guides, Design proposals) |
-
-## Background Jobs & Worker Deployment (CRITICAL)
-
-**Currently migrating from PM2/BullMQ local workers to Cloudflare Queues + Cloudflare Workers (Native Edge).**
-
-See `docs/CLOUDFLARE_EDGE_MIGRATION.md` and `docs/EXPERT_BACKGROUND_JOBS.md` for details.
-- Background tasks (like deleting photos from R2/Cloudinary) will be handled by Cloudflare Edge Workers.
-- Next.js acts as the Publisher, sending messages to Cloudflare Queues via HTTP POST.
-
-## Dual Storage Architecture
-
-- **Cloudinary**: Thumbnails only
-- **R2 (Cloudflare)**: Original files
-
-**Credentials Configuration**:
-- Storage credentials (Cloudinary, R2) are **dynamically loaded from the PostgreSQL database** (`StorageAccount` table), NOT exclusively from `.env`. This allows multiple storage accounts to be configured and managed via the Admin Dashboard.
-
-**Direct Upload Flow** (no chunking):
-1. Client requests presigned URL from API
-2. Client uploads directly to R2 (bypass server)
-3. Worker processes thumbnail generation asynchronously / Client notifies webhook
-
-**Photo Deletion**:
-- API immediately deletes from database
-- Storage cleanup (R2 + Cloudinary) is queued for background processing (Cloudflare Queues planned)
-- This prevents API blocking and provides retry on failure
-
-## Database - BigInt Serialization
-
-```typescript
-// Prisma BigInt cannot serialize to JSON directly
-// ALWAYS convert to string in API responses:
-return { 
-  usedStorage: account.usedStorage.toString(),
-  fileSize: photo.fileSize?.toString()  // Also for Photo model!
-}
-```
-
-## File Upload - Supported Types
-
-```typescript
-// Client + server validation for:
-['.jpg', '.jpeg', '.png', '.webp', '.heic', '.nef', '.cr2', '.arw', '.dng', '.raw']
-
-// RAW files (.nef, .cr2, .arw, .dng, .raw) bypass browser compression
-// (browser-image-compression doesn't support RAW formats)
-```
-
-## API Pagination Pattern
-
-```typescript
-// All admin list APIs support:
-GET /api/admin/events?page=1&limit=20
-
-// Response format:
-{ data: { events: [...] }, pagination: { page: 1, limit: 20, total: 150, pages: 8 } }
-```
-*(Note: API responses are typically wrapped in a `data` object via the `successResponse` utility).*
-
-## Environment Variables Required
-
-```env
-DATABASE_URL=postgresql://...
-# REDIS_URL=redis://...         # Deprecated/Migrating out (used for BullMQ)
-CLOUDFLARE_API_TOKEN=...        # Required for Wrangler & Queues (Use .dev.vars for Worker isolation)
-ABLY_API_KEY=...                # Real-time notifications
-NEXTAUTH_SECRET=...             # Auth
-```
-
-## Verification Before Commit
-
+**Verify before every commit:**
 ```bash
 npm run lint && npm run build
 ```
 
-No test framework configured for CI. Playwright is used for interactive/manual UI tests. Build + lint success = ready to commit.
+## Architecture
 
-## Completed Work (April 12, 2026)
+| Path | Purpose |
+|------|---------|
+| `src/app/(dashboard)/admin/` | Admin pages — auth required |
+| `src/app/gallery/[token]/` | Public gallery — token-based, no auth |
+| `src/app/api/admin/` | Admin API routes — auth required |
+| `src/app/api/public/` | Public API routes |
+| `src/app/api/webhook/` | Cloudflare Worker webhooks |
+| `src/components/ui/` | shadcn/ui components (base-ui based) |
+| `src/lib/storage/` | R2, Cloudinary, accounts, rotation, deletion |
+| `src/lib/upload/` | Presigned URLs, analytics, cleanup, hash |
+| `src/lib/cloudflare-queue.ts` | Cloudflare Queues publisher |
+| `workers/` | Cloudflare Edge Workers |
+| `prisma/schema.prisma` | Database schema |
+| `docs/` | Documentation only — excluded from build |
 
-### PRs Merged to Main
+## Code Style
 
-| PR # | Title | Status |
-|------|-------|--------|
-| #9 | fix/immediate-audit-fixes | ✅ MERGED |
-| #10 | fix(galleries): type definition | ✅ MERGED |
-| #11 | fix: critical bugs - error responses, validation, race condition | ✅ MERGED |
-| #12 | feat: reusable UI components + frontend consistency | ✅ MERGED |
-| #13 | fix: upload looping bug - race condition in useDirectUpload | ✅ MERGED |
-| #14 | fix: multiple upload system bugs | ✅ MERGED |
-| #15 | fix(upload): Critical bugs - memory leak, race condition, counter mismatch, session TTL | ✅ MERGED |
+- **TypeScript strict**: no `any`, use `unknown` or specific interfaces
+- **Imports**: use `@/` alias for all `src/` imports
+- **Notifications**: `toast()` from `sonner` — NEVER `alert()`
+- **UI colors**: Tailwind v4 OKLCH semantic only (`bg-background`, `bg-card`, `text-foreground`, etc.)
+- **Dialog**: `import { Dialog } from '@/components/ui/dialog'` — uses `@base-ui/react`, NOT Radix
 
-### PR #15 - Upload System Critical Fixes ✅ MERGED
+## UI Conventions — Aura Noir Theme
 
-**Branch**: `fix/upload-system-critical-bugs`
-**Commits**: 12 total (24df922 → d3bd103)
-**Status**: ✅ **MERGED** to main (Squash commit: `7537e3f`)
+**Aura Noir** = OLED Luxury dark theme. Always use semantic OKLCH colors:
 
-**High Priority Fixes**:
-- Memory leak (retry timeouts cleanup)
-- Race condition (centralized counter)
-- Counter mismatch (increment/decrement helpers)
-- Orphaned sessions (1 hour TTL with database index)
+```tsx
+// Backgrounds & text
+bg-background / bg-card / bg-card-hover
+text-foreground / text-muted-foreground
 
-**Medium Priority**:
-- Parallel compression (3x faster for large batches)
-- Cleanup scheduler (Cloudflare Cron recommendation)
-- Upload telemetry foundation
+// Actions
+bg-primary / text-primary-foreground / hover:bg-primary/90
 
-**Low Priority**:
-- Storage quota (10GB/client with Prisma aggregation)
-- Duplicate detection foundation (Web Crypto API)
-- Analytics dashboard structure
+// Borders
+border-border
 
-**Performance Improvements**:
-- 3x faster compression (100 files: 200s → 67s)
-- O(N²) → O(N) compression queue
-- Prisma aggregation (no N+1 queries)
-- Select only needed fields
+// Native inputs MUST have explicit styling:
+<input className="border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground" />
+```
 
-### Bugs Fixed (Previous PRs)
+**NEVER use:** static colors (`amber-500`, `gray-800`), `rgba(var(--primary))` syntax, light-mode colors.
 
-**PR #11 - Critical API Bugs:**
-- Error response helpers inconsistency
-- Date validation missing in Zod schemas
-- Race condition in booking code
-- Missing Prisma P2025 error handling
-- Input sanitization for XSS
+## Storage Architecture
 
-**PR #12 - Frontend Consistency:**
-- Created reusable components: loading.tsx, empty-state.tsx, pagination.tsx
-- Fixed 44+ hardcoded amber-500 → semantic OKLCH colors
+- **Cloudflare R2** — original files (direct upload via presigned URL, bypass server)
+- **Cloudinary** — thumbnails ONLY
+- Credentials from `StorageAccount` table in PostgreSQL — NOT from `.env`
 
-**PR #13 & #14 - Upload System:**
-- Race condition in uploadWorker (processingIds + filesRef)
-- activeUploads counter fix
-- alert() → sonner toast
-- selectedCloudinary sent to API
-- uploadId uses crypto.randomUUID()
-- File size validation (BigInt)
-- R2 verification (HeadObject)
-- Storage usage race condition fix
-- Webhook Zod validation
+**Direct Upload Flow:**
+1. Client requests presigned URL from `/api/admin/upload/presigned`
+2. Client uploads directly to R2 (bypass server)
+3. Client calls `/api/admin/upload/complete` → queues thumbnail generation
 
-### Additional Improvements (Added to PR #15)
+**Supported file types:** `.jpg`, `.jpeg`, `.png`, `.webp`, `.heic`, `.nef`, `.cr2`, `.arw`, `.dng`, `.raw`
 
-**BigInt Utilities (`src/lib/bigint-utils.ts`):**
-- `safeBigInt()` - Type-safe conversion from unknown
-- `serializeBigInt()` - JSON serialization helper
-- `safeBigIntAdd/Subtract()` - Safe arithmetic with nulls
-- `formatBytes()` - Human-readable sizes ("1.50 GB")
-- `parseSizeToBytes()` - Parse "10MB" → BigInt
+## Environment Variables
 
-**File Hashing (`src/lib/upload/hash-client.ts`):**
-- `calculateFileHash()` - Full SHA-256 via Web Crypto API
-- `calculatePartialHash()` - Quick 1MB hash for previews
-- `areFilesIdentical()` - Compare two files by hash
-- Client-side only (uses `crypto.subtle`)
+```env
+DATABASE_URL=postgresql://...
+CLOUDFLARE_API_TOKEN=...   # Wrangler & Queues
+ABLY_API_KEY=...           # Real-time
+NEXTAUTH_SECRET=...        # Auth
+VPS_WEBHOOK_SECRET=...     # Webhook validation
+```
 
-**Analytics Optimization (`src/lib/upload/analytics.ts`):**
-- Raw SQL for hourly grouping (10-50x faster)
-- Uses `prisma.$queryRaw` with PostgreSQL EXTRACT
+## Critical Rules
 
-## Key Files Reference
+### Storage Credentials
+Cloudinary and R2 credentials come from the `StorageAccount` table in PostgreSQL — NOT from `.env`.
 
-- `/docs/DESIGN_PROPOSAL_2026.md` - Aura Noir UI/UX design specifications
-- `/docs/CLOUDFLARE_EDGE_MIGRATION.md` - Cloudflare Worker edge migration plan
-- `/src/lib/upload/presigned.ts` - R2 presigned URL generation
-- `/src/lib/upload/hash-client.ts` - Client-side file hashing (Web Crypto API)
-- `/src/lib/bigint-utils.ts` - BigInt utilities (safe conversion, formatting)
-- `/src/hooks/useDirectUpload.ts` - Frontend upload hook with retry logic
-- `/src/components/upload/UploadManager.tsx` - Upload UI component
+### BigInt Serialization
+```typescript
+// Prisma BigInt cannot JSON.stringify — always convert:
+return successResponse({ fileSize: photo.fileSize?.toString() })
+```
 
-## AI Agent Behavior (MCP Integration)
+### Background Jobs
+Use **Cloudflare Queues only** via `src/lib/cloudflare-queue.ts`.
+NO BullMQ, NO PM2, NO Redis for task queues.
 
-**CRITICAL INSTRUCTION FOR AI AGENTS:**
-You MUST prioritize using configured **Model Context Protocol (MCP)** tools for testing, browser automation, data fetching, and code review over writing manual Node.js/Python scripts (e.g., `test.js` or `get_logs.js`). 
+### API Response Pattern
+```typescript
+import { successResponse, errorResponse, unauthorizedResponse, notFoundResponse, paginatedResponse } from '@/lib/api/response'
+```
 
-Currently available MCP Servers (configured in `~/.junie/mcp/mcp.json`):
-1. **Playwright MCP**: Use for interactive end-to-end browser testing, navigating pages, capturing snapshots, and verifying UI without writing manual Playwright scripts.
-2. **Chrome DevTools MCP**: Use for inspecting DOM elements, evaluating JavaScript on live pages, and analyzing network/console logs.
-3. **GitHub MCP**: Use for pulling PRs, adding review comments, creating issues, and browsing the codebase.
-4. **Context7 MCP**: Use for fetching up-to-date documentation and code snippets for Next.js, Tailwind v4, etc.
-5. **shadcn MCP**: Use to search and load the latest shadcn/ui and base-ui components directly.
-6. **Filesystem & Memory**: Local project file manipulation and entity context storage.
+### Pagination
+```typescript
+const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
+const limit = Math.min(100, parseInt(searchParams.get('limit') ?? '20', 10))
+```
 
-If an MCP tool can accomplish the task, **USE IT DIRECTLY** rather than simulating it via terminal commands.
+## Security
 
-## Security Rules
-1. **No Secrets in Code**: Never commit sensitive tokens (e.g., `CLOUDFLARE_API_TOKEN`, `VPS_WEBHOOK_SECRET`) to the repository. Use `.gitignore` for `.dev.vars`, `.env`, and secret files.
-2. **Denial of Service (DoS) Prevention**: Always cap API query parameters. For example, limit pagination sizes using `Math.min(limit, 100)` and enforce radix `10` in `parseInt`.
-3. **Authentication**: All Admin API routes (`/api/admin/*`) MUST implement session authentication checks (e.g., `getServerSession()`).
-4. **Webhook Verification**: Webhooks from Cloudflare Edge MUST validate `VPS_WEBHOOK_SECRET` before processing.
+- All `/api/admin/*` routes MUST call `getServerSession()` at the top
+- Webhooks from Cloudflare Edge MUST validate `VPS_WEBHOOK_SECRET` header
+- NEVER commit secrets, tokens, or credentials to the repository
+- Validate all inputs with **Zod** — including date fields
+- Handle Prisma `P2025` (not found) → return 404
+
+## Testing
+
+No CI test framework. Use **Playwright MCP** for interactive E2E testing — do NOT write manual test scripts.
+
+Build + lint success = ready to commit:
+```bash
+npm run lint && npm run build
+```
 
 ## Explicit Prohibitions
-1. **NO Bash for Filesystem**: Do NOT use bash commands like `cat`, `ls`, `grep` for reading or searching files. Always use the built-in MCP filesystem tools (`open`, `search_contents_by_grep`, `search_paths_by_glob`).
-2. **NO Custom Test Scripts**: Do NOT write custom Node.js/Python scripts (e.g., `test.js`, `get_logs.js`) to test UI or API. Always use **Playwright MCP** or **Chrome DevTools MCP** directly for interactive testing.
-3. **NO Blocking UI**: Do NOT use `alert()` or blocking dialogues. Use `sonner` `toast()` for non-blocking UI notifications.
-4. **NO Over-fetching**: Do NOT fetch unbounded relationships (e.g., 10,000 photos at once) in Admin dashboard APIs to prevent Out-Of-Memory. Always use Server-Side Pagination.
-5. **NO Legacy Tailwind**: Do NOT use `rgba(var(--primary))` syntax in Tailwind v4 shadows; use direct RGB values. Do NOT use light-mode static colors for the Aura Noir theme.
-6. **NO Redis/BullMQ for Background Jobs**: Do NOT use or install `bullmq` or `PM2` for background jobs. This project strictly uses Cloudflare Queues + Cloudflare Workers (Native Edge). Note: `ioredis` and Valkey are permitted STRICTLY for caching layers, not for task queues.
 
-## Coding Style & Best Practices
-1. **TypeScript Strictness**: Always use TypeScript with strict `no-any` types. Avoid using `any` at all costs; use `unknown` or specific interfaces.
-2. **Aura Noir Design System**: Strictly use Tailwind v4 OKLCH semantic colors (`bg-background`, `bg-card`, `text-foreground`). The UI should be dominant dark, luxurious, and OLED-friendly.
-3. **Next.js 15 Compatibility**: Route `params` and `searchParams` must be awaited as `Promise` before destructured.
-4. **Dynamic Storage Credentials**: Cloudinary and Cloudflare R2 credentials must be dynamically fetched from the `StorageAccount` table in PostgreSQL, not hardcoded from `.env`.
-5. **Continuous Learning**: Always load and check `.junie/memory/errors.md` and `.junie/memory/tasks.md` across sessions to persist context and rules.
+1. **NO bash for file operations** — use Filesystem MCP tools, not `cat`/`ls`/`grep`
+2. **NO custom test scripts** — use Playwright MCP or Chrome DevTools MCP directly
+3. **NO `alert()`** — use `sonner` `toast()` only
+4. **NO BullMQ / PM2 / Redis** for background jobs — Cloudflare Queues only
+5. **NO static Tailwind colors** — no `amber-500`, `gray-800`; use OKLCH semantic tokens
+6. **NO `rgba(var(--primary))`** syntax in Tailwind v4
+7. **NO unbounded queries** — always paginate, never fetch all records at once
+8. **NO secrets in code** — never commit API keys, tokens, or credentials
+
+## Kiro Configuration
+
+### Steering Files
+Project-specific rules are in `.kiro/steering/` — loaded automatically every session:
+
+| File | Content |
+|------|---------|
+| `product.md` | Product overview, features, business rules |
+| `tech.md` | Full stack details, library choices, constraints |
+| `structure.md` | Directory layout, naming conventions, import patterns |
+| `security.md` | Auth rules, secrets policy, DoS prevention |
+| `api-standards.md` | Response format, pagination, BigInt, Zod patterns |
+| `ui-conventions.md` | Aura Noir theme, OKLCH colors, component library |
+
+### Hooks
+Defined in `~/.kiro/agents/kiro.json`, run automatically:
+
+| Hook | Trigger | Action |
+|------|---------|--------|
+| `agentSpawn` | Agent starts | Inject critical project rules into context |
+| `preToolUse` (write) | Before file write | Block if secrets detected in content |
+| `stop` | After each response | Run `npm run lint` if TS files were modified |
+
+### Skills Available
+Global skills in `~/.kiro/skills/` relevant to this project:
+- `nextjs-best-practices` — Next.js App Router patterns
+- `tailwind-v4-shadcn` — Tailwind v4 + shadcn/ui integration
+- `shadcn` — shadcn/ui components, theming, forms
+- `cloudinary` — Cloudinary API usage
+- `nextauth-authentication` — NextAuth.js session management
+- `prisma-database-setup` — Prisma + PostgreSQL configuration
+- `playwright-generate-test` — E2E test generation via Playwright MCP
+- `code-review-excellence` — Code review best practices
+
+## MCP Tools Available
+
+Prefer MCP tools over bash scripts for these tasks:
+
+| Task | MCP |
+|------|-----|
+| Browser testing / UI verification | Playwright MCP |
+| DOM inspection, JS evaluation, network logs | Chrome DevTools MCP |
+| PR review, issues, code browsing | GitHub MCP |
+| Next.js / Tailwind v4 docs | Context7 MCP |
+| shadcn/ui components | shadcn MCP |
+| UI component generation | 21st-dev MCP |
+| File operations | Filesystem MCP |
