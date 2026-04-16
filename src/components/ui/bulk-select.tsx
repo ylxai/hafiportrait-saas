@@ -12,7 +12,8 @@ export function BulkSelectCheckbox({ checked, indeterminate, onCheckedChange, la
   return (
     <div className="flex items-center gap-2">
       <Checkbox
-        checked={indeterminate ? 'indeterminate' : checked}
+        checked={indeterminate ? false : checked}
+        indeterminate={indeterminate}
         onCheckedChange={onCheckedChange}
         aria-label={label || 'Select all'}
       />
