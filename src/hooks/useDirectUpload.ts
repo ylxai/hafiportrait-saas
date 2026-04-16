@@ -333,14 +333,22 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
 
   // Wrapper untuk upload dengan retry support
   const uploadFileWithRetry = async (file: UploadFile): Promise<void> => {
-    // HIGH PRIORITY FIX #3: Use state callback untuk atomic check
+    // HIGH PRIORITY FIX #3: Use latest file state to prevent stale data
     const currentFile = filesRef.current.find(f => f.id === file.id);
     if (!currentFile || currentFile.status === 'completed' || currentFile.status === 'failed') {
       return;
     }
     
+    // Prevent duplicate processing across all upload paths
+    if (processingIds.current.has(file.id)) return;
+    processingIds.current.add(file.id);
+    
     incrementActiveUploads();
-    await uploadFile(currentFile);
+    try {
+      await uploadFile(currentFile);
+    } finally {
+      processingIds.current.delete(file.id);
+    }
   };
 
   // Worker untuk upload batch
@@ -370,6 +378,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         // Gunakan await agar worker menunggu satu file selesai sebelum mengambil berikutnya
         await uploadFile(pendingFile);
       } finally {
+        // HIGH PRIORITY FIX #4: Always cleanup processingIds to prevent memory leak
         processingIds.current.delete(pendingFile.id);
       }
       
@@ -396,17 +405,25 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       
       // Compress dan upload langsung semua parallel
       const uploadPromises = pendingFiles.map(async (file) => {
-        // Compress
-        updateFileStatus(file.id, { status: 'compressing' });
-        const compressed = await compressFile(file.file);
-        updateFileStatus(file.id, { 
-          status: 'pending',
-          compressed,
-        });
+        // Prevent duplicate processing
+        if (processingIds.current.has(file.id)) return;
+        processingIds.current.add(file.id);
         
-        // Upload - increment activeUploads before uploadFile (uploadFile only decrements)
-        incrementActiveUploads();
-        await uploadFile({ ...file, compressed });
+        try {
+          // Compress
+          updateFileStatus(file.id, { status: 'compressing' });
+          const compressed = await compressFile(file.file);
+          updateFileStatus(file.id, { 
+            status: 'pending',
+            compressed,
+          });
+          
+          // Upload - increment activeUploads before uploadFile (uploadFile only decrements)
+          incrementActiveUploads();
+          await uploadFile({ ...file, compressed });
+        } finally {
+          processingIds.current.delete(file.id);
+        }
       });
       
       await Promise.all(uploadPromises);
