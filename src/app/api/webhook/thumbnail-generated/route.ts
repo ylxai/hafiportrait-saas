@@ -69,9 +69,9 @@ export async function POST(request: Request) {
           filename: true,
         },
       });
-    } catch (_error) {
+    } catch (error) {
       // Prisma P2025: Record not found
-      console.error(`[Webhook/Thumbnail] Photo ${photoId} not found`);
+      console.error(`[Webhook/Thumbnail] Photo ${photoId} not found:`, error);
       return errorResponse('Photo not found', 404);
     }
 

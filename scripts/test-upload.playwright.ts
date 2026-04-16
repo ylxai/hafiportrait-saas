@@ -118,10 +118,7 @@ test.describe('Upload System Tests', () => {
   });
 
   test('5. Test file size validation (>50MB should reject)', async ({ page }) => {
-    // Create a large dummy file (simulate >50MB)
-    const largeFile = '/tmp/large-test.jpg';
-    // Note: This would need actual implementation
-    
+    // Note: This test is disabled - would need actual large file implementation
     await page.goto(`${DEV_URL}/admin/galleries`);
     await page.click('a[href^="/admin/galleries/"]');
     
@@ -151,7 +148,7 @@ test.describe('Upload System Tests', () => {
     
     // Get all logs
     const logs = await page.evaluate(() => {
-      return (window as any).consoleLogs || [];
+      return (window as { consoleLogs?: string[] }).consoleLogs || [];
     });
     
     // Check for race condition errors
@@ -168,7 +165,7 @@ test.describe('Upload System Tests', () => {
     
     // Get initial memory
     const initialMemory = await page.evaluate(() => {
-      return (performance as any).memory?.usedJSHeapSize || 0;
+      return (performance as { memory?: { usedJSHeapSize?: number } }).memory?.usedJSHeapSize || 0;
     });
     
     await page.goto(`${DEV_URL}/admin/galleries`);
@@ -179,7 +176,7 @@ test.describe('Upload System Tests', () => {
     
     // Get final memory
     const finalMemory = await page.evaluate(() => {
-      return (performance as any).memory?.usedJSHeapSize || 0;
+      return (performance as { memory?: { usedJSHeapSize?: number } }).memory?.usedJSHeapSize || 0;
     });
     
     const memoryIncrease = (finalMemory - initialMemory) / 1024 / 1024;
