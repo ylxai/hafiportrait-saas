@@ -1,9 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import Image from 'next/image';
-import { createAvatar } from '@dicebear/core';
-import { initials } from '@dicebear/collection';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,22 +19,14 @@ type Client = {
 };
 
 const ClientAvatar = ({ name }: { name: string }) => {
-  const avatar = useMemo(() => {
-    return createAvatar(initials, {
-      seed: name || 'User',
-      backgroundColor: ['transparent'],
-      textColor: ['ffffff'],
-    }).toDataUri();
-  }, [name]);
+  const initials = name
+    ? name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()
+    : '?';
 
   return (
-    <Image
-      src={avatar}
-      alt={name || 'User'}
-      fill
-      unoptimized={true}
-      className="object-cover"
-    />
+    <div className="w-full h-full rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
+      {initials}
+    </div>
   );
 };
 

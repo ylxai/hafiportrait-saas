@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import useSWR from 'swr';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,8 +44,6 @@ type Event = {
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -66,31 +65,39 @@ export default function EventsPage() {
     paymentStatus: 'unpaid',
   });
 
+  // SWR for clients and packages (bounded, cached, no re-fetch on every page change)
+  const { data: clientsData, error: clientsError, isLoading: clientsLoading } = useSWR('/api/admin/clients?limit=100', {
+    revalidateOnFocus: false,
+    dedupingInterval: 300000,
+  });
+  const { data: packagesData, error: packagesError, isLoading: packagesLoading } = useSWR('/api/admin/packages?limit=100', {
+    revalidateOnFocus: false,
+    dedupingInterval: 300000,
+  });
+
+  const clients: Client[] = clientsData?.data?.clients || clientsData?.clients || [];
+  const packages: Package[] = packagesData?.data?.packages || packagesData?.packages || [];
+  const hasDataError = clientsError || packagesError;
+  const isLoadingData = clientsLoading || packagesLoading;
+
   useEffect(() => {
-    fetchData();
+    fetchEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination.page]);
 
-  const fetchData = async () => {
+  const fetchEvents = async () => {
     try {
       setLoading(true);
-      const [eventsRes, clientsRes, packagesRes] = await Promise.all([
-        fetch(`/api/admin/events?page=${pagination.page}&limit=${pagination.limit}`),
-        fetch('/api/admin/clients'),
-        fetch('/api/admin/packages'),
-      ]);
+      const eventsRes = await fetch(`/api/admin/events?page=${pagination.page}&limit=${pagination.limit}`);
+      if (!eventsRes.ok) throw new Error('Failed to fetch events');
       const eventsData = await eventsRes.json();
-      const clientsData = await clientsRes.json();
-      const packagesData = await packagesRes.json();
-      
+
       setEvents(eventsData.data?.events || eventsData.events || []);
       if (eventsData.data?.pagination || eventsData.pagination) {
         setPagination(eventsData.data?.pagination || eventsData.pagination);
       }
-      setClients(clientsData.data?.clients || clientsData.clients || []);
-      setPackages(packagesData.data?.packages || packagesData.packages || []);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching events:', error);
     } finally {
       setLoading(false);
     }
@@ -468,6 +475,8 @@ export default function EventsPage() {
                   <SelectValue placeholder="Pilih client..." />
                 </SelectTrigger>
                 <SelectContent>
+                  {isLoadingData && <SelectItem value="loading" disabled>Loading...</SelectItem>}
+                  {hasDataError && <SelectItem value="error" disabled>Error loading clients</SelectItem>}
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>{client.nama}</SelectItem>
                   ))}
@@ -500,6 +509,8 @@ export default function EventsPage() {
                   <SelectValue placeholder="Pilih paket..." />
                 </SelectTrigger>
                 <SelectContent>
+                  {isLoadingData && <SelectItem value="loading" disabled>Loading...</SelectItem>}
+                  {hasDataError && <SelectItem value="error" disabled>Error loading packages</SelectItem>}
                   {packages.map((pkg) => (
                     <SelectItem key={pkg.id} value={pkg.id}>{pkg.nama} - Rp {pkg.price.toLocaleString('id-ID')}</SelectItem>
                   ))}
