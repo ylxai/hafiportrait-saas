@@ -1,5 +1,6 @@
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { getAccountsNeedingRotation, rotateStorageCredentials } from '@/lib/storage/rotation';
+import { timingSafeEqual } from 'crypto';
 
 /**
  * POST /api/admin/storage-accounts/rotation/cron
@@ -23,7 +24,17 @@ export async function POST(request: Request) {
       return serverErrorResponse('Server misconfiguration');
     }
 
-    if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return errorResponse('Unauthorized', 401);
+    }
+
+    const token = authHeader.substring(7);
+    const isValid = timingSafeEqual(
+      Buffer.from(token),
+      Buffer.from(cronSecret)
+    );
+
+    if (!isValid) {
       return errorResponse('Unauthorized', 401);
     }
 

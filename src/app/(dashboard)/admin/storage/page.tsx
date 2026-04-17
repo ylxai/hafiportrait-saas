@@ -197,10 +197,24 @@ export default function StorageAccountsPage() {
         : '/api/admin/storage-accounts';
       const method = editingAccount ? 'PATCH' : 'POST';
 
+      // Filter out empty credential fields when editing (don't overwrite existing secrets)
+      const payload = editingAccount
+        ? Object.fromEntries(
+            Object.entries(formData).filter(([key, value]) => {
+              // Keep non-credential fields
+              if (!['apiKey', 'apiSecret', 'accessKey', 'secretKey', 'cloudName', 'uploadPreset', 'accountId', 'bucketName', 'publicUrl', 'endpoint'].includes(key)) {
+                return true;
+              }
+              // Only include credential fields if they have values
+              return value !== '';
+            })
+          )
+        : formData;
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
       const json = await res.json();
 

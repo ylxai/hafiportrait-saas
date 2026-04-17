@@ -166,7 +166,7 @@ export async function setSecondaryCredentials(
       data: {
         secondaryApiKey: credentials.apiKey,
         secondaryApiSecret: credentials.apiSecret,
-        isSecondaryActive: true,
+        isSecondaryActive: false,
       },
     });
   } else if (account.provider === 'R2') {
@@ -178,7 +178,7 @@ export async function setSecondaryCredentials(
       data: {
         secondaryAccessKey: credentials.accessKey,
         secondarySecretKey: credentials.secretKey,
-        isSecondaryActive: true,
+        isSecondaryActive: false,
       },
     });
   } else {
@@ -208,8 +208,8 @@ function computeNextRotationDate(schedule: string | null): Date | null {
     }
     case 'monthly': {
       const d = new Date(now);
+      d.setDate(1); // Reset to 1st before adding month
       d.setMonth(d.getMonth() + 1);
-      d.setDate(1);
       d.setHours(0, 0, 0, 0);
       return d;
     }

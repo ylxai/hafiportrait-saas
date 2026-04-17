@@ -42,17 +42,18 @@ export async function performPhotoDeletion(data: DeletionJobData): Promise<void>
       const publicId = getCloudinaryPublicId(thumbnailUrl);
       if (publicId) {
         const creds = await getStorageCredentials(storageAccountId);
+        
+        // Skip if not Cloudinary account (e.g., R2-only setup)
         if (creds.provider !== 'CLOUDINARY') {
-          throw new Error('Storage account is not Cloudinary');
-        }
+          console.log(`[DeletionWorker] Skipping Cloudinary deletion - account is ${creds.provider}`);
+        } else {
+          const cloudinaryCreds = {
+            cloudName: creds.cloudName || '',
+            apiKey: creds.apiKey || '',
+            apiSecret: creds.apiSecret || '',
+          };
 
-        const cloudinaryCreds = {
-          cloudName: creds.cloudName || '',
-          apiKey: creds.apiKey || '',
-          apiSecret: creds.apiSecret || '',
-        };
-
-        await deleteFromCloudinary(publicId, cloudinaryCreds);
+          await deleteFromCloudinary(publicId, cloudinaryCreds);
         console.log(`[DeletionWorker] Cloudinary file deleted: ${publicId}`);
         cloudinaryDeleted = true;
       }
