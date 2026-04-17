@@ -6,7 +6,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
 import { generateKodeBooking } from '@/lib/utils';
-import { parseAdminPagination, createAdminPaginationResponse } from '@/types/pagination';
+import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -22,7 +22,15 @@ export async function GET(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(request.url);
-    const { page, limit, skip } = parseAdminPagination(searchParams);
+    
+    // Validate pagination parameters
+    const paginationResult = parseAdminPaginationSafe(searchParams);
+    if (!paginationResult.success) {
+      const firstError = paginationResult.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+    }
+    
+    const { page, limit, skip } = paginationResult.data;
 
     const [events, total] = await Promise.all([
       prisma.event.findMany({

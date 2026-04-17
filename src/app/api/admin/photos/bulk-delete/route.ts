@@ -19,6 +19,17 @@ async function checkAuth() {
   return session;
 }
 
+/**
+ * Bulk delete photos with atomic queue-first pattern
+ * 
+ * Flow:
+ * 1. Fetch photos with storage credentials
+ * 2. Queue storage deletion jobs (with retry)
+ * 3. If queue succeeds, delete from database
+ * 4. If queue fails, return error without deleting from DB
+ * 
+ * This prevents orphaned files in storage.
+ */
 export async function POST(request: Request) {
   try {
     const auth = await checkAuth();
@@ -39,7 +50,7 @@ export async function POST(request: Request) {
 
     const { photoIds } = result.data;
 
-    // Get photos with storage credentials
+    // Step 1: Get photos with storage credentials
     const photos = await prisma.photo.findMany({
       where: { id: { in: photoIds } },
       select: {
@@ -72,12 +83,7 @@ export async function POST(request: Request) {
       return errorResponse('No photos found', 404);
     }
 
-    // Delete from database
-    await prisma.photo.deleteMany({
-      where: { id: { in: photoIds } },
-    });
-
-    // Queue storage deletion with credentials
+    // Step 2: Prepare deletion jobs
     const deletionJobs = photos
       .filter(photo => photo.r2Key || photo.thumbnailUrl)
       .map(photo => {
@@ -97,14 +103,53 @@ export async function POST(request: Request) {
         };
       });
 
+    // Step 3: Queue storage deletion FIRST (with retry logic built-in)
     if (deletionJobs.length > 0) {
-      await queueStorageDeletionBulk(deletionJobs);
+      const queueResult = await queueStorageDeletionBulk(deletionJobs);
+      
+      if (!queueResult.success) {
+        // Queue failed - DO NOT delete from database
+        console.error('[Bulk Delete] Queue failed, aborting database deletion:', queueResult.error);
+        return errorResponse(
+          `Failed to queue storage deletion: ${queueResult.error}. Photos were NOT deleted from database to prevent orphaned files.`,
+          500
+        );
+      }
+
+      // Log partial failures
+      if (queueResult.failedCount && queueResult.failedCount > 0) {
+        console.warn(`[Bulk Delete] ${queueResult.failedCount} deletion jobs failed to queue`);
+      }
+
+      console.log(`[Bulk Delete] Successfully queued ${deletionJobs.length} storage deletion jobs`);
     }
 
-    return successResponse({
-      deleted: photos.length,
-      photoIds: photos.map(p => p.id),
-    });
+    // Step 4: Only delete from database AFTER successful queue
+    try {
+      await prisma.photo.deleteMany({
+        where: { id: { in: photoIds } },
+      });
+
+      console.log(`[Bulk Delete] Successfully deleted ${photos.length} photos from database`);
+
+      return successResponse({
+        deleted: photos.length,
+        photoIds: photos.map(p => p.id),
+        queuedForStorageDeletion: deletionJobs.length,
+      });
+    } catch (dbError) {
+      // Database deletion failed AFTER queue succeeded
+      // This is a critical error - files will be deleted from storage but DB records remain
+      console.error('[Bulk Delete] CRITICAL: Database deletion failed after queue succeeded:', dbError);
+      
+      // Log this for manual intervention
+      console.error('[Bulk Delete] Manual intervention required for photo IDs:', photoIds);
+      
+      return errorResponse(
+        'Database deletion failed. Storage deletion was queued successfully. Manual intervention may be required.',
+        500
+      );
+    }
   } catch (error) {
     console.error('[API] Error bulk deleting photos:', error);
     return handlePrismaError(error);

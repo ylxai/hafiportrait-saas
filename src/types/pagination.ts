@@ -6,6 +6,30 @@
  * 2. Cursor-based (Public APIs) - For infinite scroll
  */
 
+import { z } from 'zod';
+
+// ============================================================================
+// ZOD SCHEMAS
+// ============================================================================
+
+/**
+ * Zod schema for admin pagination query parameters
+ * Validates page (≥1, ≤10000) and limit (1-100)
+ */
+export const adminPaginationSchema = z.object({
+  page: z.coerce.number().int().min(1, 'Page must be at least 1').max(10000, 'Page cannot exceed 10000').default(1),
+  limit: z.coerce.number().int().min(1, 'Limit must be at least 1').max(100, 'Limit cannot exceed 100').default(20),
+});
+
+/**
+ * Zod schema for cursor-based pagination
+ * Validates cursor format and perPage limit
+ */
+export const cursorPaginationSchema = z.object({
+  cursor: z.string().min(1).optional(),
+  perPage: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 // ============================================================================
 // ADMIN PAGINATION (Offset-based)
 // ============================================================================
@@ -32,10 +56,12 @@ export interface AdminPaginationResponse {
 
 /**
  * Parse and validate admin pagination parameters from URL search params
+ * Now uses Zod validation for robust input checking
  * 
  * @param searchParams - URLSearchParams from request.url
  * @param defaultLimit - Default items per page (default: 20)
  * @returns Validated pagination params with calculated skip
+ * @throws ZodError if validation fails
  * 
  * @example
  * const { page, limit, skip } = parseAdminPagination(searchParams);
@@ -45,15 +71,53 @@ export function parseAdminPagination(
   searchParams: URLSearchParams,
   defaultLimit = 20
 ): AdminPaginationParams {
-  const pageRaw = parseInt(searchParams.get('page') ?? '1', 10);
-  const page = Number.isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
+  // Validate with Zod
+  const validated = adminPaginationSchema.parse({
+    page: searchParams.get('page'),
+    limit: searchParams.get('limit') ?? String(defaultLimit),
+  });
   
-  const limitRaw = parseInt(searchParams.get('limit') ?? String(defaultLimit), 10);
-  const limit = Number.isNaN(limitRaw) ? defaultLimit : Math.min(100, Math.max(1, limitRaw));
-  
+  const { page, limit } = validated;
   const skip = (page - 1) * limit;
   
   return { page, limit, skip };
+}
+
+/**
+ * Safe version of parseAdminPagination that returns validation result
+ * Use this when you want to handle validation errors manually
+ * 
+ * @param searchParams - URLSearchParams from request.url
+ * @param defaultLimit - Default items per page (default: 20)
+ * @returns SafeParseReturnType with success/error
+ * 
+ * @example
+ * const result = parseAdminPaginationSafe(searchParams);
+ * if (!result.success) {
+ *   return errorResponse(result.error.errors[0].message, 400);
+ * }
+ * const { page, limit, skip } = result.data;
+ */
+export function parseAdminPaginationSafe(
+  searchParams: URLSearchParams,
+  defaultLimit = 20
+): z.SafeParseReturnType<unknown, AdminPaginationParams> {
+  const validation = adminPaginationSchema.safeParse({
+    page: searchParams.get('page'),
+    limit: searchParams.get('limit') ?? String(defaultLimit),
+  });
+  
+  if (!validation.success) {
+    return validation;
+  }
+  
+  const { page, limit } = validation.data;
+  const skip = (page - 1) * limit;
+  
+  return {
+    success: true,
+    data: { page, limit, skip },
+  };
 }
 
 /**
@@ -97,9 +161,11 @@ export interface PublicPaginationResponse {
 
 /**
  * Parse and validate cursor from URL search params
+ * Now uses Zod validation for robust input checking
  * 
  * @param searchParams - URLSearchParams from request.url
  * @returns Validated cursor or undefined
+ * @throws ZodError if validation fails
  * 
  * @example
  * const cursor = parseCursor(searchParams);
@@ -116,7 +182,44 @@ export function parseCursor(searchParams: URLSearchParams): string | undefined {
     return undefined;
   }
   
-  return cursor;
+  // Validate cursor format (should be a valid ID)
+  const validated = cursorPaginationSchema.parse({
+    cursor,
+    perPage: searchParams.get('perPage') ?? '20',
+  });
+  
+  return validated.cursor;
+}
+
+/**
+ * Safe version of parseCursor that returns validation result
+ * 
+ * @param searchParams - URLSearchParams from request.url
+ * @returns SafeParseReturnType with success/error
+ * 
+ * @example
+ * const result = parseCursorSafe(searchParams);
+ * if (!result.success) {
+ *   return errorResponse(result.error.errors[0].message, 400);
+ * }
+ */
+export function parseCursorSafe(
+  searchParams: URLSearchParams
+): z.SafeParseReturnType<unknown, { cursor?: string; perPage: number }> {
+  const cursor = searchParams.get('cursor');
+  
+  // Filter out invalid cursor values
+  if (!cursor || cursor === 'null' || cursor === 'undefined' || cursor.trim() === '') {
+    return {
+      success: true,
+      data: { perPage: 20 },
+    };
+  }
+  
+  return cursorPaginationSchema.safeParse({
+    cursor,
+    perPage: searchParams.get('perPage') ?? '20',
+  });
 }
 
 /**
