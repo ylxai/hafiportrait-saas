@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import useSWR from 'swr';
+import { useRouter } from 'next/navigation';
 
 type Package = {
   id: string;
@@ -17,6 +16,7 @@ type PackagesResponse = { data: { packages: Package[] } };
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function BookingPage() {
+  const router = useRouter();
   const { data, isLoading } = useSWR<PackagesResponse>('/api/public/booking/packages', fetcher, {
     revalidateOnFocus: false,
   });
@@ -24,7 +24,6 @@ export default function BookingPage() {
   const packages = data?.data?.packages ?? [];
   
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     nama: '',
     email: '',
@@ -48,8 +47,10 @@ export default function BookingPage() {
         body: JSON.stringify(formData),
       });
 
-      if (res.ok) {
-        setSubmitted(true);
+      const result = await res.json();
+
+      if (res.ok && result.data?.kodeBooking) {
+        router.push(`/booking/invoice/${result.data.kodeBooking}`);
       } else {
         alert('Terjadi kesalahan. Silakan coba lagi.');
       }
@@ -58,28 +59,7 @@ export default function BookingPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [formData]);
-
-  if (submitted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4 py-12">
-        <div className="max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">✓</span>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Booking Diterima!</h1>
-          <p className="text-slate-600 mb-6">Terima kasih telah melakukan booking. Kami akan menghubungi Anda segera.</p>
-            <button 
-              onClick={() => window.location.reload()} 
-              aria-label="Booking lagi"
-              className="px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
-            >
-            Booking Lagi
-          </button>
-        </div>
-      </div>
-    );
-  }
+  }, [formData, router]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-6 px-3">

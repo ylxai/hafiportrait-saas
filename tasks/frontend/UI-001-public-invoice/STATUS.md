@@ -21,15 +21,17 @@
 ### Step 1: Booking Redirect
 **Status:** 🟨 In Progress
 
-- [ ] Update `src/app/booking/page.tsx` with redirect logic
-- [ ] Verify redirect works on submission
+- [x] Update `src/app/booking/page.tsx` with redirect logic
+- [ ] Verify redirect works on submission (manually after page creation)
 
 ---
 
 ### Step 2: GET Booking Data API
-**Status:** ⬜ Not Started
+**Status:** 🟨 In Progress
 
-- [ ] API route created and tested
+- [ ] Create `src/app/api/public/booking/[kodeBooking]/route.ts`
+- [ ] Implement fetch logic with relations (Package, Client, Payments)
+- [ ] Ensure security (no sensitive data leakage)
 
 ---
 
