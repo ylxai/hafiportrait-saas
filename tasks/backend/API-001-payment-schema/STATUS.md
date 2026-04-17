@@ -1,6 +1,6 @@
 # API-001: Database Schema Update for Payment System — Status
 
-**Current Step:** Step 1: Update Prisma Schema
+**Current Step:** Step 2: Testing & Verification
 **Status:** 🟡 In Progress
 **Last Updated:** 2026-04-17
 **Review Level:** 1
@@ -19,19 +19,19 @@
 ---
 
 ### Step 1: Update Prisma Schema
-**Status:** 🟨 In Progress
+**Status:** ✅ Complete
 
-- [ ] Add `Payment` model to `prisma/schema.prisma` (with `uniqueCode` Int)
-- [ ] Add `payments Payment[]` to `Event` model
-- [ ] Update `paymentStatus` enum in TS schemas (`index.ts`, `validation.ts`) to include new statuses
-- [ ] Update `booking/route.ts` to generate `uniqueCode` and create initial `Payment` intent
-- [ ] Run `npm run db:generate`
-- [ ] Run `npm run db:push`
+- [x] Add `Payment` model to `prisma/schema.prisma` (with `uniqueCode` Int)
+- [x] Add `payments Payment[]` to `Event` model
+- [x] Update `paymentStatus` enum in TS schemas (`index.ts`, `validation.ts`) to include new statuses
+- [x] Update `booking/route.ts` to generate `uniqueCode` and create initial `Payment` intent
+- [x] Run `npm run db:generate`
+- [x] Run `npm run db:push`
 
 ---
 
 ### Step 2: Testing & Verification
-**Status:** ⬜ Not Started
+**Status:** 🟨 In Progress
 
 - [ ] FULL test suite passing (lint/build)
 - [ ] All failures fixed

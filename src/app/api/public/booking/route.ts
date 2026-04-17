@@ -40,6 +40,8 @@ export async function POST(request: Request) {
       kodeBooking = generateKodeBooking();
       
       try {
+        const uniqueCode = Math.floor(Math.random() * 999) + 1;
+        
         event = await prisma.event.create({
           data: {
             kodeBooking,
@@ -51,8 +53,20 @@ export async function POST(request: Request) {
             notes: validated.notes || '',
             totalPrice: packageData?.price || 0,
             status: 'pending',
-            paymentStatus: 'unpaid',
+            paymentStatus: 'awaiting_confirmation',
+            payments: {
+              create: {
+                amount: packageData?.price || 0,
+                uniqueCode,
+                type: 'full', // Default to full, can be changed if UI supports DP selection
+                method: 'transfer',
+                status: 'pending'
+              }
+            }
           },
+          include: {
+            payments: true
+          }
         });
         break;
       } catch (error: unknown) {

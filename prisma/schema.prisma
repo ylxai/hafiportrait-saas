@@ -51,6 +51,7 @@ model Event {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   galleries     Gallery[]
+  payments      Payment[]
 
   @@index([clientId])
   @@index([eventDate])
@@ -77,6 +78,24 @@ model Package {
 
   @@index([createdAt])
   @@index([isActive, createdAt])
+}
+
+model Payment {
+  id         String   @id @default(cuid())
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  amount     Int
+  uniqueCode Int      @default(0) // Random 3-digit code for auto-mutasi
+  type       String   // "dp" or "full"
+  method     String
+  proofUrl   String?
+  status     String   @default("pending") // "pending", "approved", "rejected"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Gallery {
