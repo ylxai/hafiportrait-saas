@@ -19,6 +19,11 @@ const nextConfig: NextConfig = {
     dangerouslyAllowSVG: false,
   },
   async headers() {
+    // Only apply strict CSP in production
+    if (process.env.NODE_ENV !== 'production') {
+      return [];
+    }
+
     return [
       {
         source: '/:path*',
