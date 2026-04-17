@@ -21,8 +21,9 @@
 ### Step 1: Update Prisma Schema
 **Status:** 🟨 In Progress
 
-- [ ] Add `Payment` model
-- [ ] Update `Event` paymentStatus expectations
+- [ ] Add `Payment` model to `prisma/schema.prisma`
+- [ ] Add `payments Payment[]` to `Event` model
+- [ ] Update `paymentStatus` enum in TS schemas (`index.ts`, `validation.ts`) to include new statuses
 - [ ] Run `npm run db:generate`
 - [ ] Run `npm run db:push`
 
