@@ -4,7 +4,7 @@
 **Status:** 🟡 In Progress
 **Last Updated:** 2026-04-17
 **Review Level:** 1
-**Review Counter:** 0
+**Review Counter:** 1
 **Iteration:** 1
 **Size:** S
 
@@ -21,9 +21,10 @@
 ### Step 1: Update Prisma Schema
 **Status:** 🟨 In Progress
 
-- [ ] Add `Payment` model to `prisma/schema.prisma`
+- [ ] Add `Payment` model to `prisma/schema.prisma` (with `uniqueCode` Int)
 - [ ] Add `payments Payment[]` to `Event` model
 - [ ] Update `paymentStatus` enum in TS schemas (`index.ts`, `validation.ts`) to include new statuses
+- [ ] Update `booking/route.ts` to generate `uniqueCode` and create initial `Payment` intent
 - [ ] Run `npm run db:generate`
 - [ ] Run `npm run db:push`
 
@@ -78,3 +79,4 @@
 ## Notes
 
 *Reserved for execution notes*
+| 2026-04-17 21:06 | Review R001 | plan Step 1: REVISE |
