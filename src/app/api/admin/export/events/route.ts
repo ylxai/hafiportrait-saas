@@ -4,6 +4,12 @@ import { unauthorizedResponse, handlePrismaError, errorResponse } from '@/lib/ap
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { z } from 'zod';
+
+// Zod schema for export query parameters
+const exportQuerySchema = z.object({
+  status: z.enum(['pending', 'confirmed', 'completed', 'cancelled']).optional(),
+});
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -25,7 +31,18 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
+    
+    // Validate query parameters
+    const validation = exportQuerySchema.safeParse({
+      status: searchParams.get('status'),
+    });
+
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+    }
+
+    const { status } = validation.data;
 
     const events = await prisma.event.findMany({
       where: status ? { status } : undefined,

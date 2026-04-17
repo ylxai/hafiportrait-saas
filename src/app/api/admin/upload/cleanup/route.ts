@@ -3,6 +3,12 @@ import { cleanupExpiredUploadSessions } from '@/lib/upload/cleanup';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { timingSafeEqual } from 'node:crypto';
+import { z } from 'zod';
+
+// Zod schema for query parameters
+const cleanupQuerySchema = z.object({
+  dryRun: z.enum(['true', 'false']).transform(val => val === 'true').default('false'),
+});
 
 // Verify cleanup secret (for cron worker or external cron)
 function verifyCleanupSecret(request: Request): boolean {
@@ -43,7 +49,18 @@ export async function POST(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const dryRun = searchParams.get('dryRun') === 'true';
+    
+    // Validate query parameters
+    const validation = cleanupQuerySchema.safeParse({
+      dryRun: searchParams.get('dryRun'),
+    });
+
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+    }
+
+    const { dryRun } = validation.data;
 
     // Cleanup expired upload sessions
     const deletedCount = await cleanupExpiredUploadSessions(dryRun);
