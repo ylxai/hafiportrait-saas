@@ -5,13 +5,13 @@
 **Last Updated:** 2026-04-17
 **Review Level:** 2
 **Review Counter:** 0
-**Iteration:** 1
+**Iteration:** 2
 **Size:** M
 
 ---
 
 ### Step 0: Preflight
-**Status:** 🟨 In Progress
+**Status:** ✅ Complete
 
 - [x] Required files and paths exist
 - [x] Dependencies satisfied (API-001 complete)
@@ -19,15 +19,16 @@
 ---
 
 ### Step 1: Booking Redirect
-**Status:** 🟨 In Progress
+**Status:** ✅ Complete
 
 - [x] Update `src/app/booking/page.tsx` with redirect logic
-- [ ] Verify redirect works on submission (manually after page creation)
+- [x] Verify redirect works on submission (manually after page creation)
+- [x] Refactor UI to follow Aura Noir theme (OKLCH colors)
 
 ---
 
 ### Step 2: GET Booking Data API
-**Status:** 🟨 In Progress
+**Status:** ✅ Complete
 
 - [x] Create `src/app/api/public/booking/[kodeBooking]/route.ts`
 - [x] Implement fetch logic with relations (Package, Client, Payments)
@@ -36,7 +37,7 @@
 ---
 
 ### Step 3: Invoice Page UI
-**Status:** 🟨 In Progress
+**Status:** ✅ Complete
 
 - [x] Create `src/app/booking/invoice/[kodeBooking]/page.tsx`
 - [x] Display Status, Client info, and Event summary
@@ -48,7 +49,7 @@
 ---
 
 ### Step 4: Testing & Verification
-**Status:** 🟨 In Progress
+**Status:** ✅ Complete
 
 - [x] Run `npm run lint`
 - [x] Run `npm run build`
@@ -57,7 +58,7 @@
 ---
 
 ### Step 5: Documentation & Delivery
-**Status:** 🟨 In Progress
+**Status:** ✅ Complete
 
 - [x] Log discoveries in STATUS.md
 - [x] Review cross-cutting docs if affected
@@ -89,6 +90,8 @@
 | 2026-04-17 | Task staged | PROMPT.md and STATUS.md created |
 | 2026-04-17 21:26 | Task started | Runtime V2 lane-runner execution |
 | 2026-04-17 21:26 | Step 0 started | Preflight |
+| 2026-04-17 21:36 | Agent reply | The public invoice page and payment upload flow (UI-001) have been implemented.  / - Booking submission now redirects to the invoice page. / - Created `src/app/booking/invoice/[kodeBooking]/page.tsx`  |
+| 2026-04-17 21:36 | Worker iter 1 | done in 612s, tools: 92 |
 
 ---
 
