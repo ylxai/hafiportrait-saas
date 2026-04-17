@@ -11,24 +11,23 @@
 **Lokasi:** Multiple API routes
 **Status:** 
 - ✅ **COMPLETED (PR #37 - Merged)**: clients, events, packages routes (3/24)
-- ✅ **COMPLETED (PR #39 - In Review)**: galleries routes (4/24)
-- ⏳ **REMAINING**: 17 routes (tracked in Issue #38)
+- ✅ **COMPLETED (PR #39 - Merged)**: galleries routes (4/24)
+- ✅ **IN REVIEW (PR - feat/zod-validation-priority-1)**: settings & storage routes (3/24)
+- ⏳ **REMAINING**: 14 routes (tracked in Issue #38)
 
-**Completed Routes:**
-1. ✅ `src/app/api/admin/clients/route.ts` - PATCH, DELETE with idSchema
-2. ✅ `src/app/api/admin/events/route.ts` - PATCH, DELETE with idSchema
-3. ✅ `src/app/api/admin/packages/route.ts` - PATCH, DELETE with idSchema
-4. ✅ `src/app/api/admin/galleries/[id]/route.ts` - PATCH with updateGallerySchema
-5. ✅ `src/app/api/admin/galleries/[id]/toggle-lock/route.ts` - PATCH with toggleLockSchema
-6. ✅ `src/app/api/admin/galleries/[id]/photos/bulk/route.ts` - POST with bulkDeleteSchema (max 100)
-7. ✅ `src/app/api/admin/galleries/[id]/photos/route.ts` - Already has validation
+**Completed Routes (10/24):**
+1. ✅ `src/app/api/admin/clients/route.ts` - PATCH, DELETE
+2. ✅ `src/app/api/admin/events/route.ts` - PATCH, DELETE
+3. ✅ `src/app/api/admin/packages/route.ts` - PATCH, DELETE
+4. ✅ `src/app/api/admin/galleries/[id]/route.ts` - PATCH
+5. ✅ `src/app/api/admin/galleries/[id]/toggle-lock/route.ts` - PATCH
+6. ✅ `src/app/api/admin/galleries/[id]/photos/bulk/route.ts` - POST
+7. ✅ `src/app/api/admin/galleries/[id]/photos/route.ts` - Already validated
+8. ✅ `src/app/api/admin/settings/route.ts` - POST with updateSettingsSchema
+9. ✅ `src/app/api/admin/storage-accounts/route.ts` - GET, POST, PATCH, DELETE
+10. ✅ `src/app/api/admin/storage-config/route.ts` - GET only (read-only)
 
-**Remaining Routes (Priority Order):**
-- 🔴 Priority 1: Settings & Storage (3 routes)
-  - `settings/route.ts` - GET, PATCH
-  - `storage-accounts/route.ts` - GET, POST, PATCH, DELETE
-  - `storage-config/route.ts` - GET, PATCH
-
+**Remaining Routes (14/24):**
 - 🟠 Priority 2: Bulk Operations (3 routes)
   - `clients/bulk/route.ts`
   - `events/bulk/route.ts`
@@ -48,6 +47,8 @@
   - `photos/[id]/rotate/route.ts`
   - `photos/[id]/metadata/route.ts`
   - `photos/bulk-delete/route.ts`
+
+**PR:** https://github.com/ylxai/hafiportrait-saas/pull/new/feat/zod-validation-priority-1
 
 **Pattern Established:**
 ```typescript
