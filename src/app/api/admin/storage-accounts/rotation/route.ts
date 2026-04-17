@@ -24,8 +24,7 @@ const postBodySchema = z.object({
   action: z.enum(['set-secondary', 'rotate-now', 'enable-rotation', 'disable-rotation']),
   schedule: z
     .object({
-      frequency: z.enum(['daily', 'weekly', 'monthly', 'custom']),
-      customCron: z.string().optional(),
+      frequency: z.enum(['daily', 'weekly', 'monthly']),
     })
     .optional(),
   credentials: z
@@ -179,9 +178,6 @@ export async function POST(request: Request) {
       case 'enable-rotation': {
         if (!schedule) {
           return errorResponse('schedule required for enable-rotation action', 400);
-        }
-        if (schedule.frequency === 'custom' && !schedule.customCron) {
-          return errorResponse('customCron required when frequency is "custom"', 400);
         }
         const result = await enableKeyRotation(accountId, schedule);
         if (!result.success) {

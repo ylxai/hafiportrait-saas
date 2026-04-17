@@ -2,8 +2,7 @@ import { prisma } from '@/lib/db';
 import { Prisma } from '@/generated/prisma';
 
 export interface RotationSchedule {
-  frequency: 'daily' | 'weekly' | 'monthly' | 'custom';
-  customCron?: string;
+  frequency: 'daily' | 'weekly' | 'monthly';
 }
 
 export interface RotationHistoryEntry {
@@ -95,24 +94,22 @@ export async function rotateStorageCredentials(
     // Compute next rotation date before transaction
     const nextDate = computeNextRotationDate(account.rotationSchedule);
 
-    await prisma.$transaction([
-      prisma.storageAccount.update({
-        where: { id: accountId },
-        data: {
-          // Promote secondary → primary
-          apiKey: account.secondaryApiKey,
-          apiSecret: account.secondaryApiSecret,
-          // Clear secondary
-          secondaryApiKey: null,
-          secondaryApiSecret: null,
-          isSecondaryActive: false,
-          lastRotatedAt: now,
-          rotationHistory: history as unknown as Prisma.InputJsonValue,
-          // Schedule next rotation
-          rotationNextDate: nextDate,
-        },
-      }),
-    ]);
+    await prisma.storageAccount.update({
+      where: { id: accountId },
+      data: {
+        // Promote secondary → primary
+        apiKey: account.secondaryApiKey,
+        apiSecret: account.secondaryApiSecret,
+        // Clear secondary
+        secondaryApiKey: null,
+        secondaryApiSecret: null,
+        isSecondaryActive: false,
+        lastRotatedAt: now,
+        rotationHistory: history as unknown as Prisma.InputJsonValue,
+        // Schedule next rotation
+        rotationNextDate: nextDate,
+      },
+    });
   } else if (account.provider === 'R2') {
     if (!account.secondaryAccessKey || !account.secondarySecretKey) {
       return { success: false, error: 'Secondary R2 credentials not set. Set secondaryAccessKey and secondarySecretKey first.' };
@@ -120,23 +117,21 @@ export async function rotateStorageCredentials(
 
     const nextDate = computeNextRotationDate(account.rotationSchedule);
 
-    await prisma.$transaction([
-      prisma.storageAccount.update({
-        where: { id: accountId },
-        data: {
-          // Promote secondary → primary
-          accessKey: account.secondaryAccessKey,
-          secretKey: account.secondarySecretKey,
-          // Clear secondary
-          secondaryAccessKey: null,
-          secondarySecretKey: null,
-          isSecondaryActive: false,
-          lastRotatedAt: now,
-          rotationHistory: history as unknown as Prisma.InputJsonValue,
-          rotationNextDate: nextDate,
-        },
-      }),
-    ]);
+    await prisma.storageAccount.update({
+      where: { id: accountId },
+      data: {
+        // Promote secondary → primary
+        accessKey: account.secondaryAccessKey,
+        secretKey: account.secondarySecretKey,
+        // Clear secondary
+        secondaryAccessKey: null,
+        secondarySecretKey: null,
+        isSecondaryActive: false,
+        lastRotatedAt: now,
+        rotationHistory: history as unknown as Prisma.InputJsonValue,
+        rotationNextDate: nextDate,
+      },
+    });
   } else {
     return { success: false, error: `Unknown provider: ${account.provider}` };
   }
@@ -255,11 +250,7 @@ export async function enableKeyRotation(
     return { success: false, error: 'Account not found' };
   }
 
-  const scheduleValue =
-    schedule.frequency === 'custom'
-      ? (schedule.customCron ?? null)
-      : schedule.frequency;
-
+  const scheduleValue = schedule.frequency;
   const nextDate = computeNextRotationDate(scheduleValue);
 
   await prisma.storageAccount.update({

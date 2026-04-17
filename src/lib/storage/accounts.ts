@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { getActiveCredentials } from './rotation';
 
 type StorageAccount = {
   id: string;
@@ -87,4 +88,46 @@ export async function findWorkingAccount(
   }
   
   return null;
+}
+
+/**
+ * Get active storage credentials for an account.
+ * Respects isSecondaryActive flag for zero-downtime rotation.
+ */
+export async function getStorageCredentials(accountId: string) {
+  const account = await prisma.storageAccount.findUnique({
+    where: { id: accountId },
+    select: {
+      id: true,
+      provider: true,
+      apiKey: true,
+      apiSecret: true,
+      accessKey: true,
+      secretKey: true,
+      secondaryApiKey: true,
+      secondaryApiSecret: true,
+      secondaryAccessKey: true,
+      secondarySecretKey: true,
+      isSecondaryActive: true,
+      cloudName: true,
+      bucketName: true,
+      endpoint: true,
+      publicUrl: true,
+    },
+  });
+
+  if (!account) {
+    throw new Error(`Storage account ${accountId} not found`);
+  }
+
+  const credentials = getActiveCredentials(account);
+
+  return {
+    provider: account.provider,
+    cloudName: account.cloudName,
+    bucketName: account.bucketName,
+    endpoint: account.endpoint,
+    publicUrl: account.publicUrl,
+    ...credentials,
+  };
 }
