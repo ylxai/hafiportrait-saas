@@ -36,11 +36,14 @@
 ---
 
 ### Step 3: Invoice Page UI
-**Status:** ⬜ Not Started
+**Status:** 🟨 In Progress
 
-- [ ] Page created
-- [ ] Display event/client details
-- [ ] Upload payment proof form works
+- [ ] Create `src/app/booking/invoice/[kodeBooking]/page.tsx`
+- [ ] Display Status, Client info, and Event summary
+- [ ] Implement Payment Instructions (Bank details + Unique Code)
+- [ ] Create Payment Proof Upload form with Cloudflare R2 direct upload
+- [ ] Implement `POST /api/public/payment` to complete the process
+- [ ] (Optional) Add "Print" button logic
 
 ---
 
