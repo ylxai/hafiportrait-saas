@@ -7,20 +7,69 @@
 
 ## 🔴 CRITICAL ISSUES (Harus Segera Diperbaiki)
 
-### 1. **Missing Zod Validation di Banyak API Routes**
+### 1. **Missing Zod Validation di Banyak API Routes** ⚠️ IN PROGRESS
 **Lokasi:** Multiple API routes
-**Issue:** 
-- `src/app/api/admin/galleries/route.ts` - GET tidak validasi searchParams
-- `src/app/api/public/gallery/[token]/route.ts` - GET tidak validasi cursor
-- Banyak PATCH/DELETE routes tidak validasi ID format
+**Status:** 
+- ✅ **COMPLETED (PR #37 - Merged)**: clients, events, packages routes (3/24)
+- ✅ **COMPLETED (PR #39 - In Review)**: galleries routes (4/24)
+- ⏳ **REMAINING**: 17 routes (tracked in Issue #38)
 
-**Solusi:** Tambahkan Zod schema untuk semua input:
+**Completed Routes:**
+1. ✅ `src/app/api/admin/clients/route.ts` - PATCH, DELETE with idSchema
+2. ✅ `src/app/api/admin/events/route.ts` - PATCH, DELETE with idSchema
+3. ✅ `src/app/api/admin/packages/route.ts` - PATCH, DELETE with idSchema
+4. ✅ `src/app/api/admin/galleries/[id]/route.ts` - PATCH with updateGallerySchema
+5. ✅ `src/app/api/admin/galleries/[id]/toggle-lock/route.ts` - PATCH with toggleLockSchema
+6. ✅ `src/app/api/admin/galleries/[id]/photos/bulk/route.ts` - POST with bulkDeleteSchema (max 100)
+7. ✅ `src/app/api/admin/galleries/[id]/photos/route.ts` - Already has validation
+
+**Remaining Routes (Priority Order):**
+- 🔴 Priority 1: Settings & Storage (3 routes)
+  - `settings/route.ts` - GET, PATCH
+  - `storage-accounts/route.ts` - GET, POST, PATCH, DELETE
+  - `storage-config/route.ts` - GET, PATCH
+
+- 🟠 Priority 2: Bulk Operations (3 routes)
+  - `clients/bulk/route.ts`
+  - `events/bulk/route.ts`
+  - `packages/bulk/route.ts`
+
+- 🟡 Priority 3: Analytics & Stats (5 routes)
+  - `analytics/route.ts`
+  - `finance/route.ts`
+  - `stats/route.ts`
+  - `search/route.ts`
+  - `upload/cleanup/route.ts`
+
+- 🟢 Priority 4: Export & Photos (6 routes)
+  - `export/events/route.ts`
+  - `export/clients/route.ts`
+  - `photos/[id]/route.ts`
+  - `photos/[id]/rotate/route.ts`
+  - `photos/[id]/metadata/route.ts`
+  - `photos/bulk-delete/route.ts`
+
+**Pattern Established:**
 ```typescript
-const querySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-});
+import { validateRequest, idSchema } from '@/lib/api/validation';
+
+// ID validation
+const validation = validateRequest(idSchema, { id: body.id });
+if (!validation.success) {
+  return errorResponse(validation.error, 400);
+}
+
+// Data validation
+const dataValidation = validateRequest(someSchema, data);
+if (!dataValidation.success) {
+  return errorResponse(dataValidation.error, 400);
+}
 ```
+
+**References:**
+- Issue #38: https://github.com/ylxai/hafiportrait-saas/issues/38
+- PR #37: https://github.com/ylxai/hafiportrait-saas/pull/37 (Merged)
+- PR #39: https://github.com/ylxai/hafiportrait-saas/pull/39 (In Review)
 
 ---
 

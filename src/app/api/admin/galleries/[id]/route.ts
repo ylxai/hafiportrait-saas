@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
-import { updateGallerySchema } from '@/lib/api/validation';
+import { updateGallerySchema, validateRequest } from '@/lib/api/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 
@@ -82,11 +82,16 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const validated = updateGallerySchema.parse(body);
+    
+    // Validate update data
+    const dataValidation = validateRequest(updateGallerySchema, body);
+    if (!dataValidation.success) {
+      return errorResponse(dataValidation.error, 400);
+    }
 
     const gallery = await prisma.gallery.update({
       where: { id },
-      data: validated,
+      data: dataValidation.data,
     });
 
     return successResponse({ gallery });
