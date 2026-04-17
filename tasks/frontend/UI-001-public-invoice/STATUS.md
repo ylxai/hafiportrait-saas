@@ -29,9 +29,9 @@
 ### Step 2: GET Booking Data API
 **Status:** 🟨 In Progress
 
-- [ ] Create `src/app/api/public/booking/[kodeBooking]/route.ts`
-- [ ] Implement fetch logic with relations (Package, Client, Payments)
-- [ ] Ensure security (no sensitive data leakage)
+- [x] Create `src/app/api/public/booking/[kodeBooking]/route.ts`
+- [x] Implement fetch logic with relations (Package, Client, Payments)
+- [x] Ensure security (no sensitive data leakage)
 
 ---
 
