@@ -208,14 +208,18 @@ model StorageAccount {
   endpoint      String?
   
   // Key rotation support
-  rotationEnabled  Boolean      @default(false)
-  rotationSchedule String?
-  rotationNextDate DateTime?
-  secondaryApiKey  String?
-  secondarySecret  String?
+  rotationEnabled    Boolean   @default(false)
+  rotationSchedule   String?
+  rotationNextDate   DateTime?
+  // Secondary Cloudinary credentials (used during rotation)
+  secondaryApiKey    String?
+  secondaryApiSecret String?   // Renamed from secondarySecret to avoid collision with R2
+  // Secondary R2 credentials (used during rotation)
   secondaryAccessKey String?
-  isSecondaryActive Boolean    @default(false)
-  lastRotatedAt    DateTime?
+  secondarySecretKey String?   // Renamed from secondarySecret — separate field for R2
+  isSecondaryActive  Boolean   @default(false)
+  lastRotatedAt      DateTime?
+  rotationHistory    Json?     // Array of { rotatedAt, initiatedBy } for audit log
   
   // Usage stats
   usedStorage   BigInt         @default(0)

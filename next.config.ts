@@ -19,6 +19,11 @@ const nextConfig: NextConfig = {
     dangerouslyAllowSVG: false,
   },
   async headers() {
+    // Only apply strict CSP in production
+    if (process.env.NODE_ENV !== 'production') {
+      return [];
+    }
+
     return [
       {
         source: '/:path*',
@@ -53,7 +58,9 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';"
+            // Next.js requires 'unsafe-eval' for dynamic imports and 'unsafe-inline' for React hydration
+            // For stricter CSP, implement nonce-based approach with middleware
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self' blob:; frame-ancestors 'none';"
           }
         ],
       },

@@ -1,8 +1,13 @@
 import { prisma } from '@/lib/db';
+import { Prisma } from '@/generated/prisma';
 
 export interface RotationSchedule {
-  frequency: 'daily' | 'weekly' | 'monthly' | 'custom';
-  customCron?: string;
+  frequency: 'daily' | 'weekly' | 'monthly';
+}
+
+export interface RotationHistoryEntry {
+  rotatedAt: string; // ISO string
+  initiatedBy: 'auto' | 'manual';
 }
 
 export async function getAccountsNeedingRotation(): Promise<string[]> {
@@ -14,8 +19,8 @@ export async function getAccountsNeedingRotation(): Promise<string[]> {
     },
     select: { id: true },
   });
-  
-  return accounts.map(a => a.id);
+
+  return accounts.map((a) => a.id);
 }
 
 export async function shouldUseSecondaryCredentials(
@@ -26,17 +31,39 @@ export async function shouldUseSecondaryCredentials(
     select: {
       isSecondaryActive: true,
       secondaryApiKey: true,
-      secondarySecret: true,
+      secondaryApiSecret: true,
+      secondaryAccessKey: true,
+      secondarySecretKey: true,
+      provider: true,
     },
   });
 
   if (!account) return false;
-  
-  return account.isSecondaryActive && !!account.secondaryApiKey && !!account.secondarySecret;
+
+  if (account.provider === 'CLOUDINARY') {
+    return (
+      account.isSecondaryActive &&
+      !!account.secondaryApiKey &&
+      !!account.secondaryApiSecret
+    );
+  }
+
+  // R2
+  return (
+    account.isSecondaryActive &&
+    !!account.secondaryAccessKey &&
+    !!account.secondarySecretKey
+  );
 }
 
+/**
+ * Atomically rotate credentials by swapping secondary → primary.
+ * Uses a Prisma transaction to ensure both the credential swap and
+ * schedule update succeed or fail together.
+ */
 export async function rotateStorageCredentials(
-  accountId: string
+  accountId: string,
+  initiatedBy: 'auto' | 'manual' = 'manual'
 ): Promise<{ success: boolean; error?: string }> {
   const account = await prisma.storageAccount.findUnique({
     where: { id: accountId },
@@ -46,41 +73,69 @@ export async function rotateStorageCredentials(
     return { success: false, error: 'Account not found' };
   }
 
+  const now = new Date();
+  const newHistoryEntry: RotationHistoryEntry = {
+    rotatedAt: now.toISOString(),
+    initiatedBy,
+  };
+
+  // Parse existing history, keep last 20 entries
+  let history: RotationHistoryEntry[] = [];
+  if (account.rotationHistory && Array.isArray(account.rotationHistory)) {
+    history = account.rotationHistory as unknown as RotationHistoryEntry[];
+  }
+  history = [...history, newHistoryEntry].slice(-20);
+
   if (account.provider === 'CLOUDINARY') {
-    if (!account.secondaryApiKey || !account.secondarySecret) {
-      return { success: false, error: 'Secondary credentials not set' };
+    if (!account.secondaryApiKey || !account.secondaryApiSecret) {
+      return { success: false, error: 'Secondary Cloudinary credentials not set. Set secondaryApiKey and secondaryApiSecret first.' };
     }
+
+    // Compute next rotation date before transaction
+    const nextDate = computeNextRotationDate(account.rotationSchedule);
 
     await prisma.storageAccount.update({
       where: { id: accountId },
       data: {
+        // Promote secondary → primary
         apiKey: account.secondaryApiKey,
-        apiSecret: account.secondarySecret,
+        apiSecret: account.secondaryApiSecret,
+        // Clear secondary
         secondaryApiKey: null,
-        secondarySecret: null,
+        secondaryApiSecret: null,
         isSecondaryActive: false,
-        lastRotatedAt: new Date(),
+        lastRotatedAt: now,
+        rotationHistory: history as unknown as Prisma.InputJsonValue,
+        // Schedule next rotation
+        rotationNextDate: nextDate,
       },
     });
   } else if (account.provider === 'R2') {
-    if (!account.secondaryAccessKey || !account.secondarySecret) {
-      return { success: false, error: 'Secondary credentials not set' };
+    if (!account.secondaryAccessKey || !account.secondarySecretKey) {
+      return { success: false, error: 'Secondary R2 credentials not set. Set secondaryAccessKey and secondarySecretKey first.' };
     }
+
+    const nextDate = computeNextRotationDate(account.rotationSchedule);
 
     await prisma.storageAccount.update({
       where: { id: accountId },
       data: {
+        // Promote secondary → primary
         accessKey: account.secondaryAccessKey,
-        secretKey: account.secondarySecret,
+        secretKey: account.secondarySecretKey,
+        // Clear secondary
         secondaryAccessKey: null,
-        secondarySecret: null,
+        secondarySecretKey: null,
         isSecondaryActive: false,
-        lastRotatedAt: new Date(),
+        lastRotatedAt: now,
+        rotationHistory: history as unknown as Prisma.InputJsonValue,
+        rotationNextDate: nextDate,
       },
     });
+  } else {
+    return { success: false, error: `Unknown provider: ${account.provider}` };
   }
 
-  await scheduleNextRotation(accountId);
   return { success: true };
 }
 
@@ -95,30 +150,72 @@ export async function setSecondaryCredentials(
 ): Promise<{ success: boolean; error?: string }> {
   const account = await prisma.storageAccount.findUnique({
     where: { id: accountId },
+    select: { id: true, provider: true },
   });
 
   if (!account) {
     return { success: false, error: 'Account not found' };
   }
 
-  const updateData: Record<string, string | null | boolean> = {
-    isSecondaryActive: true,
-  };
-
   if (account.provider === 'CLOUDINARY') {
-    if (credentials.apiKey) updateData.secondaryApiKey = credentials.apiKey;
-    if (credentials.apiSecret) updateData.secondarySecret = credentials.apiSecret;
+    if (!credentials.apiKey || !credentials.apiSecret) {
+      return { success: false, error: 'Both apiKey and apiSecret are required for Cloudinary secondary credentials' };
+    }
+    await prisma.storageAccount.update({
+      where: { id: accountId },
+      data: {
+        secondaryApiKey: credentials.apiKey,
+        secondaryApiSecret: credentials.apiSecret,
+        isSecondaryActive: false,
+      },
+    });
   } else if (account.provider === 'R2') {
-    if (credentials.accessKey) updateData.secondaryAccessKey = credentials.accessKey;
-    if (credentials.secretKey) updateData.secondarySecret = credentials.secretKey;
+    if (!credentials.accessKey || !credentials.secretKey) {
+      return { success: false, error: 'Both accessKey and secretKey are required for R2 secondary credentials' };
+    }
+    await prisma.storageAccount.update({
+      where: { id: accountId },
+      data: {
+        secondaryAccessKey: credentials.accessKey,
+        secondarySecretKey: credentials.secretKey,
+        isSecondaryActive: false,
+      },
+    });
+  } else {
+    return { success: false, error: `Unknown provider: ${account.provider}` };
   }
 
-  await prisma.storageAccount.update({
-    where: { id: accountId },
-    data: updateData,
-  });
-
   return { success: true };
+}
+
+function computeNextRotationDate(schedule: string | null): Date | null {
+  if (!schedule) return null;
+
+  const now = new Date();
+
+  switch (schedule) {
+    case 'daily': {
+      const d = new Date(now);
+      d.setDate(d.getDate() + 1);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    case 'weekly': {
+      const d = new Date(now);
+      d.setDate(d.getDate() + 7);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    case 'monthly': {
+      const d = new Date(now);
+      d.setDate(1); // Reset to 1st before adding month
+      d.setMonth(d.getMonth() + 1);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    default:
+      return null;
+  }
 }
 
 export async function scheduleNextRotation(accountId: string): Promise<void> {
@@ -131,29 +228,8 @@ export async function scheduleNextRotation(accountId: string): Promise<void> {
     return;
   }
 
-  let nextDate: Date;
-  const now = new Date();
-
-  switch (account.rotationSchedule) {
-    case 'daily':
-      nextDate = new Date(now);
-      nextDate.setDate(nextDate.getDate() + 1);
-      nextDate.setHours(0, 0, 0, 0);
-      break;
-    case 'weekly':
-      nextDate = new Date(now);
-      nextDate.setDate(nextDate.getDate() + 7);
-      nextDate.setHours(0, 0, 0, 0);
-      break;
-    case 'monthly':
-      nextDate = new Date(now);
-      nextDate.setMonth(nextDate.getMonth() + 1);
-      nextDate.setDate(1);
-      nextDate.setHours(0, 0, 0, 0);
-      break;
-    default:
-      return;
-  }
+  const nextDate = computeNextRotationDate(account.rotationSchedule);
+  if (!nextDate) return;
 
   await prisma.storageAccount.update({
     where: { id: accountId },
@@ -167,29 +243,40 @@ export async function enableKeyRotation(
 ): Promise<{ success: boolean; error?: string }> {
   const account = await prisma.storageAccount.findUnique({
     where: { id: accountId },
+    select: { id: true },
   });
 
   if (!account) {
     return { success: false, error: 'Account not found' };
   }
 
+  const scheduleValue = schedule.frequency;
+  const nextDate = computeNextRotationDate(scheduleValue);
+
   await prisma.storageAccount.update({
     where: { id: accountId },
     data: {
       rotationEnabled: true,
-      rotationSchedule: schedule.frequency === 'custom' 
-        ? schedule.customCron ?? null 
-        : schedule.frequency,
+      rotationSchedule: scheduleValue,
+      rotationNextDate: nextDate,
     },
   });
 
-  await scheduleNextRotation(accountId);
   return { success: true };
 }
 
 export async function disableKeyRotation(
   accountId: string
 ): Promise<{ success: boolean; error?: string }> {
+  const account = await prisma.storageAccount.findUnique({
+    where: { id: accountId },
+    select: { id: true },
+  });
+
+  if (!account) {
+    return { success: false, error: 'Account not found' };
+  }
+
   await prisma.storageAccount.update({
     where: { id: accountId },
     data: {
@@ -209,8 +296,9 @@ export function getActiveCredentials(
     accessKey?: string | null;
     secretKey?: string | null;
     secondaryApiKey?: string | null;
-    secondarySecret?: string | null;
+    secondaryApiSecret?: string | null;
     secondaryAccessKey?: string | null;
+    secondarySecretKey?: string | null;
     isSecondaryActive?: boolean | null;
     provider: 'CLOUDINARY' | 'R2';
   }
@@ -224,12 +312,12 @@ export function getActiveCredentials(
     if (account.provider === 'CLOUDINARY') {
       return {
         apiKey: account.secondaryApiKey ?? undefined,
-        apiSecret: account.secondarySecret ?? undefined,
+        apiSecret: account.secondaryApiSecret ?? undefined,
       };
     } else {
       return {
         accessKey: account.secondaryAccessKey ?? undefined,
-        secretKey: account.secondarySecret ?? undefined,
+        secretKey: account.secondarySecretKey ?? undefined,
       };
     }
   }
