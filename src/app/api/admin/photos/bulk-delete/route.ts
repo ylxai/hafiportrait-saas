@@ -87,7 +87,7 @@ export async function POST(request: Request) {
           photoId: photo.id,
           r2Key: photo.r2Key || undefined,
           thumbnailUrl: photo.thumbnailUrl || undefined,
-          fileSize: photo.fileSize?.toString(),
+          fileSize: photo.fileSize ? photo.fileSize.toString() : undefined,
           storageAccountId: photo.storageAccountId || undefined,
           cloudinaryCredentials: cloudinaryCredentials ? {
             cloudName: cloudinaryCredentials.cloudName,

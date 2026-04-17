@@ -87,7 +87,7 @@ export async function DELETE(
         r2Key: photo.r2Key,
         thumbnailUrl: photo.thumbnailUrl,
         storageAccountId: photo.storageAccountId,
-        fileSize: photo.fileSize?.toString(),
+        fileSize: photo.fileSize ? photo.fileSize.toString() : undefined,
         // Include Cloudinary credentials untuk Workers
         cloudinaryCredentials,
       };

@@ -13,7 +13,7 @@ const cleanupQuerySchema = z.object({
 // Verify cleanup secret (for cron worker or external cron)
 function verifyCleanupSecret(request: Request): boolean {
   const auth = request.headers.get('Authorization');
-  const secret = process.env.VPS_CLEANUP_SECRET || process.env.WEBHOOK_SECRET;
+  const secret = process.env.CRON_SECRET || process.env.VPS_CLEANUP_SECRET;
   if (!secret || !auth) return false;
 
   const expected = `Bearer ${secret}`;
