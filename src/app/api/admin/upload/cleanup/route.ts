@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   try {
     // Verify cron secret for security
     const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
+    const cronSecret = process.env.CRON_SECRET || process.env.VPS_CLEANUP_SECRET;
     
     if (!cronSecret) {
       console.error('[Cleanup] CRON_SECRET not configured');

@@ -37,11 +37,12 @@ export async function POST(request: Request) {
     // Verify webhook signature and timestamp
     const validation = verifyWebhookSignature(body, signature, timestamp);
 
-    // Backward-compat: accept legacy Bearer auth from workers not yet updated
+    // Backward-compat: accept legacy Bearer auth only when explicitly enabled
+    const allowLegacyAuth = process.env.ALLOW_LEGACY_WEBHOOK_AUTH === 'true';
     const authHeader = request.headers.get('authorization');
     const legacySecret = process.env.VPS_WEBHOOK_SECRET;
     let legacyAuthorized = false;
-    if (authHeader && legacySecret) {
+    if (allowLegacyAuth && authHeader && legacySecret) {
       const expected = `Bearer ${legacySecret}`;
       if (authHeader.length === expected.length) {
         legacyAuthorized = timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected));

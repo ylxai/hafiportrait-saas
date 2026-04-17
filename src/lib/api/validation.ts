@@ -40,14 +40,13 @@ const sanitizeString = (str: string) =>
     .replace(/data:/gi, '')
     .replace(/vbscript:/gi, '')
     // Remove event handlers (onclick=, onerror=, etc.)
-    .replace(/on\w+\s*=/gi, '')
+    .replace(/\bon[a-z]+\s*=/gi, '')
     // HTML-escape the remaining content (prevents XSS without dropping text)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+    .replace(/'/g, '&#x27;');
 
 // Email regex for stricter validation
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
