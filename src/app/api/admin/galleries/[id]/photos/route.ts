@@ -9,6 +9,17 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { createAdminPaginationResponse } from '@/types/pagination';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
+
+// Zod schemas
+const paramsSchema = z.object({
+  id: z.string().min(1, 'Gallery ID is required'),
+});
+
+const querySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -26,12 +37,30 @@ export async function GET(
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const { id: galleryId } = await params;
+    const resolvedParams = await params;
+    
+    // Validate route params
+    const paramsValidation = paramsSchema.safeParse(resolvedParams);
+    if (!paramsValidation.success) {
+      const firstError = paramsValidation.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+    }
+
+    const { id: galleryId } = paramsValidation.data;
+    
+    // Validate query params
     const { searchParams } = new URL(request.url);
-    const pageRaw = parseInt(searchParams.get('page') ?? '1', 10);
-    const page = Number.isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
-    const limitRaw = parseInt(searchParams.get('limit') || '50', 10);
-    const limit = Number.isNaN(limitRaw) ? 50 : Math.min(100, Math.max(1, limitRaw));
+    const queryValidation = querySchema.safeParse({
+      page: searchParams.get('page'),
+      limit: searchParams.get('limit'),
+    });
+
+    if (!queryValidation.success) {
+      const firstError = queryValidation.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+    }
+
+    const { page, limit } = queryValidation.data;
     const skip = (page - 1) * limit;
 
     const [photos, total] = await Promise.all([
