@@ -13,6 +13,7 @@ import {
 import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
 import { queueThumbnailGeneration } from '@/lib/cloudflare-queue';
 import { serializeBigInt } from '@/lib/bigint-utils';
+import { trackUploadResult } from '@/lib/analytics';
 
 
 // Zod validation schema for upload complete request
@@ -228,6 +229,9 @@ export async function POST(request: Request) {
 
     await cleanupUploadSession(uploadId);
 
+    // Track successful upload (non-blocking)
+    trackUploadResult(galleryId, true).catch(() => {});
+
     return successResponse({
       photo: {
         id: photo.id,
@@ -243,6 +247,22 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('Error completing upload:', error);
+    
+    // Track failed upload (non-blocking)
+    const body = await request.json().catch(() => ({}));
+    const uploadId = body.uploadId;
+    if (uploadId) {
+      const session = await prisma.uploadSession.findUnique({
+        where: { id: uploadId },
+        select: { galleryId: true },
+      }).catch(() => null);
+      
+      if (session?.galleryId) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        trackUploadResult(session.galleryId, false, errorMsg).catch(() => {});
+      }
+    }
+    
     return serverErrorResponse('Failed to complete upload');
   }
 }
