@@ -5,7 +5,7 @@ import { verifyR2Upload, cleanupUploadSession } from '@/lib/upload/presigned';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validated = paymentProofSchema.parse(body);
 
     // 1. Verify upload session and R2 file
@@ -14,9 +14,15 @@ export async function POST(request: Request) {
       return errorResponse(verification.error || 'Verifikasi upload gagal', 400);
     }
 
-    const { publicUrl } = verification;
+    const { publicUrl, galleryId } = verification;
     if (!publicUrl) {
       return errorResponse('Public URL tidak ditemukan', 400);
+    }
+
+    // 2. Verify upload belongs to this event (security check)
+    const expectedGalleryId = `payments/${validated.eventId}`;
+    if (galleryId !== expectedGalleryId) {
+      return errorResponse('Upload tidak sesuai dengan event pembayaran', 400);
     }
 
     // 2. Find payment and event

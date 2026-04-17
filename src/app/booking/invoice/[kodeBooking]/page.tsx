@@ -33,6 +33,7 @@ interface EventData {
   kodeBooking: string;
   namaProject: string;
   eventDate: string;
+  createdAt: string;
   location: string;
   status: string;
   paymentStatus: string;
@@ -54,7 +55,8 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
   const { kodeBooking } = use(params);
   const { data, error, isLoading, mutate } = useSWR<{ success: boolean, data: EventData }>(
     `/api/public/booking/${kodeBooking}`,
-    fetcher
+    fetcher,
+    { refreshInterval: 30000, revalidateOnFocus: true }
   );
 
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -202,7 +204,7 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
               <div className="text-left md:text-right">
                 {getStatusBadge()}
                 <p className="text-sm text-muted-foreground mt-2">
-                  Diterbitkan: {new Date(event.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  Diterbitkan: {new Date(event.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
               </div>
             </div>
@@ -351,7 +353,7 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
           <DialogHeader>
             <DialogTitle>Konfirmasi Pembayaran</DialogTitle>
             <DialogDescription>
-              Unggah bukti transfer Anda (JPG/PNG/PDF, max 5MB).
+              Unggah bukti transfer Anda (JPG/PNG, max 5MB).
             </DialogDescription>
           </DialogHeader>
           
@@ -372,7 +374,7 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
                 type="file" 
                 id="file-upload" 
                 className="hidden" 
-                accept="image/*,application/pdf"
+                accept="image/*"
                 onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
               />
               <label htmlFor="file-upload" className="cursor-pointer block space-y-2">

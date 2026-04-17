@@ -44,7 +44,7 @@ function validateFileType(filename: string): { valid: boolean; error?: string } 
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = PublicPresignedRequestSchema.safeParse(body);
     
     if (!validation.success) {

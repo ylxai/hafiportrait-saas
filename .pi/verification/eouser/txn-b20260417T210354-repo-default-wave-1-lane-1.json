@@ -1,0 +1,16 @@
+{
+  "opId": "eouser",
+  "batchId": "20260417T210354",
+  "waveIndex": 1,
+  "laneNumber": 1,
+  "repoId": null,
+  "baseHEAD": "97f1c2bc40f1c147f530a91e5302cdc39f342442",
+  "laneHEAD": "52c813fce9e49d04995a98527da2c117351212fc",
+  "mergedHEAD": "52c813fce9e49d04995a98527da2c117351212fc",
+  "status": "committed",
+  "rollbackAttempted": false,
+  "rollbackResult": null,
+  "recoveryCommands": [],
+  "startedAt": "2026-04-17T21:24:13.979Z",
+  "completedAt": "2026-04-17T21:26:04.237Z"
+}

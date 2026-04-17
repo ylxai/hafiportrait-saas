@@ -1,0 +1,31 @@
+{
+  "batchId": "20260417T210354",
+  "laneNumber": 1,
+  "laneId": "lane-1",
+  "repoId": "default",
+  "taskId": "UI-001",
+  "segmentId": null,
+  "status": "complete",
+  "worker": {
+    "agentId": "orch-eouser-lane-1-worker",
+    "status": "exited",
+    "elapsedMs": 113031,
+    "toolCalls": 9,
+    "contextPct": 2.7997970581054688,
+    "costUsd": 0.132266,
+    "lastTool": "bash: git add -A && git commit -m \"feat(UI-001): complete Step 1 and refactor booking page UI to follow Aura Noir theme\"",
+    "inputTokens": 57839,
+    "outputTokens": 6274,
+    "cacheReadTokens": 169049,
+    "cacheWriteTokens": 0
+  },
+  "reviewer": null,
+  "progress": {
+    "currentStep": "Step 5: Documentation & Delivery",
+    "checked": 20,
+    "total": 20,
+    "iteration": 2,
+    "reviews": 0
+  },
+  "updatedAt": 1776461890136
+}
