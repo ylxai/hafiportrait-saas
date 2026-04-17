@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     
     // Validate query parameters
     const validation = exportQuerySchema.safeParse({
-      status: searchParams.get('status'),
+      status: searchParams.get('status') ?? undefined,
     });
 
     if (!validation.success) {

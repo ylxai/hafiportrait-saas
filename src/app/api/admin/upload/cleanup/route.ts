@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     
     // Validate query parameters
     const validation = cleanupQuerySchema.safeParse({
-      dryRun: searchParams.get('dryRun'),
+      dryRun: searchParams.get('dryRun') ?? undefined,
     });
 
     if (!validation.success) {

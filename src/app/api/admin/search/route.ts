@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     // Validate query parameters
     const validation = searchQuerySchema.safeParse({
       q: searchParams.get('q'),
-      type: searchParams.get('type'),
+      type: searchParams.get('type') ?? undefined,
     });
 
     if (!validation.success) {

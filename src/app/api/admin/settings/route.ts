@@ -12,8 +12,8 @@ const updateSettingsSchema = z.object({
   email: z.string().email('Email tidak valid').max(100).optional(),
   address: z.string().max(500, 'Alamat terlalu panjang').optional(),
   socialMedia: z.record(z.string(), z.string().url()).optional(),
-  bookingFields: z.record(z.string(), z.any()).optional(),
-  notifications: z.record(z.string(), z.any()).optional(),
+  bookingFields: z.record(z.string(), z.unknown()).optional(),
+  notifications: z.record(z.string(), z.unknown()).optional(),
 });
 
 // Get studio settings (single row with id="studio")
@@ -78,9 +78,12 @@ export async function POST(request: Request) {
         phone: data.phone,
         email: data.email,
         address: data.address,
-        socialMedia: data.socialMedia,
-        bookingFields: data.bookingFields,
-        notifications: data.notifications,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        socialMedia: data.socialMedia as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        bookingFields: data.bookingFields as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        notifications: data.notifications as any,
       },
       create: {
         id: 'studio',
@@ -89,9 +92,12 @@ export async function POST(request: Request) {
         phone: data.phone || '',
         email: data.email || '',
         address: data.address || '',
-        socialMedia: data.socialMedia || {},
-        bookingFields: data.bookingFields || {},
-        notifications: data.notifications || {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        socialMedia: (data.socialMedia || {}) as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        bookingFields: (data.bookingFields || {}) as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        notifications: (data.notifications || {}) as any,
       },
     });
 
