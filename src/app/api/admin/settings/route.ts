@@ -5,6 +5,11 @@ import { authOptions } from '@/lib/auth/options';
 import { Prisma } from '@/generated/prisma';
 import { z } from 'zod';
 
+// Normalize null → undefined so legacy DB rows with null JSON columns
+// don't fail validation when the client round-trips settings via POST.
+const nullToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((v) => (v === null ? undefined : v), schema.optional());
+
 // Zod schema for settings update
 const updateSettingsSchema = z.object({
   namaStudio: z.string().max(100, 'Nama studio terlalu panjang').optional(),
@@ -12,9 +17,9 @@ const updateSettingsSchema = z.object({
   phone: z.string().regex(/^(\+62|62|0)[0-9]{9,12}$/, 'Format nomor telepon tidak valid').optional(),
   email: z.string().email('Email tidak valid').max(100).optional(),
   address: z.string().max(500, 'Alamat terlalu panjang').optional(),
-  socialMedia: z.record(z.string(), z.string().url()).optional(),
-  bookingFields: z.record(z.string(), z.unknown()).optional(),
-  notifications: z.record(z.string(), z.unknown()).optional(),
+  socialMedia: nullToUndefined(z.record(z.string(), z.string().url())),
+  bookingFields: nullToUndefined(z.record(z.string(), z.unknown())),
+  notifications: nullToUndefined(z.record(z.string(), z.unknown())),
 });
 
 // Get studio settings (single row with id="studio")
