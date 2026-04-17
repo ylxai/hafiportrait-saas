@@ -13,11 +13,11 @@ const nullToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
 // Zod schema for settings update
 const updateSettingsSchema = z.object({
   namaStudio: z.string().max(100, 'Nama studio terlalu panjang').optional(),
-  logoUrl: z.string().url('URL logo tidak valid').max(500).optional(),
-  phone: z.string().regex(/^(\+62|62|0)[0-9]{9,12}$/, 'Format nomor telepon tidak valid').optional(),
-  email: z.string().email('Email tidak valid').max(100).optional(),
+  logoUrl: z.string().url('URL logo tidak valid').max(500).or(z.literal('')).optional(),
+  phone: z.string().regex(/^(\+62|62|0)[0-9]{9,12}$/, 'Format nomor telepon tidak valid').or(z.literal('')).optional(),
+  email: z.string().email('Email tidak valid').max(100).or(z.literal('')).optional(),
   address: z.string().max(500, 'Alamat terlalu panjang').optional(),
-  socialMedia: nullToUndefined(z.record(z.string(), z.string().url())),
+  socialMedia: nullToUndefined(z.record(z.string(), z.string())),
   bookingFields: nullToUndefined(z.record(z.string(), z.unknown())),
   notifications: nullToUndefined(z.record(z.string(), z.unknown())),
 });
