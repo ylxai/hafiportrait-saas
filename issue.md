@@ -162,53 +162,54 @@ if (count === 1) await kv.expire(key, windowMs / 1000);
 
 ## 🟡 MEDIUM PRIORITY ISSUES
 
-### 8. **Middleware Auth Check Tidak Lengkap**
+### 8. ✅ **Middleware Auth Check Tidak Lengkap** - FIXED
 **Lokasi:** `src/middleware.ts`
 **Issue:**
 - Hanya check cookie existence, tidak validate session
 - Tidak check user role/permissions
 - Public gallery routes (`/gallery/[token]`) tidak di-handle
 
-**Improvement:**
-```typescript
-// Validate session token dengan NextAuth
-import { getToken } from 'next-auth/jwt';
-const token = await getToken({ req: request });
-if (!token) return redirect('/login');
-```
+**Solusi:** ✅ Implemented NextAuth JWT token validation dengan `getToken()`
+- Session validation sebelum allow access
+- Role-based access control prepared (commented for future implementation)
+**PR:** feat/priority-fixes-batch-1
 
-### 9. **Missing Pagination Validation**
+### 9. ✅ **Missing Pagination Validation** - FIXED
 **Lokasi:** `src/types/pagination.ts`
 **Issue:** `parseAdminPagination` tidak validate:
 - Negative page numbers
 - Limit > 100 (DoS risk)
 - Invalid cursor format
 
-**Sudah Ada:** Tapi bisa improve dengan Zod:
-```typescript
-const paginationSchema = z.object({
-  page: z.coerce.number().int().min(1).max(1000),
-  limit: z.coerce.number().int().min(1).max(100),
-});
-```
+**Solusi:** ✅ Standardized Zod pagination validation across all routes
+- Updated 4 API routes: clients, events, packages, galleries
+- Consistent `?? undefined` pattern for null handling
+**PR:** feat/priority-fixes-batch-1
 
-### 10. **Cloudflare Queue Error Handling Lemah**
+### 10. ✅ **Cloudflare Queue Error Handling Lemah** - FIXED
 **Lokasi:** `src/lib/cloudflare-queue.ts`
 **Issue:**
 - Tidak ada retry logic untuk failed queue publish
 - Tidak ada dead letter queue
 - Error hanya di-log, tidak di-track
 
-**Solusi:** Tambahkan retry dengan exponential backoff
+**Solusi:** ✅ Implemented retry logic dengan exponential backoff (3 attempts)
+- Enhanced error logging dengan context (photoId, operation type)
+- Better error messages untuk debugging
+**PR:** feat/priority-fixes-batch-1
 
-### 11. **Photo Deletion Tidak Atomic**
+### 11. ✅ **Photo Deletion Tidak Atomic** - FIXED
 **Lokasi:** `src/app/api/admin/photos/bulk-delete/route.ts`
 **Issue:**
 - Delete dari DB dulu, baru queue storage deletion
 - Jika queue gagal, file orphaned di storage
 - Tidak ada rollback mechanism
 
-**Solusi:** Gunakan transaction pattern atau queue dulu baru delete DB
+**Solusi:** ✅ Implemented queue-first atomic deletion pattern
+- Queue storage deletion BEFORE database delete
+- Rollback DB transaction if queue fails
+- Prevents orphaned files in storage
+**PR:** feat/priority-fixes-batch-1
 
 ### 12. **Missing Compression Config Validation**
 **Lokasi:** `src/hooks/useDirectUpload.ts`
@@ -362,9 +363,9 @@ const paginationSchema = z.object({
 ## 📊 SUMMARY STATISTICS
 
 - **Total Issues Found:** 29
-- **Critical:** 1
+- **Critical:** 1 (✅ 1 fixed)
 - **High Priority:** 6 (✅ 5 fixed, ⏸️ 1 pending)
-- **Medium Priority:** 8
+- **Medium Priority:** 8 (✅ 4 fixed, 🚧 4 remaining)
 - **Low Priority:** 8
 - **Missing Features:** 6
 
@@ -374,6 +375,11 @@ const paginationSchema = z.object({
 - ✅ BigInt serialization standardization
 - ✅ Input sanitization improvements
 - ✅ Upload session cleanup endpoint
+- ✅ Zod validation for all 27 admin API routes (100%)
+- ✅ Middleware session validation with NextAuth JWT
+- ✅ Pagination validation standardization
+- ✅ Queue retry logic with exponential backoff
+- ✅ Atomic photo deletion (queue-first pattern)
 
 **Overall Code Quality:** 8.5/10 ⬆️
 - Strong foundation dengan TypeScript strict & Zod
