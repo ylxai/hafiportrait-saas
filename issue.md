@@ -211,9 +211,16 @@ if (count === 1) await kv.expire(key, windowMs / 1000);
 - Prevents orphaned files in storage
 **PR:** feat/priority-fixes-batch-1
 
-### 12. **Missing Compression Config Validation**
+### 12. ✅ **Missing Compression Config Validation** - FIXED
 **Lokasi:** `src/hooks/useDirectUpload.ts`
 **Issue:** Compression constants hardcoded, tidak bisa di-override per gallery/client
+
+**Solusi:** ✅ Add configurable compression options to hook
+- `compressionQuality` (0-1, default 0.92)
+- `compressionMaxSizeMB` (default 10MB)
+- `compressionMaxDimension` (default 4096px)
+- Backward compatible (uses defaults if not provided)
+**PR:** feat/compression-config
 
 **Improvement:** Ambil dari gallery settings atau client config
 
@@ -369,7 +376,7 @@ if (count === 1) await kv.expire(key, windowMs / 1000);
 - **Total Issues Found:** 29
 - **Critical:** 1 (✅ 1 fixed)
 - **High Priority:** 6 (✅ 5 fixed, ⏸️ 1 pending)
-- **Medium Priority:** 8 (✅ 5 fixed, 🚧 3 remaining)
+- **Medium Priority:** 8 (✅ 6 fixed, 🚧 2 remaining)
 - **Low Priority:** 8
 - **Missing Features:** 6
 
@@ -385,6 +392,7 @@ if (count === 1) await kv.expire(key, windowMs / 1000);
 - ✅ Queue retry logic with exponential backoff
 - ✅ Atomic photo deletion (queue-first pattern)
 - ✅ Duplicate detection UX (API response with existing photo info)
+- ✅ Compression config options (per-gallery/client override)
 
 **Overall Code Quality:** 8.5/10 ⬆️
 - Strong foundation dengan TypeScript strict & Zod

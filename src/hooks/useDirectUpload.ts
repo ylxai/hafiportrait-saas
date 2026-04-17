@@ -46,6 +46,10 @@ interface UseDirectUploadOptions {
   autoUpload?: boolean;
   maxFileSize?: number; // in bytes, default 50MB
   maxRetries?: number; // Max retry attempts, default 3
+  // Compression config (overrides defaults from constants)
+  compressionQuality?: number; // 0-1, default 0.92
+  compressionMaxSizeMB?: number; // default 10MB
+  compressionMaxDimension?: number; // default 4096px
   onProgress?: (completed: number, total: number) => void;
   onComplete?: (photo: { id: string; filename: string; thumbnailUrl?: string }) => void;
   onError?: (fileId: string, error: string, errorCode: UploadFile['errorCode']) => void;
@@ -163,11 +167,11 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
 
     try {
       return await imageCompression(file, {
-        maxSizeMB: COMPRESSION_MAX_SIZE_MB,
-        maxWidthOrHeight: COMPRESSION_MAX_DIMENSION,
+        maxSizeMB: options.compressionMaxSizeMB ?? COMPRESSION_MAX_SIZE_MB,
+        maxWidthOrHeight: options.compressionMaxDimension ?? COMPRESSION_MAX_DIMENSION,
         useWebWorker: COMPRESSION_USE_WEB_WORKER,
         preserveExif: COMPRESSION_PRESERVE_EXIF,
-        initialQuality: COMPRESSION_QUALITY,
+        initialQuality: Math.min(Math.max(options.compressionQuality ?? COMPRESSION_QUALITY, 0), 1),
       });
     } catch (error) {
       console.warn('Compression failed, using original:', error);
