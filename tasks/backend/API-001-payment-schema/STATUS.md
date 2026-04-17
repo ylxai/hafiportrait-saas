@@ -1,7 +1,7 @@
 # API-001: Database Schema Update for Payment System — Status
 
 **Current Step:** Step 3: Documentation & Delivery
-**Status:** 🟡 In Progress
+**Status:** ✅ Complete
 **Last Updated:** 2026-04-17
 **Review Level:** 1
 **Review Counter:** 1
@@ -40,9 +40,9 @@
 ---
 
 ### Step 3: Documentation & Delivery
-**Status:** 🟨 In Progress
+**Status:** ✅ Complete
 
-- [ ] Discoveries logged
+- [x] Discoveries logged
 
 ---
 
@@ -57,6 +57,9 @@
 
 | Discovery | Disposition | Location |
 |-----------|-------------|----------|
+| Kept 'partial' and 'paid' in TS schemas | To prevent build breakage, kept legacy statuses | `src/types/index.ts` |
+| Added `uniqueCode` to `Payment` | Added uniqueCode for auto mutasi in Payment | `prisma/schema.prisma` |
+| Initial `Payment` creation on Booking | When client books, an initial full `Payment` with random uniqueCode is created | `booking/route.ts` |
 
 ---
 
