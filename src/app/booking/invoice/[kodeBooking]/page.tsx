@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, use, useEffect } from 'react';
+import { useState, use } from 'react';
 import useSWR from 'swr';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { 
   Dialog, 
   DialogContent, 
