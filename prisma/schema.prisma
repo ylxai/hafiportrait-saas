@@ -99,6 +99,7 @@ model Gallery {
   updatedAt         DateTime @updatedAt
   photos            Photo[]
   selections        Selection[]
+  uploadAnalytics   UploadAnalytics[]
 
   @@index([eventId])
   @@index([createdAt])
@@ -251,4 +252,18 @@ model UploadSession {
   @@index([createdAt])
   @@index([galleryId])
   @@index([expiresAt]) // Index for cleanup queries
+}
+
+
+model UploadAnalytics {
+  id          String   @id @default(cuid())
+  galleryId   String
+  success     Boolean
+  errorReason String?
+  timestamp   DateTime @default(now())
+  
+  gallery     Gallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  
+  @@index([galleryId, timestamp])
+  @@index([success])
 }

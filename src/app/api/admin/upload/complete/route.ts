@@ -13,6 +13,7 @@ import {
 import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
 import { queueThumbnailGeneration } from '@/lib/cloudflare-queue';
 import { serializeBigInt } from '@/lib/bigint-utils';
+import { trackUploadResult } from '@/lib/analytics';
 
 
 // Zod validation schema for upload complete request
@@ -23,13 +24,16 @@ const CompleteUploadSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  let body: { uploadId?: string; width?: number; height?: number } = {};
+  let galleryId: string | undefined;
+  
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return errorResponse('Unauthorized', 401);
     }
 
-    const body = await request.json();
+    body = await request.json();
     const validation = CompleteUploadSchema.safeParse(body);
     
     if (!validation.success) {
@@ -45,11 +49,14 @@ export async function POST(request: Request) {
       return errorResponse(verification.error || 'Upload verification failed', 400);
     }
 
-    const { r2Key, publicUrl, filename, galleryId, storageAccountId, fileSize: serverFileSize, fileHash: sessionFileHash } = verification;
-
-    if (!r2Key || !publicUrl || !filename || !galleryId) {
+    const { r2Key, publicUrl, filename, galleryId: gId, storageAccountId, fileSize: serverFileSize, fileHash: sessionFileHash } = verification;
+    
+    if (!r2Key || !publicUrl || !filename || !gId) {
       return errorResponse('Invalid upload verification data', 400);
     }
+    
+    // After validation, galleryId is guaranteed to be string
+    galleryId = gId;
 
     // Use server-side file size from R2 (NOT client-provided)
     const actualFileSize = serverFileSize || 0;
@@ -172,7 +179,7 @@ export async function POST(request: Request) {
     const photo = await prisma.$transaction(async (tx) => {
       const newPhoto = await tx.photo.create({
         data: {
-          galleryId,
+          galleryId: galleryId!, // Guaranteed non-null after validation
           filename,
           url: publicUrl,
           r2Key: r2Key,
@@ -228,6 +235,9 @@ export async function POST(request: Request) {
 
     await cleanupUploadSession(uploadId);
 
+    // Track successful upload (non-blocking)
+    trackUploadResult(galleryId, true).catch(() => {});
+
     return successResponse({
       photo: {
         id: photo.id,
@@ -243,6 +253,13 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('Error completing upload:', error);
+    
+    // Track failed upload (non-blocking)
+    if (galleryId) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      trackUploadResult(galleryId, false, errorMsg).catch(() => {});
+    }
+    
     return serverErrorResponse('Failed to complete upload');
   }
 }
