@@ -217,14 +217,18 @@ if (count === 1) await kv.expire(key, windowMs / 1000);
 
 **Improvement:** Ambil dari gallery settings atau client config
 
-### 13. **Duplicate Detection Tidak Optimal**
+### 13. ✅ **Duplicate Detection Tidak Optimal** - FIXED
 **Lokasi:** `src/app/api/admin/upload/complete/route.ts`
 **Issue:**
 - Hanya warn di console, tidak prevent upload
 - Tidak ada UI feedback ke user
 - Tidak ada option untuk skip/replace duplicate
 
-**Solusi:** Return duplicate info ke client, biarkan user decide
+**Solusi:** ✅ Return duplicate info in API response
+- Upload still succeeds (non-blocking)
+- Response includes `duplicate: { isDuplicate, existingPhoto: { id, filename, url } }`
+- Client can show UI for user decision (keep both, skip, replace)
+**PR:** feat/duplicate-detection-ux
 
 ### 14. **Storage Account Rotation Tidak Implemented**
 **Lokasi:** `prisma/schema.prisma`
@@ -365,7 +369,7 @@ if (count === 1) await kv.expire(key, windowMs / 1000);
 - **Total Issues Found:** 29
 - **Critical:** 1 (✅ 1 fixed)
 - **High Priority:** 6 (✅ 5 fixed, ⏸️ 1 pending)
-- **Medium Priority:** 8 (✅ 4 fixed, 🚧 4 remaining)
+- **Medium Priority:** 8 (✅ 5 fixed, 🚧 3 remaining)
 - **Low Priority:** 8
 - **Missing Features:** 6
 
@@ -380,6 +384,7 @@ if (count === 1) await kv.expire(key, windowMs / 1000);
 - ✅ Pagination validation standardization
 - ✅ Queue retry logic with exponential backoff
 - ✅ Atomic photo deletion (queue-first pattern)
+- ✅ Duplicate detection UX (API response with existing photo info)
 
 **Overall Code Quality:** 8.5/10 ⬆️
 - Strong foundation dengan TypeScript strict & Zod

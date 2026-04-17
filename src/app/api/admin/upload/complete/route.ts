@@ -61,17 +61,29 @@ export async function POST(request: Request) {
     const photoFileHash = sessionFileHash || null;
 
     // DUPLICATE DETECTION: Check if file with same hash already exists in gallery
+    let duplicateInfo: { isDuplicate: boolean; existingPhoto?: { id: string; filename: string; url: string } } = {
+      isDuplicate: false,
+    };
+
     if (photoFileHash) {
       const existingPhoto = await prisma.photo.findFirst({
         where: {
           galleryId,
           fileHash: photoFileHash,
         },
-        select: { id: true, filename: true },
+        select: { id: true, filename: true, url: true, thumbnailUrl: true },
       });
 
       if (existingPhoto) {
-        console.warn(`[Duplicate Detection] Potential duplicate: ${photoFileHash} in gallery ${galleryId} (existing: ${existingPhoto.filename})`);
+        duplicateInfo = {
+          isDuplicate: true,
+          existingPhoto: {
+            id: existingPhoto.id,
+            filename: existingPhoto.filename,
+            url: existingPhoto.thumbnailUrl || existingPhoto.url,
+          },
+        };
+        console.warn(`[Duplicate Detection] Duplicate detected: ${photoFileHash} in gallery ${galleryId} (existing: ${existingPhoto.filename})`);
       }
     }
 
@@ -227,6 +239,7 @@ export async function POST(request: Request) {
         height: photo.height,
         fileSize: serializeBigInt(photo.fileSize),
       },
+      duplicate: duplicateInfo,
     });
   } catch (error) {
     console.error('Error completing upload:', error);
