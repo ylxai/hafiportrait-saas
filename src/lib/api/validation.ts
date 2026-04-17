@@ -184,6 +184,12 @@ export const selectionSubmitSchema = z.object({
   photoIds: z.array(z.string()).min(1, 'Pilih minimal 1 foto'),
 });
 
+export const paymentProofSchema = z.object({
+  eventId: z.string().min(1, 'Event ID wajib diisi'),
+  paymentId: z.string().min(1, 'Payment ID wajib diisi'),
+  uploadId: z.string().min(1, 'Upload ID wajib diisi'),
+});
+
 export const updateGallerySchema = z.object({
   namaProject: z.string()
     .min(1, 'Nama project tidak boleh kosong')
