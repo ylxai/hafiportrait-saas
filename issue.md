@@ -216,7 +216,7 @@ if (count === 1) await kv.expire(key, windowMs / 1000);
 **Issue:** Compression constants hardcoded, tidak bisa di-override per gallery/client
 
 **Solusi:** ✅ Add configurable compression options to hook
-- `compressionQuality` (0-1, default 0.8)
+- `compressionQuality` (0-1, default 0.92)
 - `compressionMaxSizeMB` (default 10MB)
 - `compressionMaxDimension` (default 4096px)
 - Backward compatible (uses defaults if not provided)

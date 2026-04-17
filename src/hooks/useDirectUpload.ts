@@ -47,7 +47,7 @@ interface UseDirectUploadOptions {
   maxFileSize?: number; // in bytes, default 50MB
   maxRetries?: number; // Max retry attempts, default 3
   // Compression config (overrides defaults from constants)
-  compressionQuality?: number; // 0-1, default 0.8
+  compressionQuality?: number; // 0-1, default 0.92
   compressionMaxSizeMB?: number; // default 10MB
   compressionMaxDimension?: number; // default 4096px
   onProgress?: (completed: number, total: number) => void;
@@ -171,7 +171,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         maxWidthOrHeight: options.compressionMaxDimension ?? COMPRESSION_MAX_DIMENSION,
         useWebWorker: COMPRESSION_USE_WEB_WORKER,
         preserveExif: COMPRESSION_PRESERVE_EXIF,
-        initialQuality: options.compressionQuality ?? COMPRESSION_QUALITY,
+        initialQuality: Math.min(Math.max(options.compressionQuality ?? COMPRESSION_QUALITY, 0), 1),
       });
     } catch (error) {
       console.warn('Compression failed, using original:', error);
