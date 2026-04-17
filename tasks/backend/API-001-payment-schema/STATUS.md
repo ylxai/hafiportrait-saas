@@ -1,11 +1,11 @@
 # API-001: Database Schema Update for Payment System — Status
 
-**Current Step:** Step 3: Documentation & Delivery
+**Current Step:** Step 4: Documentation & Delivery
 **Status:** ✅ Complete
 **Last Updated:** 2026-04-17
 **Review Level:** 1
 **Review Counter:** 1
-**Iteration:** 1
+**Iteration:** 2
 **Size:** S
 
 ---
@@ -25,24 +25,32 @@
 - [x] Add `payments Payment[]` to `Event` model
 - [x] Update `paymentStatus` enum in TS schemas (`index.ts`, `validation.ts`) to include new statuses
 - [x] Update `booking/route.ts` to generate `uniqueCode` and create initial `Payment` intent
-- [x] Run `npm run db:generate`
-- [x] Run `npm run db:push`
 
 ---
 
-### Step 2: Testing & Verification
+### Step 2: Update Database
 **Status:** ✅ Complete
 
-- [x] FULL test suite passing (lint/build)
-- [x] All failures fixed
+- [x] Run `npm run db:generate` to generate new Prisma client.
+- [x] Run `npm run db:push` to apply schema changes to database.
+
+---
+
+### Step 3: Testing & Verification
+**Status:** ✅ Complete
+
+- [x] Run FULL test suite: `npm run lint` and `npm run build`
+- [x] Fix all failures
 - [x] Build passes
 
 ---
 
-### Step 3: Documentation & Delivery
+### Step 4: Documentation & Delivery
 **Status:** ✅ Complete
 
-- [x] Discoveries logged
+- [x] "Must Update" docs modified
+- [x] "Check If Affected" docs reviewed
+- [x] Discoveries logged in STATUS.md
 
 ---
 
@@ -70,6 +78,9 @@
 | 2026-04-17 | Task staged | PROMPT.md and STATUS.md created |
 | 2026-04-17 21:03 | Task started | Runtime V2 lane-runner execution |
 | 2026-04-17 21:03 | Step 0 started | Preflight |
+| 2026-04-17 21:10 | Agent reply | Task API-001 has been fully completed. I've updated the Prisma schema with the new `Payment` model and relations, ensuring `uniqueCode` support. The TS schema has been updated while retaining legacy s |
+| 2026-04-17 21:10 | Worker iter 1 | done in 414s, tools: 57 |
+| 2026-04-17 21:10 | Step 4 started | Documentation & Delivery |
 
 ---
 
