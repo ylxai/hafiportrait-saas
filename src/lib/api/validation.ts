@@ -15,14 +15,42 @@ export const searchQuerySchema = z.object({
   type: z.enum(['clients', 'events', 'galleries', 'photos']).optional(),
 });
 
-// Helper to sanitize string (trim and basic XSS prevention)
-// Note: For production, consider using DOMPurify for more robust sanitization
+/**
+ * Enhanced string sanitization for XSS prevention
+ * 
+ * Removes/escapes dangerous characters and patterns:
+ * - HTML tags and entities
+ * - JavaScript protocols and event handlers
+ * - SQL injection patterns (though Prisma protects against this)
+ * - Unicode control characters
+ * - Null bytes
+ * 
+ * Note: For rich text content, use a dedicated library like DOMPurify
+ */
 const sanitizeString = (str: string) => {
   return str
     .trim()
-    .replace(/[<>]/g, '') // Remove < and > to prevent HTML tags
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
-    .replace(/on\w+=/gi, ''); // Remove event handlers (onclick, onerror, etc.)
+    // Remove null bytes
+    .replace(/\0/g, '')
+    // Remove Unicode control characters (except newline, tab, carriage return)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+    // Remove HTML tags
+    .replace(/<[^>]*>/g, '')
+    // Escape HTML entities
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+    // Remove dangerous protocols
+    .replace(/javascript:/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/vbscript:/gi, '')
+    // Remove event handlers
+    .replace(/on\w+\s*=/gi, '')
+    // Remove SQL injection patterns (defense in depth, Prisma already protects)
+    .replace(/(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE|UNION|DECLARE)\b)/gi, '');
 };
 
 // Email regex for stricter validation

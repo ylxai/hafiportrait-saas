@@ -4,6 +4,7 @@ import { successResponse, notFoundResponse, serverErrorResponse, errorResponse }
 import { updateGallerySchema, validateRequest } from '@/lib/api/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { serializeBigInt } from '@/lib/bigint-utils';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -59,7 +60,7 @@ export async function GET(
           ...p,
           photo: {
             ...p.photo,
-            fileSize: p.photo.fileSize?.toString() || null
+            fileSize: serializeBigInt(p.photo.fileSize)
           }
         }))
       }))

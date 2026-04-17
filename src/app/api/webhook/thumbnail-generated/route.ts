@@ -1,8 +1,8 @@
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { prisma } from '@/lib/db';
 import { publishPhotoThumbnailGenerated } from '@/lib/ably';
+import { verifyWebhookSignature } from '@/lib/webhook-validation';
 import { z } from 'zod';
-import { timingSafeEqual } from 'node:crypto';
 
 /**
  * Webhook handler for thumbnail generation callback from Cloudflare Workers
@@ -10,6 +10,8 @@ import { timingSafeEqual } from 'node:crypto';
  * This endpoint receives callback from Cloudflare Workers after they generate
  * thumbnails from R2 and upload to Cloudinary. We update the database and
  * broadcast real-time event.
+ * 
+ * Security: Uses HMAC-SHA256 signature verification with timestamp validation
  */
 
 const thumbnailGeneratedSchema = z.object({
@@ -20,35 +22,29 @@ const thumbnailGeneratedSchema = z.object({
   publicId: z.string().min(1, 'publicId is required'),
 });
 
-function verifyWebhook(request: Request): boolean {
-  const auth = request.headers.get('Authorization');
-  const secret = process.env.VPS_WEBHOOK_SECRET || process.env.WEBHOOK_SECRET;
-  if (!secret || !auth) return false;
-
-  const expected = `Bearer ${secret}`;
-  if (auth.length !== expected.length) return false;
-
-  return timingSafeEqual(
-    Buffer.from(auth),
-    Buffer.from(expected)
-  );
-}
-
 export async function POST(request: Request) {
   try {
-    if (!verifyWebhook(request)) {
-      return errorResponse('Unauthorized', 401);
+    // Get raw body for signature verification
+    const body = await request.text();
+    const signature = request.headers.get('x-webhook-signature');
+    const timestamp = request.headers.get('x-webhook-timestamp');
+    
+    // Verify webhook signature and timestamp
+    const validation = verifyWebhookSignature(body, signature, timestamp);
+    if (!validation.valid) {
+      console.warn('[Webhook/Thumbnail] Validation failed:', validation.error);
+      return errorResponse(validation.error || 'Unauthorized', 401);
     }
 
-    const body = await request.json();
+    const data = JSON.parse(body);
 
-    const validation = thumbnailGeneratedSchema.safeParse(body);
-    if (!validation.success) {
-      console.error('[Webhook/Thumbnail] Invalid body:', validation.error.flatten());
-      return errorResponse('Invalid webhook body: ' + validation.error.errors.map(e => e.message).join(', '), 400);
+    const payloadValidation = thumbnailGeneratedSchema.safeParse(data);
+    if (!payloadValidation.success) {
+      console.error('[Webhook/Thumbnail] Invalid body:', payloadValidation.error.flatten());
+      return errorResponse('Invalid webhook body: ' + payloadValidation.error.errors.map(e => e.message).join(', '), 400);
     }
 
-    const { photoId, thumbnailUrl, mediumUrl: _mediumUrl, smallUrl: _smallUrl, publicId } = validation.data;
+    const { photoId, thumbnailUrl, mediumUrl: _mediumUrl, smallUrl: _smallUrl, publicId } = payloadValidation.data;
 
     console.log(`[Webhook/Thumbnail] Callback for photo ${photoId}: ${publicId}`);
 

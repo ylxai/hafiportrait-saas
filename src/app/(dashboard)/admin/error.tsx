@@ -2,9 +2,9 @@
 
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Home } from 'lucide-react';
 
-export default function Error({
+export default function AdminError({
   error,
   reset,
 }: {
@@ -12,8 +12,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log error to monitoring service (e.g., Sentry)
-    console.error('Root error boundary caught:', error);
+    console.error('Admin error boundary caught:', error);
   }, [error]);
 
   return (
@@ -30,7 +29,7 @@ export default function Error({
             Terjadi Kesalahan
           </h1>
           <p className="text-muted-foreground">
-            Maaf, terjadi kesalahan yang tidak terduga. Tim kami telah diberitahu dan sedang menangani masalah ini.
+            Maaf, terjadi kesalahan saat memuat halaman admin. Silakan coba lagi atau hubungi support jika masalah berlanjut.
           </p>
         </div>
 
@@ -56,9 +55,10 @@ export default function Error({
           </Button>
           <Button
             variant="outline"
-            onClick={() => window.location.href = '/'}
+            onClick={() => window.location.href = '/admin'}
           >
-            Kembali ke Beranda
+            <Home className="w-4 h-4 mr-2" />
+            Dashboard
           </Button>
         </div>
       </div>

@@ -2,9 +2,9 @@
 
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Home } from 'lucide-react';
 
-export default function Error({
+export default function GalleryError({
   error,
   reset,
 }: {
@@ -12,8 +12,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log error to monitoring service (e.g., Sentry)
-    console.error('Root error boundary caught:', error);
+    console.error('Gallery error boundary caught:', error);
   }, [error]);
 
   return (
@@ -27,10 +26,10 @@ export default function Error({
         
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-foreground">
-            Terjadi Kesalahan
+            Galeri Tidak Dapat Dimuat
           </h1>
           <p className="text-muted-foreground">
-            Maaf, terjadi kesalahan yang tidak terduga. Tim kami telah diberitahu dan sedang menangani masalah ini.
+            Maaf, terjadi kesalahan saat memuat galeri. Silakan coba lagi atau hubungi fotografer Anda.
           </p>
         </div>
 
@@ -58,7 +57,8 @@ export default function Error({
             variant="outline"
             onClick={() => window.location.href = '/'}
           >
-            Kembali ke Beranda
+            <Home className="w-4 h-4 mr-2" />
+            Beranda
           </Button>
         </div>
       </div>

@@ -1,13 +1,15 @@
 import { decreaseStorageUsage } from '@/lib/storage/accounts';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
+import { verifyWebhookSignature } from '@/lib/webhook-validation';
 import { z } from 'zod';
-import { timingSafeEqual } from 'node:crypto';
 
 /**
  * Webhook handler for storage deletion callback from Cloudflare Workers
  * 
  * This endpoint receives callback from Cloudflare Workers after they delete
  * files from R2 and Cloudinary. We update the database and storage usage here.
+ * 
+ * Security: Uses HMAC-SHA256 signature verification with timestamp validation
  */
 
 // Schema validation for webhook body
@@ -19,21 +21,6 @@ const storageDeletedSchema = z.object({
   fileSize: z.union([z.number(), z.string()]).optional(),
 });
 
-// Verify webhook secret using timing-safe comparison
-function verifyWebhook(request: Request): boolean {
-  const auth = request.headers.get('Authorization');
-  const secret = process.env.VPS_WEBHOOK_SECRET || process.env.WEBHOOK_SECRET;
-  if (!secret || !auth) return false;
-
-  const expected = `Bearer ${secret}`;
-  if (auth.length !== expected.length) return false;
-
-  return timingSafeEqual(
-    Buffer.from(auth),
-    Buffer.from(expected)
-  );
-}
-
 /**
  * POST /api/webhook/storage-deleted
  * 
@@ -41,17 +28,25 @@ function verifyWebhook(request: Request): boolean {
  */
 export async function POST(request: Request) {
   try {
-    if (!verifyWebhook(request)) {
-      return errorResponse('Unauthorized', 401);
+    // Get raw body for signature verification
+    const body = await request.text();
+    const signature = request.headers.get('x-webhook-signature');
+    const timestamp = request.headers.get('x-webhook-timestamp');
+    
+    // Verify webhook signature and timestamp
+    const validation = verifyWebhookSignature(body, signature, timestamp);
+    if (!validation.valid) {
+      console.warn('[Webhook/Storage] Validation failed:', validation.error);
+      return errorResponse(validation.error || 'Unauthorized', 401);
     }
 
-    const body = await request.json();
+    const data = JSON.parse(body);
     
     // Validate body schema
-    const validation = storageDeletedSchema.safeParse(body);
-    if (!validation.success) {
-      console.error('[Webhook] Invalid body schema:', validation.error.flatten());
-      return errorResponse('Invalid webhook body: ' + validation.error.errors.map(e => e.message).join(', '), 400);
+    const payloadValidation = storageDeletedSchema.safeParse(data);
+    if (!payloadValidation.success) {
+      console.error('[Webhook] Invalid body schema:', payloadValidation.error.flatten());
+      return errorResponse('Invalid webhook body: ' + payloadValidation.error.errors.map(e => e.message).join(', '), 400);
     }
 
     const { 
@@ -59,7 +54,7 @@ export async function POST(request: Request) {
       r2Deleted,
       storageAccountId,
       fileSize,
-    } = validation.data;
+    } = payloadValidation.data;
 
     console.log(`[Webhook] Storage deletion callback for photo ${photoId}:`, {
       r2Deleted,
