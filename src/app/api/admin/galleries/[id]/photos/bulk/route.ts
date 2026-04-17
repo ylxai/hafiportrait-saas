@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { validateRequest } from '@/lib/api/validation';
 
 const bulkDeleteSchema = z.object({
-  photoIds: z.array(z.string()).min(1, 'At least one photo ID required'),
+  photoIds: z.array(z.string().trim().min(1, 'ID foto tidak valid')).min(1, 'Pilih minimal 1 foto').max(100, 'Maksimal 100 foto per batch'),
 });
 
 export async function POST(

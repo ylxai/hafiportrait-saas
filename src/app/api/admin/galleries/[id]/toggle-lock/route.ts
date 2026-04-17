@@ -7,7 +7,10 @@ import { z } from 'zod';
 import { validateRequest } from '@/lib/api/validation';
 
 const toggleLockSchema = z.object({
-  isSelectionLocked: z.boolean(),
+  isSelectionLocked: z.boolean({
+    required_error: 'Status kunci seleksi wajib diisi',
+    invalid_type_error: 'Status kunci harus berupa boolean',
+  }),
 });
 
 async function checkAuth() {
