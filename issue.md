@@ -7,47 +7,61 @@
 
 ## 🔴 CRITICAL ISSUES (Harus Segera Diperbaiki)
 
-### 1. **Missing Zod Validation di Banyak API Routes** ⚠️ IN PROGRESS
+### 1. ✅ **Missing Zod Validation di Banyak API Routes** - COMPLETED
 **Lokasi:** Multiple API routes
 **Status:** 
 - ✅ **COMPLETED (PR #37 - Merged)**: clients, events, packages routes (3/24)
-- ✅ **COMPLETED (PR #39 - In Review)**: galleries routes (4/24)
-- ⏳ **REMAINING**: 17 routes (tracked in Issue #38)
+- ✅ **COMPLETED (PR #39 - Merged)**: galleries routes (4/24)
+- ✅ **COMPLETED (PR - feat/zod-validation-priority-1)**: All remaining routes (17/24)
 
-**Completed Routes:**
-1. ✅ `src/app/api/admin/clients/route.ts` - PATCH, DELETE with idSchema
-2. ✅ `src/app/api/admin/events/route.ts` - PATCH, DELETE with idSchema
-3. ✅ `src/app/api/admin/packages/route.ts` - PATCH, DELETE with idSchema
-4. ✅ `src/app/api/admin/galleries/[id]/route.ts` - PATCH with updateGallerySchema
-5. ✅ `src/app/api/admin/galleries/[id]/toggle-lock/route.ts` - PATCH with toggleLockSchema
-6. ✅ `src/app/api/admin/galleries/[id]/photos/bulk/route.ts` - POST with bulkDeleteSchema (max 100)
-7. ✅ `src/app/api/admin/galleries/[id]/photos/route.ts` - Already has validation
+**All Routes Validated (27/27 - 100%):**
 
-**Remaining Routes (Priority Order):**
-- 🔴 Priority 1: Settings & Storage (3 routes)
-  - `settings/route.ts` - GET, PATCH
-  - `storage-accounts/route.ts` - GET, POST, PATCH, DELETE
-  - `storage-config/route.ts` - GET, PATCH
+**Priority 1 - Settings & Storage (3 routes):**
+1. ✅ `settings/route.ts` - POST with updateSettingsSchema
+2. ✅ `storage-accounts/route.ts` - GET, POST, PATCH, DELETE with full validation
+3. ✅ `storage-config/route.ts` - GET only (read-only, documented)
 
-- 🟠 Priority 2: Bulk Operations (3 routes)
-  - `clients/bulk/route.ts`
-  - `events/bulk/route.ts`
-  - `packages/bulk/route.ts`
+**Priority 2 - Bulk Operations (3 routes):**
+4. ✅ `clients/bulk/route.ts` - DELETE with max 100 IDs
+5. ✅ `events/bulk/route.ts` - PATCH, DELETE with status validation
+6. ✅ `packages/bulk/route.ts` - PATCH, DELETE with toggleActive
 
-- 🟡 Priority 3: Analytics & Stats (5 routes)
-  - `analytics/route.ts`
-  - `finance/route.ts`
-  - `stats/route.ts`
-  - `search/route.ts`
-  - `upload/cleanup/route.ts`
+**Priority 3 - Analytics & Stats (5 routes):**
+7. ✅ `analytics/route.ts` - GET with pagination validation
+8. ✅ `finance/route.ts` - GET with pagination validation
+9. ✅ `stats/route.ts` - GET only (read-only, documented)
+10. ✅ `search/route.ts` - GET with query validation (min 2 chars)
+11. ✅ `upload/cleanup/route.ts` - POST with dryRun validation
 
-- 🟢 Priority 4: Export & Photos (6 routes)
-  - `export/events/route.ts`
-  - `export/clients/route.ts`
-  - `photos/[id]/route.ts`
-  - `photos/[id]/rotate/route.ts`
-  - `photos/[id]/metadata/route.ts`
-  - `photos/bulk-delete/route.ts`
+**Priority 4 - Export & Photos (3 routes):**
+12. ✅ `export/events/route.ts` - GET with status filter validation
+13. ✅ `export/clients/route.ts` - GET only (read-only, documented)
+14. ✅ `galleries/[id]/photos/[photoId]/route.ts` - DELETE with params validation
+
+**Additional Routes (3 routes):**
+15. ✅ `galleries/[id]/photos/route.ts` - GET with pagination + params validation
+16. ✅ `galleries/bulk/route.ts` - PATCH, DELETE with max 100 IDs
+17. ✅ `storage-accounts/rotation/route.ts` - GET, POST with RotationSchedule validation
+
+**Previously Completed (10 routes):**
+18. ✅ `clients/route.ts` - PATCH, DELETE
+19. ✅ `events/route.ts` - PATCH, DELETE
+20. ✅ `packages/route.ts` - PATCH, DELETE
+21. ✅ `galleries/[id]/route.ts` - PATCH
+22. ✅ `galleries/[id]/toggle-lock/route.ts` - PATCH
+23. ✅ `galleries/[id]/photos/bulk/route.ts` - POST
+24. ✅ `photos/bulk-delete/route.ts` - Already validated
+25. ✅ `upload/presigned/route.ts` - Already validated
+26. ✅ `upload/complete/route.ts` - Already validated
+27. ✅ `clients/quota/route.ts` - Already validated
+
+**PR:** https://github.com/ylxai/hafiportrait-saas/pull/41
+
+**Impact:**
+- ✅ All API routes now have proper input validation
+- ✅ Prevents invalid data from reaching database
+- ✅ Consistent error messages across all endpoints
+- ✅ Type-safe validation with Zod schemas
 
 **Pattern Established:**
 ```typescript

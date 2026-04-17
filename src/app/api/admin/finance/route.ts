@@ -2,7 +2,14 @@ import { prisma } from '@/lib/db';
 import { successResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { parseAdminPagination, createAdminPaginationResponse } from '@/types/pagination';
+import { createAdminPaginationResponse } from '@/types/pagination';
+import { z } from 'zod';
+
+// Zod schema for query parameters
+const querySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
 
 export async function GET(request: Request) {
   try {
@@ -11,9 +18,20 @@ export async function GET(request: Request) {
       return errorResponse('Unauthorized', 401);
     }
 
-    // Parse pagination params
+    // Parse and validate query params
     const { searchParams } = new URL(request.url);
-    const { page, limit, skip } = parseAdminPagination(searchParams);
+    const validation = querySchema.safeParse({
+      page: searchParams.get('page') ?? undefined,
+      limit: searchParams.get('limit') ?? undefined,
+    });
+
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+    }
+
+    const { page, limit } = validation.data;
+    const skip = (page - 1) * limit;
 
     const [events, totalAgg, paidAgg, pendingAgg, revenueByMonthRaw] = await Promise.all([
       // Paginated events list

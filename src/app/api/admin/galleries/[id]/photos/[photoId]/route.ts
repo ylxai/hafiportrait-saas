@@ -3,6 +3,13 @@ import { successResponse, notFoundResponse, serverErrorResponse, errorResponse }
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { queueStorageDeletion, isQueueConfigured } from '@/lib/cloudflare-queue';
+import { z } from 'zod';
+
+// Zod schema for route params
+const paramsSchema = z.object({
+  id: z.string().min(1, 'Gallery ID is required'),
+  photoId: z.string().min(1, 'Photo ID is required'),
+});
 
 export async function DELETE(
   request: Request,
@@ -14,7 +21,16 @@ export async function DELETE(
       return errorResponse('Unauthorized', 401);
     }
 
-    const { photoId } = await params;
+    const resolvedParams = await params;
+    
+    // Validate route params
+    const validation = paramsSchema.safeParse(resolvedParams);
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+    }
+
+    const { photoId } = validation.data;
 
     // Get photo dengan storage account (untuk credentials)
     const photo = await prisma.photo.findUnique({

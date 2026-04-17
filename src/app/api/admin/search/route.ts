@@ -4,6 +4,13 @@ import { successResponse, unauthorizedResponse, handlePrismaError, errorResponse
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { z } from 'zod';
+
+// Zod schema for search query parameters
+const searchQuerySchema = z.object({
+  q: z.string().min(2, 'Search query must be at least 2 characters').max(200, 'Search query too long'),
+  type: z.enum(['all', 'galleries', 'events', 'clients']).default('all'),
+});
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -25,12 +32,19 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q') || '';
-    const type = searchParams.get('type') || 'all'; // all, galleries, events, clients
+    
+    // Validate query parameters
+    const validation = searchQuerySchema.safeParse({
+      q: searchParams.get('q'),
+      type: searchParams.get('type') ?? undefined,
+    });
 
-    if (!query || query.length < 2) {
-      return successResponse({ galleries: [], events: [], clients: [] });
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
     }
+
+    const { q: query, type } = validation.data;
 
     // Parallel queries for better performance
     const [galleries, events, clients] = await Promise.all([

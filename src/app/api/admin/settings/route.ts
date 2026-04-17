@@ -2,6 +2,25 @@ import { prisma } from '@/lib/db';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { Prisma } from '@/generated/prisma';
+import { z } from 'zod';
+
+// Normalize null → undefined so legacy DB rows with null JSON columns
+// don't fail validation when the client round-trips settings via POST.
+const nullToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((v) => (v === null ? undefined : v), schema.optional());
+
+// Zod schema for settings update
+const updateSettingsSchema = z.object({
+  namaStudio: z.string().max(100, 'Nama studio terlalu panjang').optional(),
+  logoUrl: z.string().url('URL logo tidak valid').max(500).or(z.literal('')).optional(),
+  phone: z.string().regex(/^(\+62|62|0)[0-9]{9,12}$/, 'Format nomor telepon tidak valid').or(z.literal('')).optional(),
+  email: z.string().email('Email tidak valid').max(100).or(z.literal('')).optional(),
+  address: z.string().max(500, 'Alamat terlalu panjang').optional(),
+  socialMedia: nullToUndefined(z.record(z.string(), z.string())),
+  bookingFields: nullToUndefined(z.record(z.string(), z.unknown())),
+  notifications: nullToUndefined(z.record(z.string(), z.unknown())),
+});
 
 // Get studio settings (single row with id="studio")
 export async function GET() {
@@ -46,40 +65,39 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { 
-      namaStudio, 
-      logoUrl, 
-      phone, 
-      email, 
-      address, 
-      socialMedia, 
-      bookingFields, 
-      notifications 
-    } = body;
+    
+    // Validate request body
+    const validation = updateSettingsSchema.safeParse(body);
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+    }
+
+    const data = validation.data;
 
     // Upsert settings (create if not exists, update if exists)
     const settings = await prisma.settings.upsert({
       where: { id: 'studio' },
       update: {
-        namaStudio: namaStudio || undefined,
-        logoUrl: logoUrl || undefined,
-        phone: phone || undefined,
-        email: email || undefined,
-        address: address || undefined,
-        socialMedia: socialMedia || undefined,
-        bookingFields: bookingFields || undefined,
-        notifications: notifications || undefined,
+        namaStudio: data.namaStudio,
+        logoUrl: data.logoUrl,
+        phone: data.phone,
+        email: data.email,
+        address: data.address,
+        socialMedia: data.socialMedia as Prisma.InputJsonValue,
+        bookingFields: data.bookingFields as Prisma.InputJsonValue,
+        notifications: data.notifications as Prisma.InputJsonValue,
       },
       create: {
         id: 'studio',
-        namaStudio: namaStudio || '',
-        logoUrl: logoUrl || '',
-        phone: phone || '',
-        email: email || '',
-        address: address || '',
-        socialMedia: socialMedia || {},
-        bookingFields: bookingFields || {},
-        notifications: notifications || {},
+        namaStudio: data.namaStudio || '',
+        logoUrl: data.logoUrl || '',
+        phone: data.phone || '',
+        email: data.email || '',
+        address: data.address || '',
+        socialMedia: (data.socialMedia ?? {}) as Prisma.InputJsonValue,
+        bookingFields: (data.bookingFields ?? {}) as Prisma.InputJsonValue,
+        notifications: (data.notifications ?? {}) as Prisma.InputJsonValue,
       },
     });
 

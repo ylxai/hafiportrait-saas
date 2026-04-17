@@ -10,6 +10,27 @@ import {
   enableKeyRotation,
   disableKeyRotation,
 } from '@/lib/storage/rotation';
+import { z } from 'zod';
+
+// Zod schemas
+const getQuerySchema = z.object({
+  action: z.enum(['pending-rotation']).optional(),
+});
+
+const postBodySchema = z.object({
+  accountId: z.string().min(1, 'Account ID is required'),
+  action: z.enum(['set-secondary', 'rotate-now', 'enable-rotation', 'disable-rotation']),
+  schedule: z.object({
+    frequency: z.enum(['daily', 'weekly', 'monthly', 'custom']),
+    customCron: z.string().optional(),
+  }).optional(),
+  credentials: z.object({
+    apiKey: z.string().optional(),
+    apiSecret: z.string().optional(),
+    accessKey: z.string().optional(),
+    secretKey: z.string().optional(),
+  }).optional(),
+});
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -25,7 +46,18 @@ export async function GET(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(request.url);
-    const action = searchParams.get('action');
+    
+    // Validate query params
+    const validation = getQuerySchema.safeParse({
+      action: searchParams.get('action'),
+    });
+
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+    }
+
+    const { action } = validation.data;
 
     if (action === 'pending-rotation') {
       const accountIds = await getAccountsNeedingRotation();
@@ -64,11 +96,15 @@ export async function POST(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     const body = await request.json();
-    const { accountId, action, schedule, credentials } = body;
-
-    if (!accountId) {
-      return errorResponse('Account ID required', 400);
+    
+    // Validate request body
+    const validation = postBodySchema.safeParse(body);
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
     }
+
+    const { accountId, action, schedule, credentials } = validation.data;
 
     switch (action) {
       case 'set-secondary': {

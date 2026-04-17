@@ -13,6 +13,12 @@ async function checkAuth() {
   return session;
 }
 
+/**
+ * GET /api/admin/export/clients
+ * 
+ * Exports all clients to CSV format.
+ * No input validation needed - read-only endpoint with no parameters.
+ */
 export async function GET() {
   try {
     const auth = await checkAuth();

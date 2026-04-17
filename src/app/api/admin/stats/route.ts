@@ -4,6 +4,12 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { getCachedData } from '@/lib/cache';
 
+/**
+ * GET /api/admin/stats
+ * 
+ * Returns dashboard statistics with caching (5 minutes TTL).
+ * No input validation needed - read-only endpoint with no parameters.
+ */
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
