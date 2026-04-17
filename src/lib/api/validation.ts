@@ -118,7 +118,7 @@ export const eventSchema = z.object({
     .transform((val) => val ? sanitizeString(val) : val),
   totalPrice: z.number().int().min(0).default(0),
   status: z.enum(['pending', 'confirmed', 'completed', 'cancelled']).default('pending'),
-  paymentStatus: z.enum(['unpaid', 'partial', 'paid', 'awaiting_confirmation', 'dp_paid', 'fully_paid']).default('unpaid'),
+  paymentStatus: z.enum(['unpaid', 'partial', 'paid', 'awaiting_confirmation']).default('unpaid'),
 });
 
 export const gallerySchema = z.object({

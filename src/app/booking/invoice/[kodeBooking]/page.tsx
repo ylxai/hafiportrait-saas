@@ -166,13 +166,11 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
   const getStatusBadge = () => {
     switch (event.paymentStatus) {
       case 'paid':
-      case 'fully_paid':
-        return <Badge variant="default" className="bg-green-500 hover:bg-green-600">LUNAS</Badge>;
+        return <Badge variant="default">LUNAS</Badge>;
       case 'partial':
-      case 'dp_paid':
-        return <Badge variant="secondary" className="bg-amber-500 text-white hover:bg-amber-600">DP DIBAYAR</Badge>;
+        return <Badge variant="secondary">DP DIBAYAR</Badge>;
       case 'awaiting_confirmation':
-        return <Badge variant="outline" className="text-amber-500 border-amber-500">MENUNGGU KONFIRMASI</Badge>;
+        return <Badge variant="outline">MENUNGGU KONFIRMASI</Badge>;
       default:
         return <Badge variant="destructive">BELUM BAYAR</Badge>;
     }

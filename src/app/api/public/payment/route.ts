@@ -6,7 +6,12 @@ import { verifyR2Upload, cleanupUploadSession } from '@/lib/upload/presigned';
 export async function POST(request: Request) {
   try {
     const body: unknown = await request.json();
-    const validated = paymentProofSchema.parse(body);
+    const validation = paymentProofSchema.safeParse(body);
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+    }
+    const validated = validation.data;
 
     // 1. Verify upload session and R2 file
     const verification = await verifyR2Upload(validated.uploadId, 0);
@@ -37,6 +42,10 @@ export async function POST(request: Request) {
 
     if (payment.eventId !== validated.eventId) {
       return errorResponse('Data tidak valid', 400);
+    }
+
+    if (payment.status === 'approved' || payment.event.paymentStatus === 'paid') {
+      return errorResponse('Pembayaran sudah dikonfirmasi', 400);
     }
 
     // 3. Update payment with proof URL and update event status

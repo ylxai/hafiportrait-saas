@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 type Package = {
   id: string;
@@ -49,15 +50,15 @@ export default function BookingPage() {
         body: JSON.stringify(formData),
       });
 
-      const result = await res.json();
+      const result: { data?: { kodeBooking?: string } } = await res.json();
 
       if (res.ok && result.data?.kodeBooking) {
         router.push(`/booking/invoice/${result.data.kodeBooking}`);
       } else {
-        alert('Terjadi kesalahan. Silakan coba lagi.');
+        toast.error('Terjadi kesalahan. Silakan coba lagi.');
       }
     } catch {
-      alert('Terjadi kesalahan. Silakan coba lagi.');
+      toast.error('Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setSubmitting(false);
     }

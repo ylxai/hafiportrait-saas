@@ -21,7 +21,7 @@ const PublicPresignedRequestSchema = z.object({
     ),
   contentType: z.string()
     .refine(
-      (val) => ALLOWED_MIME_TYPES.includes(val) || val.startsWith('image/'),
+      (val) => ALLOWED_MIME_TYPES.includes(val),
       'Invalid content type'
     ),
   eventId: z.string().min(1, 'Invalid event ID'),
@@ -62,10 +62,27 @@ export async function POST(request: Request) {
     // Check if event exists
     const event = await prisma.event.findUnique({
       where: { id: eventId },
+      select: {
+        id: true,
+        paymentStatus: true,
+        payments: {
+          where: { status: 'pending', proofUrl: null },
+          select: { id: true },
+          take: 1,
+        },
+      },
     });
 
     if (!event) {
       return errorResponse('Event not found', 404);
+    }
+
+    if (event.paymentStatus === 'paid') {
+      return errorResponse('Pembayaran sudah lunas', 400);
+    }
+
+    if (event.payments.length === 0) {
+      return errorResponse('Tidak ada pembayaran aktif untuk diunggah', 400);
     }
 
     // Note: Payment proof upload uses a special dummy galleryId or eventId-based path
