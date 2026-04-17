@@ -9,27 +9,33 @@ import {
   setSecondaryCredentials,
   enableKeyRotation,
   disableKeyRotation,
+  type RotationHistoryEntry,
 } from '@/lib/storage/rotation';
 import { z } from 'zod';
 
 // Zod schemas
 const getQuerySchema = z.object({
   action: z.enum(['pending-rotation']).optional(),
+  accountId: z.string().optional(),
 });
 
 const postBodySchema = z.object({
   accountId: z.string().min(1, 'Account ID is required'),
   action: z.enum(['set-secondary', 'rotate-now', 'enable-rotation', 'disable-rotation']),
-  schedule: z.object({
-    frequency: z.enum(['daily', 'weekly', 'monthly', 'custom']),
-    customCron: z.string().optional(),
-  }).optional(),
-  credentials: z.object({
-    apiKey: z.string().optional(),
-    apiSecret: z.string().optional(),
-    accessKey: z.string().optional(),
-    secretKey: z.string().optional(),
-  }).optional(),
+  schedule: z
+    .object({
+      frequency: z.enum(['daily', 'weekly', 'monthly', 'custom']),
+      customCron: z.string().optional(),
+    })
+    .optional(),
+  credentials: z
+    .object({
+      apiKey: z.string().optional(),
+      apiSecret: z.string().optional(),
+      accessKey: z.string().optional(),
+      secretKey: z.string().optional(),
+    })
+    .optional(),
 });
 
 async function checkAuth() {
@@ -46,10 +52,10 @@ export async function GET(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(request.url);
-    
-    // Validate query params
+
     const validation = getQuerySchema.safeParse({
-      action: searchParams.get('action'),
+      action: searchParams.get('action') ?? undefined,
+      accountId: searchParams.get('accountId') ?? undefined,
     });
 
     if (!validation.success) {
@@ -57,19 +63,64 @@ export async function GET(request: Request) {
       return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
     }
 
-    const { action } = validation.data;
+    const { action, accountId } = validation.data;
 
+    // Return accounts pending auto-rotation
     if (action === 'pending-rotation') {
       const accountIds = await getAccountsNeedingRotation();
       return successResponse({ accountIds });
     }
 
+    // Return rotation history for a specific account
+    if (accountId) {
+      const account = await prisma.storageAccount.findUnique({
+        where: { id: accountId },
+        select: {
+          id: true,
+          name: true,
+          provider: true,
+          rotationEnabled: true,
+          rotationSchedule: true,
+          rotationNextDate: true,
+          isSecondaryActive: true,
+          lastRotatedAt: true,
+          rotationHistory: true,
+          // Show whether secondary credentials are set (not the values)
+          secondaryApiKey: true,
+          secondaryApiSecret: true,
+          secondaryAccessKey: true,
+          secondarySecretKey: true,
+        },
+      });
+
+      if (!account) {
+        return errorResponse('Account not found', 404);
+      }
+
+      return successResponse({
+        account: {
+          id: account.id,
+          name: account.name,
+          provider: account.provider,
+          rotationEnabled: account.rotationEnabled,
+          rotationSchedule: account.rotationSchedule,
+          rotationNextDate: account.rotationNextDate,
+          isSecondaryActive: account.isSecondaryActive,
+          lastRotatedAt: account.lastRotatedAt,
+          rotationHistory: (account.rotationHistory as RotationHistoryEntry[] | null) ?? [],
+          // Mask credential values — only expose whether they are set
+          hasSecondaryApiKey: !!account.secondaryApiKey,
+          hasSecondaryApiSecret: !!account.secondaryApiSecret,
+          hasSecondaryAccessKey: !!account.secondaryAccessKey,
+          hasSecondarySecretKey: !!account.secondarySecretKey,
+        },
+      });
+    }
+
+    // Return all accounts with rotation configured
     const accounts = await prisma.storageAccount.findMany({
       where: {
-        OR: [
-          { rotationEnabled: true },
-          { isSecondaryActive: true },
-        ],
+        OR: [{ rotationEnabled: true }, { isSecondaryActive: true }],
       },
       select: {
         id: true,
@@ -96,8 +147,7 @@ export async function POST(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     const body = await request.json();
-    
-    // Validate request body
+
     const validation = postBodySchema.safeParse(body);
     if (!validation.success) {
       const firstError = validation.error.errors[0];
@@ -109,40 +159,43 @@ export async function POST(request: Request) {
     switch (action) {
       case 'set-secondary': {
         if (!credentials) {
-          return errorResponse('Credentials required', 400);
+          return errorResponse('credentials required for set-secondary action', 400);
         }
         const result = await setSecondaryCredentials(accountId, credentials);
         if (!result.success) {
-          return errorResponse(result.error || 'Failed to set secondary credentials', 400);
+          return errorResponse(result.error ?? 'Failed to set secondary credentials', 400);
         }
-        return successResponse({ success: true });
+        return successResponse({ success: true, message: 'Secondary credentials saved. Run "rotate-now" to activate them.' });
       }
 
       case 'rotate-now': {
-        const result = await rotateStorageCredentials(accountId);
+        const result = await rotateStorageCredentials(accountId, 'manual');
         if (!result.success) {
-          return errorResponse(result.error || 'Failed to rotate credentials', 400);
+          return errorResponse(result.error ?? 'Failed to rotate credentials', 400);
         }
-        return successResponse({ success: true });
+        return successResponse({ success: true, message: 'Credentials rotated successfully. Secondary is now active as primary.' });
       }
 
       case 'enable-rotation': {
         if (!schedule) {
-          return errorResponse('Schedule required', 400);
+          return errorResponse('schedule required for enable-rotation action', 400);
+        }
+        if (schedule.frequency === 'custom' && !schedule.customCron) {
+          return errorResponse('customCron required when frequency is "custom"', 400);
         }
         const result = await enableKeyRotation(accountId, schedule);
         if (!result.success) {
-          return errorResponse(result.error || 'Failed to enable rotation', 400);
+          return errorResponse(result.error ?? 'Failed to enable rotation', 400);
         }
-        return successResponse({ success: true });
+        return successResponse({ success: true, message: `Auto-rotation enabled (${schedule.frequency})` });
       }
 
       case 'disable-rotation': {
         const result = await disableKeyRotation(accountId);
         if (!result.success) {
-          return errorResponse(result.error || 'Failed to disable rotation', 400);
+          return errorResponse(result.error ?? 'Failed to disable rotation', 400);
         }
-        return successResponse({ success: true });
+        return successResponse({ success: true, message: 'Auto-rotation disabled' });
       }
 
       default:
