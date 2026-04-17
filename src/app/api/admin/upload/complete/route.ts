@@ -24,13 +24,16 @@ const CompleteUploadSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  let body: { uploadId?: string; width?: number; height?: number } = {};
+  let galleryId: string | undefined;
+  
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return errorResponse('Unauthorized', 401);
     }
 
-    const body = await request.json();
+    body = await request.json();
     const validation = CompleteUploadSchema.safeParse(body);
     
     if (!validation.success) {
@@ -46,11 +49,14 @@ export async function POST(request: Request) {
       return errorResponse(verification.error || 'Upload verification failed', 400);
     }
 
-    const { r2Key, publicUrl, filename, galleryId, storageAccountId, fileSize: serverFileSize, fileHash: sessionFileHash } = verification;
-
-    if (!r2Key || !publicUrl || !filename || !galleryId) {
+    const { r2Key, publicUrl, filename, galleryId: gId, storageAccountId, fileSize: serverFileSize, fileHash: sessionFileHash } = verification;
+    
+    if (!r2Key || !publicUrl || !filename || !gId) {
       return errorResponse('Invalid upload verification data', 400);
     }
+    
+    // After validation, galleryId is guaranteed to be string
+    galleryId = gId;
 
     // Use server-side file size from R2 (NOT client-provided)
     const actualFileSize = serverFileSize || 0;
@@ -173,7 +179,7 @@ export async function POST(request: Request) {
     const photo = await prisma.$transaction(async (tx) => {
       const newPhoto = await tx.photo.create({
         data: {
-          galleryId,
+          galleryId: galleryId!, // Guaranteed non-null after validation
           filename,
           url: publicUrl,
           r2Key: r2Key,
@@ -249,18 +255,9 @@ export async function POST(request: Request) {
     console.error('Error completing upload:', error);
     
     // Track failed upload (non-blocking)
-    const body = await request.json().catch(() => ({}));
-    const uploadId = body.uploadId;
-    if (uploadId) {
-      const session = await prisma.uploadSession.findUnique({
-        where: { id: uploadId },
-        select: { galleryId: true },
-      }).catch(() => null);
-      
-      if (session?.galleryId) {
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-        trackUploadResult(session.galleryId, false, errorMsg).catch(() => {});
-      }
+    if (galleryId) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      trackUploadResult(galleryId, false, errorMsg).catch(() => {});
     }
     
     return serverErrorResponse('Failed to complete upload');

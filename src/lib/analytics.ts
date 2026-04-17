@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db';
 
+const BYTES_PER_MB = 1024 * 1024;
+
 /**
  * Track upload success/failure for analytics
  * Non-blocking: errors are logged but don't affect the main flow
@@ -52,40 +54,35 @@ export async function getUploadStats(galleryId: string) {
 
 /**
  * Get storage usage trends (last 30 days)
+ * Uses database-level aggregation for performance
  */
 export async function getStorageUsageTrends(clientId: string) {
   try {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const photos = await prisma.photo.findMany({
-      where: {
-        gallery: {
-          event: { clientId },
-        },
-        createdAt: { gte: thirtyDaysAgo },
-      },
-      select: {
-        fileSize: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    // Use raw query for efficient DB-level aggregation
+    const dailyUsage = await prisma.$queryRaw<Array<{ date: string; bytes: bigint }>>`
+      SELECT 
+        DATE("createdAt") as date,
+        SUM("fileSize")::bigint as bytes
+      FROM "Photo"
+      WHERE "galleryId" IN (
+        SELECT "id" FROM "Gallery"
+        WHERE "eventId" IN (
+          SELECT "id" FROM "Event"
+          WHERE "clientId" = ${clientId}
+        )
+      )
+      AND "createdAt" >= ${thirtyDaysAgo}
+      GROUP BY DATE("createdAt")
+      ORDER BY date ASC
+    `;
 
-    // Group by day
-    const dailyUsage = photos.reduce((acc, photo) => {
-      const date = photo.createdAt.toISOString().split('T')[0];
-      if (!acc[date]) {
-        acc[date] = BigInt(0);
-      }
-      acc[date] += photo.fileSize || BigInt(0);
-      return acc;
-    }, {} as Record<string, bigint>);
-
-    return Object.entries(dailyUsage).map(([date, bytes]) => ({
+    return dailyUsage.map(({ date, bytes }) => ({
       date,
       bytes: bytes.toString(),
-      mb: Number(bytes) / (1024 * 1024),
+      mb: Number(bytes) / BYTES_PER_MB,
     }));
   } catch (error) {
     console.error('[Analytics] Failed to get storage trends:', error);

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { successResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
+import { successResponse, notFoundResponse } from '@/lib/api/response';
 
 export async function POST(
   request: Request,
@@ -10,20 +10,29 @@ export async function POST(
     
     const gallery = await prisma.gallery.findUnique({
       where: { clientToken: token },
+      select: { id: true, viewCount: true },
     });
 
     if (!gallery) {
       return notFoundResponse('Gallery not found');
     }
 
-    const updatedGallery = await prisma.gallery.update({
+    // Non-blocking view count increment
+    prisma.gallery.update({
       where: { id: gallery.id },
       data: { viewCount: { increment: 1 } },
+    }).catch((error) => {
+      if (error.code === 'P2025') {
+        console.error('[API] Gallery record not found for analytics update');
+      } else {
+        console.error(`[API] Failed to increment view count for gallery ${gallery.id}`, error);
+      }
     });
 
-    return successResponse({ viewCount: updatedGallery.viewCount });
+    // Return immediately without waiting for increment
+    return successResponse({ viewCount: gallery.viewCount + 1 });
   } catch (error) {
-    console.error('Error incrementing view count:', error);
-    return serverErrorResponse('Failed to increment view count');
+    console.error('[API] Error in view endpoint:', error);
+    return notFoundResponse('Gallery not found');
   }
 }

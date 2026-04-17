@@ -47,15 +47,6 @@ export async function GET(
       return notFoundResponse('Gallery not found');
     }
 
-    // Increment view count (analytics)
-    await prisma.gallery.update({
-      where: { id: gallery.id },
-      data: { viewCount: { increment: 1 } },
-    }).catch(() => {
-      // Non-blocking: log error but don't fail request
-      console.error(`[Analytics] Failed to increment view count for gallery ${gallery.id}`);
-    });
-
     // Get paginated photos using the gallery ID to optimize index usage
     const photos = await prisma.photo.findMany({
       where: { 
