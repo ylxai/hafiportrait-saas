@@ -16,42 +16,38 @@ export const searchQuerySchema = z.object({
 });
 
 /**
- * Enhanced string sanitization for XSS prevention
- * 
- * Removes/escapes dangerous characters and patterns:
- * - HTML tags and entities
- * - JavaScript protocols and event handlers
- * - SQL injection patterns (though Prisma protects against this)
- * - Unicode control characters
- * - Null bytes
- * 
- * Note: For rich text content, use a dedicated library like DOMPurify
+ * String sanitization for XSS prevention.
+ *
+ * - Trims and removes null bytes / Unicode control characters
+ * - Strips dangerous URL protocols (javascript:, data:, vbscript:)
+ * - Strips inline event handlers (onclick=, onerror=, ...)
+ * - HTML-escapes the remaining content (&, <, >, ", ', /) — this neutralizes
+ *   tags without dropping legitimate user text like "a < b > c"
+ *
+ * Note: Prisma parameterizes queries, so SQL keyword stripping is intentionally
+ * not done here (it corrupts legitimate user content like "Update meeting").
+ * For rich text content, use a dedicated library like DOMPurify.
  */
-const sanitizeString = (str: string) => {
-  return str
+const sanitizeString = (str: string) =>
+  str
     .trim()
     // Remove null bytes
     .replace(/\0/g, '')
     // Remove Unicode control characters (except newline, tab, carriage return)
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
-    // Remove HTML tags
-    .replace(/<[^>]*>/g, '')
-    // Escape HTML entities
+    // Remove dangerous URL protocols
+    .replace(/javascript:/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/vbscript:/gi, '')
+    // Remove event handlers (onclick=, onerror=, etc.)
+    .replace(/on\w+\s*=/gi, '')
+    // HTML-escape the remaining content (prevents XSS without dropping text)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;')
-    // Remove dangerous protocols
-    .replace(/javascript:/gi, '')
-    .replace(/data:/gi, '')
-    .replace(/vbscript:/gi, '')
-    // Remove event handlers
-    .replace(/on\w+\s*=/gi, '')
-    // Remove SQL injection patterns (defense in depth, Prisma already protects)
-    .replace(/(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE|UNION|DECLARE)\b)/gi, '');
-};
+    .replace(/\//g, '&#x2F;');
 
 // Email regex for stricter validation
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;

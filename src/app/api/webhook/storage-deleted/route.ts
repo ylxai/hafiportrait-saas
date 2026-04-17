@@ -1,6 +1,7 @@
 import { decreaseStorageUsage } from '@/lib/storage/accounts';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { verifyWebhookSignature } from '@/lib/webhook-validation';
+import { timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 
 /**
@@ -35,12 +36,29 @@ export async function POST(request: Request) {
     
     // Verify webhook signature and timestamp
     const validation = verifyWebhookSignature(body, signature, timestamp);
-    if (!validation.valid) {
+
+    // Backward-compat: accept legacy Bearer auth from workers not yet updated
+    const authHeader = request.headers.get('authorization');
+    const legacySecret = process.env.VPS_WEBHOOK_SECRET;
+    let legacyAuthorized = false;
+    if (authHeader && legacySecret) {
+      const expected = `Bearer ${legacySecret}`;
+      if (authHeader.length === expected.length) {
+        legacyAuthorized = timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected));
+      }
+    }
+
+    if (!validation.valid && !legacyAuthorized) {
       console.warn('[Webhook/Storage] Validation failed:', validation.error);
       return errorResponse(validation.error || 'Unauthorized', 401);
     }
 
-    const data = JSON.parse(body);
+    let data: unknown;
+    try {
+      data = JSON.parse(body);
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
     
     // Validate body schema
     const payloadValidation = storageDeletedSchema.safeParse(data);

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { timingSafeEqual } from 'node:crypto';
 import { prisma } from '@/lib/db';
 import { successResponse, errorResponse, unauthorizedResponse } from '@/lib/api/response';
 
@@ -19,7 +20,13 @@ export async function POST(request: Request) {
       return errorResponse('Cron job not configured', 500);
     }
     
-    if (authHeader !== `Bearer ${cronSecret}`) {
+    const expectedAuth = `Bearer ${cronSecret}`;
+    const authOk =
+      !!authHeader &&
+      authHeader.length === expectedAuth.length &&
+      timingSafeEqual(Buffer.from(authHeader), Buffer.from(expectedAuth));
+
+    if (!authOk) {
       console.warn('[Cleanup] Unauthorized cleanup attempt');
       return unauthorizedResponse();
     }
@@ -48,7 +55,6 @@ export async function POST(request: Request) {
   }
 }
 
-// Allow GET for manual testing (with same auth)
-export async function GET(request: Request) {
-  return POST(request);
+export async function GET() {
+  return errorResponse('Method not allowed', 405);
 }

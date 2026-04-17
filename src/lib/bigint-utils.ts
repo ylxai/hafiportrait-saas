@@ -14,26 +14,25 @@
  * const serialized = serializeBigInt(data);
  * // { fileSize: "1024", nested: { count: "5" } }
  */
-export function serializeBigInt<T>(obj: T): T {
+// Overloads for correct typing: bigint → string; other values → same shape with bigints serialized
+export function serializeBigInt(value: bigint): string;
+export function serializeBigInt<T>(value: T): T;
+export function serializeBigInt(obj: unknown): unknown {
   if (obj === null || obj === undefined) {
     return obj;
   }
 
-  // Handle BigInt directly
   if (typeof obj === 'bigint') {
-    return String(obj) as T;
+    return String(obj);
   }
 
-  // Handle arrays
   if (Array.isArray(obj)) {
-    return obj.map(item => serializeBigInt(item)) as T;
+    return obj.map(item => serializeBigInt(item));
   }
 
-  // Handle objects
   if (typeof obj === 'object') {
     const serialized: Record<string, unknown> = {};
-    
-    for (const [key, value] of Object.entries(obj)) {
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
       if (typeof value === 'bigint') {
         serialized[key] = String(value);
       } else if (value !== null && typeof value === 'object') {
@@ -42,11 +41,9 @@ export function serializeBigInt<T>(obj: T): T {
         serialized[key] = value;
       }
     }
-    
-    return serialized as T;
+    return serialized;
   }
 
-  // Primitive types (string, number, boolean)
   return obj;
 }
 

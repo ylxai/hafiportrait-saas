@@ -70,9 +70,13 @@ export function verifyWebhookSignature(
     };
   }
 
-  // Validate timestamp format (should be ISO 8601 or Unix timestamp)
-  const timestampMs = Date.parse(timestamp);
-  if (isNaN(timestampMs)) {
+  // Validate timestamp format (supports ISO 8601 and Unix timestamps in seconds or ms)
+  const numericTimestamp = Number(timestamp);
+  const timestampMs = Number.isFinite(numericTimestamp)
+    ? (numericTimestamp < 1e12 ? numericTimestamp * 1000 : numericTimestamp)
+    : Date.parse(timestamp);
+
+  if (Number.isNaN(timestampMs)) {
     return {
       valid: false,
       error: 'Invalid timestamp format',
@@ -166,15 +170,31 @@ export function verifyWebhookIP(
     return { valid: true };
   }
 
-  // Simple IP matching (exact match or CIDR prefix)
-  // For production, consider using a library like 'ip-range-check'
-  const isWhitelisted = whitelist.some(allowed => {
-    if (allowed.includes('/')) {
-      // CIDR range - simple prefix match (not full CIDR validation)
-      const [network] = allowed.split('/');
-      return ip.startsWith(network.split('.').slice(0, -1).join('.'));
+  // IPv4 matching with proper CIDR support
+  const ipToInt = (value: string): number | null => {
+    const octets = value.split('.').map(Number);
+    if (octets.length !== 4 || octets.some(o => !Number.isInteger(o) || o < 0 || o > 255)) {
+      return null;
     }
-    return ip === allowed;
+    return (((octets[0] << 24) >>> 0) + (octets[1] << 16) + (octets[2] << 8) + octets[3]) >>> 0;
+  };
+
+  const isWhitelisted = whitelist.some((allowed) => {
+    if (!allowed.includes('/')) {
+      return ip === allowed;
+    }
+    const [networkIp, prefixRaw] = allowed.split('/');
+    const prefix = Number(prefixRaw);
+    if (!Number.isInteger(prefix) || prefix < 0 || prefix > 32) {
+      return false;
+    }
+    const target = ipToInt(ip);
+    const network = ipToInt(networkIp);
+    if (target === null || network === null) {
+      return false;
+    }
+    const mask = prefix === 0 ? 0 : ((0xffffffff << (32 - prefix)) >>> 0);
+    return (target & mask) === (network & mask);
   });
 
   if (!isWhitelisted) {
