@@ -28,10 +28,16 @@ export async function POST(request: Request) {
       return errorResponse('Unauthorized', 401);
     }
 
-    const token = authHeader.substring(7);
+    const expected = `Bearer ${cronSecret}`;
+    
+    // Check length before timingSafeEqual (throws on different lengths)
+    if (authHeader.length !== expected.length) {
+      return errorResponse('Unauthorized', 401);
+    }
+
     const isValid = timingSafeEqual(
-      Buffer.from(token),
-      Buffer.from(cronSecret)
+      Buffer.from(authHeader),
+      Buffer.from(expected)
     );
 
     if (!isValid) {
