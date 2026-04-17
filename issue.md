@@ -48,7 +48,7 @@
 21. ✅ `galleries/[id]/photos/route.ts` - Already validated
 22. ✅ `photos/bulk-delete/route.ts` - Already validated
 
-**PR:** https://github.com/ylxai/hafiportrait-saas/pull/new/feat/zod-validation-priority-1
+**PR:** https://github.com/ylxai/hafiportrait-saas/pull/41
 
 **Impact:**
 - ✅ All API routes now have proper input validation

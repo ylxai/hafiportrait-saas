@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { Prisma } from '@/generated/prisma';
 import { z } from 'zod';
 
 // Zod schema for settings update
@@ -78,12 +79,9 @@ export async function POST(request: Request) {
         phone: data.phone,
         email: data.email,
         address: data.address,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        socialMedia: data.socialMedia as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        bookingFields: data.bookingFields as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        notifications: data.notifications as any,
+        socialMedia: data.socialMedia as Prisma.InputJsonValue,
+        bookingFields: data.bookingFields as Prisma.InputJsonValue,
+        notifications: data.notifications as Prisma.InputJsonValue,
       },
       create: {
         id: 'studio',
@@ -92,12 +90,9 @@ export async function POST(request: Request) {
         phone: data.phone || '',
         email: data.email || '',
         address: data.address || '',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        socialMedia: (data.socialMedia || {}) as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        bookingFields: (data.bookingFields || {}) as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        notifications: (data.notifications || {}) as any,
+        socialMedia: (data.socialMedia ?? {}) as Prisma.InputJsonValue,
+        bookingFields: (data.bookingFields ?? {}) as Prisma.InputJsonValue,
+        notifications: (data.notifications ?? {}) as Prisma.InputJsonValue,
       },
     });
 

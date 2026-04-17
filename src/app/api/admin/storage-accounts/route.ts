@@ -28,6 +28,39 @@ const createStorageAccountSchema = z.object({
   rotationEnabled: z.boolean().default(false),
   rotationSchedule: z.string().max(50).optional(),
   secondaryApiKey: z.string().max(100).optional(),
+}).superRefine((data, ctx) => {
+  if (data.provider === 'R2') {
+    const requiredR2: Array<'accountId' | 'accessKey' | 'secretKey' | 'bucketName'> = [
+      'accountId',
+      'accessKey',
+      'secretKey',
+      'bucketName',
+    ];
+    for (const field of requiredR2) {
+      if (!data[field] || data[field]!.trim() === '') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: `${field} is required for R2 provider`,
+        });
+      }
+    }
+  } else if (data.provider === 'CLOUDINARY') {
+    const requiredCloudinary: Array<'cloudName' | 'apiKey' | 'apiSecret'> = [
+      'cloudName',
+      'apiKey',
+      'apiSecret',
+    ];
+    for (const field of requiredCloudinary) {
+      if (!data[field] || data[field]!.trim() === '') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: `${field} is required for Cloudinary provider`,
+        });
+      }
+    }
+  }
 });
 
 const updateStorageAccountSchema = z.object({
