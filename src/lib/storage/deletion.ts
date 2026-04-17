@@ -54,8 +54,9 @@ export async function performPhotoDeletion(data: DeletionJobData): Promise<void>
           };
 
           await deleteFromCloudinary(publicId, cloudinaryCreds);
-        console.log(`[DeletionWorker] Cloudinary file deleted: ${publicId}`);
-        cloudinaryDeleted = true;
+          console.log(`[DeletionWorker] Cloudinary file deleted: ${publicId}`);
+          cloudinaryDeleted = true;
+        }
       }
     } catch (error) {
       console.error(`[DeletionWorker] Failed to delete Cloudinary file:`, error);
