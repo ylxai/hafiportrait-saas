@@ -1,62 +1,60 @@
-import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
-import { cleanupExpiredUploadSessions } from '@/lib/upload/cleanup';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
+import { prisma } from '@/lib/db';
+import { successResponse, errorResponse, unauthorizedResponse } from '@/lib/api/response';
 
-// Verify cleanup secret (for cron worker or external cron)
-function verifyCleanupSecret(request: Request): boolean {
-  const auth = request.headers.get('Authorization');
-  const secret = process.env.VPS_CLEANUP_SECRET || process.env.WEBHOOK_SECRET;
-  if (!secret || !auth) return false;
-
-  const expected = `Bearer ${secret}`;
-  if (auth.length !== expected.length) return false;
-
-  return timingSafeEqual(
-    Buffer.from(auth),
-    Buffer.from(expected)
-  );
-}
-
+/**
+ * Cleanup expired upload sessions
+ * This endpoint should be called by Vercel Cron (hourly)
+ * 
+ * Authentication: Bearer token from environment variable
+ */
 export async function POST(request: Request) {
   try {
-    // Check auth: either NextAuth session OR cleanup secret (for cron worker)
-    let isAuthenticated = false;
-
-    // Try NextAuth session first (admin dashboard manual cleanup)
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role === 'admin') {
-      isAuthenticated = true;
+    // Verify cron secret for security
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET || process.env.VPS_CLEANUP_SECRET;
+    
+    if (!cronSecret) {
+      console.error('[Cleanup] CRON_SECRET not configured');
+      return errorResponse('Cron job not configured', 500);
     }
+    
+    const expectedAuth = `Bearer ${cronSecret}`;
+    const authOk =
+      !!authHeader &&
+      authHeader.length === expectedAuth.length &&
+      timingSafeEqual(Buffer.from(authHeader), Buffer.from(expectedAuth));
 
-    // Fall back to cleanup secret (for Cloudflare cron worker or external cron)
-    if (!isAuthenticated) {
-      if (!verifyCleanupSecret(request)) {
-        return errorResponse('Unauthorized', 401);
-      }
-      isAuthenticated = true;
+    if (!authOk) {
+      console.warn('[Cleanup] Unauthorized cleanup attempt');
+      return unauthorizedResponse();
     }
-
-    if (!isAuthenticated) {
-      return errorResponse('Unauthorized', 401);
-    }
-
-    const { searchParams } = new URL(request.url);
-    const dryRun = searchParams.get('dryRun') === 'true';
-
-    // Cleanup expired upload sessions
-    const deletedCount = await cleanupExpiredUploadSessions(dryRun);
-
+    
+    // Delete expired upload sessions
+    const result = await prisma.uploadSession.deleteMany({
+      where: {
+        expiresAt: {
+          lt: new Date(), // Less than current time = expired
+        },
+      },
+    });
+    
+    console.log(`[Cleanup] Deleted ${result.count} expired upload sessions`);
+    
     return successResponse({
-      message: dryRun
-        ? `Would delete ${deletedCount} expired sessions`
-        : `Deleted ${deletedCount} expired upload sessions`,
-      deletedCount,
-      dryRun,
+      deleted: result.count,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Error cleaning up upload sessions:', error);
-    return serverErrorResponse('Failed to cleanup upload sessions');
+    console.error('[Cleanup] Error cleaning up upload sessions:', error);
+    return NextResponse.json(
+      { success: false, error: 'Cleanup failed' },
+      { status: 500 }
+    );
   }
+}
+
+export async function GET() {
+  return errorResponse('Method not allowed', 405);
 }

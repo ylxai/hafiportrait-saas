@@ -15,15 +15,38 @@ export const searchQuerySchema = z.object({
   type: z.enum(['clients', 'events', 'galleries', 'photos']).optional(),
 });
 
-// Helper to sanitize string (trim and basic XSS prevention)
-// Note: For production, consider using DOMPurify for more robust sanitization
-const sanitizeString = (str: string) => {
-  return str
+/**
+ * String sanitization for XSS prevention.
+ *
+ * - Trims and removes null bytes / Unicode control characters
+ * - Strips dangerous URL protocols (javascript:, data:, vbscript:)
+ * - Strips inline event handlers (onclick=, onerror=, ...)
+ * - HTML-escapes the remaining content (&, <, >, ", ', /) — this neutralizes
+ *   tags without dropping legitimate user text like "a < b > c"
+ *
+ * Note: Prisma parameterizes queries, so SQL keyword stripping is intentionally
+ * not done here (it corrupts legitimate user content like "Update meeting").
+ * For rich text content, use a dedicated library like DOMPurify.
+ */
+const sanitizeString = (str: string) =>
+  str
     .trim()
-    .replace(/[<>]/g, '') // Remove < and > to prevent HTML tags
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
-    .replace(/on\w+=/gi, ''); // Remove event handlers (onclick, onerror, etc.)
-};
+    // Remove null bytes
+    .replace(/\0/g, '')
+    // Remove Unicode control characters (except newline, tab, carriage return)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+    // Remove dangerous URL protocols
+    .replace(/javascript:/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/vbscript:/gi, '')
+    // Remove event handlers (onclick=, onerror=, etc.)
+    .replace(/\bon[a-z]+\s*=/gi, '')
+    // HTML-escape the remaining content (prevents XSS without dropping text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
 
 // Email regex for stricter validation
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;

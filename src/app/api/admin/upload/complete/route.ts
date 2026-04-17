@@ -12,6 +12,7 @@ import {
 } from '@/lib/upload/constants';
 import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
 import { queueThumbnailGeneration } from '@/lib/cloudflare-queue';
+import { serializeBigInt } from '@/lib/bigint-utils';
 
 
 // Zod validation schema for upload complete request
@@ -224,7 +225,7 @@ export async function POST(request: Request) {
         publicId: photo.publicId,
         width: photo.width,
         height: photo.height,
-        fileSize: photo.fileSize?.toString() || null,
+        fileSize: serializeBigInt(photo.fileSize),
       },
     });
   } catch (error) {

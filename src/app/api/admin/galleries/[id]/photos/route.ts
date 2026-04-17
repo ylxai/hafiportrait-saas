@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { createAdminPaginationResponse } from '@/types/pagination';
 import { NextResponse } from 'next/server';
+import { serializeBigInt } from '@/lib/bigint-utils';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -67,7 +68,7 @@ export async function GET(
       return {
         ...photo,
         thumbnailUrl: thumbnailUrl || photo.url,
-        fileSize: photo.fileSize?.toString() || null,
+        fileSize: serializeBigInt(photo.fileSize),
       };
     });
 
@@ -221,7 +222,7 @@ export async function POST(
 
     const serializedPhoto = {
       ...photo,
-      fileSize: photo.fileSize?.toString() || null,
+      fileSize: serializeBigInt(photo.fileSize),
     };
 
     return successResponse({ photo: serializedPhoto }, 201);

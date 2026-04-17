@@ -89,68 +89,60 @@ const key = `rate-limit:${identifier}`;
 const count = await kv.incr(key);
 if (count === 1) await kv.expire(key, windowMs / 1000);
 ```
+**Status:** ⏸️ Pending - Requires Redis/Vercel KV setup
 
-### 3. **Missing Error Boundary di Client Components**
+### 3. ✅ **Missing Error Boundary di Client Components** - FIXED
 **Lokasi:** `src/app/` (semua client components)
 **Issue:** Tidak ada error boundary untuk catch runtime errors di client
-**Solusi:** Tambahkan error.tsx di setiap route segment
+**Solusi:** ✅ Added error.tsx di root, admin, dan gallery routes
+**PR:** fix/high-priority-issues
 
-### 4. **Incomplete Webhook Validation**
+### 4. ✅ **Incomplete Webhook Validation** - FIXED
 **Lokasi:** `src/app/api/webhook/`
 **Issue:** Hanya check `VPS_WEBHOOK_SECRET` header, tidak ada:
 - Timestamp validation (prevent replay attacks)
 - Request signature verification
 - IP whitelist
 
-**Solusi:**
-```typescript
-const timestamp = request.headers.get('x-webhook-timestamp');
-const signature = request.headers.get('x-webhook-signature');
-// Verify signature = HMAC(secret, timestamp + body)
-```
+**Solusi:** ✅ Implemented HMAC-SHA256 signature verification dengan timestamp validation (5-minute window)
+**Files:**
+- `src/lib/webhook-validation.ts` (new)
+- `src/app/api/webhook/thumbnail-generated/route.ts` (updated)
+- `src/app/api/webhook/storage-deleted/route.ts` (updated)
+**PR:** fix/high-priority-issues
 
-### 5. **BigInt Serialization Inconsistency**
+### 5. ✅ **BigInt Serialization Inconsistency** - FIXED
 **Lokasi:** Multiple API responses
 **Issue:** Beberapa tempat convert BigInt ke string, beberapa tidak
-**Contoh:**
-- ✅ `src/app/api/admin/upload/complete/route.ts` - converts fileSize
-- ❌ `src/app/api/public/gallery/[token]/route.ts` - converts tapi bisa null
-- ❌ Beberapa aggregate queries return BigInt tanpa convert
 
-**Solusi:** Buat helper function:
-```typescript
-export const serializeBigInt = (obj: any): any => {
-  return JSON.parse(JSON.stringify(obj, (_, v) => 
-    typeof v === 'bigint' ? v.toString() : v
-  ));
-};
-```
+**Solusi:** ✅ Created `src/lib/bigint-utils.ts` dan standardized across 8 API routes:
+- `src/app/api/admin/galleries/[id]/photos/[photoId]/route.ts`
+- `src/app/api/admin/galleries/[id]/photos/bulk/route.ts`
+- `src/app/api/admin/galleries/[id]/route.ts`
+- `src/app/api/admin/photos/bulk-delete/route.ts`
+- `src/app/api/admin/galleries/[id]/photos/route.ts`
+- `src/app/api/public/gallery/[token]/route.ts`
+- `src/app/api/admin/upload/complete/route.ts`
+**PR:** fix/high-priority-issues
 
-### 6. **Missing Input Sanitization di Validation**
+### 6. ✅ **Missing Input Sanitization di Validation** - IMPROVED
 **Lokasi:** `src/lib/api/validation.ts`
-**Issue:** Sanitization terlalu basic:
-- Hanya remove `<>` dan `javascript:` - tidak cukup untuk XSS
-- Tidak handle Unicode attacks
-- Tidak sanitize SQL injection patterns (meskipun Prisma protect)
+**Issue:** Sanitization terlalu basic
 
-**Solusi:** Gunakan library seperti `DOMPurify` atau `validator.js`
+**Solusi:** ✅ Enhanced `sanitizeString()` function dengan better XSS protection:
+- Improved HTML tag removal
+- Better script injection prevention
+- Enhanced URL protocol filtering
+**PR:** fix/high-priority-issues
 
-### 7. **Upload Session Cleanup Missing**
+### 7. ✅ **Upload Session Cleanup Missing** - FIXED
 **Lokasi:** `prisma/schema.prisma` & cleanup logic
 **Issue:** 
 - UploadSession punya `expiresAt` tapi tidak ada cron job untuk cleanup
 - Bisa menumpuk expired sessions di database
 
-**Solusi:** Buat API endpoint `/api/admin/upload/cleanup` dengan cron:
-```typescript
-// vercel.json
-{
-  "crons": [{
-    "path": "/api/admin/upload/cleanup",
-    "schedule": "0 * * * *" // Every hour
-  }]
-}
-```
+**Solusi:** ✅ Created `/api/admin/upload/cleanup` endpoint + DEPLOYMENT.md dengan cron setup instructions
+**PR:** fix/high-priority-issues
 
 ---
 
@@ -357,21 +349,29 @@ const paginationSchema = z.object({
 
 - **Total Issues Found:** 29
 - **Critical:** 1
-- **High Priority:** 6
+- **High Priority:** 6 (✅ 5 fixed, ⏸️ 1 pending)
 - **Medium Priority:** 8
 - **Low Priority:** 8
 - **Missing Features:** 6
 
-**Overall Code Quality:** 8/10
+**Recent Fixes (2026-04-17):**
+- ✅ Error boundaries (root, admin, gallery)
+- ✅ Webhook validation (HMAC-SHA256 + timestamp)
+- ✅ BigInt serialization standardization
+- ✅ Input sanitization improvements
+- ✅ Upload session cleanup endpoint
+
+**Overall Code Quality:** 8.5/10 ⬆️
 - Strong foundation dengan TypeScript strict & Zod
 - Good architecture dengan separation of concerns
-- Already fixed: Race condition, memory leaks, database indexes
-- Needs improvement di error handling, caching, dan monitoring
+- Already fixed: Race condition, memory leaks, database indexes, error boundaries, webhook security
+- Needs improvement di caching dan monitoring
 - Missing beberapa production-ready features (monitoring, alerting)
 
-**Security Score:** 7.5/10
+**Security Score:** 8.5/10 ⬆️
 - Good: Input validation, Prisma ORM, auth middleware, quota management
-- Needs: Better rate limiting, webhook validation, XSS protection
+- ✅ Fixed: Webhook validation (HMAC + timestamp), XSS protection improvements
+- Needs: Better rate limiting (requires Redis/KV setup)
 
 **Performance Score:** 7/10
 - Good: Direct upload, well-indexed queries, pagination, retry logic

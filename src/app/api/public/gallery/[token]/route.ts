@@ -4,6 +4,7 @@ import { getDefaultAccount } from '@/lib/storage/accounts';
 import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
 import { z } from 'zod';
 import { parseCursor, createPublicPaginationResponse } from '@/types/pagination';
+import { serializeBigInt } from '@/lib/bigint-utils';
 
 const PHOTOS_PER_PAGE = 100;
 
@@ -86,7 +87,7 @@ export async function GET(
       return {
         ...photo,
         thumbnailUrl: thumbnailUrl || photo.url,
-        fileSize: photo.fileSize?.toString() || null,
+        fileSize: serializeBigInt(photo.fileSize),
       };
     });
 
