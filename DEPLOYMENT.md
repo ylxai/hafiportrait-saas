@@ -67,15 +67,30 @@ crontab -e
   -H "Content-Type: application/json"
 ```
 
-**Setup Vercel Cron** — add to `vercel.json`:
+**Setup External Cron** (Vercel Cron cannot send Authorization headers):
+
+Use external cron service like [cron-job.org](https://cron-job.org) or [EasyCron](https://www.easycron.com):
+
+**Endpoint:** `POST https://your-domain.com/api/admin/storage-accounts/rotation/cron`
+
+**Headers:**
+```
+Authorization: Bearer YOUR_VPS_WEBHOOK_SECRET
+Content-Type: application/json
+```
+
+**Schedule:** Daily at 00:05 UTC (`5 0 * * *`)
+
+**Alternative for Vercel Cron** — add to `vercel.json` (cleanup only):
 ```json
 {
   "crons": [
-    { "path": "/api/admin/upload/cleanup",                       "schedule": "0 * * * *" },
-    { "path": "/api/admin/storage-accounts/rotation/cron",       "schedule": "5 0 * * *" }
+    { "path": "/api/admin/upload/cleanup", "schedule": "0 * * * *" }
   ]
 }
 ```
+
+**Note:** Storage rotation cron requires Bearer token authentication, which Vercel Cron does not support. Use external cron service instead.
 
 **Required env:**
 ```env
