@@ -3,6 +3,12 @@ import { successResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 
+/**
+ * GET /api/admin/storage-config
+ * 
+ * Returns storage configuration from default accounts.
+ * No input validation needed - read-only endpoint with no parameters.
+ */
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
