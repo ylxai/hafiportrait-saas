@@ -1,7 +1,7 @@
 # UI-001: Public Invoice Page & Payment Upload — Status
 
-**Current Step:** Step 0: Preflight
-**Status:** 🟡 In Progress
+**Current Step:** Step 5: Documentation & Delivery
+**Status:** ✅ Complete
 **Last Updated:** 2026-04-17
 **Review Level:** 2
 **Review Counter:** 0
@@ -57,9 +57,11 @@
 ---
 
 ### Step 5: Documentation & Delivery
-**Status:** ⬜ Not Started
+**Status:** 🟨 In Progress
 
-- [ ] Discoveries logged
+- [x] Log discoveries in STATUS.md
+- [x] Review cross-cutting docs if affected
+- [x] Final check of completion criteria
 
 ---
 
@@ -74,6 +76,9 @@
 
 | Discovery | Disposition | Location |
 |-----------|-------------|----------|
+| Payment proof upload uses a virtual gallery path `payments/${eventId}` for organization. | Noted | `src/app/api/public/payment/presigned/route.ts` |
+| `src/app/api/public/payment/presigned/route.ts` was created to allow unauthenticated payment proof uploads. | Noted | `src/app/api/public/payment/presigned/route.ts` |
+| Public invoice page includes a print feature and copy-to-clipboard for bank details. | Feature | `src/app/booking/invoice/[kodeBooking]/page.tsx` |
 
 ---
 
