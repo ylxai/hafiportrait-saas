@@ -14,7 +14,7 @@
 - ✅ **COMPLETED (PR #39 - Merged)**: galleries routes (4/24)
 - ✅ **COMPLETED (PR - feat/zod-validation-priority-1)**: All remaining routes (17/24)
 
-**All Routes Validated (24/24 - 100%):**
+**All Routes Validated (27/27 - 100%):**
 
 **Priority 1 - Settings & Storage (3 routes):**
 1. ✅ `settings/route.ts` - POST with updateSettingsSchema
@@ -38,15 +38,22 @@
 13. ✅ `export/clients/route.ts` - GET only (read-only, documented)
 14. ✅ `galleries/[id]/photos/[photoId]/route.ts` - DELETE with params validation
 
-**Previously Completed (7 routes):**
-15. ✅ `clients/route.ts` - PATCH, DELETE
-16. ✅ `events/route.ts` - PATCH, DELETE
-17. ✅ `packages/route.ts` - PATCH, DELETE
-18. ✅ `galleries/[id]/route.ts` - PATCH
-19. ✅ `galleries/[id]/toggle-lock/route.ts` - PATCH
-20. ✅ `galleries/[id]/photos/bulk/route.ts` - POST
-21. ✅ `galleries/[id]/photos/route.ts` - Already validated
-22. ✅ `photos/bulk-delete/route.ts` - Already validated
+**Additional Routes (3 routes):**
+15. ✅ `galleries/[id]/photos/route.ts` - GET with pagination + params validation
+16. ✅ `galleries/bulk/route.ts` - PATCH, DELETE with max 100 IDs
+17. ✅ `storage-accounts/rotation/route.ts` - GET, POST with RotationSchedule validation
+
+**Previously Completed (10 routes):**
+18. ✅ `clients/route.ts` - PATCH, DELETE
+19. ✅ `events/route.ts` - PATCH, DELETE
+20. ✅ `packages/route.ts` - PATCH, DELETE
+21. ✅ `galleries/[id]/route.ts` - PATCH
+22. ✅ `galleries/[id]/toggle-lock/route.ts` - PATCH
+23. ✅ `galleries/[id]/photos/bulk/route.ts` - POST
+24. ✅ `photos/bulk-delete/route.ts` - Already validated
+25. ✅ `upload/presigned/route.ts` - Already validated
+26. ✅ `upload/complete/route.ts` - Already validated
+27. ✅ `clients/quota/route.ts` - Already validated
 
 **PR:** https://github.com/ylxai/hafiportrait-saas/pull/41
 
