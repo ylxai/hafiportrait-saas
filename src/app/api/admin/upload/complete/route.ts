@@ -24,7 +24,7 @@ const CompleteUploadSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  let body: { uploadId?: string; width?: number; height?: number } = {};
+  let body: unknown = {};
   let galleryId: string | undefined;
   
   try {

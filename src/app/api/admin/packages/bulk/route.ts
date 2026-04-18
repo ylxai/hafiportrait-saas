@@ -32,7 +32,7 @@ export async function PATCH(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const body = await request.json();
+    const body: unknown = await request.json();
     
     // Validate request body
     const validation = bulkUpdateSchema.safeParse(body);
@@ -70,7 +70,7 @@ export async function DELETE(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const body = await request.json();
+    const body: unknown = await request.json();
     
     // Validate request body
     const validation = bulkDeleteSchema.safeParse(body);

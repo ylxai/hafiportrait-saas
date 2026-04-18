@@ -72,12 +72,16 @@ export function parseAdminPagination(
   defaultLimit = 20
 ): AdminPaginationParams {
   // Validate with Zod
-  const validated = adminPaginationSchema.parse({
+  const validation = adminPaginationSchema.safeParse({
     page: searchParams.get('page'),
     limit: searchParams.get('limit') ?? String(defaultLimit),
   });
   
-  const { page, limit } = validated;
+  if (!validation.success) {
+    throw validation.error;
+  }
+  
+  const { page, limit } = validation.data;
   const skip = (page - 1) * limit;
   
   return { page, limit, skip };
@@ -183,12 +187,16 @@ export function parseCursor(searchParams: URLSearchParams): string | undefined {
   }
   
   // Validate cursor format (should be a valid ID)
-  const validated = cursorPaginationSchema.parse({
+  const validation = cursorPaginationSchema.safeParse({
     cursor,
     perPage: searchParams.get('perPage') ?? '20',
   });
   
-  return validated.cursor;
+  if (!validation.success) {
+    throw validation.error;
+  }
+  
+  return validation.data.cursor;
 }
 
 /**

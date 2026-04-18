@@ -145,7 +145,7 @@ export async function POST(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const body = await request.json();
+    const body: unknown = await request.json();
 
     const validation = postBodySchema.safeParse(body);
     if (!validation.success) {

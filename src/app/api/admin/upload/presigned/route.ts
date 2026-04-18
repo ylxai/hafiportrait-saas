@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     }
 
     // Parse and validate request body with Zod
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = PresignedRequestSchema.safeParse(body);
     
     if (!validation.success) {

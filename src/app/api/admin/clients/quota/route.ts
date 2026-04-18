@@ -20,7 +20,7 @@ export async function PATCH(request: Request) {
       return errorResponse('Unauthorized', 401);
     }
 
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = updateQuotaSchema.safeParse(body);
 
     if (!validation.success) {

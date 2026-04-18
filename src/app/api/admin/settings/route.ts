@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       return errorResponse('Unauthorized', 401);
     }
 
-    const body = await request.json();
+    const body: unknown = await request.json();
     
     // Validate request body
     const validation = updateSettingsSchema.safeParse(body);
