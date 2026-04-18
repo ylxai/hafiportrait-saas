@@ -23,3 +23,12 @@ export function formatFileSize(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
+
+export function formatDate(date: Date | string | number, options?: Intl.DateTimeFormatOptions): string {
+  const d = new Date(date);
+  return new Intl.DateTimeFormat('id-ID', options || {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(d);
+}
