@@ -1,0 +1,14 @@
+{
+  "batchId": "20260417T210354",
+  "agentId": "orch-eouser-merge-1",
+  "role": "merger",
+  "laneNumber": null,
+  "taskId": null,
+  "repoId": "default",
+  "pid": 700805,
+  "parentPid": 503661,
+  "startedAt": 1776461890808,
+  "status": "killed",
+  "cwd": "/home/eouser/web-saas/.worktrees/eouser-20260417T210354/merge",
+  "packet": null
+}

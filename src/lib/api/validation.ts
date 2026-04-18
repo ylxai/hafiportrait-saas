@@ -118,7 +118,7 @@ export const eventSchema = z.object({
     .transform((val) => val ? sanitizeString(val) : val),
   totalPrice: z.number().int().min(0).default(0),
   status: z.enum(['pending', 'confirmed', 'completed', 'cancelled']).default('pending'),
-  paymentStatus: z.enum(['unpaid', 'partial', 'paid']).default('unpaid'),
+  paymentStatus: z.enum(['unpaid', 'partial', 'paid', 'awaiting_confirmation']).default('unpaid'),
 });
 
 export const gallerySchema = z.object({
@@ -182,6 +182,12 @@ export const bookingSchema = z.object({
 
 export const selectionSubmitSchema = z.object({
   photoIds: z.array(z.string()).min(1, 'Pilih minimal 1 foto'),
+});
+
+export const paymentProofSchema = z.object({
+  eventId: z.string().min(1, 'Event ID wajib diisi'),
+  paymentId: z.string().min(1, 'Payment ID wajib diisi'),
+  uploadId: z.string().min(1, 'Upload ID wajib diisi'),
 });
 
 export const updateGallerySchema = z.object({

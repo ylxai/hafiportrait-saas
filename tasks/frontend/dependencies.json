@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "generatedAt": "2026-04-17T22:28:29.984Z",
+  "source": "prompt",
+  "tasks": {
+    "UI-001": [
+      "API-001"
+    ]
+  }
+}

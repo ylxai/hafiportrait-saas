@@ -1,0 +1,45 @@
+{
+  "batchId": "20260417T222825",
+  "laneNumber": 1,
+  "laneId": "lane-1",
+  "repoId": "default",
+  "taskId": "API-001",
+  "segmentId": "API-001::default",
+  "status": "idle",
+  "worker": {
+    "agentId": "orch-eouser-lane-1-worker",
+    "status": "wrapping_up",
+    "elapsedMs": 0,
+    "toolCalls": 0,
+    "contextPct": 0,
+    "costUsd": 0,
+    "lastTool": "",
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "reviewer": {
+    "agentId": "orch-eouser-lane-1-reviewer",
+    "status": "running",
+    "elapsedMs": 18528,
+    "toolCalls": 6,
+    "contextPct": 0,
+    "costUsd": 0.031577499999999994,
+    "lastTool": "read: /home/eouser/web-saas/.worktrees/eouser-20260417T222825/lane-1/src/app/api/publi",
+    "inputTokens": 23011,
+    "outputTokens": 1461,
+    "cacheReadTokens": 31378,
+    "cacheWriteTokens": 0,
+    "reviewType": "plan",
+    "reviewStep": 1
+  },
+  "progress": {
+    "currentStep": "Step 0: Preflight",
+    "checked": 2,
+    "total": 11,
+    "iteration": 1,
+    "reviews": 1
+  },
+  "updatedAt": 1776465006119
+}
