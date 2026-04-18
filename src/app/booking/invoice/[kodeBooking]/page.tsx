@@ -326,7 +326,7 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
               </div>
             )}
 
-            {event.paymentStatus === 'fully_paid' && (
+            {event.paymentStatus === 'paid' && (
               <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-6 text-center space-y-2">
                 <CheckCircle2 className="w-8 h-8 text-green-500 mx-auto mb-2" />
                 <h3 className="font-bold text-green-500">Pembayaran Selesai</h3>

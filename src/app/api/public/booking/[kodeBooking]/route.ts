@@ -38,9 +38,6 @@ export async function GET(
     if (!event) {
       return notFoundResponse('Booking tidak ditemukan');
     }
-
-    // Convert BigInt or other types if necessary as per AGENTS.md
-    // totalAmount and paidAmount are Int in schema, so they are fine.
     
     return successResponse(event);
   } catch (error) {
