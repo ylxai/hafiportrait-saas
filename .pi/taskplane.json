@@ -5,5 +5,12 @@
   "components": {
     "agents": "0.28.2",
     "config": "0.28.2"
+  },
+  "migrations": {
+    "applied": {
+      "add-supervisor-local-template-v1": {
+        "appliedAt": "2026-04-18T07:29:13.478Z"
+      }
+    }
   }
 }
