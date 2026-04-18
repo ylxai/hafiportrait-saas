@@ -153,6 +153,8 @@ export function UploadManager({
         return <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />;
       case 'compressing':
         return <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />;
+      case 'retrying':
+        return <Loader2 className="w-5 h-5 text-amber-400 animate-spin" />;
       default:
         // Show retry indicator if file is waiting for retry
         if (file.retryCount > 0 && file.error) {
@@ -174,6 +176,8 @@ export function UploadManager({
         return 'Memproses...';
       case 'compressing':
         return 'Mengompres...';
+      case 'retrying':
+        return file.error || 'Mencoba ulang...';
       default:
         // Show retry info if there's an error message (during auto-retry)
         if (file.error && file.retryCount > 0) {
@@ -417,12 +421,12 @@ export function UploadManager({
                     </Button>
                   )}
 
-                  {(file.status === 'pending' || file.status === 'failed') && (
+                  {(file.status === 'pending' || file.status === 'failed' || file.status === 'retrying') && (
                     <Button 
                       variant="ghost" 
                       size="sm"
                       onClick={() => removeFile(file.id)}
-                      disabled={isUploading && file.status !== 'failed'}
+                      disabled={isUploading && file.status !== 'failed' && file.status !== 'retrying'}
                     >
                       <X className="w-4 h-4" />
                     </Button>

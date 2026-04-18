@@ -29,7 +29,7 @@ export interface UploadFile {
   file: File;
   compressed?: File;
   fileHash?: string; // SHA-256 hash for integrity/duplicate detection
-  status: 'pending' | 'compressing' | 'uploading' | 'processing' | 'completed' | 'failed';
+  status: 'pending' | 'compressing' | 'uploading' | 'processing' | 'completed' | 'failed' | 'retrying';
   progress: number;
   error?: string;
   errorCode?: 'INVALID_TYPE' | 'TOO_LARGE' | 'UPLOAD_FAILED' | 'PROCESSING_FAILED' | 'NETWORK_ERROR';
@@ -294,7 +294,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         
         // Update status dengan info retry
         updateFileStatus(uploadFile.id, { 
-          status: 'pending', 
+          status: 'retrying', 
           error: `Upload gagal, mencoba ulang (${retryCount}/${maxRetries})...`,
           progress: 0,
           retryCount,
@@ -360,9 +360,9 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     while (true) {
       const currentFiles = filesRef.current;
       
-      // Cari file pending yang tidak sedang diproses atau menunggu retry
+      // Cari file pending atau retrying yang tidak sedang diproses atau menunggu retry
       const pendingFile = currentFiles.find(f => 
-        f.status === 'pending' && 
+        (f.status === 'pending' || f.status === 'retrying') && 
         !processingIds.current.has(f.id) &&
         !retryTimeouts.current.has(f.id)
       );
@@ -397,7 +397,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     // Get fresh files from ref
     const currentFiles = filesRef.current;
     const totalFiles = currentFiles.length;
-    const pendingFiles = currentFiles.filter(f => f.status === 'pending');
+    const pendingFiles = currentFiles.filter(f => f.status === 'pending' || f.status === 'retrying');
     const isSmallBatch = pendingFiles.length < SMALL_BATCH_THRESHOLD;
     
     console.log(`[Upload] Starting upload of ${pendingFiles.length} pending files (total: ${totalFiles})`);

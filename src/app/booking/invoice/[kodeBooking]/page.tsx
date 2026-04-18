@@ -14,6 +14,7 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { formatBigIntFileSize } from '@/lib/bigint-utils';
+import { formatDate } from '@/lib/utils';
 import { CheckCircle2, AlertCircle, Clock, Upload, Printer, ArrowLeft, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -202,7 +203,7 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
               <div className="text-left md:text-right">
                 {getStatusBadge()}
                 <p className="text-sm text-muted-foreground mt-2">
-                  Diterbitkan: {new Date(event.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  Diterbitkan: {formatDate(event.createdAt)}
                 </p>
               </div>
             </div>
@@ -221,7 +222,7 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
                 <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Detail Event</h3>
                 <p className="font-semibold text-base">{event.namaProject}</p>
                 <p className="text-sm text-muted-foreground">
-                  {new Date(event.eventDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  {formatDate(event.eventDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
                 <p className="text-sm text-muted-foreground">{event.location || 'Lokasi menyusul'}</p>
               </div>

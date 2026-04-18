@@ -60,6 +60,7 @@ model Event {
   @@index([status])
   @@index([status, createdAt])
   @@index([clientId, eventDate]) // Composite index for client event lookups
+  @@index([paymentStatus, eventDate])
 }
 
 model Package {
@@ -96,6 +97,8 @@ model Payment {
   @@index([eventId])
   @@index([status])
   @@index([createdAt])
+  @@index([type])
+  @@index([eventId, status])
 }
 
 model Gallery {
