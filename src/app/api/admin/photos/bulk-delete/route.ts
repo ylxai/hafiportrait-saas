@@ -41,7 +41,12 @@ export async function POST(request: Request) {
       return errorResponse('Too many requests. Please try again later.', 429);
     }
 
-    const body: unknown = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
     const result = bulkDeleteSchema.safeParse(body);
     
     if (!result.success) {

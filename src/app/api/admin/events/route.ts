@@ -70,7 +70,12 @@ export async function POST(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const body: unknown = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
     const validation = eventSchema.safeParse(body);
 
     if (!validation.success) {
@@ -140,7 +145,12 @@ export async function PATCH(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const body: unknown = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
     
     // Validate ID
     const idValidation = validateRequest(idSchema, body);

@@ -7,7 +7,12 @@ const MAX_RETRY = 5;
 
 export async function POST(request: Request) {
   try {
-    const body: unknown = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
     const validation = bookingSchema.safeParse(body);
 
     if (!validation.success) {
