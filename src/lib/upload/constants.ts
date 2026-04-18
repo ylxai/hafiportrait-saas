@@ -42,13 +42,14 @@ export const COMPRESSION_USE_WEB_WORKER = true;
 export const COMPRESSION_PRESERVE_EXIF = true;
 
 // Allowed file types
-export const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.nef', '.cr2', '.arw', '.dng', '.raw'];
+export const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.pdf', '.nef', '.cr2', '.arw', '.dng', '.raw'];
 export const ALLOWED_MIME_TYPES = [
   'image/jpeg',
   'image/png',
   'image/webp',
   'image/heic',
   'image/heif',
+  'application/pdf',
   'image/x-canon-cr2',
   'image/x-nikon-nef',
   'image/x-sony-arw',
