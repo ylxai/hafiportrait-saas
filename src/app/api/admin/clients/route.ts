@@ -65,11 +65,26 @@ export async function POST(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const body = await request.json();
-    const validated = clientSchema.parse(body);
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
+    const validation = clientSchema.safeParse(body);
+
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(
+        firstError.path.length > 0
+          ? `${firstError.path.join('.')}: ${firstError.message}`
+          : firstError.message,
+        400
+      );
+    }
 
     const client = await prisma.client.create({
-      data: validated,
+      data: validation.data,
     });
 
     return successResponse({ client }, 201);
@@ -84,7 +99,12 @@ export async function PATCH(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
     
     // Validate ID
     const idValidation = validateRequest(idSchema, body);
@@ -93,10 +113,9 @@ export async function PATCH(request: Request) {
     }
 
     const { id } = idValidation.data;
-    const { id: _, ...data } = body;
 
     // Validate update data
-    const dataValidation = validateRequest(clientUpdateSchema, data);
+    const dataValidation = validateRequest(clientUpdateSchema, body);
     if (!dataValidation.success) {
       return errorResponse(dataValidation.error, 400);
     }

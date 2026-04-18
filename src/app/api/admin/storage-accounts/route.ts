@@ -124,7 +124,12 @@ export async function POST(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
     
     // Validate request body
     const validation = createStorageAccountSchema.safeParse(body);
@@ -172,7 +177,12 @@ export async function PATCH(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
     
     // Validate request body
     const validation = updateStorageAccountSchema.safeParse(body);

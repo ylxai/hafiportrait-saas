@@ -70,8 +70,25 @@ export async function POST(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const body = await request.json();
-    const validated = eventSchema.parse(body);
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
+    const validation = eventSchema.safeParse(body);
+
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(
+        firstError.path.length > 0
+          ? `${firstError.path.join('.')}: ${firstError.message}`
+          : firstError.message,
+        400
+      );
+    }
+
+    const validated = validation.data;
 
     // Atomic creation with retry on unique constraint violation
     // This eliminates race conditions by letting the database enforce uniqueness
@@ -128,7 +145,12 @@ export async function PATCH(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
     
     // Validate ID
     const idValidation = validateRequest(idSchema, body);
@@ -137,11 +159,10 @@ export async function PATCH(request: Request) {
     }
 
     const { id } = idValidation.data;
-    const { id: _, ...data } = body;
 
     // Validate update data
     // @ts-expect-error - eventUpdateSchema has transforms, type inference is complex
-    const dataValidation = validateRequest(eventUpdateSchema, data);
+    const dataValidation = validateRequest(eventUpdateSchema, body);
     if (!dataValidation.success) {
       return errorResponse(dataValidation.error, 400);
     }

@@ -21,7 +21,7 @@ export async function POST(
     }
 
     const { id: galleryId } = await params;
-    const body = await request.json();
+    const body: unknown = await request.json();
     
     // Validate payload
     const validation = validateRequest(bulkDeleteSchema, body);

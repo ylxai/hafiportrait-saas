@@ -3,7 +3,7 @@ import { successResponse, notFoundResponse, serverErrorResponse, errorResponse }
 import { getDefaultAccount } from '@/lib/storage/accounts';
 import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
 import { z } from 'zod';
-import { parseCursor, createPublicPaginationResponse } from '@/types/pagination';
+import { parseCursorSafe, createPublicPaginationResponse } from '@/types/pagination';
 import { serializeBigInt } from '@/lib/bigint-utils';
 
 const PHOTOS_PER_PAGE = 100;
@@ -25,7 +25,11 @@ export async function GET(
     }
     
     const { searchParams } = new URL(request.url);
-    const cursor = parseCursor(searchParams);
+    const paginationResult = parseCursorSafe(searchParams);
+    if (!paginationResult.success) {
+      return errorResponse(paginationResult.error.errors[0].message, 400);
+    }
+    const { cursor } = paginationResult.data;
 
     // Get gallery with event info
     const gallery = await prisma.gallery.findUnique({

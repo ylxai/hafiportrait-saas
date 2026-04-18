@@ -82,7 +82,7 @@ export async function PATCH(
     if (auth instanceof NextResponse) return auth;
 
     const { id } = await params;
-    const body = await request.json();
+    const body: unknown = await request.json();
     
     // Validate update data
     const dataValidation = validateRequest(updateGallerySchema, body);

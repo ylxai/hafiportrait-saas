@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { successResponse, serverErrorResponse } from '@/lib/api/response';
+import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { bookingSchema } from '@/lib/api/validation';
 import { generateKodeBooking } from '@/lib/utils';
 
@@ -7,8 +7,25 @@ const MAX_RETRY = 5;
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const validated = bookingSchema.parse(body);
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
+    const validation = bookingSchema.safeParse(body);
+
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(
+        firstError.path.length > 0
+          ? `${firstError.path.join('.')}: ${firstError.message}`
+          : firstError.message,
+        400
+      );
+    }
+
+    const validated = validation.data;
 
     let client = await prisma.client.findFirst({
       where: { email: validated.email },

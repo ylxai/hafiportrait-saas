@@ -8,8 +8,20 @@ export async function POST(
 ) {
   try {
     const { token } = await params;
-    const body = await request.json();
-    const { photoIds } = selectionSubmitSchema.parse(body);
+    const body: unknown = await request.json();
+    const validation = selectionSubmitSchema.safeParse(body);
+
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(
+        firstError.path.length > 0
+          ? `${firstError.path.join('.')}: ${firstError.message}`
+          : firstError.message,
+        400
+      );
+    }
+
+    const { photoIds } = validation.data;
 
     const gallery = await prisma.gallery.findUnique({
       where: { clientToken: token },
