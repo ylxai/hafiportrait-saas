@@ -36,8 +36,8 @@ export async function getUploadStats(galleryId: string) {
       _count: { success: true },
     });
 
-    const successCount = stats.find(s => s.success)?._count.success || 0;
-    const failureCount = stats.find(s => !s.success)?._count.success || 0;
+    const successCount = stats.find((s: typeof stats[number]) => s.success)?._count.success || 0;
+    const failureCount = stats.find((s: typeof stats[number]) => !s.success)?._count.success || 0;
     const total = successCount + failureCount;
 
     return {
@@ -79,7 +79,7 @@ export async function getStorageUsageTrends(clientId: string) {
       ORDER BY date ASC
     `;
 
-    return dailyUsage.map(({ date, bytes }) => ({
+    return dailyUsage.map(({ date, bytes }: typeof dailyUsage[number]) => ({
       date,
       bytes: bytes.toString(),
       mb: Number(bytes) / BYTES_PER_MB,

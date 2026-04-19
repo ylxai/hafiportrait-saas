@@ -59,7 +59,7 @@ export async function GET() {
           totalGalleries,
           totalPhotos,
           totalRevenue: revenueResult._sum.totalPrice?.toString() ?? "0",
-          recentEvents: recentEvents.map(e => ({
+           recentEvents: recentEvents.map((e: typeof recentEvents[number]) => ({
             id: e.id,
             namaProject: e.namaProject,
             kodeBooking: e.kodeBooking,
@@ -67,7 +67,7 @@ export async function GET() {
             status: e.status,
             client: e.client.nama,
           })),
-          recentGalleries: recentGalleries.map(g => ({
+           recentGalleries: recentGalleries.map((g: typeof recentGalleries[number]) => ({
             id: g.id,
             namaProject: g.namaProject,
             status: g.status,

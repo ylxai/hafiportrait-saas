@@ -81,7 +81,7 @@ export async function GET(
       where: { id: { in: uniqueStorageAccountIds }, provider: 'CLOUDINARY' }
     });
 
-    const cloudinaryAccountMap = new Map(storageAccounts.map((a: typeof storageAccounts[number]) => [a.id, a]));
+    const cloudinaryAccountMap = new Map<string, typeof storageAccounts[number]>(storageAccounts.map((a: typeof storageAccounts[number]) => [a.id, a]));
     const defaultCloudinaryAccount = await getDefaultAccount('CLOUDINARY');
     const defaultCloudName = defaultCloudinaryAccount?.cloudName || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 

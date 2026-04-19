@@ -54,7 +54,7 @@ export async function PATCH(request: Request) {
         select: { isActive: true },
       });
 
-      const allActive = packages.every(p => p.isActive);
+      const allActive = packages.every((p: typeof packages[number]) => p.isActive);
       const newStatus = !allActive;
 
       await prisma.package.updateMany({

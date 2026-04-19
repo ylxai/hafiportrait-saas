@@ -176,7 +176,7 @@ export async function POST(request: Request) {
     const publicId: string | null = null;
 
     // TRANSACTION: Atomic photo creation + storage usage update
-    const photo = await prisma.$transaction(async (tx) => {
+    const photo = await prisma.$transaction(async (tx: typeof prisma) => {
       const newPhoto = await tx.photo.create({
         data: {
           galleryId: galleryId!, // Guaranteed non-null after validation

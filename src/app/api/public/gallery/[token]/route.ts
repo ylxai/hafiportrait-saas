@@ -76,14 +76,14 @@ export async function GET(
         })
       : [];
 
-    const selections = selectedPhotoIds.map((s) => s.photoId);
+    const selections = selectedPhotoIds.map((s: typeof selectedPhotoIds[number]) => s.photoId);
 
     // Get Cloudinary config for dynamic thumbnails
     const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
     const cloudName = cloudinaryAccount?.cloudName || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 
     // Serialize BigInt fields for JSON and compute thumbnails if missing
-    const serializedPhotos = photoList.map(photo => {
+    const serializedPhotos = photoList.map((photo: typeof photoList[number]) => {
       let thumbnailUrl = photo.thumbnailUrl;
       if (!thumbnailUrl && cloudName) {
         thumbnailUrl = getCloudinaryThumbnailUrl(photo.url, { width: 400, cloudName });

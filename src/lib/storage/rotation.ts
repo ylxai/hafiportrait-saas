@@ -20,7 +20,7 @@ export async function getAccountsNeedingRotation(): Promise<string[]> {
     select: { id: true },
   });
 
-  return accounts.map((a) => a.id);
+  return accounts.map((a: typeof accounts[number]) => a.id);
 }
 
 export async function shouldUseSecondaryCredentials(

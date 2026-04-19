@@ -55,7 +55,7 @@ export async function updateStorageUsage(accountId: string, fileSize: bigint) {
 
 export async function decreaseStorageUsage(accountId: string, fileSize: bigint) {
   // Use transaction to ensure consistency
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: typeof prisma) => {
     const account = await tx.storageAccount.findUnique({ where: { id: accountId } });
     if (!account) return;
     

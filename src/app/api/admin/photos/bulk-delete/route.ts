@@ -90,8 +90,8 @@ export async function POST(request: Request) {
 
     // Step 2: Prepare deletion jobs
     const deletionJobs = photos
-      .filter(photo => photo.r2Key || photo.thumbnailUrl)
-      .map(photo => {
+      .filter((photo: typeof photos[number]) => photo.r2Key || photo.thumbnailUrl)
+      .map((photo: typeof photos[number]) => {
         const cloudinaryCredentials = photo.cloudinaryAccount || photo.storageAccount;
         
         return {
@@ -139,7 +139,7 @@ export async function POST(request: Request) {
 
       return successResponse({
         deleted: photos.length,
-        photoIds: photos.map(p => p.id),
+        photoIds: photos.map((p: typeof photos[number]) => p.id),
         queuedForStorageDeletion: deletionJobs.length,
       });
     } catch (dbError) {

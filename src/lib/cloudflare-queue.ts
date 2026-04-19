@@ -437,7 +437,7 @@ export async function queuePhotosDeletionForEntities(whereCriteria: Prisma.Photo
   if (photos.length === 0) return;
 
   // Mengumpulkan semua storageAccountId unik dari foto-foto yang akan dihapus
-  const uniqueStorageAccountIds = Array.from(new Set(photos.map(p => p.storageAccountId).filter(Boolean))) as string[];
+  const uniqueStorageAccountIds = Array.from(new Set(photos.map((p: typeof photos[number]) => p.storageAccountId).filter(Boolean))) as string[];
 
   // Mengambil semua akun penyimpanan yang relevan dalam satu query
   const storageAccounts = await prisma.storageAccount.findMany({
@@ -447,7 +447,7 @@ export async function queuePhotosDeletionForEntities(whereCriteria: Prisma.Photo
   // Membuat map dari storageAccountId ke kredensial Cloudinary yang sesuai
   const cloudinaryCredentialsMap = new Map<string, { cloudName: string | null; apiKey: string | null; apiSecret: string | null } | null>();
   
-  storageAccounts.forEach(account => {
+  storageAccounts.forEach((account: typeof storageAccounts[number]) => {
     // We pass the credentials if they exist on the account
     cloudinaryCredentialsMap.set(account.id, {
       cloudName: account.cloudName,
@@ -468,7 +468,7 @@ export async function queuePhotosDeletionForEntities(whereCriteria: Prisma.Photo
     apiSecret: defaultCloudinaryAccount.apiSecret,
   } : null;
 
-  const deletionJobs = photos.map(photo => {
+  const deletionJobs = photos.map((photo: typeof photos[number]) => {
     // Gunakan kredensial dari map berdasarkan storageAccountId, atau fallback ke default
     let cloudinaryCredentials = defaultCloudinaryCredentials;
     if (photo.storageAccountId && cloudinaryCredentialsMap.has(photo.storageAccountId)) {
@@ -487,7 +487,7 @@ export async function queuePhotosDeletionForEntities(whereCriteria: Prisma.Photo
       fileSize: photo.fileSize?.toString(),
       cloudinaryCredentials,
     };
-  }).filter(job => job.r2Key || job.thumbnailUrl);
+  }).filter((job: typeof deletionJobs[number]) => job.r2Key || job.thumbnailUrl);
 
   if (deletionJobs.length > 0) {
     try {

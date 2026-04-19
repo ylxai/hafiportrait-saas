@@ -21,8 +21,8 @@ export async function POST(
     prisma.gallery.update({
       where: { id: gallery.id },
       data: { viewCount: { increment: 1 } },
-    }).catch((error) => {
-      if (error.code === 'P2025') {
+    }).catch((error: unknown) => {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
         console.error('[API] Gallery record not found for analytics update');
       } else {
         console.error(`[API] Failed to increment view count for gallery ${gallery.id}`, error);
