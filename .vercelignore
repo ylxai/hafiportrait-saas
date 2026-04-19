@@ -1,0 +1,29 @@
+# Test files
+tests/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Development files
+.husky/
+.kiro/
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local env files
+.env.local
+.env*.local
+
+# Playwright
+playwright-report/
+test-results/
