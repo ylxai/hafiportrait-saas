@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { getDefaultAccount } from '@/lib/storage/accounts';
-import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
+import { getCloudinaryThumbnailUrl, getCloudinaryLightboxUrl } from '@/lib/cloudinary';
 import { z } from 'zod';
 import { parseCursorSafe, createPublicPaginationResponse } from '@/types/pagination';
 import { serializeBigInt } from '@/lib/bigint-utils';
@@ -85,13 +85,21 @@ export async function GET(
     // Serialize BigInt fields for JSON and compute thumbnails if missing
     const serializedPhotos = photoList.map((photo: typeof photoList[number]) => {
       let thumbnailUrl = photo.thumbnailUrl;
-      if (!thumbnailUrl && cloudName) {
-        thumbnailUrl = getCloudinaryThumbnailUrl(photo.url, { width: 400, cloudName });
+      let lightboxUrl = photo.url; // Default to R2 original
+      
+      if (cloudName) {
+        // Generate thumbnail if missing
+        if (!thumbnailUrl) {
+          thumbnailUrl = getCloudinaryThumbnailUrl(photo.url, { width: 400, cloudName });
+        }
+        // Always generate high-res lightbox URL from Cloudinary
+        lightboxUrl = getCloudinaryLightboxUrl(photo.url, cloudName);
       }
       
       return {
         ...photo,
         thumbnailUrl: thumbnailUrl || photo.url,
+        lightboxUrl,
         fileSize: serializeBigInt(photo.fileSize),
       };
     });

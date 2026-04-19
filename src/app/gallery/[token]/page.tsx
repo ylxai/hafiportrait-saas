@@ -19,6 +19,7 @@ type Photo = {
   filename: string;
   url: string;
   thumbnailUrl: string | null;
+  lightboxUrl?: string;
   width: number | null;
   height: number | null;
 };
@@ -577,7 +578,7 @@ export default function GalleryPage() {
         close={closeLightbox}
         index={lightboxIndex >= 0 ? lightboxIndex : 0}
         on={{ view: ({ index }) => setLightboxIndex(index) }}
-        slides={photos.map((p) => ({ src: p.thumbnailUrl || p.url, alt: p.filename }))}
+        slides={photos.map((p) => ({ src: p.lightboxUrl || p.thumbnailUrl || p.url, alt: p.filename }))}
         plugins={[Zoom]}
         carousel={{ finite: false }}
         toolbar={{

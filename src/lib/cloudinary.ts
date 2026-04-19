@@ -62,3 +62,19 @@ export function getThumbnailSizes(r2Url: string, cloudName?: string) {
     original: r2Url,
   };
 }
+
+/**
+ * Get high-res URL for lightbox display (sharp, not blurry)
+ * Uses Cloudinary with quality optimization for fast loading
+ */
+export function getCloudinaryLightboxUrl(
+  r2Url: string,
+  cloudName?: string
+): string {
+  return getCloudinaryThumbnailUrl(r2Url, {
+    width: 1920,
+    quality: 'auto',
+    format: 'auto',
+    cloudName,
+  });
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import imageCompression from 'browser-image-compression';
+import Pica from 'pica';
 import { toast } from 'sonner';
 import {
   MAX_FILE_SIZE_BYTES,
@@ -13,11 +13,8 @@ import {
   MAX_RETRY_ATTEMPTS,
   RETRY_DELAYS_MS,
   MIN_COMPRESSION_SIZE_BYTES,
-  COMPRESSION_MAX_SIZE_MB,
   COMPRESSION_MAX_DIMENSION,
   COMPRESSION_QUALITY,
-  COMPRESSION_USE_WEB_WORKER,
-  COMPRESSION_PRESERVE_EXIF,
   ALLOWED_EXTENSIONS,
   ALLOWED_MIME_TYPES,
   RAW_FILE_EXTENSIONS,
@@ -155,7 +152,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     };
   }, []);
 
-  // Compress file sebelum upload
+  // Compress file sebelum upload using Pica
   const compressFile = async (file: File): Promise<File> => {
     // Skip compression untuk file RAW (karena sudah compressed)
     const extension = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -166,13 +163,32 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     if (file.size < MIN_COMPRESSION_SIZE_BYTES) return file;
 
     try {
-      return await imageCompression(file, {
-        maxSizeMB: options.compressionMaxSizeMB ?? COMPRESSION_MAX_SIZE_MB,
-        maxWidthOrHeight: options.compressionMaxDimension ?? COMPRESSION_MAX_DIMENSION,
-        useWebWorker: COMPRESSION_USE_WEB_WORKER,
-        preserveExif: COMPRESSION_PRESERVE_EXIF,
-        initialQuality: Math.min(Math.max(options.compressionQuality ?? COMPRESSION_QUALITY, 0), 1),
+      const pica = Pica();
+      const img = await createImageBitmap(file);
+      
+      // Calculate target dimensions
+      const maxDimension = options.compressionMaxDimension ?? COMPRESSION_MAX_DIMENSION;
+      const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+      const targetWidth = Math.round(img.width * scale);
+      const targetHeight = Math.round(img.height * scale);
+      
+      // Create canvas for resizing
+      const canvas = document.createElement('canvas');
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      
+      // Resize with Pica (high quality Lanczos filter)
+      await pica.resize(img, canvas, {
+        unsharpAmount: 80,
+        unsharpRadius: 0.6,
+        unsharpThreshold: 2,
       });
+      
+      // Convert to blob
+      const quality = options.compressionQuality ?? COMPRESSION_QUALITY;
+      const blob = await pica.toBlob(canvas, 'image/jpeg', quality);
+      
+      return new File([blob], file.name, { type: 'image/jpeg' });
     } catch (error) {
       console.warn('Compression failed, using original:', error);
       return file;
