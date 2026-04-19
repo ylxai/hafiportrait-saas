@@ -416,7 +416,6 @@ export default function GalleryPage() {
                         src={photo.thumbnailUrl || photo.url}
                         alt={photo.filename}
                         fill
-                        unoptimized
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                         sizes="(max-width: 500px) 100vw, (max-width: 700px) 50vw, (max-width: 1100px) 33vw, 25vw"
                       />
@@ -482,7 +481,6 @@ export default function GalleryPage() {
                           src={photo.thumbnailUrl || photo.url}
                           alt={photo.filename}
                           fill
-                          unoptimized
                           className="object-cover"
                           onClick={() => openLightbox(originalIndex)}
                         />
@@ -579,7 +577,7 @@ export default function GalleryPage() {
         close={closeLightbox}
         index={lightboxIndex >= 0 ? lightboxIndex : 0}
         on={{ view: ({ index }) => setLightboxIndex(index) }}
-        slides={photos.map((p) => ({ src: p.url, alt: p.filename }))}
+        slides={photos.map((p) => ({ src: p.thumbnailUrl || p.url, alt: p.filename }))}
         plugins={[Zoom]}
         carousel={{ finite: false }}
         toolbar={{
