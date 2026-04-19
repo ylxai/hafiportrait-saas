@@ -16,7 +16,7 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "prepare": "husky",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate --no-engine"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1023.0",
