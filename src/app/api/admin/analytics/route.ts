@@ -70,7 +70,7 @@ export async function GET(request: Request) {
 
     const total = summaryData.summary._count.id;
 
-    const analytics = galleries.map((g) => ({
+    const analytics = galleries.map((g: typeof galleries[number]) => ({
       id: g.id,
       namaProject: g.namaProject,
       client: g.event.client.nama,

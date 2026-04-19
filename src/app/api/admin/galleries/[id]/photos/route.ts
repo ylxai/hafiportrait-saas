@@ -76,16 +76,16 @@ export async function GET(
       }),
     ]);
 
-    const uniqueStorageAccountIds = Array.from(new Set(photos.map(p => p.storageAccountId).filter(Boolean))) as string[];
+    const uniqueStorageAccountIds = Array.from(new Set(photos.map((p: typeof photos[number]) => p.storageAccountId).filter(Boolean))) as string[];
     const storageAccounts = await prisma.storageAccount.findMany({
       where: { id: { in: uniqueStorageAccountIds }, provider: 'CLOUDINARY' }
     });
 
-    const cloudinaryAccountMap = new Map(storageAccounts.map(a => [a.id, a]));
+    const cloudinaryAccountMap = new Map(storageAccounts.map((a: typeof storageAccounts[number]) => [a.id, a]));
     const defaultCloudinaryAccount = await getDefaultAccount('CLOUDINARY');
     const defaultCloudName = defaultCloudinaryAccount?.cloudName || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 
-    const serializedPhotos = photos.map(photo => {
+    const serializedPhotos = photos.map((photo: typeof photos[number]) => {
       let thumbnailUrl = photo.thumbnailUrl;
       if (!thumbnailUrl) {
         const account = photo.storageAccountId ? cloudinaryAccountMap.get(photo.storageAccountId) : null;

@@ -47,7 +47,7 @@ export async function POST(
     }
 
     // Mengumpulkan semua storageAccountId unik dari foto-foto yang akan dihapus
-    const uniqueStorageAccountIds = Array.from(new Set(photos.map(p => p.storageAccountId).filter(Boolean))) as string[];
+    const uniqueStorageAccountIds = Array.from(new Set(photos.map((p: typeof photos[number]) => p.storageAccountId).filter(Boolean))) as string[];
 
     // Mengambil semua akun penyimpanan yang relevan dalam satu query
     const storageAccounts = await prisma.storageAccount.findMany({
@@ -57,7 +57,7 @@ export async function POST(
     // Membuat map dari storageAccountId ke kredensial Cloudinary yang sesuai
     const cloudinaryCredentialsMap = new Map<string, { cloudName: string | null; apiKey: string | null; apiSecret: string | null } | null>();
     
-    storageAccounts.forEach(account => {
+    storageAccounts.forEach((account: typeof storageAccounts[number]) => {
       cloudinaryCredentialsMap.set(account.id, {
         cloudName: account.cloudName,
         apiKey: account.apiKey,
@@ -122,7 +122,7 @@ export async function POST(
     // Delete all from database immediately
     await prisma.photo.deleteMany({
       where: { 
-        id: { in: photos.map(p => p.id) },
+        id: { in: photos.map((p: typeof photos[number]) => p.id) },
         galleryId: galleryId
       },
     });

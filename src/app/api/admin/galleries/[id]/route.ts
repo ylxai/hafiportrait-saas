@@ -54,9 +54,9 @@ export async function GET(
       ...gallery,
       // photos are now fetched via a separate paginated endpoint
       photos: [],
-      selections: gallery.selections.map((selection) => ({
+      selections: gallery.selections.map((selection: typeof gallery.selections[number]) => ({
         ...selection,
-        photos: selection.photos.map((p) => ({
+        photos: selection.photos.map((p: typeof selection.photos[number]) => ({
           ...p,
           photo: {
             ...p.photo,

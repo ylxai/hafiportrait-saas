@@ -98,7 +98,7 @@ export async function GET(request: Request) {
       totalPending: pendingAgg._sum.totalPrice || 0,
     };
 
-    const eventsList = events.map((e) => ({
+    const eventsList = events.map((e: typeof events[number]) => ({
       id: e.id,
       kodeBooking: e.kodeBooking,
       namaProject: e.namaProject,

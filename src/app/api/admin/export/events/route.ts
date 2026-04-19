@@ -54,7 +54,7 @@ export async function GET(request: Request) {
     });
 
     // Convert to CSV format
-    const csvData = events.map(event => ({
+    const csvData = events.map((event: typeof events[number]) => ({
       'Kode Booking': event.kodeBooking,
       'Nama Project': event.namaProject,
       'Client': event.client.nama,
@@ -74,7 +74,7 @@ export async function GET(request: Request) {
     const headers = Object.keys(csvData[0] || {});
     const csvRows = [
       headers.join(','),
-      ...csvData.map(row => 
+      ...csvData.map((row: Record<string, unknown>) => 
         headers.map(header => {
           const value = row[header as keyof typeof row];
           const escaped = String(value).replace(/"/g, '""');

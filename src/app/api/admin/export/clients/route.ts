@@ -38,7 +38,7 @@ export async function GET() {
     });
 
     // Convert to CSV format
-    const csvData = clients.map(client => ({
+    const csvData = clients.map((client: typeof clients[number]) => ({
       'Nama': client.nama,
       'Email': client.email,
       'Phone': client.phone || '',
@@ -52,7 +52,7 @@ export async function GET() {
     const headers = Object.keys(csvData[0] || {});
     const csvRows = [
       headers.join(','),
-      ...csvData.map(row => 
+      ...csvData.map((row: Record<string, unknown>) => 
         headers.map(header => {
           const value = row[header as keyof typeof row];
           const escaped = String(value).replace(/"/g, '""');
