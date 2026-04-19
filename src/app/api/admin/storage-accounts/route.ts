@@ -104,6 +104,7 @@ export async function GET() {
 
     const accounts = await prisma.storageAccount.findMany({
       orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }],
+      cacheStrategy: { ttl: 120, swr: 30 },
     });
 
     // Convert BigInt to string for JSON serialization

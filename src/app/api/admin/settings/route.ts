@@ -32,6 +32,7 @@ export async function GET() {
 
     const settings = await prisma.settings.findUnique({
       where: { id: 'studio' },
+      cacheStrategy: { ttl: 300, swr: 60 },
     });
 
     // Return default settings if not found

@@ -33,6 +33,7 @@ export async function GET(
           },
         },
       },
+      cacheStrategy: { ttl: 30, swr: 15 },
     });
 
     if (!event) {

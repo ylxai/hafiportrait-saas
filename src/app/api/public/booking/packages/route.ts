@@ -6,6 +6,7 @@ export async function GET() {
     const packages = await prisma.package.findMany({
       where: { isActive: true },
       orderBy: { price: 'asc' },
+      cacheStrategy: { ttl: 300, swr: 60 },
     });
 
     return successResponse({ packages });
