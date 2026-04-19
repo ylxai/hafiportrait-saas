@@ -60,7 +60,7 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             // Next.js requires 'unsafe-eval' for dynamic imports and 'unsafe-inline' for React hydration
             // For stricter CSP, implement nonce-based approach with middleware
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https: wss:; worker-src 'self' blob:; frame-ancestors 'none';"
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https: wss:; worker-src 'self' blob:; frame-ancestors 'none';"
           }
         ],
       },
