@@ -416,6 +416,7 @@ export default function GalleryPage() {
                         src={photo.thumbnailUrl || photo.url}
                         alt={photo.filename}
                         fill
+                        unoptimized
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                         sizes="(max-width: 500px) 100vw, (max-width: 700px) 50vw, (max-width: 1100px) 33vw, 25vw"
                       />
@@ -481,6 +482,7 @@ export default function GalleryPage() {
                           src={photo.thumbnailUrl || photo.url}
                           alt={photo.filename}
                           fill
+                          unoptimized
                           className="object-cover"
                           onClick={() => openLightbox(originalIndex)}
                         />
