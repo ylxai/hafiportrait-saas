@@ -111,6 +111,15 @@ function isRetryableError(errorCode: UploadFile['errorCode']): boolean {
   return RETRYABLE_ERROR_CODES.includes(errorCode);
 }
 
+// Reusable Pica instance (avoid creating new instance per file)
+let picaInstance: ReturnType<typeof Pica> | null = null;
+function getPicaInstance() {
+  if (!picaInstance) {
+    picaInstance = Pica();
+  }
+  return picaInstance;
+}
+
 export function useDirectUpload(options: UseDirectUploadOptions) {
   const { 
     galleryId, 
@@ -162,9 +171,10 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     // Skip file kecil
     if (file.size < MIN_COMPRESSION_SIZE_BYTES) return file;
 
+    let img: ImageBitmap | null = null;
     try {
-      const pica = Pica();
-      const img = await createImageBitmap(file);
+      const pica = getPicaInstance();
+      img = await createImageBitmap(file);
       
       // Calculate target dimensions
       const maxDimension = options.compressionMaxDimension ?? COMPRESSION_MAX_DIMENSION;
@@ -184,14 +194,27 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         unsharpThreshold: 2,
       });
       
-      // Convert to blob
+      // Determine output format: preserve PNG/WebP, convert others to JPEG
       const quality = options.compressionQuality ?? COMPRESSION_QUALITY;
-      const blob = await pica.toBlob(canvas, 'image/jpeg', quality);
+      const shouldPreserveFormat = file.type === 'image/png' || file.type === 'image/webp';
+      const outputType = shouldPreserveFormat ? file.type : 'image/jpeg';
+      const blob = await pica.toBlob(canvas, outputType as 'image/jpeg' | 'image/png', quality);
       
-      return new File([blob], file.name, { type: 'image/jpeg' });
+      // Normalize filename if converting to JPEG
+      let outputName = file.name;
+      if (outputType === 'image/jpeg' && !file.name.toLowerCase().endsWith('.jpg') && !file.name.toLowerCase().endsWith('.jpeg')) {
+        outputName = file.name.replace(/\.[^.]+$/, '.jpg');
+      }
+      
+      return new File([blob], outputName, { type: outputType });
     } catch (error) {
       console.warn('Compression failed, using original:', error);
       return file;
+    } finally {
+      // Always close ImageBitmap to free memory
+      if (img) {
+        img.close();
+      }
     }
   };
 
