@@ -342,19 +342,27 @@ export async function queueStorageDeletionBulk(dataList: Array<{
     apiSecret?: string | null;
   } | null;
 }>): Promise<{ success: boolean; error?: string; failedCount?: number }> {
-  const timestamp = Date.now();
-  const messages = dataList.map(data => ({
-    type: 'storage-deletion',
-    timestamp,
-    photoId: data.photoId,
-    r2Key: data.r2Key || undefined,
-    thumbnailUrl: data.thumbnailUrl || undefined,
-    fileSize: data.fileSize,
-    storageAccountId: data.storageAccountId || undefined,
-    cloudinaryCredentials: data.cloudinaryCredentials || undefined,
-  }));
+  // Send each deletion job individually to Worker HTTP endpoint
+  let failedCount = 0;
+  let lastError: string | undefined;
 
-  return publishToQueueBulk('storage-deletion', messages);
+  for (const data of dataList) {
+    const result = await queueStorageDeletion(data);
+    if (!result.success) {
+      failedCount++;
+      lastError = result.error;
+    }
+  }
+
+  if (failedCount > 0) {
+    return {
+      success: false,
+      error: lastError || 'Some deletions failed',
+      failedCount,
+    };
+  }
+
+  return { success: true };
 }
 
 /**

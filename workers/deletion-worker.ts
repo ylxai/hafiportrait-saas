@@ -295,11 +295,10 @@ async function uploadToCloudinaryWithTransform(
 ): Promise<string | null> {
   const timestamp = Math.round(Date.now() / 1000);
   const publicIdBase = filename.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
-  const publicId = `${folder}/${publicIdBase}`;
+  const publicId = `${folder}/${publicIdBase}`; // Already includes folder
 
   // Build upload params for signed upload (only params sent to API)
   const paramsToSign: Record<string, string> = {
-    folder,
     public_id: publicId,
     timestamp: timestamp.toString(),
   };
@@ -311,10 +310,7 @@ async function uploadToCloudinaryWithTransform(
   formData.append('file', new Blob([imageBuffer]), filename);
   formData.append('api_key', apiKey);
   formData.append('timestamp', paramsToSign.timestamp);
-  formData.append('folder', folder);
   formData.append('public_id', publicId);
-  formData.append('quality', 'auto');
-  formData.append('fetch_format', 'auto');
   formData.append('signature', signature);
 
   const response = await fetch(
@@ -372,21 +368,28 @@ async function callbackThumbnailToVercel(
     publicId: result.publicId,
   };
 
-  const response = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${env.VPS_WEBHOOK_SECRET}`,
-    },
-    body: JSON.stringify(payload),
-  });
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${env.VPS_WEBHOOK_SECRET}`,
+      },
+      body: JSON.stringify(payload),
+    });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Thumbnail callback failed: ${error}`);
+    if (!response.ok) {
+      const error = await response.text();
+      console.error(`[Thumbnail] Callback failed (${response.status}): ${error}`);
+      // Don't throw - thumbnail is already uploaded to Cloudinary
+      return;
+    }
+
+    console.log(`[Thumbnail] ✅ Callback to Vercel successful for ${job.photoId}`);
+  } catch (error) {
+    console.error(`[Thumbnail] Callback error (non-critical):`, error);
+    // Don't throw - thumbnail is already uploaded, DB update can be done manually
   }
-
-  console.log(`[Thumbnail] ✅ Callback to Vercel successful for ${job.photoId}`);
 }
 
 // ─── Cloudinary Helpers ─────────────────────────────────────────
