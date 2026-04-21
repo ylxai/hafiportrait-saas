@@ -213,7 +213,7 @@ export async function POST(request: Request) {
     if (cloudinaryAccount?.cloudName && cloudinaryAccount.apiKey && cloudinaryAccount.apiSecret) {
       await queueThumbnailGeneration({
         photoId: photo.id,
-        r2Url: publicUrl,
+        r2Key: r2Key, // Send R2 key instead of public URL
         galleryId,
         filename,
         cloudinaryCredentials: {

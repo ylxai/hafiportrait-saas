@@ -18,6 +18,7 @@ import { Prisma } from '@/generated/prisma';
 
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const API_TOKEN = process.env.NEXT_SERVER_CF_QUEUE_TOKEN;
+const WORKER_URL = process.env.CLOUDFLARE_WORKER_URL || 'https://photostudio-deletion-worker.masipah1973.workers.dev';
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -347,7 +348,7 @@ export async function queueStorageDeletionBulk(dataList: Array<{
  */
 export async function queueThumbnailGeneration(data: {
   photoId: string;
-  r2Url: string;
+  r2Key: string;
   galleryId: string;
   filename: string;
   cloudinaryCredentials: {
@@ -361,19 +362,33 @@ export async function queueThumbnailGeneration(data: {
     return { success: false, error: 'Missing Cloudinary credentials' };
   }
 
-  return publishToQueue('thumbnail-generation', {
-    type: 'thumbnail-generation',
-    timestamp: Date.now(),
-    photoId: data.photoId,
-    r2Url: data.r2Url,
-    galleryId: data.galleryId,
-    filename: data.filename,
-    cloudinaryCredentials: {
-      cloudName: data.cloudinaryCredentials.cloudName,
-      apiKey: data.cloudinaryCredentials.apiKey,
-      apiSecret: data.cloudinaryCredentials.apiSecret,
-    },
-  });
+  try {
+    const response = await fetch(`${WORKER_URL}/queue/thumbnail`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'thumbnail-generation',
+        timestamp: Date.now(),
+        photoId: data.photoId,
+        r2Key: data.r2Key,
+        galleryId: data.galleryId,
+        filename: data.filename,
+        cloudinaryCredentials: {
+          cloudName: data.cloudinaryCredentials.cloudName,
+          apiKey: data.cloudinaryCredentials.apiKey,
+          apiSecret: data.cloudinaryCredentials.apiSecret,
+        },
+      }),
+    });
+
+    const result = await response.json();
+    return result.success
+      ? { success: true }
+      : { success: false, error: result.error || 'Failed to queue' };
+  } catch (error) {
+    console.error('[Queue/Thumbnail] Failed to publish:', error);
+    return { success: false, error: String(error) };
+  }
 }
 
 /**
