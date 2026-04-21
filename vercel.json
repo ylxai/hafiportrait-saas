@@ -5,8 +5,7 @@
   "regions": ["sin1"],
   "functions": {
     "app/api/**/*.ts": {
-      "maxDuration": 30,
-      "maxRequestBodySize": 10485760
+      "maxDuration": 30
     }
   }
 }
