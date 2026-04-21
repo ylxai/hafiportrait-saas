@@ -297,14 +297,11 @@ async function uploadToCloudinaryWithTransform(
   const publicIdBase = filename.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
   const publicId = `${folder}/${publicIdBase}`;
 
-  // Build upload params for signed upload
+  // Build upload params for signed upload (only params sent to API)
   const paramsToSign: Record<string, string> = {
-    timestamp: timestamp.toString(),
     folder,
     public_id: publicId,
-    quality: 'auto',
-    fetch_format: 'auto',
-    resource_type: 'image',
+    timestamp: timestamp.toString(),
   };
 
   const signature = await generateCloudinarySignature(paramsToSign, apiSecret);

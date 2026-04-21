@@ -301,16 +301,30 @@ export async function queueStorageDeletion(data: {
     apiSecret?: string | null;
   } | null;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  return publishToQueue('storage-deletion', {
-    type: 'storage-deletion',
-    timestamp: Date.now(),
-    photoId: data.photoId,
-    r2Key: data.r2Key || undefined,
-    thumbnailUrl: data.thumbnailUrl || undefined,
-    fileSize: data.fileSize,
-    storageAccountId: data.storageAccountId || undefined,
-    cloudinaryCredentials: data.cloudinaryCredentials || undefined,
-  });
+  try {
+    const response = await fetch(`${WORKER_URL}/queue/deletion`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'storage-deletion',
+        timestamp: Date.now(),
+        photoId: data.photoId,
+        r2Key: data.r2Key || undefined,
+        thumbnailUrl: data.thumbnailUrl || undefined,
+        fileSize: data.fileSize,
+        storageAccountId: data.storageAccountId || undefined,
+        cloudinaryCredentials: data.cloudinaryCredentials || undefined,
+      }),
+    });
+
+    const result = await response.json();
+    return result.success
+      ? { success: true }
+      : { success: false, error: result.error || 'Failed to queue' };
+  } catch (error) {
+    console.error('[Queue/Deletion] Failed to publish:', error);
+    return { success: false, error: String(error) };
+  }
 }
 
 /**
