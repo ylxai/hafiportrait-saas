@@ -382,7 +382,7 @@ export default function GalleryDetailPage() {
                     return (
                     <div key={photo.id} className="relative group">
                       <PhotoImage
-                        src={photo.url}
+                        src={photo.thumbnailUrl || photo.url}
                         alt={photo.filename}
                         width={150}
                         height={150}
@@ -503,7 +503,7 @@ export default function GalleryDetailPage() {
                   onClick={() => setLightboxIndex(localIndex)}
                 >
                   <PhotoImage
-                    src={photo.url}
+                    src={photo.thumbnailUrl || photo.url}
                     alt={photo.filename}
                     fill
                     sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 20vw, 12vw"
@@ -625,12 +625,13 @@ export default function GalleryDetailPage() {
         index={lightboxIndex >= 0 ? lightboxIndex : 0}
         close={() => setLightboxIndex(-1)}
         slides={photos?.map((p, idx) => {
-          // Log for debugging
-          if (!p.url) {
+          // Use thumbnailUrl (Cloudinary) instead of url (R2 private)
+          const imageUrl = p.thumbnailUrl || p.url || '';
+          if (!imageUrl) {
             console.error(`[Lightbox] Photo ${idx} has no URL:`, p);
           }
           return { 
-            src: p.url || p.thumbnailUrl || '',
+            src: imageUrl,
             alt: p.filename,
             width: p.width || 1200,
             height: p.height || 800,
