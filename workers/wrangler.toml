@@ -12,9 +12,10 @@ account_id = "b14090010faed475102a62eca152b67f"
 # Environment variables (non-secret)
 [vars]
 # Webhook URL untuk callback dari Workers
-# Using ngrok tunnel for development
-VPS_WEBHOOK_URL = "https://8913-124-197-42-88.ngrok-free.app/api/webhook"
-VPS_CLEANUP_URL = "https://8913-124-197-42-88.ngrok-free.app"
+# PRODUCTION: Update this to your Vercel deployment URL after deploy
+# Example: VPS_WEBHOOK_URL = "https://your-app.vercel.app/api/webhook"
+VPS_WEBHOOK_URL = "https://REPLACE_WITH_VERCEL_URL/api/webhook"
+VPS_CLEANUP_URL = "https://REPLACE_WITH_VERCEL_URL"
 
 # R2 Bucket binding (for deleting files)
 [[r2_buckets]]
