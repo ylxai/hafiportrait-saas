@@ -113,7 +113,10 @@ export default {
 
       try {
         const result = await processDeletion(job, env);
-        await callbackToVercel(job, result, env);
+        // Try callback but don't fail if Vercel blocks it
+        await callbackToVercel(job, result, env).catch((err) => {
+          console.warn(`[DeletionWorker] Callback failed (non-critical): ${err.message}`);
+        });
         message.ack();
         console.log(`[DeletionWorker] ✅ Deleted: ${job.photoId}`);
       } catch (error) {
