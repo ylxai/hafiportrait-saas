@@ -14,6 +14,7 @@ account_id = "b14090010faed475102a62eca152b67f"
 # Webhook URL untuk callback dari Workers
 # WARNING: Using HTTP (not HTTPS) for development only
 VPS_WEBHOOK_URL = "http://124.197.42.88:3000/api/webhook"
+VPS_CLEANUP_URL = "http://124.197.42.88:3000"
 
 # R2 Bucket binding (for deleting files)
 [[r2_buckets]]
