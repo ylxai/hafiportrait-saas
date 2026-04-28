@@ -1,5 +1,4 @@
-// LOW PRIORITY FIX #9: Duplicate detection using file hash
-// CRITICAL FIX: Use Web Crypto API instead of Node.js crypto (browser compatible)
+// Hash-based duplicate detection using SHA-256
 import { prisma } from '@/lib/db';
 
 /**
@@ -17,44 +16,69 @@ export async function calculateFileHash(file: File): Promise<string> {
 
 /**
  * Check if a photo with the same hash already exists in the gallery
+ * Uses fileHash column for accurate duplicate detection
  * @param galleryId - Gallery ID to check within
  * @param fileHash - SHA-256 hash of the file
- * @param filename - Optional filename for additional matching
- * @param fileSize - Optional file size for additional matching
- * @returns Object indicating if duplicate exists and the existing photo ID
+ * @returns Object indicating if duplicate exists and the existing photo info
  */
 export async function checkDuplicatePhoto(
   galleryId: string,
-  fileHash: string,
-  filename?: string,
-  fileSize?: number
-): Promise<{ isDuplicate: boolean; existingPhotoId?: string }> {
-  // TODO: Add fileHash column to Photo model in schema.prisma
-  // For now, check by filename + fileSize as approximation
-  if (!filename || !fileSize) {
+  fileHash: string
+): Promise<{ isDuplicate: boolean; existingPhotoId?: string; existingPhoto?: { id: string; filename: string; url: string } }> {
+  if (!fileHash) {
     return { isDuplicate: false };
   }
 
   const existingPhoto = await prisma.photo.findFirst({
     where: {
       galleryId,
+      fileHash,
+    },
+    select: {
+      id: true,
+      filename: true,
+      url: true,
+      thumbnailUrl: true,
+    },
+  });
+
+  if (existingPhoto) {
+    return {
+      isDuplicate: true,
+      existingPhotoId: existingPhoto.id,
+      existingPhoto: {
+        id: existingPhoto.id,
+        filename: existingPhoto.filename,
+        url: existingPhoto.thumbnailUrl || existingPhoto.url,
+      },
+    };
+  }
+
+  return { isDuplicate: false };
+}
+
+/**
+ * Check for duplicate by content hash (filename + fileSize approximation as fallback)
+ * Used when fileHash is not available
+ */
+export async function checkDuplicateByContent(
+  galleryId: string,
+  filename: string,
+  fileSize: bigint
+): Promise<{ isDuplicate: boolean; existingPhotoId?: string }> {
+  const existingPhoto = await prisma.photo.findFirst({
+    where: {
+      galleryId,
       filename,
-      fileSize: BigInt(fileSize),
+      fileSize,
     },
     select: {
       id: true,
     },
   });
-  
+
   return {
     isDuplicate: !!existingPhoto,
     existingPhotoId: existingPhoto?.id,
   };
 }
-
-// TODO: Add test coverage for duplicate detection
-// Note: To fully implement hash-based detection, need to:
-// 1. Add fileHash column to Photo model (String @unique per gallery)
-// 2. Calculate hash on client before upload using calculateFileHash()
-// 3. Check for duplicates in presigned API using checkDuplicatePhoto()
-// 4. Show warning to user if duplicate detected (allow override or skip)

@@ -15,6 +15,7 @@
 
 import { prisma } from '@/lib/db';
 import { Prisma } from '@/generated/prisma';
+import { recordFailedJob } from '@/lib/failed-jobs';
 
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const API_TOKEN = process.env.NEXT_SERVER_CF_QUEUE_TOKEN;
@@ -318,11 +319,50 @@ export async function queueStorageDeletion(data: {
     });
 
     const result = await response.json();
-    return result.success
-      ? { success: true }
-      : { success: false, error: result.error || 'Failed to queue' };
+    if (!result.success) {
+      // Record failed job after queue publish fails
+      await recordFailedJob({
+        jobType: 'storage-deletion',
+        payload: {
+          photoId: data.photoId,
+          r2Key: data.r2Key,
+          thumbnailUrl: data.thumbnailUrl,
+          fileSize: data.fileSize,
+          storageAccountId: data.storageAccountId,
+          cloudinaryCredentials: data.cloudinaryCredentials ? {
+            cloudName: data.cloudinaryCredentials.cloudName,
+            apiKey: data.cloudinaryCredentials.apiKey,
+            apiSecret: '[REDACTED]',
+          } : undefined,
+        },
+        errorMessage: result.error || 'Worker returned failure',
+      }).catch((err) => {
+        console.error('[Queue/Deletion] Failed to record failed job:', err);
+      });
+      return { success: false, error: result.error || 'Failed to queue' };
+    }
+    return { success: true };
   } catch (error) {
     console.error('[Queue/Deletion] Failed to publish:', error);
+    // Record failed job on exception
+    await recordFailedJob({
+      jobType: 'storage-deletion',
+      payload: {
+        photoId: data.photoId,
+        r2Key: data.r2Key,
+        thumbnailUrl: data.thumbnailUrl,
+        fileSize: data.fileSize,
+        storageAccountId: data.storageAccountId,
+        cloudinaryCredentials: data.cloudinaryCredentials ? {
+          cloudName: data.cloudinaryCredentials.cloudName,
+          apiKey: data.cloudinaryCredentials.apiKey,
+          apiSecret: '[REDACTED]',
+        } : undefined,
+      },
+      errorMessage: String(error),
+    }).catch((err) => {
+      console.error('[Queue/Deletion] Failed to record failed job:', err);
+    });
     return { success: false, error: String(error) };
   }
 }
@@ -404,11 +444,48 @@ export async function queueThumbnailGeneration(data: {
     });
 
     const result = await response.json();
-    return result.success
-      ? { success: true }
-      : { success: false, error: result.error || 'Failed to queue' };
+    if (!result.success) {
+      // Record failed job after queue publish fails
+      await recordFailedJob({
+        jobType: 'thumbnail-generation',
+        payload: {
+          photoId: data.photoId,
+          r2Key: data.r2Key,
+          galleryId: data.galleryId,
+          filename: data.filename,
+          cloudinaryCredentials: {
+            cloudName: data.cloudinaryCredentials.cloudName,
+            apiKey: data.cloudinaryCredentials.apiKey,
+            apiSecret: '[REDACTED]',
+          },
+        },
+        errorMessage: result.error || 'Worker returned failure',
+      }).catch((err) => {
+        console.error('[Queue/Thumbnail] Failed to record failed job:', err);
+      });
+      return { success: false, error: result.error || 'Failed to queue' };
+    }
+    return { success: true };
   } catch (error) {
     console.error('[Queue/Thumbnail] Failed to publish:', error);
+    // Record failed job on exception
+    await recordFailedJob({
+      jobType: 'thumbnail-generation',
+      payload: {
+        photoId: data.photoId,
+        r2Key: data.r2Key,
+        galleryId: data.galleryId,
+        filename: data.filename,
+        cloudinaryCredentials: {
+          cloudName: data.cloudinaryCredentials.cloudName,
+          apiKey: data.cloudinaryCredentials.apiKey,
+          apiSecret: '[REDACTED]',
+        },
+      },
+      errorMessage: String(error),
+    }).catch((err) => {
+      console.error('[Queue/Thumbnail] Failed to record failed job:', err);
+    });
     return { success: false, error: String(error) };
   }
 }
