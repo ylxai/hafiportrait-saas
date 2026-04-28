@@ -33,6 +33,7 @@ yarn-error.log*
 # env files - CRITICAL - never commit these
 .env
 .env.local
+.env.example
 .env.development.local
 .env.test.local
 .env.production.local
@@ -90,6 +91,14 @@ CLAUDE.md
 
 # AI Agent Memory (task lists, errors - exclude from PRs)
 .junie/memory/
+
+# Parallel Agents Coordination Files (machine-specific)
+OWNERS.md
+TASK-BOARD.md
+PARALLEL-AGENTS-PLAN.md
+MCP-SETUP.md
+agent-notes/
+scripts/setup-parallel-agents.sh
 
 # Bob AI Assistant
 .bob/

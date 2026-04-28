@@ -12,8 +12,13 @@ account_id = "b14090010faed475102a62eca152b67f"
 # Environment variables (non-secret)
 [vars]
 # Webhook URL untuk callback dari Workers
-VPS_WEBHOOK_URL = "https://studio.hafiportrait.photography/api/webhook"
-VPS_CLEANUP_URL = "https://studio.hafiportrait.photography"
+# Development (VPS/local): tidak perlu webhook - proses langsung
+#VPS_WEBHOOK_URL = "http://localhost:3000"
+#VPS_CLEANUP_URL = "http://localhost:3000"
+
+# Production (Vercel):
+#VPS_WEBHOOK_URL = "https://studio.hafiportrait.photography/api/webhook"
+#VPS_CLEANUP_URL = "https://studio.hafiportrait.photography"
 
 # R2 Bucket binding (for deleting files)
 [[r2_buckets]]

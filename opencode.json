@@ -1,14 +1,141 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "mcp": {
-    "shadcn": {
-      "type": "local",
-      "command": [
-        "npx",
-        "shadcn@latest",
-        "mcp"
-      ],
-      "enabled": true
+  "provider": {
+    "askjune": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "AskJune AI (blockchain.info)",
+      "options": {
+        "baseURL": "https://api.blockchain.info/ai/api/v1",
+        "apiKey": "sk_live_xxxREPLACE_WITH_REAL_KEY"
+      },
+      "models": {
+        "anthropic/claude-sonnet-4.6": {
+          "name": "Claude Sonnet 4.6"
+        },
+        "anthropic/claude-haiku-4.5": {
+          "name": "Claude Haiku 4.5"
+        }
+      }
     }
+  },
+  "model": "askjune/anthropic/claude-sonnet-4.6",
+  "small_model": "askjune/anthropic/claude-haiku-4.5",
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp"
+    },
+    "github": {
+      "type": "remote",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ghp_xxxREPLACE_WITH_REAL_TOKEN"
+      }
+    },
+    "filesystem": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/home/ubuntu/hafiportrait-saas"],
+      "enabled": true
+    },
+    "sequential-thinking": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "enabled": true
+    },
+    "memory": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-memory"],
+      "enabled": true
+    },
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "@playwright/mcp@latest"],
+      "enabled": true
+    },
+    "tiger": {
+      "type": "local",
+      "command": ["/home/ubuntu/.local/bin/tiger", "mcp", "start"],
+      "enabled": true
+    },
+    "tavily": {
+      "type": "remote",
+      "url": "https://mcp.tavily.com/mcp?tavilyApiKey=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"
+    },
+    "notion": {
+      "type": "remote",
+      "url": "https://mcp.notion.com/mcp"
+    }
+  },
+  "permission": {
+    "edit": "allow",
+    "bash": "ask",
+    "webfetch": "allow",
+    "websearch": "allow",
+    "codesearch": "allow"
+  },
+  "agent": {
+    "leader": {
+      "description": "Team leader - orchestrates tasks, creates plans, delegates to subagents",
+      "mode": "primary",
+      "model": "askjune/anthropic/claude-sonnet-4.6",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow",
+        "task": {
+          "*": "allow"
+        }
+      }
+    },
+    "frontend": {
+      "description": "Frontend specialist - React, Next.js, UI components, Tailwind styling",
+      "mode": "subagent",
+      "model": "askjune/anthropic/claude-sonnet-4.6",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "backend": {
+      "description": "Backend specialist - API routes, Prisma, database, authentication",
+      "mode": "subagent",
+      "model": "askjune/anthropic/claude-sonnet-4.6",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "reviewer": {
+      "description": "Code reviewer - reviews code for quality, best practices, and potential issues",
+      "mode": "subagent",
+      "model": "askjune/anthropic/claude-haiku-4.5",
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "git diff": "allow",
+          "git log*": "allow",
+          "grep *": "allow"
+        }
+      }
+    },
+    "devops": {
+      "description": "DevOps specialist - deployment, Vercel, CI/CD, infrastructure",
+      "mode": "subagent",
+      "model": "askjune/anthropic/claude-haiku-4.5",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    }
+  },
+  "tools": {
+    "context7_*": true,
+    "github_*": true,
+    "filesystem_*": true,
+    "sequential-thinking_*": true,
+    "memory_*": true,
+    "playwright_*": true,
+    "tiger_*": true,
+    "tavily_*": true,
+    "notion_*": true
   }
 }

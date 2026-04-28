@@ -193,3 +193,76 @@ Prefer MCP tools over bash scripts for these tasks:
 | shadcn/ui components | shadcn MCP |
 | UI component generation | 21st-dev MCP |
 | File operations | Filesystem MCP |
+
+---
+
+## Parallel Agents System
+
+This project uses a 5-agent parallel development system.
+
+### Team Members
+
+| Agent | Role | Model | Files Owned |
+|-------|------|-------|-------------|
+| @leader | Orchestrator | Sonnet 4.6 | - |
+| @frontend | UI/Components | Sonnet 4.6 | src/components/**, src/app/(dashboard)/** |
+| @backend | API/Database | Sonnet 4.6 | src/app/api/**, prisma/**, src/lib/** |
+| @reviewer | Code Review | Haiku 4.5 | tests/** |
+| @devops | Deployment | Haiku 4.5 | .github/workflows/**, scripts/** |
+
+### MCP Tools Available
+
+- **context7** - Real-time documentation lookup
+- **github** - Issues, PRs, repos management
+- **filesystem** - File operations
+- **sequential-thinking** - Step-by-step reasoning
+- **memory** - Persistent context
+- **playwright** - E2E testing
+- **tigerdata** - PostgreSQL queries
+- **tavily** - Web search
+- **notion** - Documentation
+
+### Skills Available
+
+See `.opencode/skills/` for all available skills.
+
+### Workflow
+
+```
+@leader "Build user auth feature"
+
+    ┌─────────────────────────────────────────┐
+    │ @frontend                               │──→ Login page
+    │ @backend                                │──→ Auth API
+    │ (parallel execution)                     │
+    └──────────────────┬──────────────────────┘
+                       ↓
+              @reviewer (review code)
+                   ↓
+              @devops (deploy to Vercel)
+                   ↓
+              @leader (finalize)
+```
+
+### Task Management
+
+1. Check `TASK-BOARD.md` for current tasks
+2. Check `OWNERS.md` for file ownership
+3. Update status when working on tasks
+
+### Using Agents
+
+Invoke agents with @ prefix:
+```
+@frontend Build the login page
+@backend Create auth API
+@reviewer Review the code
+@devops Deploy to staging
+```
+
+### Before Commit
+
+Always run:
+```bash
+npm run lint && npm run build
+```

@@ -3,6 +3,7 @@ import { verifyR2Upload, cleanupUploadSession, deleteFromR2, getR2Credentials } 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
+import type { PrismaClient } from '@/generated/prisma';
 import { getStorageAccountById } from '@/lib/storage/accounts';
 import { publishPhotoUploaded } from '@/lib/ably';
 import { z } from 'zod';
@@ -148,7 +149,7 @@ export async function POST(request: Request) {
 
     // TRANSACTION: Atomic duplicate check + quota check + photo creation
     // This prevents race conditions where concurrent uploads could exceed quota
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use'>) => {
       // 1. DUPLICATE DETECTION: Check if file with same hash already exists in gallery
       let duplicateInfo: { isDuplicate: boolean; existingPhoto?: { id: string; filename: string; url: string } } = {
         isDuplicate: false,
@@ -205,7 +206,7 @@ export async function POST(request: Request) {
       // 3. Create photo record
       const newPhoto = await tx.photo.create({
         data: {
-          galleryId,
+          galleryId: galleryId!,
           filename,
           url: publicUrl,
           r2Key: verifiedR2Key,
@@ -232,7 +233,7 @@ export async function POST(request: Request) {
       }
 
       return { photo: newPhoto, duplicateInfo };
-    }).catch(async (err) => {
+    }).catch(async (err: unknown) => {
       // Handle quota exceeded - rollback R2 upload
       if (err instanceof QuotaExceededError) {
         if (verifiedR2Key) {
