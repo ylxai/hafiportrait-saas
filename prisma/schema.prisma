@@ -270,10 +270,11 @@ model UploadSession {
   storageAccountId String?  // R2 account ID
   cloudinaryAccountId String? // Cloudinary account ID
   publicUrl       String?
-  
+
   @@index([createdAt])
   @@index([galleryId])
   @@index([expiresAt]) // Index for cleanup queries
+  @@index([fileHash]) // For integrity verification lookups
 }
 
 

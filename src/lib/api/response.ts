@@ -74,6 +74,26 @@ export function conflictResponse(message = 'Resource already exists') {
   return errorResponse(message, 409, ERROR_CODES.CONFLICT);
 }
 
+export function rateLimitResponse(
+  message: string,
+  retryAfterSeconds: number
+): NextResponse<ErrorResponse> {
+  return NextResponse.json(
+    {
+      success: false,
+      error: message,
+      errorCode: ERROR_CODES.BAD_REQUEST,
+      timestamp: new Date().toISOString(),
+    },
+    {
+      status: 429,
+      headers: {
+        'Retry-After': retryAfterSeconds.toString(),
+      },
+    }
+  );
+}
+
 // Handle Prisma errors with specific messages
 export function handlePrismaError(error: unknown) {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {

@@ -15,6 +15,7 @@ import {
   ALLOWED_MIME_TYPES,
 } from '@/lib/upload/constants';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { rateLimitResponse } from '@/lib/api/response';
 import { publishStorageQuotaAlert } from '@/lib/ably';
 
 
@@ -74,10 +75,9 @@ export async function POST(request: Request) {
     const rateLimit = await checkRateLimit(rateLimitKey, RATE_LIMITS.UPLOAD_PRESIGNED);
 
     if (!rateLimit.success) {
-      return errorResponse(
+      return rateLimitResponse(
         'Terlalu banyak request. Silakan coba lagi nanti.',
-        429,
-        { 'Retry-After': Math.ceil((rateLimit.resetAt - Date.now()) / 1000).toString() }
+        Math.ceil((rateLimit.resetAt - Date.now()) / 1000)
       );
     }
 
@@ -157,25 +157,41 @@ export async function POST(request: Request) {
     const usagePercentAfter = Number(((totalUsedStorage + BigInt(fileSize)) * BigInt(100)) / storageQuotaBytes);
     const usedGBAfter = Number(totalUsedStorage + BigInt(fileSize)) / BYTES_PER_GB;
 
-    for (const threshold of QUOTA_WARNING_THRESHOLDS) {
-      if (usagePercentBefore < threshold && usagePercentAfter >= threshold) {
-        const alertType = threshold >= 95 ? 'exceeded' : threshold >= 90 ? 'critical' : 'warning';
+    // Check if quota will be exceeded after this upload
+    if (usagePercentAfter >= 100) {
+      await publishStorageQuotaAlert({
+        clientId,
+        clientName: client?.nama || 'Unknown',
+        galleryId,
+        alertType: 'exceeded',
+        usedGB: usedGBAfter,
+        quotaGB: storageQuotaGB,
+        percentage: usagePercentAfter,
+      }).catch((err) => {
+        console.error('[Quota Warning] Failed to send exceeded alert:', err);
+      });
+    } else {
+      // Send warning/critical alerts for threshold crossings
+      for (const threshold of QUOTA_WARNING_THRESHOLDS) {
+        if (usagePercentBefore < threshold && usagePercentAfter >= threshold) {
+          const alertType = threshold >= 95 ? 'exceeded' : threshold >= 90 ? 'critical' : 'warning';
 
-        // Log locally
-        console.warn(`[Quota Warning] Client ${client?.nama || clientId} crossed ${threshold}% threshold (${usedGBAfter.toFixed(2)}GB / ${storageQuotaGB}GB)`);
+          // Log locally
+          console.warn(`[Quota Warning] Client ${client?.nama || clientId} crossed ${threshold}% threshold (${usedGBAfter.toFixed(2)}GB / ${storageQuotaGB}GB)`);
 
-        // Send Ably notification to admin dashboard
-        await publishStorageQuotaAlert({
-          clientId,
-          clientName: client?.nama || 'Unknown',
-          galleryId,
-          alertType,
-          usedGB: usedGBAfter,
-          quotaGB: storageQuotaGB,
-          percentage: threshold,
-        }).catch((err) => {
-          console.error('[Quota Warning] Failed to send Ably notification:', err);
-        });
+          // Send Ably notification to admin dashboard
+          await publishStorageQuotaAlert({
+            clientId,
+            clientName: client?.nama || 'Unknown',
+            galleryId,
+            alertType,
+            usedGB: usedGBAfter,
+            quotaGB: storageQuotaGB,
+            percentage: threshold,
+          }).catch((err) => {
+            console.error('[Quota Warning] Failed to send Ably notification:', err);
+          });
+        }
       }
     }
 

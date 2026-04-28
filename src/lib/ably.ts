@@ -148,3 +148,28 @@ export async function publishStorageQuotaAlert(data: {
     console.error('Failed to publish storage quota alert:', error);
   }
 }
+
+export type FailedJobAlertType = 'failed' | 'retry' | 'resolved';
+
+/**
+ * Publish failed job alert for admin dashboard
+ */
+export async function publishFailedJobAlert(data: {
+  jobId: string;
+  jobType: string;
+  alertType: FailedJobAlertType;
+  errorMessage?: string;
+  attemptCount?: number;
+  resolvedBy?: string;
+}) {
+  try {
+    const client = getAblyRestClient();
+    await client.channels.get(CHANNELS.ADMIN_ALERTS).publish('failed-job-alert', {
+      type: 'failed_job',
+      ...data,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Failed to publish failed job alert:', error);
+  }
+}

@@ -15,6 +15,7 @@ import { queueThumbnailGeneration } from '@/lib/cloudflare-queue';
 import { serializeBigInt } from '@/lib/bigint-utils';
 import { trackUploadResult } from '@/lib/analytics';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { rateLimitResponse } from '@/lib/api/response';
 
 // Custom error for quota exceeded - allows transaction rollback
 class QuotaExceededError extends Error {
@@ -50,10 +51,9 @@ export async function POST(request: Request) {
     const rateLimit = await checkRateLimit(`upload-complete:${userId}`, RATE_LIMITS.UPLOAD_COMPLETE);
 
     if (!rateLimit.success) {
-      return errorResponse(
+      return rateLimitResponse(
         'Terlalu banyak request. Silakan coba lagi nanti.',
-        429,
-        { 'Retry-After': Math.ceil((rateLimit.resetAt - Date.now()) / 1000).toString() }
+        Math.ceil((rateLimit.resetAt - Date.now()) / 1000)
       );
     }
 
