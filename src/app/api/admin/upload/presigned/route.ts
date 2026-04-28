@@ -159,7 +159,7 @@ export async function POST(request: Request) {
 
     for (const threshold of QUOTA_WARNING_THRESHOLDS) {
       if (usagePercentBefore < threshold && usagePercentAfter >= threshold) {
-        const alertType = threshold >= 90 ? 'exceeded' : threshold >= 75 ? 'critical' : 'warning';
+        const alertType = threshold >= 95 ? 'exceeded' : threshold >= 90 ? 'critical' : 'warning';
 
         // Log locally
         console.warn(`[Quota Warning] Client ${client?.nama || clientId} crossed ${threshold}% threshold (${usedGBAfter.toFixed(2)}GB / ${storageQuotaGB}GB)`);

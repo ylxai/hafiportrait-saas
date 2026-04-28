@@ -128,6 +128,15 @@ export async function retryFailedThumbnailJob(jobId: string): Promise<{ success:
     };
   };
 
+  // Increment attempt count when retrying
+  await prisma.failedJob.update({
+    where: { id: jobId },
+    data: {
+      attemptCount: { increment: 1 },
+      lastAttemptAt: new Date(),
+    },
+  });
+
   const result = await queueThumbnailGeneration({
     photoId: payload.photoId,
     r2Key: payload.r2Key,
@@ -160,27 +169,21 @@ export async function getFailedJobStats(): Promise<{
   discarded: number;
   byType: Record<string, number>;
 }> {
-  const jobs = await prisma.failedJob.findMany({
-    select: {
-      status: true,
-      jobType: true,
-    },
-  });
+  // Use count queries instead of fetching all records
+  const [pending, resolved, discarded, byTypeJobs] = await Promise.all([
+    prisma.failedJob.count({ where: { status: 'pending' } }),
+    prisma.failedJob.count({ where: { status: 'resolved' } }),
+    prisma.failedJob.count({ where: { status: 'discarded' } }),
+    prisma.failedJob.groupBy({
+      by: ['jobType'],
+      _count: { jobType: true },
+    }),
+  ]);
 
-  const stats = {
-    pending: 0,
-    resolved: 0,
-    discarded: 0,
-    byType: {} as Record<string, number>,
-  };
-
-  for (const job of jobs) {
-    if (job.status === 'pending') stats.pending++;
-    else if (job.status === 'resolved') stats.resolved++;
-    else if (job.status === 'discarded') stats.discarded++;
-
-    stats.byType[job.jobType] = (stats.byType[job.jobType] || 0) + 1;
+  const byType: Record<string, number> = {};
+  for (const item of byTypeJobs) {
+    byType[item.jobType] = item._count.jobType;
   }
 
-  return stats;
+  return { pending, resolved, discarded, byType };
 }

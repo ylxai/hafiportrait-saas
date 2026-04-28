@@ -260,7 +260,8 @@ export async function POST(request: Request) {
     const { photo, duplicateInfo } = result;
 
     // Stage 2: Queue async thumbnail generation (outside transaction - non-blocking)
-    if (cloudinaryAccount?.cloudName && cloudinaryAccount.apiKey && cloudinaryAccount.apiSecret) {
+    // Only queue if we have a cloudinary account configured
+    if (cloudinaryAccountId && cloudinaryAccount?.cloudName && cloudinaryAccount.apiKey && cloudinaryAccount.apiSecret) {
       await queueThumbnailGeneration({
         photoId: photo.id,
         r2Key: verifiedR2Key,

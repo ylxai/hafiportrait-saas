@@ -56,29 +56,3 @@ export async function checkDuplicatePhoto(
 
   return { isDuplicate: false };
 }
-
-/**
- * Check for duplicate by content hash (filename + fileSize approximation as fallback)
- * Used when fileHash is not available
- */
-export async function checkDuplicateByContent(
-  galleryId: string,
-  filename: string,
-  fileSize: bigint
-): Promise<{ isDuplicate: boolean; existingPhotoId?: string }> {
-  const existingPhoto = await prisma.photo.findFirst({
-    where: {
-      galleryId,
-      filename,
-      fileSize,
-    },
-    select: {
-      id: true,
-    },
-  });
-
-  return {
-    isDuplicate: !!existingPhoto,
-    existingPhotoId: existingPhoto?.id,
-  };
-}
