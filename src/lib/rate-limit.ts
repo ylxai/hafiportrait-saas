@@ -113,4 +113,6 @@ export const RATE_LIMITS = {
   SEARCH: { maxRequests: 30, windowMs: 60 * 1000 }, // 30 req/min
   EXPORT: { maxRequests: 10, windowMs: 60 * 1000 }, // 10 req/min
   BULK_DELETE: { maxRequests: 20, windowMs: 60 * 1000 }, // 20 req/min
+  UPLOAD_PRESIGNED: { maxRequests: 100, windowMs: 60 * 1000 }, // 100 presigned URLs/min per user
+  UPLOAD_COMPLETE: { maxRequests: 100, windowMs: 60 * 1000 }, // 100 upload completions/min per user
 } as const;

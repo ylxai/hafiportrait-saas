@@ -14,6 +14,9 @@ import {
   ALLOWED_EXTENSIONS,
   ALLOWED_MIME_TYPES,
 } from '@/lib/upload/constants';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { rateLimitResponse } from '@/lib/api/response';
+import { publishStorageQuotaAlert } from '@/lib/ably';
 
 
 // Zod validation schema for presigned upload request
@@ -64,6 +67,18 @@ export async function POST(request: Request) {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return errorResponse('Unauthorized', 401);
+    }
+
+    // Rate limiting - prevent abuse of presigned URL generation
+    const userId = session.user.id || session.user.email || 'anonymous';
+    const rateLimitKey = `upload-presigned:${userId}`;
+    const rateLimit = await checkRateLimit(rateLimitKey, RATE_LIMITS.UPLOAD_PRESIGNED);
+
+    if (!rateLimit.success) {
+      return rateLimitResponse(
+        'Terlalu banyak request. Silakan coba lagi nanti.',
+        Math.ceil((rateLimit.resetAt - Date.now()) / 1000)
+      );
     }
 
     // Parse and validate request body with Zod
@@ -137,15 +152,46 @@ export async function POST(request: Request) {
       );
     }
 
-    // Quota warning checks (log when crossing threshold)
+    // Quota warning checks - send Ably notification to admin dashboard
     const usagePercentBefore = Number((totalUsedStorage * BigInt(100)) / storageQuotaBytes);
     const usagePercentAfter = Number(((totalUsedStorage + BigInt(fileSize)) * BigInt(100)) / storageQuotaBytes);
     const usedGBAfter = Number(totalUsedStorage + BigInt(fileSize)) / BYTES_PER_GB;
 
-    for (const threshold of QUOTA_WARNING_THRESHOLDS) {
-      if (usagePercentBefore < threshold && usagePercentAfter >= threshold) {
-        console.warn(`[Quota Warning] Client ${client?.nama || clientId} crossed ${threshold}% threshold (${usedGBAfter.toFixed(2)}GB / ${storageQuotaGB}GB)`);
-        // Future: send Ably notification to admin dashboard
+    // Check if quota will be exceeded after this upload
+    if (usagePercentAfter >= 100) {
+      await publishStorageQuotaAlert({
+        clientId,
+        clientName: client?.nama || 'Unknown',
+        galleryId,
+        alertType: 'exceeded',
+        usedGB: usedGBAfter,
+        quotaGB: storageQuotaGB,
+        percentage: usagePercentAfter,
+      }).catch((err) => {
+        console.error('[Quota Warning] Failed to send exceeded alert:', err);
+      });
+    } else {
+      // Send warning/critical alerts for threshold crossings
+      for (const threshold of QUOTA_WARNING_THRESHOLDS) {
+        if (usagePercentBefore < threshold && usagePercentAfter >= threshold) {
+          const alertType = threshold >= 95 ? 'exceeded' : threshold >= 90 ? 'critical' : 'warning';
+
+          // Log locally
+          console.warn(`[Quota Warning] Client ${client?.nama || clientId} crossed ${threshold}% threshold (${usedGBAfter.toFixed(2)}GB / ${storageQuotaGB}GB)`);
+
+          // Send Ably notification to admin dashboard
+          await publishStorageQuotaAlert({
+            clientId,
+            clientName: client?.nama || 'Unknown',
+            galleryId,
+            alertType,
+            usedGB: usedGBAfter,
+            quotaGB: storageQuotaGB,
+            percentage: threshold,
+          }).catch((err) => {
+            console.error('[Quota Warning] Failed to send Ably notification:', err);
+          });
+        }
       }
     }
 

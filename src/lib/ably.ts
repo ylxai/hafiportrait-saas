@@ -27,6 +27,7 @@ export const CHANNELS = {
   BOOKINGS: `${env.NEXT_PUBLIC_ABLY_CHANNEL_PREFIX}:bookings`,
   PAYMENTS: `${env.NEXT_PUBLIC_ABLY_CHANNEL_PREFIX}:payments`,
   UPLOADS: (galleryId: string) => `${env.NEXT_PUBLIC_ABLY_CHANNEL_PREFIX}:uploads:${galleryId}`,
+  ADMIN_ALERTS: `${env.NEXT_PUBLIC_ABLY_CHANNEL_PREFIX}:admin:alerts`,
 };
 
 export async function publishSelectionUpdate(galleryId: string, data: {
@@ -118,5 +119,57 @@ export async function publishPhotoThumbnailGenerated(galleryId: string, data: {
     await client.channels.get(CHANNELS.UPLOADS(galleryId)).publish('photo-thumbnail-generated', data);
   } catch (error) {
     console.error('Failed to publish photo thumbnail generated:', error);
+  }
+}
+
+export type QuotaAlertType = 'warning' | 'critical' | 'exceeded';
+
+/**
+ * Publish storage quota alert for admin dashboard
+ */
+export async function publishStorageQuotaAlert(data: {
+  clientId: string;
+  clientName: string;
+  galleryId: string;
+  alertType: QuotaAlertType;
+  usedGB: number;
+  quotaGB: number;
+  percentage: number;
+  userId?: string;
+}) {
+  try {
+    const client = getAblyRestClient();
+    await client.channels.get(CHANNELS.ADMIN_ALERTS).publish('storage-quota-alert', {
+      type: 'storage_quota',
+      ...data,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Failed to publish storage quota alert:', error);
+  }
+}
+
+export type FailedJobAlertType = 'failed' | 'retry' | 'resolved';
+
+/**
+ * Publish failed job alert for admin dashboard
+ */
+export async function publishFailedJobAlert(data: {
+  jobId: string;
+  jobType: string;
+  alertType: FailedJobAlertType;
+  errorMessage?: string;
+  attemptCount?: number;
+  resolvedBy?: string;
+}) {
+  try {
+    const client = getAblyRestClient();
+    await client.channels.get(CHANNELS.ADMIN_ALERTS).publish('failed-job-alert', {
+      type: 'failed_job',
+      ...data,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Failed to publish failed job alert:', error);
   }
 }
