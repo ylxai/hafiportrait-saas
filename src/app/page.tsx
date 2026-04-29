@@ -225,23 +225,23 @@ export default function Home() {
               <h4 className="font-semibold text-foreground mb-3">Produk</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link href="/booking" className="hover:text-foreground transition-colors">Booking</Link></li>
-                <li><Link href="/gallery" className="hover:text-foreground transition-colors">Gallery</Link></li>
+                
               </ul>
             </div>
             
             <div>
               <h4 className="font-semibold text-foreground mb-3">Perusahaan</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/about" className="hover:text-foreground transition-colors">Tentang</Link></li>
-                <li><Link href="/contact" className="hover:text-foreground transition-colors">Kontak</Link></li>
+                
+                
               </ul>
             </div>
             
             <div>
               <h4 className="font-semibold text-foreground mb-3">Legal</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link></li>
-                <li><Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link></li>
+                
+                
               </ul>
             </div>
           </div>
