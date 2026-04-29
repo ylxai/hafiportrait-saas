@@ -133,16 +133,21 @@ export async function getStorageCredentials(accountId: string) {
 }
 
 /**
+ * Cache TTL for Cloudinary config (1 minute)
+ * Balances between fresh config and performance
+ */
+const CLOUDINARY_CONFIG_CACHE_TTL = 60000;
+
+/**
  * Get active Cloudinary cloud name from database.
  * Falls back to environment variable if no active account found.
  * Cached for performance.
  */
 let cloudinaryConfigCache: { cloudName: string; cachedAt: number } | null = null;
-const CACHE_TTL = 60000; // 1 minute
 
 export async function getCloudinaryConfig(): Promise<{ cloudName: string }> {
   // Check cache
-  if (cloudinaryConfigCache && Date.now() - cloudinaryConfigCache.cachedAt < CACHE_TTL) {
+  if (cloudinaryConfigCache && Date.now() - cloudinaryConfigCache.cachedAt < CLOUDINARY_CONFIG_CACHE_TTL) {
     return { cloudName: cloudinaryConfigCache.cloudName };
   }
 
