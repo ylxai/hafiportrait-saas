@@ -1,3 +1,4 @@
+import { getCloudinaryConfig } from './storage/accounts';
 
 /**
  * Generate Cloudinary fetch URL from R2 public URL
@@ -52,6 +53,44 @@ export function getCloudinaryThumbnailUrl(
 }
 
 /**
+ * Generate Cloudinary fetch URL with cloud name from database (async version)
+ * Use this in server-side code (API routes, server components)
+ * 
+ * @param r2Url - R2 public URL (original image)
+ * @param options - Resize options
+ * @returns Cloudinary fetch URL
+ */
+export async function getCloudinaryThumbnailUrlAsync(
+  r2Url: string,
+  options: {
+    width?: number;
+    height?: number;
+    quality?: 'auto' | 'auto:good' | number;
+    format?: 'auto' | 'webp' | 'jpg' | 'png';
+    cloudName?: string;
+  } = {}
+): Promise<string> {
+  const { cloudName: explicitCloudName, ...restOptions } = options;
+  
+  // If cloudName explicitly provided, use sync version
+  if (explicitCloudName) {
+    return getCloudinaryThumbnailUrl(r2Url, options);
+  }
+  
+  // Otherwise, fetch from database
+  try {
+    const config = await getCloudinaryConfig();
+    return getCloudinaryThumbnailUrl(r2Url, {
+      ...restOptions,
+      cloudName: config.cloudName,
+    });
+  } catch (error) {
+    console.error('Failed to get Cloudinary config:', error);
+    return r2Url; // Fallback to original
+  }
+}
+
+/**
  * Get different thumbnail sizes
  */
 export function getThumbnailSizes(r2Url: string, cloudName?: string) {
@@ -72,6 +111,22 @@ export function getCloudinaryLightboxUrl(
   cloudName?: string
 ): string {
   return getCloudinaryThumbnailUrl(r2Url, {
+    width: 1920,
+    quality: 'auto:good',
+    format: 'auto',
+    cloudName,
+  });
+}
+
+/**
+ * Get high-res URL for lightbox display (async version with database config)
+ * Use this in server-side code (API routes, server components)
+ */
+export async function getCloudinaryLightboxUrlAsync(
+  r2Url: string,
+  cloudName?: string
+): Promise<string> {
+  return getCloudinaryThumbnailUrlAsync(r2Url, {
     width: 1920,
     quality: 'auto:good',
     format: 'auto',

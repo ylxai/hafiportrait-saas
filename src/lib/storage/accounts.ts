@@ -131,3 +131,42 @@ export async function getStorageCredentials(accountId: string) {
     ...credentials,
   };
 }
+
+/**
+ * Cache TTL for Cloudinary config (1 minute)
+ * Balances between fresh config and performance
+ */
+const CLOUDINARY_CONFIG_CACHE_TTL = 60000;
+
+/**
+ * Get active Cloudinary cloud name from database.
+ * Falls back to environment variable if no active account found.
+ * Cached for performance.
+ */
+let cloudinaryConfigCache: { cloudName: string; cachedAt: number } | null = null;
+
+export async function getCloudinaryConfig(): Promise<{ cloudName: string }> {
+  // Check cache
+  if (cloudinaryConfigCache && Date.now() - cloudinaryConfigCache.cachedAt < CLOUDINARY_CONFIG_CACHE_TTL) {
+    return { cloudName: cloudinaryConfigCache.cloudName };
+  }
+
+  // Try to get from database
+  const account = await getDefaultAccount('CLOUDINARY');
+  
+  if (account?.cloudName) {
+    cloudinaryConfigCache = {
+      cloudName: account.cloudName,
+      cachedAt: Date.now(),
+    };
+    return { cloudName: account.cloudName };
+  }
+
+  // Fallback to environment variable
+  const envCloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  if (envCloudName) {
+    return { cloudName: envCloudName };
+  }
+
+  throw new Error('Cloudinary cloud name not configured in database or environment');
+}
