@@ -93,6 +93,7 @@ export function LazyImage({
           onLoad={() => setIsLoaded(true)}
           onError={() => setHasError(true)}
           priority={priority}
+          unoptimized={displaySrc.includes('cloudinary.com')}
           {...props}
         />
       )}
