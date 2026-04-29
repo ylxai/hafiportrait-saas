@@ -12,7 +12,7 @@ export function getCloudinaryThumbnailUrl(
   options: {
     width?: number;
     height?: number;
-    quality?: 'auto' | number;
+    quality?: 'auto' | 'auto:good' | number;
     format?: 'auto' | 'webp' | 'jpg' | 'png';
     cloudName?: string;
   } = {}
@@ -20,7 +20,7 @@ export function getCloudinaryThumbnailUrl(
   const { 
     width = 400, 
     height, 
-    quality = 'auto',
+    quality = 'auto:good',
     format = 'auto',
     cloudName: explicitCloudName
   } = options;
@@ -73,7 +73,7 @@ export function getCloudinaryLightboxUrl(
 ): string {
   return getCloudinaryThumbnailUrl(r2Url, {
     width: 1920,
-    quality: 'auto',
+    quality: 'auto:good',
     format: 'auto',
     cloudName,
   });
