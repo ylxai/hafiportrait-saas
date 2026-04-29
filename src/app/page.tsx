@@ -52,7 +52,7 @@ export default function Home() {
               <Link href="/booking" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg bg-primary hover:bg-primary/90 text-center font-medium text-primary-foreground transition-colors">
                 Buat Booking
               </Link>
-              <Link href="/login" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg bg-card hover:bg-card-hover border border-border text-center font-medium text-foreground transition-colors">
+              <Link href="/login" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg bg-card hover:bg-accent border border-border text-center font-medium text-foreground transition-colors">
                 Login Admin
               </Link>
             </div>
