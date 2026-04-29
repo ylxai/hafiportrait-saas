@@ -6,14 +6,14 @@
 INPUT=$(cat)
 CWD=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('cwd',''))" 2>/dev/null)
 
-# Hanya inject jika bekerja di project web-saas
-if [[ "$CWD" != "/home/eouser/web-saas"* ]]; then
+# Hanya inject jika bekerja di project hafiportrait-saas
+if [[ "$CWD" != "/home/ubuntu/hafiportrait-saas"* ]]; then
   exit 0
 fi
 
 cat << 'EOF'
 === PhotoStudio SaaS — Active Project Context ===
-Path: /home/eouser/web-saas
+Path: /home/ubuntu/hafiportrait-saas
 Stack: Next.js 15.4.11, TypeScript strict, Tailwind v4, Prisma+PostgreSQL, Cloudflare R2, Cloudinary, Ably
 
 CRITICAL RULES (must follow every response):

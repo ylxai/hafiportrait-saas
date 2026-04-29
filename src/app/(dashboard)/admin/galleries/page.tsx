@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -114,11 +115,11 @@ export default function GalleriesPage() {
         mutate(); // Refresh gallery list
       } else {
         const error = await res.json();
-        alert(error.error || 'Gagal membuat gallery');
+        toast.error(error.error || 'Gagal membuat gallery');
       }
     } catch (err) {
       console.error('Error creating gallery:', err);
-      alert('Gagal membuat gallery');
+      toast.error('Gagal membuat gallery');
     } finally {
       setIsSubmitting(false);
     }
@@ -159,8 +160,8 @@ export default function GalleriesPage() {
 
   const statusColors: Record<string, string> = {
     draft: 'bg-muted text-muted-foreground',
-    published: 'bg-green-500/20 text-green-400',
-    archived: 'bg-primary/20 text-primary',
+    published: 'bg-primary/20 text-primary',
+    archived: 'bg-muted text-muted-foreground',
   };
 
   return (
@@ -177,7 +178,7 @@ export default function GalleriesPage() {
       <Button
         onClick={() => setShowModal(true)}
         size="icon"
-        className="fab bg-muted0 text-white sm:hidden fixed bottom-6 right-6"
+        className="fab bg-primary text-primary-foreground sm:hidden fixed bottom-6 right-6"
         aria-label="Buat Gallery Baru"
       >
         <Plus className="w-6 h-6" />

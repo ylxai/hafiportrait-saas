@@ -75,7 +75,12 @@ export async function DELETE(request: Request) {
 
     const { ids } = validation.data;
 
-    await queuePhotosDeletionForEntities({ galleryId: { in: ids } });
+    const result = await queuePhotosDeletionForEntities({ galleryId: { in: ids } });
+    
+    if (!result.success) {
+      console.error('[Delete] Failed to queue photos deletion:', result.error);
+      return errorResponse('Failed to queue storage deletion', 500);
+    }
 
     await prisma.gallery.deleteMany({
       where: { id: { in: ids } },
