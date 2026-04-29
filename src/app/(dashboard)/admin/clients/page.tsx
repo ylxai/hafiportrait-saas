@@ -16,6 +16,11 @@ type Client = {
   storageQuotaGB: number;
   createdAt: string;
   updatedAt: string;
+  _count?: {
+    events: number;
+  };
+  usedStorageBytes?: string;
+  photoCount?: number;
 };
 
 const ClientAvatar = ({ name }: { name: string }) => {
@@ -250,7 +255,7 @@ export default function ClientsPage() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Email</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Phone</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Instagram</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Quota</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Storage</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Dibuat</th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Aksi</th>
               </tr>
@@ -275,14 +280,46 @@ export default function ClientsPage() {
                   <td className="px-4 py-4 text-muted-foreground">{client.email}</td>
                   <td className="px-4 py-4 text-muted-foreground">{client.phone || '-'}</td>
                   <td className="px-4 py-4 text-muted-foreground">{client.instagram || '-'}</td>
-                  <td className="px-4 py-4 text-muted-foreground text-sm font-medium">{client.storageQuotaGB || 10} GB</td>
+                  <td className="px-4 py-4">
+                    {client.usedStorageBytes !== undefined ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">
+                            {(Number(client.usedStorageBytes) / 1073741824).toFixed(2)} GB / {client.storageQuotaGB} GB
+                          </span>
+                          <span className="text-muted-foreground font-medium">
+                            {Math.round((Number(client.usedStorageBytes) / (client.storageQuotaGB * 1073741824)) * 100)}%
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all ${
+                              (Number(client.usedStorageBytes) / (client.storageQuotaGB * 1073741824)) >= 0.95
+                                ? 'bg-destructive'
+                                : (Number(client.usedStorageBytes) / (client.storageQuotaGB * 1073741824)) >= 0.8
+                                ? 'bg-warning'
+                                : 'bg-primary'
+                            }`}
+                            style={{
+                              width: `${Math.min(100, (Number(client.usedStorageBytes) / (client.storageQuotaGB * 1073741824)) * 100)}%`
+                            }}
+                          />
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {client.photoCount || 0} photos
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{client.storageQuotaGB} GB</span>
+                    )}
+                  </td>
                   <td className="px-4 py-4 text-muted-foreground text-sm">
                     {new Date(client.createdAt).toLocaleDateString('id-ID')}
                   </td>
                   <td className="px-4 py-4 text-right">
                     <div className="flex gap-2 justify-end">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(client)}>Edit</Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(client.id)} className="text-red-600">Hapus</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(client.id)} className="text-destructive">Hapus</Button>
                     </div>
                   </td>
                 </tr>
