@@ -95,20 +95,21 @@ export async function DELETE(
       if (isQueueConfigured()) {
         try {
           const result = await queueStorageDeletion(deletionData);
-          if (result.success) {
-            console.log(`[Delete] Queued to Cloudflare for photo ${photoId}`);
-          } else {
+          if (!result.success) {
             console.error(`[Delete] Cloudflare Queue failed: ${result.error}`);
+            return errorResponse('Failed to queue storage deletion', 500);
           }
+          console.log(`[Delete] Queued to Cloudflare for photo ${photoId}`);
         } catch (cfError) {
           console.error(`[Delete] Cloudflare Queue error:`, cfError);
+          return errorResponse('Failed to queue storage deletion', 500);
         }
       } else {
         console.warn('[Delete] Cloudflare Queue not configured. Storage will not be cleaned up.');
       }
     }
 
-    // Hapus dari database immediately
+    // Hapus dari database setelah queue berhasil
     await prisma.photo.delete({
       where: { id: photoId },
     });

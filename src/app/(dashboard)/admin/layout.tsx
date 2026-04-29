@@ -184,7 +184,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition ${
                       isActive 
                         ? 'bg-primary text-primary-foreground font-medium shadow-[0_0_10px_rgb(245_158_11_/_0.3)]' 
-                        : 'text-muted-foreground hover:bg-muted0 hover:text-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     }`}
                   >
                     {item.icon}
@@ -240,7 +240,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${
                   isActive 
                     ? 'bg-primary text-primary-foreground font-medium shadow-[0_0_15px_rgb(245_158_11_/_0.3)]' 
-                    : 'text-muted-foreground hover:bg-muted0 hover:text-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 } ${!sidebarOpen && 'justify-center px-0'}`}
                 title={!sidebarOpen ? item.label : undefined}
               >

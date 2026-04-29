@@ -336,7 +336,7 @@ export default function GalleryDetailPage() {
           <button
             onClick={() => setShowSelectionView(!showSelectionView)}
             className={`flex-1 sm:flex-none px-4 py-2 text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2 ${
-              showSelectionView ? 'bg-amber-100 text-amber-800' : 'bg-card border border-border hover:bg-muted text-foreground'
+              showSelectionView ? 'bg-primary text-primary-foreground' : 'bg-card border border-border hover:bg-muted text-foreground'
             }`}
           >
             <span>📋</span> Seleksi Client
@@ -353,8 +353,8 @@ export default function GalleryDetailPage() {
               onClick={toggleLock}
               className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border flex items-center gap-2 w-fit ${
                 gallery.isSelectionLocked
-                  ? 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200'
-                  : 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200'
+                  ? 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20'
+                  : 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
               }`}
             >
               {gallery.isSelectionLocked ? '🔓 Buka Kunci (Klien bisa memilih lagi)' : '🔒 Kunci Seleksi (Klien tidak bisa memilih)'}
@@ -431,7 +431,7 @@ export default function GalleryDetailPage() {
                 <button
                   onClick={() => { setBulkMode(!bulkMode); setSelectedPhotoIdsForBulk(new Set()); }}
                   className={`px-3 py-2 sm:py-1 text-sm rounded-lg transition-smooth cursor-pointer border border-border ${
-                    bulkMode ? 'bg-green-600/80 text-white border-green-500/50' : 'bg-card text-foreground hover:bg-primary/20 hover:text-primary hover:border-primary/50'
+                    bulkMode ? 'bg-primary text-primary-foreground border-primary/50' : 'bg-card text-foreground hover:bg-primary/20 hover:text-primary hover:border-primary/50'
                   }`}
                 >
                   {bulkMode ? '✓ Bulk ON' : '☐ Bulk Select'}
@@ -447,7 +447,7 @@ export default function GalleryDetailPage() {
                 <button
                   onClick={() => setReorderMode(!reorderMode)}
                   className={`px-3 py-2 sm:py-1 text-sm rounded-lg transition-smooth cursor-pointer border border-border ${
-                    reorderMode ? 'bg-blue-600/80 text-white border-blue-500/50' : 'bg-card text-foreground hover:bg-blue-500/20 hover:text-blue-400 hover:border-blue-500/50'
+                    reorderMode ? 'bg-accent text-accent-foreground border-accent/50' : 'bg-card text-foreground hover:bg-accent/20 hover:text-accent-foreground hover:border-accent/50'
                   }`}
                 >
                   {reorderMode ? '✓ Reorder ON' : '⇅ Reorder'}
@@ -457,7 +457,7 @@ export default function GalleryDetailPage() {
             {bulkMode && selectedPhotoIdsForBulk.size > 0 && (
               <button
                 onClick={deleteSelectedPhotos}
-                className="px-3 py-2 sm:py-1 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 cursor-pointer"
+                className="px-3 py-2 sm:py-1 text-sm bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 cursor-pointer"
               >
                 🗑️ {selectedPhotoIdsForBulk.size}
               </button>

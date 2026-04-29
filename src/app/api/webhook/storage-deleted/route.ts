@@ -1,10 +1,14 @@
 import { successResponse, errorResponse, unauthorizedResponse } from '@/lib/api/response';
+import { decreaseStorageUsage } from '@/lib/storage/accounts';
+import { timingSafeEqual } from 'crypto';
 import { z } from 'zod';
 
 const DeletionCallbackSchema = z.object({
   photoId: z.string(),
-  success: z.boolean(),
-  error: z.string().optional(),
+  r2Deleted: z.boolean(),
+  cloudinaryDeleted: z.boolean(),
+  storageAccountId: z.string().optional(),
+  fileSize: z.number().optional(),
 });
 
 export async function POST(request: Request) {
@@ -12,7 +16,15 @@ export async function POST(request: Request) {
     const authHeader = request.headers.get('authorization');
     const expectedSecret = process.env.VPS_WEBHOOK_SECRET;
 
-    if (!authHeader || !expectedSecret || authHeader !== `Bearer ${expectedSecret}`) {
+    if (!authHeader || !expectedSecret) {
+      return unauthorizedResponse();
+    }
+
+    const receivedSecret = authHeader.replace('Bearer ', '');
+    if (
+      receivedSecret.length !== expectedSecret.length ||
+      !timingSafeEqual(Buffer.from(receivedSecret), Buffer.from(expectedSecret))
+    ) {
       return unauthorizedResponse();
     }
 
@@ -23,12 +35,19 @@ export async function POST(request: Request) {
       return errorResponse('Invalid payload', 400);
     }
 
-    const { photoId, success, error } = validation.data;
+    const { photoId, r2Deleted, cloudinaryDeleted, storageAccountId, fileSize } = validation.data;
+
+    const success = r2Deleted && cloudinaryDeleted;
 
     if (success) {
       console.log(`[Webhook] ✅ Deletion confirmed for ${photoId}`);
+      
+      if (storageAccountId && fileSize) {
+        await decreaseStorageUsage(storageAccountId, BigInt(fileSize));
+        console.log(`[Webhook] 📉 Decreased storage usage: ${fileSize} bytes`);
+      }
     } else {
-      console.error(`[Webhook] ❌ Deletion failed for ${photoId}: ${error}`);
+      console.error(`[Webhook] ❌ Deletion failed for ${photoId}: R2=${r2Deleted}, Cloudinary=${cloudinaryDeleted}`);
     }
 
     return successResponse({ received: true });

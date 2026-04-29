@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -114,11 +115,11 @@ export default function GalleriesPage() {
         mutate(); // Refresh gallery list
       } else {
         const error = await res.json();
-        alert(error.error || 'Gagal membuat gallery');
+        toast.error(error.error || 'Gagal membuat gallery');
       }
     } catch (err) {
       console.error('Error creating gallery:', err);
-      alert('Gagal membuat gallery');
+      toast.error('Gagal membuat gallery');
     } finally {
       setIsSubmitting(false);
     }

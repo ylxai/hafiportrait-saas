@@ -4,7 +4,6 @@ import { successResponse, serverErrorResponse, errorResponse, notFoundResponse }
 import { eventSchema, eventUpdateSchema, idSchema, validateRequest } from '@/lib/api/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
 import { generateKodeBooking } from '@/lib/utils';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
 
@@ -180,34 +179,5 @@ export async function PATCH(request: Request) {
       return notFoundResponse('Event not found');
     }
     return serverErrorResponse('Failed to update event');
-  }
-}
-
-export async function DELETE(request: Request) {
-  try {
-    const auth = await checkAuth();
-    if (auth instanceof NextResponse) return auth;
-
-    const { searchParams } = new URL(request.url);
-    
-    // Validate ID
-    const idValidation = validateRequest(idSchema, { id: searchParams.get('id') });
-    if (!idValidation.success) {
-      return errorResponse(idValidation.error, 400);
-    }
-
-    const { id } = idValidation.data;
-
-    await queuePhotosDeletionForEntities({ gallery: { eventId: id } });
-
-    await prisma.event.delete({ where: { id } });
-
-    return successResponse({ success: true });
-  } catch (error) {
-    console.error('Error deleting event:', error);
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
-      return notFoundResponse('Event not found');
-    }
-    return serverErrorResponse('Failed to delete event');
   }
 }
