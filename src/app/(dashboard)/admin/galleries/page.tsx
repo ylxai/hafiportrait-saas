@@ -160,8 +160,8 @@ export default function GalleriesPage() {
 
   const statusColors: Record<string, string> = {
     draft: 'bg-muted text-muted-foreground',
-    published: 'bg-green-500/20 text-green-400',
-    archived: 'bg-primary/20 text-primary',
+    published: 'bg-primary/20 text-primary',
+    archived: 'bg-muted text-muted-foreground',
   };
 
   return (
@@ -178,7 +178,7 @@ export default function GalleriesPage() {
       <Button
         onClick={() => setShowModal(true)}
         size="icon"
-        className="fab bg-muted0 text-white sm:hidden fixed bottom-6 right-6"
+        className="fab bg-primary text-primary-foreground sm:hidden fixed bottom-6 right-6"
         aria-label="Buat Gallery Baru"
       >
         <Plus className="w-6 h-6" />

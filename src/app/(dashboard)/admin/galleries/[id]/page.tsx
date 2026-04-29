@@ -318,8 +318,8 @@ export default function GalleryDetailPage() {
               👁️ {gallery.viewCount} views
             </span>
             <span className="text-border">•</span> 
-            <span className="flex items-center gap-1 text-green-500">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            <span className="flex items-center gap-1 text-primary">
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
               Live
             </span>
           </p>
@@ -346,9 +346,9 @@ export default function GalleryDetailPage() {
 
       {/* Selection View - Admin sees client selections */}
       {showSelectionView && (
-        <div className="mb-6 bg-muted border border-amber-200 rounded-xl p-4">
+        <div className="mb-6 bg-muted border border-border rounded-xl p-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <h2 className="font-semibold text-slate-900">📋 Seleksi dari Client</h2>
+            <h2 className="font-semibold text-foreground">📋 Seleksi dari Client</h2>
             <button
               onClick={toggleLock}
               className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border flex items-center gap-2 w-fit ${
@@ -410,7 +410,7 @@ export default function GalleryDetailPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              <p className="text-sm text-muted-foreground">Status seleksi saat ini sedang <strong className="text-green-600">Terbuka</strong>. Klien masih dapat mengubah dan mengirimkan pilihan foto.</p>
+              <p className="text-sm text-muted-foreground">Status seleksi saat ini sedang <strong className="text-primary">Terbuka</strong>. Klien masih dapat mengubah dan mengirimkan pilihan foto.</p>
               {selectedPhotoIdsFromServer.length > 0 && (
                 <p className="text-sm font-medium text-primary">
                   Pilihan terakhir klien: {selectedPhotoIdsFromServer.length} foto.
@@ -544,7 +544,7 @@ export default function GalleryDetailPage() {
                 )}
                 {/* Selection indicator from Client */}
                 {!bulkMode && !reorderMode && selectedPhotoIdsFromServer.includes(photo.id) && (
-                  <div className="absolute bottom-2 right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs shadow-md pointer-events-none">
+                  <div className="absolute bottom-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-xs shadow-md pointer-events-none">
                     ✓
                   </div>
                 )}
@@ -552,7 +552,7 @@ export default function GalleryDetailPage() {
                   <button
                     onClick={(e) => { e.stopPropagation(); deletePhoto(photo.id); }}
                     aria-label={`Hapus ${photo.filename}`}
-                    className="absolute top-2 right-2 z-10 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white text-sm opacity-0 group-hover:opacity-100 transition-smooth shadow-md cursor-pointer hover:scale-110"
+                    className="absolute top-2 right-2 z-10 w-8 h-8 bg-destructive rounded-full flex items-center justify-center text-destructive-foreground text-sm opacity-0 group-hover:opacity-100 transition-smooth shadow-md cursor-pointer hover:scale-110"
                   >
                     ✕
                   </button>
@@ -684,7 +684,7 @@ export default function GalleryDetailPage() {
             {isSavingSettings ? 'Saving...' : 'Save Settings'}
           </button>
           {settingsMessage && (
-            <span className={`text-sm ${settingsMessage.includes('success') ? 'text-green-600' : 'text-red-600'}`}>
+            <span className={`text-sm ${settingsMessage.includes('success') ? 'text-primary' : 'text-destructive'}`}>
               {settingsMessage}
             </span>
           )}
