@@ -297,7 +297,7 @@ export default function ClientsPage() {
                               (Number(client.usedStorageBytes) / (client.storageQuotaGB * 1073741824)) >= 0.95
                                 ? 'bg-destructive'
                                 : (Number(client.usedStorageBytes) / (client.storageQuotaGB * 1073741824)) >= 0.8
-                                ? 'bg-orange-500'
+                                ? 'bg-warning'
                                 : 'bg-primary'
                             }`}
                             style={{
@@ -319,7 +319,7 @@ export default function ClientsPage() {
                   <td className="px-4 py-4 text-right">
                     <div className="flex gap-2 justify-end">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(client)}>Edit</Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(client.id)} className="text-red-600">Hapus</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(client.id)} className="text-destructive">Hapus</Button>
                     </div>
                   </td>
                 </tr>
