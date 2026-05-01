@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const result = schema.safeParse(body)
     
     if (!result.success) {
-      return validationError(result.error.flatten())
+      return validationError(result.error)
     }
 
     const { email } = result.data

@@ -23,7 +23,7 @@ export default function ProfilePage() {
         if (res.ok) {
           setProfile(data.data.client)
         }
-      } catch (error) {
+      } catch {
         toast.error('Gagal memuat profil')
       } finally {
         setLoading(false)
@@ -56,7 +56,7 @@ export default function ProfilePage() {
       }
 
       toast.success('Profil berhasil diperbarui')
-    } catch (error) {
+    } catch {
       toast.error('Terjadi kesalahan')
     } finally {
       setSaving(false)

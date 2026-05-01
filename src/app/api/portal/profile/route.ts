@@ -46,7 +46,7 @@ export async function PATCH(request: Request) {
     const result = schema.safeParse(body);
 
     if (!result.success) {
-      return validationError(result.error.flatten());
+      return validationError(result.error);
     }
 
     const client = await prisma.client.update({

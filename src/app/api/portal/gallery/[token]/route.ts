@@ -79,12 +79,12 @@ export async function GET(
         })
       : [];
 
-    const selections = selectedPhotoIds.map((s) => s.photoId);
+    const selections = selectedPhotoIds.map((s: { photoId: string }) => s.photoId);
 
     const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
     const cloudName = cloudinaryAccount?.cloudName || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 
-    const serializedPhotos = photoList.map((photo) => {
+    const serializedPhotos = photoList.map((photo: typeof photoList[number]) => {
       let thumbnailUrl = photo.thumbnailUrl;
       let lightboxUrl = photo.url;
       

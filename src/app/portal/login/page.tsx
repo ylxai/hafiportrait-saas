@@ -29,7 +29,7 @@ export default function LoginPage() {
 
       setSent(true)
       toast.success('Link masuk telah dikirim ke email Anda')
-    } catch (error) {
+    } catch {
       toast.error('Terjadi kesalahan')
     } finally {
       setLoading(false)

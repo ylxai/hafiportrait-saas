@@ -31,7 +31,7 @@ export default function InvoicesPage() {
         } else {
           toast.error(data.error || 'Gagal memuat tagihan')
         }
-      } catch (error) {
+      } catch {
         toast.error('Terjadi kesalahan')
       } finally {
         setLoading(false)

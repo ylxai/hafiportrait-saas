@@ -37,7 +37,7 @@ export default function DashboardPage() {
         }
 
         setGalleries(data.data.galleries)
-      } catch (error) {
+      } catch {
         toast.error('Terjadi kesalahan')
       } finally {
         setLoading(false)

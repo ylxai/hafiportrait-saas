@@ -46,7 +46,7 @@ export default function VerifyPage() {
         }
 
         router.push('/portal/dashboard')
-      } catch (err) {
+      } catch {
         setError('Terjadi kesalahan')
       }
     }
