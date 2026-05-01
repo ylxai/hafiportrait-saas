@@ -47,6 +47,25 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  if (!token.email) {
+    console.error('[Middleware] Token exists but missing email');
+    
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - Invalid user data' },
+        { status: 401 }
+      );
+    }
+    
+    const loginUrl = new URL(
+      pathname.startsWith('/admin') || pathname.startsWith('/api/admin') 
+        ? '/login' 
+        : '/portal/login',
+      request.url
+    );
+    return NextResponse.redirect(loginUrl);
+  }
+
   const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/api/admin');
   const isPortalRoute = pathname.startsWith('/portal') || pathname.startsWith('/gallery') || pathname.startsWith('/api/portal/gallery');
 

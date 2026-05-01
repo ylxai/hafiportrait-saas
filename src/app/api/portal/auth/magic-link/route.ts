@@ -29,6 +29,18 @@ export async function POST(request: NextRequest) {
     }
 
     const magicLink = await generateMagicLink(client.id, client.email)
+    
+    const token = magicLink.split('token=')[1]
+    const tokenExpiry = new Date(Date.now() + 15 * 60 * 1000)
+    
+    await prisma.client.update({
+      where: { id: client.id },
+      data: {
+        verificationToken: token,
+        tokenExpiry
+      }
+    })
+    
     await sendMagicLink(client.email, magicLink, client.nama)
 
     return successResponse({ message: 'Link masuk telah dikirim ke email Anda' })

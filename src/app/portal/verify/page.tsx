@@ -33,7 +33,7 @@ export default function VerifyPage() {
           return
         }
 
-        const result = await signIn('credentials', {
+        const result = await signIn('client', {
           redirect: false,
           provider: 'client',
           clientId: data.data.clientId,
