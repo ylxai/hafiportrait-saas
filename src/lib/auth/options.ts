@@ -6,6 +6,7 @@ import { compare } from 'bcryptjs';
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
+      id: 'admin',
       name: 'Credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
@@ -35,6 +36,34 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
+        };
+      },
+    }),
+    CredentialsProvider({
+      id: 'client',
+      name: 'Client',
+      credentials: {
+        clientId: { label: 'Client ID', type: 'text' },
+        email: { label: 'Email', type: 'email' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.clientId || !credentials?.email) {
+          return null;
+        }
+
+        const client = await prisma.client.findUnique({
+          where: { id: credentials.clientId },
+        });
+
+        if (!client || client.email !== credentials.email) {
+          return null;
+        }
+
+        return {
+          id: client.id,
+          email: client.email,
+          name: client.nama,
+          role: 'CLIENT',
         };
       },
     }),
