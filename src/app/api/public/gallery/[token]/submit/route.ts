@@ -1,10 +1,15 @@
-import { prisma } from '@/lib/db';
-import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
-import { selectionSubmitSchema } from '@/lib/api/validation';
+import { prisma } from "@/lib/db";
+import {
+  successResponse,
+  errorResponse,
+  notFoundResponse,
+  serverErrorResponse,
+} from "@/lib/api/response";
+import { selectionSubmitSchema } from "@/lib/api/validation";
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ token: string }> }
+  { params }: { params: Promise<{ token: string }> },
 ) {
   try {
     const { token } = await params;
@@ -15,9 +20,9 @@ export async function POST(
       const firstError = validation.error.errors[0];
       return errorResponse(
         firstError.path.length > 0
-          ? `${firstError.path.join('.')}: ${firstError.message}`
+          ? `${firstError.path.join(".")}: ${firstError.message}`
           : firstError.message,
-        400
+        400,
       );
     }
 
@@ -27,18 +32,30 @@ export async function POST(
       where: { clientToken: token },
       include: {
         selections: {
-          orderBy: { submittedAt: 'desc' },
+          orderBy: { submittedAt: "desc" },
           take: 1,
         },
       },
     });
 
     if (!gallery) {
-      return notFoundResponse('Gallery not found');
+      return notFoundResponse("Gallery not found");
     }
 
     if (gallery.selections.length > 0) {
-      return errorResponse('Selection already submitted', 400);
+      return errorResponse("Selection already submitted", 400);
+    }
+
+    const validPhotos = await prisma.photo.findMany({
+      where: {
+        id: { in: photoIds },
+        galleryId: gallery.id,
+      },
+      select: { id: true },
+    });
+
+    if (validPhotos.length !== photoIds.length) {
+      return errorResponse("Invalid photo IDs", 400);
     }
 
     const selection = await prisma.selection.create({
@@ -57,7 +74,7 @@ export async function POST(
 
     return successResponse({ selectionId: selection.id }, 201);
   } catch (error) {
-    console.error('Error submitting selection:', error);
-    return serverErrorResponse('Failed to submit selection');
+    console.error("Error submitting selection:", error);
+    return serverErrorResponse("Failed to submit selection");
   }
 }

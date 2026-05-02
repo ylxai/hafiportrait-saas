@@ -25,6 +25,10 @@ model Client {
   phone     String?
   instagram String?
   storageQuotaGB Int  @default(10) // Configurable storage quota per client (in GB)
+  password  String?
+  emailVerified Boolean @default(false)
+  verificationToken String?
+  tokenExpiry DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   events    Event[]
