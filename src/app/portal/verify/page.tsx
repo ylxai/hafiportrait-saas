@@ -1,58 +1,56 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { signIn } from 'next-auth/react'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { Loader2, AlertCircle } from "lucide-react";
 
 export default function VerifyPage() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const [error, setError] = useState('')
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const token = searchParams.get('token')
-    
+    const token = searchParams.get("token");
+
     if (!token) {
-      setError('Token tidak ditemukan')
-      return
+      setError("Token tidak ditemukan");
+      return;
     }
 
     async function verify() {
       try {
-        const res = await fetch('/api/portal/auth/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token })
-        })
+        const res = await fetch("/api/portal/auth/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
 
-        const data = await res.json()
+        const data = await res.json();
 
         if (!res.ok) {
-          setError(data.error || 'Link tidak valid')
-          return
+          setError(data.error || "Link tidak valid");
+          return;
         }
 
-        const result = await signIn('client', {
+        const result = await signIn("client", {
           redirect: false,
-          provider: 'client',
-          clientId: data.data.clientId,
-          email: data.data.email
-        })
+          token: token,
+        });
 
         if (result?.error) {
-          setError('Gagal masuk')
-          return
+          setError("Gagal masuk");
+          return;
         }
 
-        router.push('/portal/dashboard')
+        router.push("/portal/dashboard");
       } catch {
-        setError('Terjadi kesalahan')
+        setError("Terjadi kesalahan");
       }
     }
 
-    verify()
-  }, [searchParams, router])
+    verify();
+  }, [searchParams, router]);
 
   if (error) {
     return (
@@ -62,7 +60,9 @@ export default function VerifyPage() {
             <AlertCircle className="w-8 h-8 text-destructive" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-foreground">Verifikasi Gagal</h1>
+            <h1 className="text-2xl font-bold text-foreground">
+              Verifikasi Gagal
+            </h1>
             <p className="text-muted-foreground">{error}</p>
           </div>
           <a
@@ -73,7 +73,7 @@ export default function VerifyPage() {
           </a>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -83,5 +83,5 @@ export default function VerifyPage() {
         <p className="text-muted-foreground">Memverifikasi...</p>
       </div>
     </div>
-  )
+  );
 }

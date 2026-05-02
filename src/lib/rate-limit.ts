@@ -115,4 +115,5 @@ export const RATE_LIMITS = {
   BULK_DELETE: { maxRequests: 20, windowMs: 60 * 1000 }, // 20 req/min
   UPLOAD_PRESIGNED: { maxRequests: 100, windowMs: 60 * 1000 }, // 100 presigned URLs/min per user
   UPLOAD_COMPLETE: { maxRequests: 100, windowMs: 60 * 1000 }, // 100 upload completions/min per user
+  BOOKING: { maxRequests: 5, windowMs: 60 * 60 * 1000 }, // 5 req/hour
 } as const;

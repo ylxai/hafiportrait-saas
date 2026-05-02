@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
-import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
+import { successResponse, serverErrorResponse, errorResponse, rateLimitResponse } from '@/lib/api/response';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { bookingSchema } from '@/lib/api/validation';
 import { generateKodeBooking } from '@/lib/utils';
 
@@ -26,6 +27,12 @@ export async function POST(request: Request) {
     }
 
     const validated = validation.data;
+
+    const rateLimitResult = await checkRateLimit(`booking:${validated.email}`, RATE_LIMITS.BOOKING);
+    if (!rateLimitResult.success) {
+      const retryAfterSeconds = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
+      return rateLimitResponse('Too many booking requests. Please try again later.', retryAfterSeconds);
+    }
 
     let client = await prisma.client.findFirst({
       where: { email: validated.email },
