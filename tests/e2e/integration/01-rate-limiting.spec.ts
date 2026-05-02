@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { login } from './helpers';
+import { login } from '../helpers';
 
 test.describe('Rate Limiting', () => {
   test.beforeEach(async ({ page }) => {
