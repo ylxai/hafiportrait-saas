@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { seedClient, prisma } from '../fixtures/db-seed';
+import { seedClient } from '../fixtures/db-seed';
 import { cleanupByEmail } from '../fixtures/db-cleanup';
 import { generateMagicLinkToken, loginAsClient } from '../helpers';
 
@@ -19,7 +19,6 @@ test.describe('Client Portal - Magic Link Authentication', () => {
 
   test.afterAll(async () => {
     await cleanupByEmail(testEmail);
-    await prisma.$disconnect();
   });
 
   test('should request magic link successfully', async ({ page }) => {

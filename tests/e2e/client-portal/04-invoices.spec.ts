@@ -67,7 +67,6 @@ test.describe("Client Portal - Invoices", () => {
 
   test.afterAll(async () => {
     await cleanupByEmail(testEmail);
-    await prisma.$disconnect();
   });
 
   test.beforeEach(async ({ page }) => {

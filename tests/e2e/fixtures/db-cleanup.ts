@@ -28,3 +28,8 @@ export async function cleanupByEmail(email: string) {
     await cleanupClient(client.id);
   }
 }
+
+// Global teardown - only disconnect once at the end of all tests
+export async function disconnectPrisma() {
+  await prisma.$disconnect();
+}

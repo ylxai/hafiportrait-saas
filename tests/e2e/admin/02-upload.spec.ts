@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { login, generateTestData, waitForToast } from './helpers';
+import { login, generateTestData, waitForToast } from '../helpers';
 import path from 'path';
 
 test.describe('Photo Upload Flow', () => {

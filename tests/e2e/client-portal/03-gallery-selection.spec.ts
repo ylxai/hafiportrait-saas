@@ -36,11 +36,19 @@ test.describe("Client Portal - Gallery Selection", () => {
     });
     otherClientId = otherClient.id;
 
-    const event = await seedEvent(clientId, { namaProject: "Test Event" });
+    const event = await seedEvent(clientId, { 
+      namaProject: "Test Event",
+      totalPrice: 5000000,
+      paidAmount: 0,
+      paymentStatus: "unpaid"
+    });
     eventId = event.id;
 
     const otherEvent = await seedEvent(otherClientId, {
       namaProject: "Other Event",
+      totalPrice: 5000000,
+      paidAmount: 0,
+      paymentStatus: "unpaid"
     });
     otherEventId = otherEvent.id;
 
@@ -68,7 +76,6 @@ test.describe("Client Portal - Gallery Selection", () => {
   test.afterAll(async () => {
     await cleanupByEmail(testEmail);
     await cleanupByEmail(otherEmail);
-    await prisma.$disconnect();
   });
 
   test.beforeEach(async ({ page }) => {

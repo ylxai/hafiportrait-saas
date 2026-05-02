@@ -20,7 +20,6 @@ test.describe('Client Portal - Profile', () => {
 
   test.afterAll(async () => {
     await cleanupByEmail(testEmail);
-    await prisma.$disconnect();
   });
 
   test.beforeEach(async ({ page }) => {

@@ -90,9 +90,9 @@ export async function seedEvent(
       namaProject: data?.namaProject || `Test Event ${timestamp}`,
       eventDate: data?.eventDate || new Date(),
       status: data?.status || "confirmed",
-      totalPrice: 5000000,
-      paidAmount: 0,
-      paymentStatus: "unpaid",
+      totalPrice: data?.totalPrice ?? 5000000,
+      paidAmount: data?.paidAmount ?? 0,
+      paymentStatus: data?.paymentStatus || "unpaid",
     },
   });
 
@@ -110,8 +110,8 @@ export async function seedGallery(
       eventId,
       namaProject: data?.namaProject || `Test Gallery ${timestamp}`,
       status: data?.status || "published",
-      maxSelection: 20,
-      enableDownload: true,
+      maxSelection: data?.maxSelection ?? 20,
+      enableDownload: data?.enableDownload ?? true,
     },
   });
 
@@ -196,7 +196,12 @@ export async function seedFullTestData() {
     email: "e2e@test.com",
     password: "test123",
   });
-  const event = await seedEvent(client.id, { namaProject: "E2E Test Event" });
+  const event = await seedEvent(client.id, { 
+    namaProject: "E2E Test Event",
+    totalPrice: 5000000,
+    paidAmount: 0,
+    paymentStatus: "unpaid"
+  });
   const gallery = await seedGallery(event.id, {
     namaProject: "E2E Test Gallery",
   });
