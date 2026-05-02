@@ -99,6 +99,15 @@ export interface TestPhoto {
   url: string;
 }
 
+export interface TestPayment {
+  id: string;
+  eventId: string;
+  amount: number;
+  type: string;
+  method: string;
+  status: string;
+}
+
 export async function seedPhoto(
   galleryId: string,
   data?: Partial<TestPhoto>,
@@ -121,6 +130,25 @@ export async function seedPhoto(
   });
 
   return photo;
+}
+
+export async function seedPayment(
+  eventId: string,
+  data?: Partial<TestPayment>,
+): Promise<TestPayment> {
+  const payment = await prisma.payment.create({
+    data: {
+      eventId,
+      amount: data?.amount || 2500000,
+      uniqueCode: Math.floor(Math.random() * 900) + 100,
+      type: data?.type || "dp",
+      method: data?.method || "transfer",
+      status: data?.status || "approved",
+      proofUrl: "https://test.cloudinary.com/proof.jpg",
+    },
+  });
+
+  return payment;
 }
 
 export async function seedFullTestData() {
