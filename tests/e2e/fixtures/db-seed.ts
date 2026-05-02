@@ -9,17 +9,32 @@ export interface TestClient {
   id: string;
   nama: string;
   email: string;
-  phone?: string;
-  password?: string;
+  phone: string | null;
+  instagram: string | null;
+  password: string | null;
+  storageQuotaGB: number;
+  emailVerified: boolean;
+  verificationToken: string | null;
+  tokenExpiry: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface TestEvent {
   id: string;
   kodeBooking: string;
   clientId: string;
+  packageId: string | null;
   namaProject: string;
   eventDate: Date;
+  location: string | null;
+  notes: string | null;
   status: string;
+  totalPrice: number;
+  paidAmount: number;
+  paymentStatus: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface TestGallery {
@@ -28,6 +43,17 @@ export interface TestGallery {
   namaProject: string;
   clientToken: string;
   status: string;
+  maxSelection: number;
+  enableDownload: boolean;
+  welcomeMessage: string | null;
+  thankYouMessage: string | null;
+  bannerClientName: string | null;
+  bannerEventDate: string | null;
+  bannerMessage: string | null;
+  viewCount: number;
+  isSelectionLocked: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export async function seedClient(
@@ -97,15 +123,30 @@ export interface TestPhoto {
   galleryId: string;
   filename: string;
   url: string;
+  thumbnailUrl: string | null;
+  publicId: string | null;
+  r2Key: string | null;
+  width: number | null;
+  height: number | null;
+  order: number;
+  fileSize: bigint | null;
+  fileHash: string | null;
+  createdAt: Date;
+  storageAccountId: string | null;
+  cloudinaryAccountId: string | null;
 }
 
 export interface TestPayment {
   id: string;
   eventId: string;
   amount: number;
+  uniqueCode: number;
   type: string;
   method: string;
+  proofUrl: string | null;
   status: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export async function seedPhoto(
@@ -124,8 +165,6 @@ export async function seedPhoto(
       fileSize: BigInt(1024000),
       width: 1920,
       height: 1080,
-      format: "jpg",
-      uploadedAt: new Date(),
     },
   });
 
