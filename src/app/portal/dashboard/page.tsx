@@ -58,7 +58,7 @@ export default function DashboardPage() {
   if (galleries.length === 0) {
     return (
       <div className="text-center py-12">
-        <Image className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+        <Image className="w-16 h-16 mx-auto text-muted-foreground mb-4" aria-label="No galleries" />
         <h2 className="text-xl font-semibold text-foreground mb-2">Belum Ada Gallery</h2>
         <p className="text-muted-foreground">Gallery Anda akan muncul di sini setelah fotografer mengunggah foto</p>
       </div>
@@ -93,7 +93,7 @@ export default function DashboardPage() {
                   {new Date(gallery.event.eventDate).toLocaleDateString('id-ID')}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Image className="w-4 h-4" />
+                  <Image className="w-4 h-4" aria-label="Photos" />
                   {gallery._count.photos} foto
                 </div>
               </div>
