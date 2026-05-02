@@ -20,7 +20,7 @@ export default function ProfilePage() {
         const res = await fetch('/api/portal/profile')
         const data = await res.json()
 
-        if (res.ok) {
+        if (res.ok && data.data?.client) {
           setProfile(data.data.client)
         }
       } catch {
