@@ -89,6 +89,7 @@ export default function InvoicesPage() {
         {payments.map((payment) => (
           <div
             key={payment.id}
+            data-testid="payment-row"
             className="bg-card border border-border rounded-lg p-4"
           >
             <div className="flex items-start justify-between mb-3">

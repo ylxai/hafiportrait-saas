@@ -1,0 +1,4969 @@
+{
+  "config": {
+    "configFile": "/home/ubuntu/hafiportrait-saas/playwright.config.ts",
+    "rootDir": "/home/ubuntu/hafiportrait-saas/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 4
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/ubuntu/hafiportrait-saas/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "admin",
+        "name": "admin",
+        "testDir": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/home/ubuntu/hafiportrait-saas/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "client",
+        "name": "client",
+        "testDir": "/home/ubuntu/hafiportrait-saas/tests/e2e/client-portal",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/ubuntu/hafiportrait-saas/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "public",
+        "name": "public",
+        "testDir": "/home/ubuntu/hafiportrait-saas/tests/e2e/public",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/ubuntu/hafiportrait-saas/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "integration",
+        "name": "integration",
+        "testDir": "/home/ubuntu/hafiportrait-saas/tests/e2e/integration",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.59.1",
+    "workers": 4,
+    "webServer": {
+      "command": "npm run dev",
+      "url": "http://localhost:3000",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "admin/01-auth.spec.ts",
+      "file": "admin/01-auth.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Authentication Flow",
+          "file": "admin/01-auth.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should login with valid credentials",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 44630,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-02T19:46:23.141Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "791b3c4e0869e77b2651-945b11581c7b744f3e56",
+              "file": "admin/01-auth.spec.ts",
+              "line": 5,
+              "column": 7
+            },
+            {
+              "title": "should reject invalid credentials",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 26973,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Invalid credentials')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Invalid credentials')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Invalid credentials')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Invalid credentials')\u001b[22m\n\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:21:60",
+                        "location": {
+                          "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                          "column": 60,
+                          "line": 21
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 19 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 20 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 21 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Invalid credentials'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                            \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 22 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 23 |\u001b[39m\n \u001b[90m 24 |\u001b[39m   test(\u001b[32m'should reject empty credentials'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                            "column": 60,
+                            "line": 21
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Invalid credentials')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Invalid credentials')\u001b[22m\n\n\n\u001b[0m \u001b[90m 19 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 20 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 21 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Invalid credentials'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                            \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 22 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 23 |\u001b[39m\n \u001b[90m 24 |\u001b[39m   test(\u001b[32m'should reject empty credentials'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:21:60\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-02T19:46:23.145Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flo-9dff3--reject-invalid-credentials-admin/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flo-9dff3--reject-invalid-credentials-admin/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                        "column": 60,
+                        "line": 21
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "791b3c4e0869e77b2651-a12a978530e65948078c",
+              "file": "admin/01-auth.spec.ts",
+              "line": 15,
+              "column": 7
+            },
+            {
+              "title": "should reject empty credentials",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "failed",
+                      "duration": 26991,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Email is required')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Email is required')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Email is required')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Email is required')\u001b[22m\n\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:28:58",
+                        "location": {
+                          "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                          "column": 58,
+                          "line": 28
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 26 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 27 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 28 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Email is required'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                          \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 29 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 30 |\u001b[39m\n \u001b[90m 31 |\u001b[39m   test(\u001b[32m'should reject invalid email format'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                            "column": 58,
+                            "line": 28
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Email is required')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Email is required')\u001b[22m\n\n\n\u001b[0m \u001b[90m 26 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 27 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 28 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Email is required'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                          \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 29 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 30 |\u001b[39m\n \u001b[90m 31 |\u001b[39m   test(\u001b[32m'should reject invalid email format'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:28:58\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-02T19:46:23.152Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flow-should-reject-empty-credentials-admin/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flow-should-reject-empty-credentials-admin/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                        "column": 58,
+                        "line": 28
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "791b3c4e0869e77b2651-4baa9dc9a318b0e68198",
+              "file": "admin/01-auth.spec.ts",
+              "line": 24,
+              "column": 7
+            },
+            {
+              "title": "should reject invalid email format",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "failed",
+                      "duration": 26994,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Invalid email')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Invalid email')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Invalid email')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Invalid email')\u001b[22m\n\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:37:54",
+                        "location": {
+                          "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                          "column": 54,
+                          "line": 37
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 35 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 36 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 37 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Invalid email'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 38 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 39 |\u001b[39m\n \u001b[90m 40 |\u001b[39m   test(\u001b[32m'should persist session after refresh'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                            "column": 54,
+                            "line": 37
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Invalid email')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Invalid email')\u001b[22m\n\n\n\u001b[0m \u001b[90m 35 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 36 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 37 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Invalid email'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 38 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 39 |\u001b[39m\n \u001b[90m 40 |\u001b[39m   test(\u001b[32m'should persist session after refresh'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:37:54\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-02T19:46:23.236Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flo-5410c-reject-invalid-email-format-admin/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flo-5410c-reject-invalid-email-format-admin/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                        "column": 54,
+                        "line": 37
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "791b3c4e0869e77b2651-77b95bc481a28fcc833b",
+              "file": "admin/01-auth.spec.ts",
+              "line": 31,
+              "column": 7
+            },
+            {
+              "title": "should persist session after refresh",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 9914,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-02T19:47:11.669Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "791b3c4e0869e77b2651-6db222e7a6fc87b0d859",
+              "file": "admin/01-auth.spec.ts",
+              "line": 40,
+              "column": 7
+            },
+            {
+              "title": "should logout successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 3,
+                      "status": "interrupted",
+                      "duration": 10998,
+                      "error": {
+                        "message": "Error: page.click: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"user-menu\"]')\u001b[22m\n",
+                        "stack": "Error: page.click: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"user-menu\"]')\u001b[22m\n\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:59:16",
+                        "location": {
+                          "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                          "column": 16,
+                          "line": 59
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 57 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'/admin'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 58 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 59 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'[data-testid=\"user-menu\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 60 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'text=Logout'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 61 |\u001b[39m     \n \u001b[90m 62 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login/\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                            "column": 16,
+                            "line": 59
+                          },
+                          "message": "Error: page.click: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"user-menu\"]')\u001b[22m\n\n\n\u001b[0m \u001b[90m 57 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'/admin'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 58 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 59 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'[data-testid=\"user-menu\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 60 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'text=Logout'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 61 |\u001b[39m     \n \u001b[90m 62 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login/\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:59:16\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-02T19:47:11.669Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flow-should-logout-successfully-admin/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flow-should-logout-successfully-admin/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                        "column": 16,
+                        "line": 59
+                      }
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "791b3c4e0869e77b2651-956fa5806b754fd8a844",
+              "file": "admin/01-auth.spec.ts",
+              "line": 52,
+              "column": 7
+            },
+            {
+              "title": "should redirect to login when accessing protected route",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 1,
+                      "status": "interrupted",
+                      "duration": 11014,
+                      "error": {
+                        "message": "Error: page.waitForURL: Test ended.\n=========================== logs ===========================\nwaiting for navigation to \"/login\" until \"load\"\n  navigated to \"http://localhost:3000/login?callbackUrl=%2Fadmin%2Fgalleries\"\n============================================================",
+                        "stack": "Error: page.waitForURL: Test ended.\n=========================== logs ===========================\nwaiting for navigation to \"/login\" until \"load\"\n  navigated to \"http://localhost:3000/login?callbackUrl=%2Fadmin%2Fgalleries\"\n============================================================\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:67:16",
+                        "location": {
+                          "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                          "column": 16,
+                          "line": 67
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 65 |\u001b[39m   test(\u001b[32m'should redirect to login when accessing protected route'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 66 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/galleries'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 67 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'/login'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 68 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login/\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 69 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 70 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                            "column": 16,
+                            "line": 67
+                          },
+                          "message": "Error: page.waitForURL: Test ended.\n=========================== logs ===========================\nwaiting for navigation to \"/login\" until \"load\"\n  navigated to \"http://localhost:3000/login?callbackUrl=%2Fadmin%2Fgalleries\"\n============================================================\n\n\u001b[0m \u001b[90m 65 |\u001b[39m   test(\u001b[32m'should redirect to login when accessing protected route'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 66 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/galleries'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 67 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'/login'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 68 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login/\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 69 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 70 |\u001b[39m\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:67:16\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-02T19:47:11.667Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flo-4fc74-n-accessing-protected-route-admin/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flo-4fc74-n-accessing-protected-route-admin/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                        "column": 16,
+                        "line": 67
+                      }
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "791b3c4e0869e77b2651-5da037b5fb7310b3e3f5",
+              "file": "admin/01-auth.spec.ts",
+              "line": 65,
+              "column": 7
+            },
+            {
+              "title": "should show loading state during login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3973,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-02T19:47:10.224Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "791b3c4e0869e77b2651-8fdd4998d978b5dd3ffe",
+              "file": "admin/01-auth.spec.ts",
+              "line": 71,
+              "column": 7
+            },
+            {
+              "title": "should handle session expiry",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "interrupted",
+                      "duration": 12237,
+                      "error": {
+                        "message": "Error: page.waitForURL: Test ended.\n=========================== logs ===========================\nwaiting for navigation to \"/login\" until \"load\"\n  navigated to \"http://localhost:3000/login?callbackUrl=%2Fadmin%2Fgalleries\"\n============================================================",
+                        "stack": "Error: page.waitForURL: Test ended.\n=========================== logs ===========================\nwaiting for navigation to \"/login\" until \"load\"\n  navigated to \"http://localhost:3000/login?callbackUrl=%2Fadmin%2Fgalleries\"\n============================================================\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:93:16",
+                        "location": {
+                          "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                          "column": 16,
+                          "line": 93
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 91 |\u001b[39m     \n \u001b[90m 92 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/galleries'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 93 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'/login'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 94 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login/\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 95 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 96 |\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                            "column": 16,
+                            "line": 93
+                          },
+                          "message": "Error: page.waitForURL: Test ended.\n=========================== logs ===========================\nwaiting for navigation to \"/login\" until \"load\"\n  navigated to \"http://localhost:3000/login?callbackUrl=%2Fadmin%2Fgalleries\"\n============================================================\n\n\u001b[0m \u001b[90m 91 |\u001b[39m     \n \u001b[90m 92 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/galleries'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 93 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'/login'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 94 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login/\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 95 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 96 |\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:93:16\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-02T19:47:14.217Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flow-should-handle-session-expiry-admin/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flow-should-handle-session-expiry-admin/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
+                        "column": 16,
+                        "line": 93
+                      }
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "791b3c4e0869e77b2651-dc4aaa01645db6f0f11b",
+              "file": "admin/01-auth.spec.ts",
+              "line": 82,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "admin/02-upload.spec.ts",
+      "file": "admin/02-upload.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Photo Upload Flow",
+          "file": "admin/02-upload.spec.ts",
+          "line": 5,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should upload photo successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 2,
+                      "status": "interrupted",
+                      "duration": 1897,
+                      "error": {
+                        "message": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[name=\"email\"]')\u001b[22m\n\u001b[2m    - locator resolved to <input value=\"\" id=\"email\" required=\"\" type=\"email\" name=\"email\" inputmode=\"email\" autocomplete=\"email\" placeholder=\"email@studio.com…\" class=\"w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all\"/>\u001b[22m\n\u001b[2m    - fill(\"admin@photostudio.com\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n",
+                        "stack": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[name=\"email\"]')\u001b[22m\n\u001b[2m    - locator resolved to <input value=\"\" id=\"email\" required=\"\" type=\"email\" name=\"email\" inputmode=\"email\" autocomplete=\"email\" placeholder=\"email@studio.com…\" class=\"w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all\"/>\u001b[22m\n\u001b[2m    - fill(\"admin@photostudio.com\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n\n    at login (/home/ubuntu/hafiportrait-saas/tests/e2e/helpers.ts:11:14)\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts:7:5",
+                        "location": {
+                          "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/helpers.ts",
+                          "column": 14,
+                          "line": 11
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mhelpers.ts:11\n\n\u001b[0m \u001b[90m  9 |\u001b[39m \u001b[36mexport\u001b[39m \u001b[36masync\u001b[39m \u001b[36mfunction\u001b[39m login(page\u001b[33m:\u001b[39m \u001b[33mPage\u001b[39m) {\n \u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m\"/login\"\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[name=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[33mTEST_USER\u001b[39m\u001b[33m.\u001b[39memail)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m              \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[name=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[33mTEST_USER\u001b[39m\u001b[33m.\u001b[39mpassword)\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m\"/admin\"\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/helpers.ts",
+                            "column": 14,
+                            "line": 11
+                          },
+                          "message": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[name=\"email\"]')\u001b[22m\n\u001b[2m    - locator resolved to <input value=\"\" id=\"email\" required=\"\" type=\"email\" name=\"email\" inputmode=\"email\" autocomplete=\"email\" placeholder=\"email@studio.com…\" class=\"w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all\"/>\u001b[22m\n\u001b[2m    - fill(\"admin@photostudio.com\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n\n\n\u001b[90m   at \u001b[39mhelpers.ts:11\n\n\u001b[0m \u001b[90m  9 |\u001b[39m \u001b[36mexport\u001b[39m \u001b[36masync\u001b[39m \u001b[36mfunction\u001b[39m login(page\u001b[33m:\u001b[39m \u001b[33mPage\u001b[39m) {\n \u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m\"/login\"\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[name=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[33mTEST_USER\u001b[39m\u001b[33m.\u001b[39memail)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m              \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[name=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[33mTEST_USER\u001b[39m\u001b[33m.\u001b[39mpassword)\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m\"/admin\"\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at login (/home/ubuntu/hafiportrait-saas/tests/e2e/helpers.ts:11:14)\u001b[22m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts:7:5\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-02T19:47:25.363Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/02-upload-Photo-Upload-Flow-should-upload-photo-successfully-admin/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/02-upload-Photo-Upload-Flow-should-upload-photo-successfully-admin/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/helpers.ts",
+                        "column": 14,
+                        "line": 11
+                      }
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c4edad4cbc4b153bf890-94038cea75dd0a09c981",
+              "file": "admin/02-upload.spec.ts",
+              "line": 10,
+              "column": 7
+            },
+            {
+              "title": "should reject invalid file type",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c4edad4cbc4b153bf890-3f33704bc38403b92b9b",
+              "file": "admin/02-upload.spec.ts",
+              "line": 34,
+              "column": 7
+            },
+            {
+              "title": "should update storage usage after upload",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c4edad4cbc4b153bf890-48680c20dac6e7901637",
+              "file": "admin/02-upload.spec.ts",
+              "line": 43,
+              "column": 7
+            },
+            {
+              "title": "should handle upload failure gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c4edad4cbc4b153bf890-9776254e1c9afccfc02c",
+              "file": "admin/02-upload.spec.ts",
+              "line": 63,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "admin/03-gallery.spec.ts",
+      "file": "admin/03-gallery.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Gallery Management API",
+          "file": "admin/03-gallery.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should create gallery with valid data",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-7df583dab103078d771b",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should reject gallery creation with missing required fields",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-f8e8d9f879d5cf6cdbd6",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 46,
+              "column": 7
+            },
+            {
+              "title": "should reject gallery with non-existent event",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-10c3ddbd504f34ed6bad",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 58,
+              "column": 7
+            },
+            {
+              "title": "should list galleries with pagination",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-3e30594b140b45536dc6",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 73,
+              "column": 7
+            },
+            {
+              "title": "should get gallery by ID",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-e6257c5d65c10fee8d44",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 87,
+              "column": 7
+            },
+            {
+              "title": "should return 404 for non-existent gallery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-e50ad5165d214f9d770b",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 99,
+              "column": 7
+            },
+            {
+              "title": "should lock gallery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-a5fce3638df0cd486ec5",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 107,
+              "column": 7
+            },
+            {
+              "title": "should unlock gallery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-5f14bc3b6fcb8cf8f1d5",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 119,
+              "column": 7
+            },
+            {
+              "title": "should update gallery details",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-6469bc60ca2627306cf5",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 131,
+              "column": 7
+            },
+            {
+              "title": "should reject invalid maxSelection value",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-8d386eabf6759d726a41",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 149,
+              "column": 7
+            },
+            {
+              "title": "should delete gallery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-60d42cc3eab886ad7ed1",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 164,
+              "column": 7
+            },
+            {
+              "title": "should return 404 when deleting non-existent gallery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-fe43303e42c9ae8f3627",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 181,
+              "column": 7
+            },
+            {
+              "title": "should handle bulk gallery deletion",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-554ebd704facedb46208",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 189,
+              "column": 7
+            },
+            {
+              "title": "should reject bulk operations with empty IDs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-09b63de2eb5b15549ec4",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 205,
+              "column": 7
+            },
+            {
+              "title": "should reject unauthenticated requests",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-22480772c465c8059926",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 218,
+              "column": 7
+            },
+            {
+              "title": "should handle gallery status updates",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-edb883c83701721f9619",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 228,
+              "column": 7
+            },
+            {
+              "title": "should reject invalid status value",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7a125d34ae5be2b184c1-f30b2d80c1e02fd5b82b",
+              "file": "admin/03-gallery.spec.ts",
+              "line": 244,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "admin/04-stats-dashboard.spec.ts",
+      "file": "admin/04-stats-dashboard.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Stats Dashboard API",
+          "file": "admin/04-stats-dashboard.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should return dashboard stats for authenticated admin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "991dabda0bfe82649e94-757a1d713f928c627185",
+              "file": "admin/04-stats-dashboard.spec.ts",
+              "line": 19,
+              "column": 7
+            },
+            {
+              "title": "should return recent events with client info",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "991dabda0bfe82649e94-a5f84f3fd725b3cc5f15",
+              "file": "admin/04-stats-dashboard.spec.ts",
+              "line": 42,
+              "column": 7
+            },
+            {
+              "title": "should return recent galleries with photo count",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "991dabda0bfe82649e94-a397f3bee0fb5f5c79af",
+              "file": "admin/04-stats-dashboard.spec.ts",
+              "line": 57,
+              "column": 7
+            },
+            {
+              "title": "should reject unauthenticated requests",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "991dabda0bfe82649e94-18342c9e7bfae498c2ca",
+              "file": "admin/04-stats-dashboard.spec.ts",
+              "line": 72,
+              "column": 7
+            },
+            {
+              "title": "should return consistent data structure on multiple calls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "991dabda0bfe82649e94-6cd88a0cfad7bed28f21",
+              "file": "admin/04-stats-dashboard.spec.ts",
+              "line": 82,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "admin/05-bulk-operations.spec.ts",
+      "file": "admin/05-bulk-operations.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Bulk Operations API",
+          "file": "admin/05-bulk-operations.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should bulk delete photos",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f2ac7d69541be7738c2b-6ebb44ee83efd6a5f0a8",
+              "file": "admin/05-bulk-operations.spec.ts",
+              "line": 14,
+              "column": 7
+            },
+            {
+              "title": "should reject bulk photo delete with empty array",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f2ac7d69541be7738c2b-26455f4fa9f899eef0b1",
+              "file": "admin/05-bulk-operations.spec.ts",
+              "line": 33,
+              "column": 7
+            },
+            {
+              "title": "should reject bulk photo delete with invalid IDs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f2ac7d69541be7738c2b-ec75d4aac0e125a33883",
+              "file": "admin/05-bulk-operations.spec.ts",
+              "line": 45,
+              "column": 7
+            },
+            {
+              "title": "should handle partial failures in bulk photo delete",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f2ac7d69541be7738c2b-ba7762612952a6c059eb",
+              "file": "admin/05-bulk-operations.spec.ts",
+              "line": 57,
+              "column": 7
+            },
+            {
+              "title": "should bulk delete events",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f2ac7d69541be7738c2b-de97f58f95ede59bd460",
+              "file": "admin/05-bulk-operations.spec.ts",
+              "line": 74,
+              "column": 7
+            },
+            {
+              "title": "should reject bulk event operations with invalid action",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f2ac7d69541be7738c2b-9a530bd310bb71f66f5e",
+              "file": "admin/05-bulk-operations.spec.ts",
+              "line": 92,
+              "column": 7
+            },
+            {
+              "title": "should reject bulk event operations with empty IDs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f2ac7d69541be7738c2b-ee21bffef43598d88f47",
+              "file": "admin/05-bulk-operations.spec.ts",
+              "line": 105,
+              "column": 7
+            },
+            {
+              "title": "should bulk delete clients",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f2ac7d69541be7738c2b-b9e5c796ed8123c5bb11",
+              "file": "admin/05-bulk-operations.spec.ts",
+              "line": 118,
+              "column": 7
+            },
+            {
+              "title": "should reject bulk client operations with invalid action",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f2ac7d69541be7738c2b-707216482d9329d5cb06",
+              "file": "admin/05-bulk-operations.spec.ts",
+              "line": 134,
+              "column": 7
+            },
+            {
+              "title": "should bulk delete galleries",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f2ac7d69541be7738c2b-ab069b489b814fd8252a",
+              "file": "admin/05-bulk-operations.spec.ts",
+              "line": 147,
+              "column": 7
+            },
+            {
+              "title": "should reject bulk operations without authentication",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f2ac7d69541be7738c2b-fd4eca6a499dbef48139",
+              "file": "admin/05-bulk-operations.spec.ts",
+              "line": 166,
+              "column": 7
+            },
+            {
+              "title": "should handle large batch of photo deletions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f2ac7d69541be7738c2b-0543ff37ccb64060ed32",
+              "file": "admin/05-bulk-operations.spec.ts",
+              "line": 179,
+              "column": 7
+            },
+            {
+              "title": "should reject bulk operations with malformed request body",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f2ac7d69541be7738c2b-e62f28c97fc772ddbf51",
+              "file": "admin/05-bulk-operations.spec.ts",
+              "line": 202,
+              "column": 7
+            },
+            {
+              "title": "should reject bulk operations with non-array IDs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f2ac7d69541be7738c2b-3c7b7fd4c59df4cd8570",
+              "file": "admin/05-bulk-operations.spec.ts",
+              "line": 214,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "admin/06-search-export.spec.ts",
+      "file": "admin/06-search-export.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Search and Export API",
+          "file": "admin/06-search-export.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should search across all entities",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-3202432e43a6c16dddef",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 20,
+              "column": 7
+            },
+            {
+              "title": "should find clients by name",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-f63aea66df94912f7b0f",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 31,
+              "column": 7
+            },
+            {
+              "title": "should find events by project name",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-8b2412a83e7a3de0ba6e",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 40,
+              "column": 7
+            },
+            {
+              "title": "should return empty results for non-existent query",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-3872e4f5eba20b7a0290",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 49,
+              "column": 7
+            },
+            {
+              "title": "should reject search without query parameter",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-22ca1511e5957db03584",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 60,
+              "column": 7
+            },
+            {
+              "title": "should reject search with empty query",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-d1125b6cbe293aab8987",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 68,
+              "column": 7
+            },
+            {
+              "title": "should handle special characters in search query",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-85cf9d7d5b449db2cfa2",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 76,
+              "column": 7
+            },
+            {
+              "title": "should limit search results",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-52832e24a9cb634c477c",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 84,
+              "column": 7
+            },
+            {
+              "title": "should export events to CSV",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-610718df29e6d4d6ed3a",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 95,
+              "column": 7
+            },
+            {
+              "title": "should export clients to CSV",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-4aec62fddc5ed627eb31",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 106,
+              "column": 7
+            },
+            {
+              "title": "should include proper CSV headers in events export",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-15602ab885cf75d97319",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 117,
+              "column": 7
+            },
+            {
+              "title": "should include proper CSV headers in clients export",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-39275729dfc2d10353ee",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 128,
+              "column": 7
+            },
+            {
+              "title": "should reject export without authentication",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-ea236b1c77c3fd68a8e4",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 138,
+              "column": 7
+            },
+            {
+              "title": "should reject search without authentication",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-0a463c064204b19dd323",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 146,
+              "column": 7
+            },
+            {
+              "title": "should handle case-insensitive search",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-3d0416c48479bc1ff9c6",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 156,
+              "column": 7
+            },
+            {
+              "title": "should search by email",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-01432a31527c654ee7ef",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 166,
+              "column": 7
+            },
+            {
+              "title": "should handle very long search queries",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "75579fd3cdcc879e1669-93c450b1cc0295beedbf",
+              "file": "admin/06-search-export.spec.ts",
+              "line": 178,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "admin/07-client-event.spec.ts",
+      "file": "admin/07-client-event.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Client and Event Integration API",
+          "file": "admin/07-client-event.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should create client and event in sequence",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc62aed367caa84d5219-dd8c3af119c8a00df478",
+              "file": "admin/07-client-event.spec.ts",
+              "line": 14,
+              "column": 7
+            },
+            {
+              "title": "should create event with gallery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc62aed367caa84d5219-fe602ad9453a6e8c46d7",
+              "file": "admin/07-client-event.spec.ts",
+              "line": 47,
+              "column": 7
+            },
+            {
+              "title": "should list events for specific client",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc62aed367caa84d5219-75f6dc8fd8a664c3b13e",
+              "file": "admin/07-client-event.spec.ts",
+              "line": 83,
+              "column": 7
+            },
+            {
+              "title": "should cascade delete client with events",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc62aed367caa84d5219-1b7b0f3272a10cea817d",
+              "file": "admin/07-client-event.spec.ts",
+              "line": 97,
+              "column": 7
+            },
+            {
+              "title": "should update event client association",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc62aed367caa84d5219-5e43b3cffa55ea32ab88",
+              "file": "admin/07-client-event.spec.ts",
+              "line": 113,
+              "column": 7
+            },
+            {
+              "title": "should get client with event statistics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc62aed367caa84d5219-cb471a584f7d5a351d66",
+              "file": "admin/07-client-event.spec.ts",
+              "line": 133,
+              "column": 7
+            },
+            {
+              "title": "should link multiple galleries to event",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc62aed367caa84d5219-6e638fabf611b2afe78d",
+              "file": "admin/07-client-event.spec.ts",
+              "line": 146,
+              "column": 7
+            },
+            {
+              "title": "should prevent deleting client with active events",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc62aed367caa84d5219-52d9d6e286625789c422",
+              "file": "admin/07-client-event.spec.ts",
+              "line": 162,
+              "column": 7
+            },
+            {
+              "title": "should get event with client details",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc62aed367caa84d5219-97a76ca3fba258f7394e",
+              "file": "admin/07-client-event.spec.ts",
+              "line": 179,
+              "column": 7
+            },
+            {
+              "title": "should filter events by client",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc62aed367caa84d5219-13ccd73cdbb2a2911009",
+              "file": "admin/07-client-event.spec.ts",
+              "line": 193,
+              "column": 7
+            },
+            {
+              "title": "should handle client with no events",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc62aed367caa84d5219-b36ff6a6ed90f0bd1e6f",
+              "file": "admin/07-client-event.spec.ts",
+              "line": 205,
+              "column": 7
+            },
+            {
+              "title": "should update client and reflect in events",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc62aed367caa84d5219-683efaac22b45ab704eb",
+              "file": "admin/07-client-event.spec.ts",
+              "line": 217,
+              "column": 7
+            },
+            {
+              "title": "should handle event date conflicts for same client",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "dc62aed367caa84d5219-ae56229f701e1214cb91",
+              "file": "admin/07-client-event.spec.ts",
+              "line": 236,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "admin/08-client-crud.spec.ts",
+      "file": "admin/08-client-crud.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Client CRUD Operations API",
+          "file": "admin/08-client-crud.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should create client with valid data",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3628e76c96399fb7e1cb-d6d7a394847707a95349",
+              "file": "admin/08-client-crud.spec.ts",
+              "line": 14,
+              "column": 7
+            },
+            {
+              "title": "should reject client creation with missing required fields",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3628e76c96399fb7e1cb-ef43c44077129bbd6bec",
+              "file": "admin/08-client-crud.spec.ts",
+              "line": 36,
+              "column": 7
+            },
+            {
+              "title": "should reject client creation with invalid email",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3628e76c96399fb7e1cb-54fa609db741d73aaf7a",
+              "file": "admin/08-client-crud.spec.ts",
+              "line": 48,
+              "column": 7
+            },
+            {
+              "title": "should reject duplicate email",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3628e76c96399fb7e1cb-626819fb60d019b54f83",
+              "file": "admin/08-client-crud.spec.ts",
+              "line": 62,
+              "column": 7
+            },
+            {
+              "title": "should list clients with pagination",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3628e76c96399fb7e1cb-fd451dbedb576a62eeb8",
+              "file": "admin/08-client-crud.spec.ts",
+              "line": 79,
+              "column": 7
+            },
+            {
+              "title": "should reject invalid pagination parameters",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3628e76c96399fb7e1cb-a3f46d59f81c0b3ab7d7",
+              "file": "admin/08-client-crud.spec.ts",
+              "line": 96,
+              "column": 7
+            },
+            {
+              "title": "should reject pagination limit exceeding max",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3628e76c96399fb7e1cb-0c4cb4e8bfaa901f0331",
+              "file": "admin/08-client-crud.spec.ts",
+              "line": 104,
+              "column": 7
+            },
+            {
+              "title": "should get client by ID",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3628e76c96399fb7e1cb-b2c4fb299c57b81b4be6",
+              "file": "admin/08-client-crud.spec.ts",
+              "line": 112,
+              "column": 7
+            },
+            {
+              "title": "should return 404 for non-existent client",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3628e76c96399fb7e1cb-3d3b538c00f932576674",
+              "file": "admin/08-client-crud.spec.ts",
+              "line": 126,
+              "column": 7
+            },
+            {
+              "title": "should update client with valid data",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3628e76c96399fb7e1cb-13a4cc13fd5e7a4c4d10",
+              "file": "admin/08-client-crud.spec.ts",
+              "line": 134,
+              "column": 7
+            },
+            {
+              "title": "should reject update with invalid email",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3628e76c96399fb7e1cb-21102ce7c634c7f6573e",
+              "file": "admin/08-client-crud.spec.ts",
+              "line": 152,
+              "column": 7
+            },
+            {
+              "title": "should delete client",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3628e76c96399fb7e1cb-4a1f88b73726959866e2",
+              "file": "admin/08-client-crud.spec.ts",
+              "line": 167,
+              "column": 7
+            },
+            {
+              "title": "should return 404 when deleting non-existent client",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3628e76c96399fb7e1cb-2f153975d35be5df5fd2",
+              "file": "admin/08-client-crud.spec.ts",
+              "line": 184,
+              "column": 7
+            },
+            {
+              "title": "should reject unauthenticated requests",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3628e76c96399fb7e1cb-81b9f77fa992f9171250",
+              "file": "admin/08-client-crud.spec.ts",
+              "line": 192,
+              "column": 7
+            },
+            {
+              "title": "should handle storage quota updates",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3628e76c96399fb7e1cb-3ed96af4d1b2dbe70efe",
+              "file": "admin/08-client-crud.spec.ts",
+              "line": 202,
+              "column": 7
+            },
+            {
+              "title": "should reject negative storage quota",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3628e76c96399fb7e1cb-2f0f77c923cc64fe41a7",
+              "file": "admin/08-client-crud.spec.ts",
+              "line": 218,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "admin/09-event-management.spec.ts",
+      "file": "admin/09-event-management.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Event Management API",
+          "file": "admin/09-event-management.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should create event with valid data",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-b23c135651343c32723c",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 16,
+              "column": 7
+            },
+            {
+              "title": "should auto-generate kodeBooking",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-665a7c98b648fb873c6c",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 43,
+              "column": 7
+            },
+            {
+              "title": "should reject event creation with missing required fields",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-4191feb921c4e341c176",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 64,
+              "column": 7
+            },
+            {
+              "title": "should reject event with non-existent client",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-d66686ab5d7ec99baca1",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 76,
+              "column": 7
+            },
+            {
+              "title": "should reject past event dates",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-4a60d37f46479cb5cad4",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 93,
+              "column": 7
+            },
+            {
+              "title": "should list events with pagination",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-2817c271d96725e1de84",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 113,
+              "column": 7
+            },
+            {
+              "title": "should include client info in event list",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-9efffff13265b7eaed13",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 129,
+              "column": 7
+            },
+            {
+              "title": "should get event by ID",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-75dcc0509e07767e1d34",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 145,
+              "column": 7
+            },
+            {
+              "title": "should return 404 for non-existent event",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-dde68a669bc2891d40d6",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 160,
+              "column": 7
+            },
+            {
+              "title": "should update event status",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-c64720ce253e87041b08",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 168,
+              "column": 7
+            },
+            {
+              "title": "should update payment status",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-d73cda11a7aa1b3c1457",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 186,
+              "column": 7
+            },
+            {
+              "title": "should reject invalid status value",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-afc799e69441138f6f6a",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 205,
+              "column": 7
+            },
+            {
+              "title": "should delete event",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-b7d2ea2dfae7e786b1b2",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 222,
+              "column": 7
+            },
+            {
+              "title": "should return 404 when deleting non-existent event",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-560b9313ac9f949553cb",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 241,
+              "column": 7
+            },
+            {
+              "title": "should reject unauthenticated requests",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-f0002d854588bcfa04eb",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 249,
+              "column": 7
+            },
+            {
+              "title": "should handle event date updates",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-75f1fef00aec230ab93f",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 259,
+              "column": 7
+            },
+            {
+              "title": "should reject negative prices",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-a6456cc5b632f0e7938f",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 277,
+              "column": 7
+            },
+            {
+              "title": "should handle bulk event deletion",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-9636f1fc4c4ce014c4e6",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 297,
+              "column": 7
+            },
+            {
+              "title": "should reject bulk operations with empty IDs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-e2acd83ae2c28d434e28",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 315,
+              "column": 7
+            },
+            {
+              "title": "should reject bulk operations with invalid action",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fc488b5688dd3a57e125-89c5a06d6c056e44d0f6",
+              "file": "admin/09-event-management.spec.ts",
+              "line": 328,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "client-portal/01-magic-link-auth.spec.ts",
+      "file": "client-portal/01-magic-link-auth.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Client Portal - Magic Link Authentication",
+          "file": "client-portal/01-magic-link-auth.spec.ts",
+          "line": 6,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should request magic link successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "179d28f075f63109b9f6-a2f4ba5ea3a6d6723987",
+              "file": "client-portal/01-magic-link-auth.spec.ts",
+              "line": 24,
+              "column": 7
+            },
+            {
+              "title": "should login with valid magic link token",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "179d28f075f63109b9f6-964b2406ed38937c9d54",
+              "file": "client-portal/01-magic-link-auth.spec.ts",
+              "line": 32,
+              "column": 7
+            },
+            {
+              "title": "should reject invalid magic link token",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "179d28f075f63109b9f6-a2c495539ef964a904d6",
+              "file": "client-portal/01-magic-link-auth.spec.ts",
+              "line": 39,
+              "column": 7
+            },
+            {
+              "title": "should reject expired magic link token",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "179d28f075f63109b9f6-0b31205666be53e3d181",
+              "file": "client-portal/01-magic-link-auth.spec.ts",
+              "line": 45,
+              "column": 7
+            },
+            {
+              "title": "should persist session after page refresh",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "179d28f075f63109b9f6-2d7f1b75a82f992a8797",
+              "file": "client-portal/01-magic-link-auth.spec.ts",
+              "line": 54,
+              "column": 7
+            },
+            {
+              "title": "should redirect to login when accessing protected route without auth",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "179d28f075f63109b9f6-df41c3eb88f48ddec60d",
+              "file": "client-portal/01-magic-link-auth.spec.ts",
+              "line": 61,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "client-portal/02-dashboard.spec.ts",
+      "file": "client-portal/02-dashboard.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Client Portal - Dashboard",
+          "file": "client-portal/02-dashboard.spec.ts",
+          "line": 6,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should display dashboard with galleries",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4d2f27bfb2b30c5eaf6b-19f113c926912176b3ad",
+              "file": "client-portal/02-dashboard.spec.ts",
+              "line": 45,
+              "column": 7
+            },
+            {
+              "title": "should show empty state when no galleries",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4d2f27bfb2b30c5eaf6b-6077b4fd8da26abb55f2",
+              "file": "client-portal/02-dashboard.spec.ts",
+              "line": 50,
+              "column": 7
+            },
+            {
+              "title": "should navigate to gallery when clicked",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4d2f27bfb2b30c5eaf6b-3e8f6a1924a7c2e53534",
+              "file": "client-portal/02-dashboard.spec.ts",
+              "line": 65,
+              "column": 7
+            },
+            {
+              "title": "should display gallery metadata correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4d2f27bfb2b30c5eaf6b-4d5aa1aeb2510152d16c",
+              "file": "client-portal/02-dashboard.spec.ts",
+              "line": 72,
+              "column": 7
+            },
+            {
+              "title": "should show loading state initially",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4d2f27bfb2b30c5eaf6b-038806c9e15f80c56ac6",
+              "file": "client-portal/02-dashboard.spec.ts",
+              "line": 76,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "client-portal/03-gallery-selection.spec.ts",
+      "file": "client-portal/03-gallery-selection.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Client Portal - Gallery Selection",
+          "file": "client-portal/03-gallery-selection.spec.ts",
+          "line": 12,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should view photos with pagination",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e370108af4d9c71eea95-9d6f44a74d8b93087367",
+              "file": "client-portal/03-gallery-selection.spec.ts",
+              "line": 90,
+              "column": 7
+            },
+            {
+              "title": "should select and deselect photos",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e370108af4d9c71eea95-3e2839547092ce92bd84",
+              "file": "client-portal/03-gallery-selection.spec.ts",
+              "line": 98,
+              "column": 7
+            },
+            {
+              "title": "should enforce selection limit",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e370108af4d9c71eea95-7005f4e1f2459975eab2",
+              "file": "client-portal/03-gallery-selection.spec.ts",
+              "line": 110,
+              "column": 7
+            },
+            {
+              "title": "should submit selection successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e370108af4d9c71eea95-ce789ee9dea4be582894",
+              "file": "client-portal/03-gallery-selection.spec.ts",
+              "line": 120,
+              "column": 7
+            },
+            {
+              "title": "should show locked state after submission",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e370108af4d9c71eea95-d0cfc1ba36d28ea49792",
+              "file": "client-portal/03-gallery-selection.spec.ts",
+              "line": 137,
+              "column": 7
+            },
+            {
+              "title": "should validate minimum selection",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e370108af4d9c71eea95-10dd2d75a8ac91bf1fca",
+              "file": "client-portal/03-gallery-selection.spec.ts",
+              "line": 162,
+              "column": 7
+            },
+            {
+              "title": "should not access other client galleries",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e370108af4d9c71eea95-c1cc6c998bde98abcf9b",
+              "file": "client-portal/03-gallery-selection.spec.ts",
+              "line": 168,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "client-portal/04-invoices.spec.ts",
+      "file": "client-portal/04-invoices.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Client Portal - Invoices",
+          "file": "client-portal/04-invoices.spec.ts",
+          "line": 11,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should view payment history",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "84eefc858505a6052d93-39e8c4a61b8e0e3f3331",
+              "file": "client-portal/04-invoices.spec.ts",
+              "line": 78,
+              "column": 7
+            },
+            {
+              "title": "should display invoice details",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "84eefc858505a6052d93-4b3ac55b188cbf3a5ca6",
+              "file": "client-portal/04-invoices.spec.ts",
+              "line": 86,
+              "column": 7
+            },
+            {
+              "title": "should show payment status correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "84eefc858505a6052d93-2df3b39454eb28b743e8",
+              "file": "client-portal/04-invoices.spec.ts",
+              "line": 92,
+              "column": 7
+            },
+            {
+              "title": "should display payment amount formatted",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "84eefc858505a6052d93-aab32637f9abaa3613c7",
+              "file": "client-portal/04-invoices.spec.ts",
+              "line": 97,
+              "column": 7
+            },
+            {
+              "title": "should handle pagination",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "84eefc858505a6052d93-6b31a5a8c0b4831a2dc0",
+              "file": "client-portal/04-invoices.spec.ts",
+              "line": 106,
+              "column": 7
+            },
+            {
+              "title": "should show empty state when no payments",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "84eefc858505a6052d93-5257551eeb2189a8c6a6",
+              "file": "client-portal/04-invoices.spec.ts",
+              "line": 123,
+              "column": 7
+            },
+            {
+              "title": "should display total paid amount",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "84eefc858505a6052d93-3103ffc80c2632ef6b57",
+              "file": "client-portal/04-invoices.spec.ts",
+              "line": 140,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "client-portal/05-profile.spec.ts",
+      "file": "client-portal/05-profile.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Client Portal - Profile",
+          "file": "client-portal/05-profile.spec.ts",
+          "line": 6,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should view profile",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fe775007db27dc592588-f5d422ce89d302128fb5",
+              "file": "client-portal/05-profile.spec.ts",
+              "line": 31,
+              "column": 7
+            },
+            {
+              "title": "should update profile name",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fe775007db27dc592588-d6cbc5689b10625a4b7f",
+              "file": "client-portal/05-profile.spec.ts",
+              "line": 44,
+              "column": 7
+            },
+            {
+              "title": "should update profile phone",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fe775007db27dc592588-9cd3f1e9005716c36b72",
+              "file": "client-portal/05-profile.spec.ts",
+              "line": 61,
+              "column": 7
+            },
+            {
+              "title": "should validate required fields",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fe775007db27dc592588-68494c02089302ef5c2f",
+              "file": "client-portal/05-profile.spec.ts",
+              "line": 78,
+              "column": 7
+            },
+            {
+              "title": "should validate phone format",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fe775007db27dc592588-247aa93d79f9b94995f1",
+              "file": "client-portal/05-profile.spec.ts",
+              "line": 87,
+              "column": 7
+            },
+            {
+              "title": "should have email field as read-only",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fe775007db27dc592588-cb2fa67c9e38ccbb8737",
+              "file": "client-portal/05-profile.spec.ts",
+              "line": 96,
+              "column": 7
+            },
+            {
+              "title": "should update instagram handle",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fe775007db27dc592588-bc24f62630cbc68e9d02",
+              "file": "client-portal/05-profile.spec.ts",
+              "line": 105,
+              "column": 7
+            },
+            {
+              "title": "should persist changes after page reload",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "client",
+                  "projectName": "client",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fe775007db27dc592588-f0ff770a3d4cb080c278",
+              "file": "client-portal/05-profile.spec.ts",
+              "line": 119,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "public/01-public-gallery.spec.ts",
+      "file": "public/01-public-gallery.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Public Gallery Access",
+          "file": "public/01-public-gallery.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should access gallery without authentication",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c7ea43ea3e31020ff343-d5d2ffa8fd623d7e8e86",
+              "file": "public/01-public-gallery.spec.ts",
+              "line": 7,
+              "column": 7
+            },
+            {
+              "title": "should access gallery with valid token",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c7ea43ea3e31020ff343-9f8972d64944e999e62e",
+              "file": "public/01-public-gallery.spec.ts",
+              "line": 15,
+              "column": 7
+            },
+            {
+              "title": "should show 404 for invalid token",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c7ea43ea3e31020ff343-7dbe802ac61d97cb0893",
+              "file": "public/01-public-gallery.spec.ts",
+              "line": 22,
+              "column": 7
+            },
+            {
+              "title": "should select and deselect photos",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c7ea43ea3e31020ff343-ad2f0934fba7aeea1062",
+              "file": "public/01-public-gallery.spec.ts",
+              "line": 28,
+              "column": 7
+            },
+            {
+              "title": "should submit photo selection",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c7ea43ea3e31020ff343-e952287c9dca603e510d",
+              "file": "public/01-public-gallery.spec.ts",
+              "line": 41,
+              "column": 7
+            },
+            {
+              "title": "should download selected photos",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c7ea43ea3e31020ff343-7f79456f554aafee3716",
+              "file": "public/01-public-gallery.spec.ts",
+              "line": 54,
+              "column": 7
+            },
+            {
+              "title": "should show locked message for locked gallery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c7ea43ea3e31020ff343-30a57259fabb5558c3ca",
+              "file": "public/01-public-gallery.spec.ts",
+              "line": 68,
+              "column": 7
+            },
+            {
+              "title": "should view photo in lightbox",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c7ea43ea3e31020ff343-1653c964fe1776e929fa",
+              "file": "public/01-public-gallery.spec.ts",
+              "line": 85,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "public/02-photo-selection.spec.ts",
+      "file": "public/02-photo-selection.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Public Photo Selection",
+          "file": "public/02-photo-selection.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should access gallery with valid token",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f922f3d72aaa64d1caa5-725f76a008b8e8b8d691",
+              "file": "public/02-photo-selection.spec.ts",
+              "line": 27,
+              "column": 7
+            },
+            {
+              "title": "should reject invalid token format",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f922f3d72aaa64d1caa5-1b89070e8ec7b6fe31b9",
+              "file": "public/02-photo-selection.spec.ts",
+              "line": 37,
+              "column": 7
+            },
+            {
+              "title": "should reject non-existent token",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f922f3d72aaa64d1caa5-4ced018f34c8c3476c35",
+              "file": "public/02-photo-selection.spec.ts",
+              "line": 46,
+              "column": 7
+            },
+            {
+              "title": "should submit photo selection",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f922f3d72aaa64d1caa5-1ba6cdaa568ab8591824",
+              "file": "public/02-photo-selection.spec.ts",
+              "line": 55,
+              "column": 7
+            },
+            {
+              "title": "should lock gallery after selection submission",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f922f3d72aaa64d1caa5-5a1139f8a05fe613eda7",
+              "file": "public/02-photo-selection.spec.ts",
+              "line": 66,
+              "column": 7
+            },
+            {
+              "title": "should reject duplicate selection submission",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f922f3d72aaa64d1caa5-23b1f80d679aec7f818d",
+              "file": "public/02-photo-selection.spec.ts",
+              "line": 83,
+              "column": 7
+            },
+            {
+              "title": "should reject invalid photo IDs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f922f3d72aaa64d1caa5-492e9d82a7f152ca81cd",
+              "file": "public/02-photo-selection.spec.ts",
+              "line": 102,
+              "column": 7
+            },
+            {
+              "title": "should reject empty photo selection",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f922f3d72aaa64d1caa5-2c605464784ff1b49954",
+              "file": "public/02-photo-selection.spec.ts",
+              "line": 116,
+              "column": 7
+            },
+            {
+              "title": "should reject photo IDs from different gallery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "f922f3d72aaa64d1caa5-d192ad814feb69464117",
+              "file": "public/02-photo-selection.spec.ts",
+              "line": 130,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "public/03-booking.spec.ts",
+      "file": "public/03-booking.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Public Booking",
+          "file": "public/03-booking.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should submit valid booking form",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "02a6c403a6d82fa82398-dfcffc023b100d6a31df",
+              "file": "public/03-booking.spec.ts",
+              "line": 24,
+              "column": 7
+            },
+            {
+              "title": "should reject booking with missing required fields",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "02a6c403a6d82fa82398-d65e3f817af8c2e71dea",
+              "file": "public/03-booking.spec.ts",
+              "line": 46,
+              "column": 7
+            },
+            {
+              "title": "should reject booking with invalid email",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "02a6c403a6d82fa82398-b507eefa13d7e4d3b993",
+              "file": "public/03-booking.spec.ts",
+              "line": 59,
+              "column": 7
+            },
+            {
+              "title": "should reject booking with invalid phone format",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "02a6c403a6d82fa82398-bd1f66b24a182f4d12c0",
+              "file": "public/03-booking.spec.ts",
+              "line": 74,
+              "column": 7
+            },
+            {
+              "title": "should reject booking with past event date",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "02a6c403a6d82fa82398-733e950117dd838df353",
+              "file": "public/03-booking.spec.ts",
+              "line": 89,
+              "column": 7
+            },
+            {
+              "title": "should enforce rate limiting on booking endpoint",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "02a6c403a6d82fa82398-02df193c1863063d6e1c",
+              "file": "public/03-booking.spec.ts",
+              "line": 104,
+              "column": 7
+            },
+            {
+              "title": "should create client if not exists",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "02a6c403a6d82fa82398-b378981676203ea7d474",
+              "file": "public/03-booking.spec.ts",
+              "line": 129,
+              "column": 7
+            },
+            {
+              "title": "should reuse existing client",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "02a6c403a6d82fa82398-d16144eb95bbe1288cc3",
+              "file": "public/03-booking.spec.ts",
+              "line": 152,
+              "column": 7
+            },
+            {
+              "title": "should reject invalid JSON body",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "02a6c403a6d82fa82398-9dbe72132a840461ece3",
+              "file": "public/03-booking.spec.ts",
+              "line": 182,
+              "column": 7
+            },
+            {
+              "title": "should create payment record with booking",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "public",
+                  "projectName": "public",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "02a6c403a6d82fa82398-405ba96a26682e765440",
+              "file": "public/03-booking.spec.ts",
+              "line": 193,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "integration/01-rate-limiting.spec.ts",
+      "file": "integration/01-rate-limiting.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Rate Limiting",
+          "file": "integration/01-rate-limiting.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should enforce search rate limit (30 req/min)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "35b616ec12cbdfa141c3-65ee664e1c41d152ed6f",
+              "file": "integration/01-rate-limiting.spec.ts",
+              "line": 9,
+              "column": 7
+            },
+            {
+              "title": "should enforce export rate limit (10 req/min)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "35b616ec12cbdfa141c3-e6c70f9d50ecc8b67f01",
+              "file": "integration/01-rate-limiting.spec.ts",
+              "line": 23,
+              "column": 7
+            },
+            {
+              "title": "should enforce bulk delete rate limit (20 req/min)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "35b616ec12cbdfa141c3-c6c6bc14ef1f48c07cc5",
+              "file": "integration/01-rate-limiting.spec.ts",
+              "line": 36,
+              "column": 7
+            },
+            {
+              "title": "should reset rate limit after window expires",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "35b616ec12cbdfa141c3-b7d5f4b5fd80dd38eba3",
+              "file": "integration/01-rate-limiting.spec.ts",
+              "line": 52,
+              "column": 7
+            },
+            {
+              "title": "should return 429 status code on rate limit",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "35b616ec12cbdfa141c3-48b550af9e0b0c40acac",
+              "file": "integration/01-rate-limiting.spec.ts",
+              "line": 72,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "integration/02-security.spec.ts",
+      "file": "integration/02-security.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Security and Authorization",
+          "file": "integration/02-security.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should block unauthenticated access to admin routes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ba4094c772b753da38df-e2b5f9979b372b5ec2b4",
+              "file": "integration/02-security.spec.ts",
+              "line": 4,
+              "column": 7
+            },
+            {
+              "title": "should block unauthenticated API requests",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ba4094c772b753da38df-81fb3daaa90cfc1b2c05",
+              "file": "integration/02-security.spec.ts",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should allow public gallery access without auth",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ba4094c772b753da38df-97357c82bbf1b8434d78",
+              "file": "integration/02-security.spec.ts",
+              "line": 30,
+              "column": 7
+            },
+            {
+              "title": "should allow public booking access without auth",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ba4094c772b753da38df-e1c92d727476d443f5a8",
+              "file": "integration/02-security.spec.ts",
+              "line": 37,
+              "column": 7
+            },
+            {
+              "title": "should validate gallery token",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ba4094c772b753da38df-892eecf6dfb7a32227fc",
+              "file": "integration/02-security.spec.ts",
+              "line": 44,
+              "column": 7
+            },
+            {
+              "title": "should prevent XSS in search input",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ba4094c772b753da38df-81dff0a0994027e28fee",
+              "file": "integration/02-security.spec.ts",
+              "line": 50,
+              "column": 7
+            },
+            {
+              "title": "should sanitize user input in forms",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ba4094c772b753da38df-4c1b5b04677ceafc3e61",
+              "file": "integration/02-security.spec.ts",
+              "line": 71,
+              "column": 7
+            },
+            {
+              "title": "should enforce HTTPS in production",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ba4094c772b753da38df-fb28e0c76e906334d1f6",
+              "file": "integration/02-security.spec.ts",
+              "line": 83,
+              "column": 7
+            },
+            {
+              "title": "should prevent email enumeration on magic link",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ba4094c772b753da38df-a2b9295d0eea3b2cd187",
+              "file": "integration/02-security.spec.ts",
+              "line": 93,
+              "column": 7
+            },
+            {
+              "title": "should handle Prisma P2025 error gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ba4094c772b753da38df-4fc55b96bd19984332f6",
+              "file": "integration/02-security.spec.ts",
+              "line": 115,
+              "column": 7
+            },
+            {
+              "title": "should validate photoIds array in selection",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ba4094c772b753da38df-954b2a433f7fa49f45bc",
+              "file": "integration/02-security.spec.ts",
+              "line": 130,
+              "column": 7
+            },
+            {
+              "title": "should validate photoIds are valid CUIDs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ba4094c772b753da38df-99d295341316a3b53b46",
+              "file": "integration/02-security.spec.ts",
+              "line": 144,
+              "column": 7
+            },
+            {
+              "title": "should prevent SQL injection in gallery token",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ba4094c772b753da38df-238006357e1d899edf50",
+              "file": "integration/02-security.spec.ts",
+              "line": 157,
+              "column": 7
+            },
+            {
+              "title": "should prevent NoSQL injection in search",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ba4094c772b753da38df-35a2033a5f287f769003",
+              "file": "integration/02-security.spec.ts",
+              "line": 168,
+              "column": 7
+            },
+            {
+              "title": "should validate CUID format for gallery tokens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ba4094c772b753da38df-98b652fa27a4c17115e5",
+              "file": "integration/02-security.spec.ts",
+              "line": 178,
+              "column": 7
+            },
+            {
+              "title": "should sanitize error messages",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ba4094c772b753da38df-17886f4c19357ba70288",
+              "file": "integration/02-security.spec.ts",
+              "line": 196,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "integration/03-error-handling.spec.ts",
+      "file": "integration/03-error-handling.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Error Handling",
+          "file": "integration/03-error-handling.spec.ts",
+          "line": 5,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should reject invalid file type upload",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9b8f0957286e65ad7085-66b60813401f289345dd",
+              "file": "integration/03-error-handling.spec.ts",
+              "line": 10,
+              "column": 7
+            },
+            {
+              "title": "should reject oversized file upload",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9b8f0957286e65ad7085-856dac66f02bc75deb26",
+              "file": "integration/03-error-handling.spec.ts",
+              "line": 20,
+              "column": 7
+            },
+            {
+              "title": "should handle network failure gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9b8f0957286e65ad7085-928f81d6ec558cf4436b",
+              "file": "integration/03-error-handling.spec.ts",
+              "line": 30,
+              "column": 7
+            },
+            {
+              "title": "should handle API 404 errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9b8f0957286e65ad7085-bfafab763f213baa8aee",
+              "file": "integration/03-error-handling.spec.ts",
+              "line": 42,
+              "column": 7
+            },
+            {
+              "title": "should handle API 500 errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9b8f0957286e65ad7085-0d4cc2d0491b1f9bade4",
+              "file": "integration/03-error-handling.spec.ts",
+              "line": 48,
+              "column": 7
+            },
+            {
+              "title": "should validate required form fields",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9b8f0957286e65ad7085-91701a6ec5bf00abc193",
+              "file": "integration/03-error-handling.spec.ts",
+              "line": 59,
+              "column": 7
+            },
+            {
+              "title": "should validate email format",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9b8f0957286e65ad7085-b65750e96827129dcda2",
+              "file": "integration/03-error-handling.spec.ts",
+              "line": 69,
+              "column": 7
+            },
+            {
+              "title": "should validate date format",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9b8f0957286e65ad7085-2545fa6a829d5bdc4754",
+              "file": "integration/03-error-handling.spec.ts",
+              "line": 80,
+              "column": 7
+            },
+            {
+              "title": "should handle concurrent upload conflicts",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9b8f0957286e65ad7085-91b0376ea46bd4545761",
+              "file": "integration/03-error-handling.spec.ts",
+              "line": 91,
+              "column": 7
+            },
+            {
+              "title": "should recover from failed transaction",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "integration",
+                  "projectName": "integration",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9b8f0957286e65ad7085-4c6e6173179612e42568",
+              "file": "integration/03-error-handling.spec.ts",
+              "line": 108,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-05-02T19:46:11.684Z",
+    "duration": 75820.43400000001,
+    "expected": 3,
+    "skipped": 200,
+    "unexpected": 3,
+    "flaky": 0
+  }
+}

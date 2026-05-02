@@ -419,6 +419,7 @@ export default function GalleryDetailPage() {
               </p>
               <div className="flex gap-2 mb-4">
                 <button
+                  data-testid="export-csv"
                   onClick={handleExport}
                   className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-primary/20 hover:text-primary text-sm"
                 >
@@ -528,6 +529,7 @@ export default function GalleryDetailPage() {
             )}
             {bulkMode && selectedPhotoIdsForBulk.size > 0 && (
               <button
+                data-testid="bulk-delete"
                 onClick={deleteSelectedPhotos}
                 className="px-3 py-2 sm:py-1 text-sm bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 cursor-pointer"
               >
@@ -571,7 +573,7 @@ export default function GalleryDetailPage() {
               {paginatedPhotos.map((photo, index) => {
                 const localIndex = index;
                 return (
-                  <div key={photo.id} className="relative group aspect-square">
+                  <div key={photo.id} data-testid="photo-item" className="relative group aspect-square">
                     <div
                       className="w-full h-full cursor-pointer"
                       onClick={() => setLightboxIndex(localIndex)}
@@ -593,6 +595,7 @@ export default function GalleryDetailPage() {
                         }}
                       >
                         <input
+                          data-testid="photo-checkbox"
                           type="checkbox"
                           checked={selectedPhotoIdsForBulk.has(photo.id)}
                           readOnly

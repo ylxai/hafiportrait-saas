@@ -123,6 +123,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           <div className="relative">
             <button
+              data-testid="user-menu"
               onClick={() => setProfileOpen(!profileOpen)}
               className="p-1.5 -mr-2 rounded-lg hover:bg-muted transition touch-target flex items-center justify-center"
             >
