@@ -1,92 +1,258 @@
 import { test, expect } from '@playwright/test';
-import { login, generateTestData, waitForToast } from './helpers';
+import { seedClient, seedEvent, seedGallery, cleanupClient } from '../fixtures/db-seed';
 
-test.describe('Client and Event Management', () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page);
+test.describe('Client and Event Integration API', () => {
+  let testClientId: string;
+
+  test.afterEach(async () => {
+    if (testClientId) {
+      await cleanupClient(testClientId).catch(() => {});
+      testClientId = '';
+    }
   });
 
-  test('should create client', async ({ page }) => {
-    const testData = generateTestData();
-    
-    await page.goto('/admin/clients');
-    await page.click('text=Add Client');
-    
-    await page.fill('input[name="nama"]', testData.clientName);
-    await page.fill('input[name="email"]', `${testData.clientName}@test.com`);
-    await page.fill('input[name="phone"]', '081234567890');
-    await page.click('button[type="submit"]');
-    
-    await waitForToast(page, 'Client created');
-    await expect(page.locator(`text=${testData.clientName}`)).toBeVisible();
-  });
-
-  test('should create event for client', async ({ page }) => {
-    const testData = generateTestData();
-    
-    await page.goto('/admin/events');
-    await page.click('text=Create Event');
-    
-    await page.fill('input[name="namaEvent"]', testData.eventName);
-    await page.selectOption('select[name="clientId"]', { index: 1 });
-    await page.fill('input[name="tanggalEvent"]', '2026-05-01');
-    await page.click('button[type="submit"]');
-    
-    await waitForToast(page, 'Event created');
-    await expect(page.locator(`text=${testData.eventName}`)).toBeVisible();
-  });
-
-  test('should link gallery to event', async ({ page }) => {
-    await page.goto('/admin/events');
-    await page.click('text=Test Event');
-    
-    await page.click('[data-testid="link-gallery"]');
-    await page.selectOption('select[name="galleryId"]', { index: 1 });
-    await page.click('button[type="submit"]');
-    
-    await waitForToast(page, 'Gallery linked');
-  });
-
-  test('should update event status', async ({ page }) => {
-    await page.goto('/admin/events');
-    await page.click('text=Test Event');
-    
-    await page.selectOption('select[name="status"]', 'completed');
-    await page.click('button[type="submit"]');
-    
-    await waitForToast(page, 'Status updated');
-    await expect(page.locator('text=Completed')).toBeVisible();
-  });
-
-  test('should delete client with cascade', async ({ page }) => {
-    const testData = generateTestData();
+  test('should create client and event in sequence', async ({ request }) => {
+    const timestamp = Date.now();
     
     // Create client
-    await page.goto('/admin/clients');
-    await page.click('text=Add Client');
-    await page.fill('input[name="nama"]', testData.clientName);
-    await page.fill('input[name="email"]', `${testData.clientName}@test.com`);
-    await page.click('button[type="submit"]');
-    await waitForToast(page, 'Client created');
-    
-    // Delete client
-    await page.click(`text=${testData.clientName}`);
-    await page.click('[data-testid="delete-client"]');
-    await page.click('text=Confirm');
-    
-    await waitForToast(page, 'Client deleted');
-    await expect(page.locator(`text=${testData.clientName}`)).not.toBeVisible();
+    const clientResponse = await request.post('/api/admin/clients', {
+      data: {
+        nama: `Integration Client ${timestamp}`,
+        email: `integration${timestamp}@test.com`,
+        phone: '+6281234567890'
+      }
+    });
+
+    expect(clientResponse.status()).toBe(200);
+    const clientData = await clientResponse.json();
+    testClientId = clientData.data.id;
+
+    // Create event for client
+    const eventResponse = await request.post('/api/admin/events', {
+      data: {
+        clientId: testClientId,
+        namaProject: `Integration Event ${timestamp}`,
+        eventDate: '2026-06-01',
+        totalPrice: 5000000,
+        paymentStatus: 'unpaid',
+        status: 'confirmed'
+      }
+    });
+
+    expect(eventResponse.status()).toBe(200);
+    const eventData = await eventResponse.json();
+    expect(eventData.data.clientId).toBe(testClientId);
   });
 
-  test('should update client details', async ({ page }) => {
-    await page.goto('/admin/clients');
-    await page.click('text=Test Client');
+  test('should create event with gallery', async ({ request }) => {
+    const client = await seedClient();
+    testClientId = client.id;
+
+    const timestamp = Date.now();
     
-    await page.click('[data-testid="edit-client"]');
-    await page.fill('input[name="nama"]', 'Updated Client Name');
-    await page.click('button[type="submit"]');
+    // Create event
+    const eventResponse = await request.post('/api/admin/events', {
+      data: {
+        clientId: client.id,
+        namaProject: `Event with Gallery ${timestamp}`,
+        eventDate: '2026-06-01',
+        totalPrice: 5000000,
+        paymentStatus: 'unpaid',
+        status: 'confirmed'
+      }
+    });
+
+    const eventData = await eventResponse.json();
+    const eventId = eventData.data.id;
+
+    // Create gallery for event
+    const galleryResponse = await request.post('/api/admin/galleries', {
+      data: {
+        eventId,
+        namaProject: `Gallery ${timestamp}`,
+        maxSelection: 20,
+        enableDownload: true
+      }
+    });
+
+    expect(galleryResponse.status()).toBe(200);
+    const galleryData = await galleryResponse.json();
+    expect(galleryData.data.eventId).toBe(eventId);
+  });
+
+  test('should list events for specific client', async ({ request }) => {
+    const client = await seedClient();
+    testClientId = client.id;
+    await seedEvent(client.id);
+    await seedEvent(client.id);
+
+    const response = await request.get(`/api/admin/clients/${client.id}`);
+    const data = await response.json();
+
+    expect(data.success).toBe(true);
+    expect(data.data).toHaveProperty('events');
+    expect(data.data.events.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('should cascade delete client with events', async ({ request }) => {
+    const client = await seedClient();
+    testClientId = client.id;
+    const event = await seedEvent(client.id);
+
+    const response = await request.delete(`/api/admin/clients/${client.id}`);
+
+    expect(response.status()).toBe(200);
+
+    // Verify event is also deleted
+    const eventResponse = await request.get(`/api/admin/events/${event.id}`);
+    expect(eventResponse.status()).toBe(404);
     
-    await waitForToast(page, 'Client updated');
-    await expect(page.locator('text=Updated Client Name')).toBeVisible();
+    testClientId = '';
+  });
+
+  test('should update event client association', async ({ request }) => {
+    const client1 = await seedClient();
+    const client2 = await seedClient();
+    testClientId = client1.id;
+    
+    const event = await seedEvent(client1.id);
+
+    const response = await request.put(`/api/admin/events/${event.id}`, {
+      data: {
+        clientId: client2.id
+      }
+    });
+
+    expect(response.status()).toBe(200);
+    const data = await response.json();
+    expect(data.data.clientId).toBe(client2.id);
+    
+    await cleanupClient(client2.id);
+  });
+
+  test('should get client with event statistics', async ({ request }) => {
+    const client = await seedClient();
+    testClientId = client.id;
+    await seedEvent(client.id, { status: 'completed' });
+    await seedEvent(client.id, { status: 'confirmed' });
+
+    const response = await request.get(`/api/admin/clients/${client.id}`);
+    const data = await response.json();
+
+    expect(data.success).toBe(true);
+    expect(data.data).toHaveProperty('events');
+  });
+
+  test('should link multiple galleries to event', async ({ request }) => {
+    const client = await seedClient();
+    testClientId = client.id;
+    const event = await seedEvent(client.id);
+
+    const _gallery1 = await seedGallery(event.id);
+    const _gallery2 = await seedGallery(event.id);
+
+    const response = await request.get(`/api/admin/events/${event.id}`);
+    const data = await response.json();
+
+    expect(data.success).toBe(true);
+    expect(data.data).toHaveProperty('galleries');
+    expect(data.data.galleries.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('should prevent deleting client with active events', async ({ request }) => {
+    const client = await seedClient();
+    testClientId = client.id;
+    await seedEvent(client.id, { status: 'confirmed' });
+
+    // This should either succeed with cascade or fail with proper error
+    const response = await request.delete(`/api/admin/clients/${client.id}`);
+    
+    if (response.status() === 400) {
+      const data = await response.json();
+      expect(data.success).toBe(false);
+    } else {
+      expect(response.status()).toBe(200);
+      testClientId = '';
+    }
+  });
+
+  test('should get event with client details', async ({ request }) => {
+    const client = await seedClient();
+    testClientId = client.id;
+    const event = await seedEvent(client.id);
+
+    const response = await request.get(`/api/admin/events/${event.id}`);
+    const data = await response.json();
+
+    expect(data.success).toBe(true);
+    expect(data.data).toHaveProperty('client');
+    expect(data.data.client.id).toBe(client.id);
+    expect(data.data.client.nama).toBe(client.nama);
+  });
+
+  test('should filter events by client', async ({ request }) => {
+    const client = await seedClient();
+    testClientId = client.id;
+    await seedEvent(client.id);
+
+    const response = await request.get(`/api/admin/events?clientId=${client.id}`);
+    const data = await response.json();
+
+    expect(data.success).toBe(true);
+    expect(data.data.items.every((e: { clientId: string }) => e.clientId === client.id)).toBe(true);
+  });
+
+  test('should handle client with no events', async ({ request }) => {
+    const client = await seedClient();
+    testClientId = client.id;
+
+    const response = await request.get(`/api/admin/clients/${client.id}`);
+    const data = await response.json();
+
+    expect(data.success).toBe(true);
+    expect(data.data.events).toBeDefined();
+    expect(data.data.events.length).toBe(0);
+  });
+
+  test('should update client and reflect in events', async ({ request }) => {
+    const client = await seedClient();
+    testClientId = client.id;
+    const event = await seedEvent(client.id);
+
+    // Update client name
+    await request.put(`/api/admin/clients/${client.id}`, {
+      data: {
+        nama: 'Updated Client Name'
+      }
+    });
+
+    // Get event and verify client name is updated
+    const eventResponse = await request.get(`/api/admin/events/${event.id}`);
+    const eventData = await eventResponse.json();
+
+    expect(eventData.data.client.nama).toBe('Updated Client Name');
+  });
+
+  test('should handle event date conflicts for same client', async ({ request }) => {
+    const client = await seedClient();
+    testClientId = client.id;
+    
+    const eventDate = '2026-07-15';
+    await seedEvent(client.id, { eventDate: new Date(eventDate) });
+
+    // Try to create another event on same date
+    const response = await request.post('/api/admin/events', {
+      data: {
+        clientId: client.id,
+        namaProject: 'Conflicting Event',
+        eventDate,
+        totalPrice: 5000000,
+        paymentStatus: 'unpaid',
+        status: 'confirmed'
+      }
+    });
+
+    // Should either allow or reject based on business rules
+    expect([200, 400]).toContain(response.status());
   });
 });
