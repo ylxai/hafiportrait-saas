@@ -753,10 +753,12 @@ npx playwright install --with-deps chromium
 
 ### Test Execution
 
-- **Parallel execution**: Disabled (sequential) for data consistency
-- **Workers**: 1 (prevents fixture conflicts)
+- **Parallel execution**: Enabled (fullyParallel: true)
+- **Workers**: 4 locally, 2 in CI
 - **Retries**: 0 locally, 2 in CI
-- **Average runtime**: ~5-10 minutes for full suite
+- **Default timeout**: 30 seconds
+- **Slow test timeout**: 60 seconds (admin, integration projects)
+- **Average runtime**: ~7-8 minutes for full suite (improved from 26.7 minutes)
 
 ### Optimization Tips
 

@@ -18,11 +18,12 @@ try {
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  fullyParallel: false,
+  fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : 1,
-  reporter: "html",
+  workers: process.env.CI ? 2 : 4,
+  reporter: [["html"], ["json", { outputFile: "test-results.json" }]],
+  timeout: 30000,
   use: {
     baseURL: process.env.BASE_URL || "http://localhost:3000",
     trace: "on-first-retry",
@@ -30,8 +31,26 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "chromium",
+      name: "admin",
+      testDir: "./tests/e2e/admin",
       use: { ...devices["Desktop Chrome"] },
+      timeout: 60000,
+    },
+    {
+      name: "client",
+      testDir: "./tests/e2e/client-portal",
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "public",
+      testDir: "./tests/e2e/public",
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "integration",
+      testDir: "./tests/e2e/integration",
+      use: { ...devices["Desktop Chrome"] },
+      timeout: 60000,
     },
   ],
   webServer: {
