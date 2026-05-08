@@ -25,15 +25,12 @@ test.beforeEach(async ({ page }) => {
   await page.goto(`${BASE_URL}/login`);
   await page.waitForLoadState('networkidle');
   
-  // Tunggu form login muncul
-  await page.waitForSelector('input[type="email"]', { timeout: 10000 });
-  
-  // Isi form login dengan selectors yang benar
-  await page.fill('input[type="email"]', TEST_CREDENTIALS.email);
-  await page.fill('input[type="password"]', TEST_CREDENTIALS.password);
+  // Isi form login dengan semantic locators
+  await page.getByLabel(/email/i).fill(TEST_CREDENTIALS.email);
+  await page.getByLabel(/password/i).fill(TEST_CREDENTIALS.password);
   
   // Click tombol "Masuk"
-  await page.click('button[type="submit"]');
+  await page.getByRole('button', { name: /masuk|submit/i }).click();
   
   // Tunggu redirect ke admin (URL harus mengandung /admin)
   await page.waitForURL(/\/admin/, { timeout: 10000 });

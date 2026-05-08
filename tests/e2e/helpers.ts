@@ -57,8 +57,8 @@ export async function loginAsClient(
 
 export async function requestMagicLink(page: Page, email: string) {
   await page.goto("/portal/login");
-  await page.fill('input[type="email"]', email);
-  await page.click('button[type="submit"]');
+  await page.getByLabel(/email/i).fill(email);
+  await page.getByRole("button", { name: /submit|kirim/i }).click();
   await waitForToast(page, "Link masuk telah dikirim");
 }
 
