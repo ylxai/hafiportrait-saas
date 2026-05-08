@@ -4,13 +4,13 @@ import { HTTP_STATUS } from '../constants/http-status';
 
 test.describe('Event Management API', () => {
   let testClientId: string;
-  let testEventId: string;
+  let _testEventId: string;
 
   test.afterEach(async () => {
     if (testClientId) {
       await cleanupClient(testClientId).catch(() => {});
       testClientId = '';
-      testEventId = '';
+      _testEventId = '';
     }
   });
 
@@ -38,7 +38,7 @@ test.describe('Event Management API', () => {
     expect(data.data.namaProject).toBe(`Test Event ${timestamp}`);
     expect(data.data.clientId).toBe(client.id);
     
-    testEventId = data.data.id;
+    _testEventId = data.data.id;
   });
 
   test('should auto-generate kodeBooking', async ({ request }) => {
@@ -115,7 +115,7 @@ test.describe('Event Management API', () => {
     const client = await seedClient();
     testClientId = client.id;
     const event = await seedEvent(client.id);
-    testEventId = event.id;
+    _testEventId = event.id;
 
     const response = await request.get('/api/admin/events?page=1&limit=10');
 
@@ -147,7 +147,7 @@ test.describe('Event Management API', () => {
     const client = await seedClient();
     testClientId = client.id;
     const event = await seedEvent(client.id);
-    testEventId = event.id;
+    _testEventId = event.id;
 
     const response = await request.get(`/api/admin/events/${event.id}`);
 
@@ -170,7 +170,7 @@ test.describe('Event Management API', () => {
     const client = await seedClient();
     testClientId = client.id;
     const event = await seedEvent(client.id);
-    testEventId = event.id;
+    _testEventId = event.id;
 
     const response = await request.put(`/api/admin/events/${event.id}`, {
       data: {
@@ -188,7 +188,7 @@ test.describe('Event Management API', () => {
     const client = await seedClient();
     testClientId = client.id;
     const event = await seedEvent(client.id);
-    testEventId = event.id;
+    _testEventId = event.id;
 
     const response = await request.put(`/api/admin/events/${event.id}`, {
       data: {
@@ -207,7 +207,7 @@ test.describe('Event Management API', () => {
     const client = await seedClient();
     testClientId = client.id;
     const event = await seedEvent(client.id);
-    testEventId = event.id;
+    _testEventId = event.id;
 
     const response = await request.put(`/api/admin/events/${event.id}`, {
       data: {
@@ -224,7 +224,7 @@ test.describe('Event Management API', () => {
     const client = await seedClient();
     testClientId = client.id;
     const event = await seedEvent(client.id);
-    testEventId = event.id;
+    _testEventId = event.id;
 
     const response = await request.delete(`/api/admin/events/${event.id}`);
 
@@ -236,7 +236,7 @@ test.describe('Event Management API', () => {
     const getResponse = await request.get(`/api/admin/events/${event.id}`);
     expect(getResponse.status()).toBe(HTTP_STATUS.NOT_FOUND);
     
-    testEventId = '';
+    _testEventId = '';
   });
 
   test('should return 404 when deleting non-existent event', async ({ request }) => {
@@ -261,7 +261,7 @@ test.describe('Event Management API', () => {
     const client = await seedClient();
     testClientId = client.id;
     const event = await seedEvent(client.id);
-    testEventId = event.id;
+    _testEventId = event.id;
 
     const response = await request.put(`/api/admin/events/${event.id}`, {
       data: {

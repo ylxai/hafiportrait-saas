@@ -76,7 +76,7 @@ test.describe('Client Portal - Dashboard', () => {
   test('should show loading state initially', async ({ page }) => {
     await page.goto('/portal/dashboard');
     
-    const loader = page.locator('[class*="animate-spin"]');
+    const _loader = page.locator('[class*="animate-spin"]');
     await page.waitForLoadState('domcontentloaded');
     
     // Check if loader was visible during initial load

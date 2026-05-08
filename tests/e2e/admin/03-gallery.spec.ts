@@ -5,7 +5,7 @@ import { HTTP_STATUS } from '../constants/http-status';
 test.describe('Gallery Management API', () => {
   let testClientId: string;
   let testEventId: string;
-  let testGalleryId: string;
+  let _testGalleryId: string;
 
   test.beforeEach(async () => {
     const client = await seedClient();
@@ -19,7 +19,7 @@ test.describe('Gallery Management API', () => {
       await cleanupClient(testClientId).catch(() => {});
       testClientId = '';
       testEventId = '';
-      testGalleryId = '';
+      _testGalleryId = '';
     }
   });
 
@@ -41,7 +41,7 @@ test.describe('Gallery Management API', () => {
     expect(data.data).toHaveProperty('id');
     expect(data.data.namaProject).toBe(`Test Gallery ${timestamp}`);
     
-    testGalleryId = data.data.id;
+    _testGalleryId = data.data.id;
   });
 
   test('should reject gallery creation with missing required fields', async ({ request }) => {
@@ -73,7 +73,7 @@ test.describe('Gallery Management API', () => {
 
   test('should list galleries with pagination', async ({ request }) => {
     const gallery = await seedGallery(testEventId);
-    testGalleryId = gallery.id;
+    _testGalleryId = gallery.id;
 
     const response = await request.get('/api/admin/galleries?page=1&limit=10');
 
@@ -87,7 +87,7 @@ test.describe('Gallery Management API', () => {
 
   test('should get gallery by ID', async ({ request }) => {
     const gallery = await seedGallery(testEventId);
-    testGalleryId = gallery.id;
+    _testGalleryId = gallery.id;
 
     const response = await request.get(`/api/admin/galleries/${gallery.id}`);
 
@@ -107,7 +107,7 @@ test.describe('Gallery Management API', () => {
 
   test('should lock gallery', async ({ request }) => {
     const gallery = await seedGallery(testEventId);
-    testGalleryId = gallery.id;
+    _testGalleryId = gallery.id;
 
     const response = await request.post(`/api/admin/galleries/${gallery.id}/toggle-lock`);
 
@@ -119,7 +119,7 @@ test.describe('Gallery Management API', () => {
 
   test('should unlock gallery', async ({ request }) => {
     const gallery = await seedGallery(testEventId, { status: 'locked' });
-    testGalleryId = gallery.id;
+    _testGalleryId = gallery.id;
 
     const response = await request.post(`/api/admin/galleries/${gallery.id}/toggle-lock`);
 
@@ -131,7 +131,7 @@ test.describe('Gallery Management API', () => {
 
   test('should update gallery details', async ({ request }) => {
     const gallery = await seedGallery(testEventId);
-    testGalleryId = gallery.id;
+    _testGalleryId = gallery.id;
 
     const response = await request.put(`/api/admin/galleries/${gallery.id}`, {
       data: {
@@ -149,7 +149,7 @@ test.describe('Gallery Management API', () => {
 
   test('should reject invalid maxSelection value', async ({ request }) => {
     const gallery = await seedGallery(testEventId);
-    testGalleryId = gallery.id;
+    _testGalleryId = gallery.id;
 
     const response = await request.put(`/api/admin/galleries/${gallery.id}`, {
       data: {
@@ -164,7 +164,7 @@ test.describe('Gallery Management API', () => {
 
   test('should delete gallery', async ({ request }) => {
     const gallery = await seedGallery(testEventId);
-    testGalleryId = gallery.id;
+    _testGalleryId = gallery.id;
 
     const response = await request.delete(`/api/admin/galleries/${gallery.id}`);
 
@@ -176,7 +176,7 @@ test.describe('Gallery Management API', () => {
     const getResponse = await request.get(`/api/admin/galleries/${gallery.id}`);
     expect(getResponse.status()).toBe(HTTP_STATUS.NOT_FOUND);
     
-    testGalleryId = '';
+    _testGalleryId = '';
   });
 
   test('should return 404 when deleting non-existent gallery', async ({ request }) => {
@@ -228,7 +228,7 @@ test.describe('Gallery Management API', () => {
 
   test('should handle gallery status updates', async ({ request }) => {
     const gallery = await seedGallery(testEventId);
-    testGalleryId = gallery.id;
+    _testGalleryId = gallery.id;
 
     const response = await request.put(`/api/admin/galleries/${gallery.id}`, {
       data: {
@@ -244,7 +244,7 @@ test.describe('Gallery Management API', () => {
 
   test('should reject invalid status value', async ({ request }) => {
     const gallery = await seedGallery(testEventId);
-    testGalleryId = gallery.id;
+    _testGalleryId = gallery.id;
 
     const response = await request.put(`/api/admin/galleries/${gallery.id}`, {
       data: {
