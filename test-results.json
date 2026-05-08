@@ -140,12 +140,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 44630,
+                      "duration": 43786,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-02T19:46:23.141Z",
+                      "startTime": "2026-05-02T20:17:05.149Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -174,31 +174,31 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "failed",
-                      "duration": 26973,
+                      "duration": 23235,
                       "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Invalid credentials')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Invalid credentials')\u001b[22m\n",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Invalid credentials')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Invalid credentials')\u001b[22m\n\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:21:60",
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Email atau password salah')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Email atau password salah')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Email atau password salah')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Email atau password salah')\u001b[22m\n\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:21:66",
                         "location": {
                           "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
-                          "column": 60,
+                          "column": 66,
                           "line": 21
                         },
-                        "snippet": "\u001b[0m \u001b[90m 19 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 20 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 21 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Invalid credentials'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                            \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 22 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 23 |\u001b[39m\n \u001b[90m 24 |\u001b[39m   test(\u001b[32m'should reject empty credentials'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                        "snippet": "\u001b[0m \u001b[90m 19 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 20 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 21 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m\"text=Email atau password salah\"\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                  \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 22 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 23 |\u001b[39m\n \u001b[90m 24 |\u001b[39m   test(\u001b[32m\"should persist session after refresh\"\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
                       },
                       "errors": [
                         {
                           "location": {
                             "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
-                            "column": 60,
+                            "column": 66,
                             "line": 21
                           },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Invalid credentials')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Invalid credentials')\u001b[22m\n\n\n\u001b[0m \u001b[90m 19 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 20 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 21 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Invalid credentials'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                            \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 22 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 23 |\u001b[39m\n \u001b[90m 24 |\u001b[39m   test(\u001b[32m'should reject empty credentials'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:21:60\u001b[22m"
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Email atau password salah')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Email atau password salah')\u001b[22m\n\n\n\u001b[0m \u001b[90m 19 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 20 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 21 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m\"text=Email atau password salah\"\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                  \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 22 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 23 |\u001b[39m\n \u001b[90m 24 |\u001b[39m   test(\u001b[32m\"should persist session after refresh\"\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:21:66\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-02T19:46:23.145Z",
+                      "startTime": "2026-05-02T20:17:05.170Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -214,7 +214,7 @@
                       ],
                       "errorLocation": {
                         "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
-                        "column": 60,
+                        "column": 66,
                         "line": 21
                       }
                     }
@@ -225,144 +225,6 @@
               "id": "791b3c4e0869e77b2651-a12a978530e65948078c",
               "file": "admin/01-auth.spec.ts",
               "line": 15,
-              "column": 7
-            },
-            {
-              "title": "should reject empty credentials",
-              "ok": false,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 60000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "admin",
-                  "projectName": "admin",
-                  "results": [
-                    {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
-                      "status": "failed",
-                      "duration": 26991,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Email is required')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Email is required')\u001b[22m\n",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Email is required')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Email is required')\u001b[22m\n\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:28:58",
-                        "location": {
-                          "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
-                          "column": 58,
-                          "line": 28
-                        },
-                        "snippet": "\u001b[0m \u001b[90m 26 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 27 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 28 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Email is required'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                          \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 29 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 30 |\u001b[39m\n \u001b[90m 31 |\u001b[39m   test(\u001b[32m'should reject invalid email format'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
-                            "column": 58,
-                            "line": 28
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Email is required')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Email is required')\u001b[22m\n\n\n\u001b[0m \u001b[90m 26 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 27 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 28 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Email is required'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                          \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 29 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 30 |\u001b[39m\n \u001b[90m 31 |\u001b[39m   test(\u001b[32m'should reject invalid email format'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:28:58\u001b[22m"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-02T19:46:23.152Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flow-should-reject-empty-credentials-admin/test-failed-1.png"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flow-should-reject-empty-credentials-admin/error-context.md"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
-                        "column": 58,
-                        "line": 28
-                      }
-                    }
-                  ],
-                  "status": "unexpected"
-                }
-              ],
-              "id": "791b3c4e0869e77b2651-4baa9dc9a318b0e68198",
-              "file": "admin/01-auth.spec.ts",
-              "line": 24,
-              "column": 7
-            },
-            {
-              "title": "should reject invalid email format",
-              "ok": false,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 60000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "admin",
-                  "projectName": "admin",
-                  "results": [
-                    {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
-                      "status": "failed",
-                      "duration": 26994,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Invalid email')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Invalid email')\u001b[22m\n",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Invalid email')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Invalid email')\u001b[22m\n\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:37:54",
-                        "location": {
-                          "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
-                          "column": 54,
-                          "line": 37
-                        },
-                        "snippet": "\u001b[0m \u001b[90m 35 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 36 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 37 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Invalid email'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 38 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 39 |\u001b[39m\n \u001b[90m 40 |\u001b[39m   test(\u001b[32m'should persist session after refresh'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
-                            "column": 54,
-                            "line": 37
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Invalid email')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Invalid email')\u001b[22m\n\n\n\u001b[0m \u001b[90m 35 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 36 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 37 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Invalid email'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 38 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 39 |\u001b[39m\n \u001b[90m 40 |\u001b[39m   test(\u001b[32m'should persist session after refresh'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:37:54\u001b[22m"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-02T19:46:23.236Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flo-5410c-reject-invalid-email-format-admin/test-failed-1.png"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flo-5410c-reject-invalid-email-format-admin/error-context.md"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
-                        "column": 54,
-                        "line": 37
-                      }
-                    }
-                  ],
-                  "status": "unexpected"
-                }
-              ],
-              "id": "791b3c4e0869e77b2651-77b95bc481a28fcc833b",
-              "file": "admin/01-auth.spec.ts",
-              "line": 31,
               "column": 7
             },
             {
@@ -378,15 +240,15 @@
                   "projectName": "admin",
                   "results": [
                     {
-                      "workerIndex": 5,
+                      "workerIndex": 2,
                       "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 9914,
+                      "duration": 46715,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-02T19:47:11.669Z",
+                      "startTime": "2026-05-02T20:17:05.207Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -396,12 +258,12 @@
               ],
               "id": "791b3c4e0869e77b2651-6db222e7a6fc87b0d859",
               "file": "admin/01-auth.spec.ts",
-              "line": 40,
+              "line": 24,
               "column": 7
             },
             {
               "title": "should logout successfully",
-              "ok": true,
+              "ok": false,
               "tags": [],
               "tests": [
                 {
@@ -412,34 +274,31 @@
                   "projectName": "admin",
                   "results": [
                     {
-                      "workerIndex": 6,
+                      "workerIndex": 3,
                       "parallelIndex": 3,
-                      "status": "interrupted",
-                      "duration": 10998,
+                      "status": "timedOut",
+                      "duration": 60725,
                       "error": {
-                        "message": "Error: page.click: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"user-menu\"]')\u001b[22m\n",
-                        "stack": "Error: page.click: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"user-menu\"]')\u001b[22m\n\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:59:16",
-                        "location": {
-                          "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
-                          "column": 16,
-                          "line": 59
-                        },
-                        "snippet": "\u001b[0m \u001b[90m 57 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'/admin'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 58 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 59 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'[data-testid=\"user-menu\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 60 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'text=Logout'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 61 |\u001b[39m     \n \u001b[90m 62 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login/\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m"
                       },
                       "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m"
+                        },
                         {
                           "location": {
                             "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
                             "column": 16,
-                            "line": 59
+                            "line": 43
                           },
-                          "message": "Error: page.click: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"user-menu\"]')\u001b[22m\n\n\n\u001b[0m \u001b[90m 57 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'/admin'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 58 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 59 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'[data-testid=\"user-menu\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 60 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'text=Logout'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 61 |\u001b[39m     \n \u001b[90m 62 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login/\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:59:16\u001b[22m"
+                          "message": "Error: page.click: Test timeout of 60000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"user-menu\"]')\u001b[22m\n\u001b[2m    - locator resolved to <button data-testid=\"user-menu\" class=\"p-1.5 -mr-2 rounded-lg hover:bg-muted transition touch-target flex items-center justify-center\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    26 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is not visible\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n\n\u001b[0m \u001b[90m 41 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m\"/admin\"\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 42 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 43 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'[data-testid=\"user-menu\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 44 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m\"text=Logout\"\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 45 |\u001b[39m\n \u001b[90m 46 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login/\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:43:16\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-02T19:47:11.669Z",
+                      "startTime": "2026-05-02T20:17:05.288Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -452,25 +311,20 @@
                           "contentType": "text/markdown",
                           "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flow-should-logout-successfully-admin/error-context.md"
                         }
-                      ],
-                      "errorLocation": {
-                        "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
-                        "column": 16,
-                        "line": 59
-                      }
+                      ]
                     }
                   ],
-                  "status": "skipped"
+                  "status": "unexpected"
                 }
               ],
               "id": "791b3c4e0869e77b2651-956fa5806b754fd8a844",
               "file": "admin/01-auth.spec.ts",
-              "line": 52,
+              "line": 36,
               "column": 7
             },
             {
               "title": "should redirect to login when accessing protected route",
-              "ok": true,
+              "ok": false,
               "tags": [],
               "tests": [
                 {
@@ -483,32 +337,29 @@
                     {
                       "workerIndex": 4,
                       "parallelIndex": 1,
-                      "status": "interrupted",
-                      "duration": 11014,
+                      "status": "timedOut",
+                      "duration": 60455,
                       "error": {
-                        "message": "Error: page.waitForURL: Test ended.\n=========================== logs ===========================\nwaiting for navigation to \"/login\" until \"load\"\n  navigated to \"http://localhost:3000/login?callbackUrl=%2Fadmin%2Fgalleries\"\n============================================================",
-                        "stack": "Error: page.waitForURL: Test ended.\n=========================== logs ===========================\nwaiting for navigation to \"/login\" until \"load\"\n  navigated to \"http://localhost:3000/login?callbackUrl=%2Fadmin%2Fgalleries\"\n============================================================\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:67:16",
-                        "location": {
-                          "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
-                          "column": 16,
-                          "line": 67
-                        },
-                        "snippet": "\u001b[0m \u001b[90m 65 |\u001b[39m   test(\u001b[32m'should redirect to login when accessing protected route'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 66 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/galleries'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 67 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'/login'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 68 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login/\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 69 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 70 |\u001b[39m\u001b[0m"
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m"
                       },
                       "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m"
+                        },
                         {
                           "location": {
                             "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
                             "column": 16,
-                            "line": 67
+                            "line": 53
                           },
-                          "message": "Error: page.waitForURL: Test ended.\n=========================== logs ===========================\nwaiting for navigation to \"/login\" until \"load\"\n  navigated to \"http://localhost:3000/login?callbackUrl=%2Fadmin%2Fgalleries\"\n============================================================\n\n\u001b[0m \u001b[90m 65 |\u001b[39m   test(\u001b[32m'should redirect to login when accessing protected route'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 66 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/galleries'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 67 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'/login'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 68 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login/\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 69 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 70 |\u001b[39m\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:67:16\u001b[22m"
+                          "message": "Error: page.waitForURL: Test timeout of 60000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"/login\" until \"load\"\n  navigated to \"http://localhost:3000/login?callbackUrl=%2Fadmin%2Fgalleries\"\n============================================================\n\n\u001b[0m \u001b[90m 51 |\u001b[39m   }) \u001b[33m=>\u001b[39m {\n \u001b[90m 52 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m\"/admin/galleries\"\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 53 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m\"/login\"\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 54 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login/\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 55 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 56 |\u001b[39m\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:53:16\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-02T19:47:11.667Z",
+                      "startTime": "2026-05-02T20:17:54.447Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -521,20 +372,15 @@
                           "contentType": "text/markdown",
                           "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flo-4fc74-n-accessing-protected-route-admin/error-context.md"
                         }
-                      ],
-                      "errorLocation": {
-                        "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
-                        "column": 16,
-                        "line": 67
-                      }
+                      ]
                     }
                   ],
-                  "status": "skipped"
+                  "status": "unexpected"
                 }
               ],
               "id": "791b3c4e0869e77b2651-5da037b5fb7310b3e3f5",
               "file": "admin/01-auth.spec.ts",
-              "line": 65,
+              "line": 49,
               "column": 7
             },
             {
@@ -553,12 +399,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3973,
+                      "duration": 3416,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-02T19:47:10.224Z",
+                      "startTime": "2026-05-02T20:18:10.151Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -568,7 +414,7 @@
               ],
               "id": "791b3c4e0869e77b2651-8fdd4998d978b5dd3ffe",
               "file": "admin/01-auth.spec.ts",
-              "line": 71,
+              "line": 57,
               "column": 7
             },
             {
@@ -584,34 +430,34 @@
                   "projectName": "admin",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
                       "status": "interrupted",
-                      "duration": 12237,
+                      "duration": 61883,
                       "error": {
                         "message": "Error: page.waitForURL: Test ended.\n=========================== logs ===========================\nwaiting for navigation to \"/login\" until \"load\"\n  navigated to \"http://localhost:3000/login?callbackUrl=%2Fadmin%2Fgalleries\"\n============================================================",
-                        "stack": "Error: page.waitForURL: Test ended.\n=========================== logs ===========================\nwaiting for navigation to \"/login\" until \"load\"\n  navigated to \"http://localhost:3000/login?callbackUrl=%2Fadmin%2Fgalleries\"\n============================================================\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:93:16",
+                        "stack": "Error: page.waitForURL: Test ended.\n=========================== logs ===========================\nwaiting for navigation to \"/login\" until \"load\"\n  navigated to \"http://localhost:3000/login?callbackUrl=%2Fadmin%2Fgalleries\"\n============================================================\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:79:16",
                         "location": {
                           "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
                           "column": 16,
-                          "line": 93
+                          "line": 79
                         },
-                        "snippet": "\u001b[0m \u001b[90m 91 |\u001b[39m     \n \u001b[90m 92 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/galleries'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 93 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'/login'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 94 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login/\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 95 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 96 |\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                        "snippet": "\u001b[0m \u001b[90m 77 |\u001b[39m\n \u001b[90m 78 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m\"/admin/galleries\"\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 79 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m\"/login\"\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 80 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login/\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 81 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 82 |\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
                       },
                       "errors": [
                         {
                           "location": {
                             "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
                             "column": 16,
-                            "line": 93
+                            "line": 79
                           },
-                          "message": "Error: page.waitForURL: Test ended.\n=========================== logs ===========================\nwaiting for navigation to \"/login\" until \"load\"\n  navigated to \"http://localhost:3000/login?callbackUrl=%2Fadmin%2Fgalleries\"\n============================================================\n\n\u001b[0m \u001b[90m 91 |\u001b[39m     \n \u001b[90m 92 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/galleries'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 93 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m'/login'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 94 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login/\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 95 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 96 |\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:93:16\u001b[22m"
+                          "message": "Error: page.waitForURL: Test ended.\n=========================== logs ===========================\nwaiting for navigation to \"/login\" until \"load\"\n  navigated to \"http://localhost:3000/login?callbackUrl=%2Fadmin%2Fgalleries\"\n============================================================\n\n\u001b[0m \u001b[90m 77 |\u001b[39m\n \u001b[90m 78 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m\"/admin/galleries\"\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 79 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m\"/login\"\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 80 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/\\/login/\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 81 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 82 |\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts:79:16\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-02T19:47:14.217Z",
+                      "startTime": "2026-05-02T20:18:13.087Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -628,7 +474,7 @@
                       "errorLocation": {
                         "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/01-auth.spec.ts",
                         "column": 16,
-                        "line": 93
+                        "line": 79
                       }
                     }
                   ],
@@ -637,7 +483,7 @@
               ],
               "id": "791b3c4e0869e77b2651-dc4aaa01645db6f0f11b",
               "file": "admin/01-auth.spec.ts",
-              "line": 82,
+              "line": 68,
               "column": 7
             }
           ]
@@ -670,34 +516,34 @@
                   "projectName": "admin",
                   "results": [
                     {
-                      "workerIndex": 5,
-                      "parallelIndex": 2,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "interrupted",
-                      "duration": 1897,
+                      "duration": 61401,
                       "error": {
-                        "message": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[name=\"email\"]')\u001b[22m\n\u001b[2m    - locator resolved to <input value=\"\" id=\"email\" required=\"\" type=\"email\" name=\"email\" inputmode=\"email\" autocomplete=\"email\" placeholder=\"email@studio.com…\" class=\"w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all\"/>\u001b[22m\n\u001b[2m    - fill(\"admin@photostudio.com\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n",
-                        "stack": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[name=\"email\"]')\u001b[22m\n\u001b[2m    - locator resolved to <input value=\"\" id=\"email\" required=\"\" type=\"email\" name=\"email\" inputmode=\"email\" autocomplete=\"email\" placeholder=\"email@studio.com…\" class=\"w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all\"/>\u001b[22m\n\u001b[2m    - fill(\"admin@photostudio.com\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n\n    at login (/home/ubuntu/hafiportrait-saas/tests/e2e/helpers.ts:11:14)\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts:7:5",
+                        "message": "Error: page.click: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('text=Create Gallery')\u001b[22m\n",
+                        "stack": "Error: page.click: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('text=Create Gallery')\u001b[22m\n\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts:15:16",
                         "location": {
-                          "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/helpers.ts",
-                          "column": 14,
-                          "line": 11
+                          "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts",
+                          "column": 16,
+                          "line": 15
                         },
-                        "snippet": "\u001b[90m   at \u001b[39mhelpers.ts:11\n\n\u001b[0m \u001b[90m  9 |\u001b[39m \u001b[36mexport\u001b[39m \u001b[36masync\u001b[39m \u001b[36mfunction\u001b[39m login(page\u001b[33m:\u001b[39m \u001b[33mPage\u001b[39m) {\n \u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m\"/login\"\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[name=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[33mTEST_USER\u001b[39m\u001b[33m.\u001b[39memail)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m              \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[name=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[33mTEST_USER\u001b[39m\u001b[33m.\u001b[39mpassword)\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m\"/admin\"\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
+                        "snippet": "\u001b[0m \u001b[90m 13 |\u001b[39m     \u001b[90m// Create gallery first\u001b[39m\n \u001b[90m 14 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/galleries'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 15 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'text=Create Gallery'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 16 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[name=\"namaProject\"]'\u001b[39m\u001b[33m,\u001b[39m testData\u001b[33m.\u001b[39mgalleryName)\u001b[33m;\u001b[39m\n \u001b[90m 17 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 18 |\u001b[39m     \u001b[36mawait\u001b[39m waitForToast(page\u001b[33m,\u001b[39m \u001b[32m'Gallery created'\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
                       },
                       "errors": [
                         {
                           "location": {
-                            "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/helpers.ts",
-                            "column": 14,
-                            "line": 11
+                            "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts",
+                            "column": 16,
+                            "line": 15
                           },
-                          "message": "Error: page.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('input[name=\"email\"]')\u001b[22m\n\u001b[2m    - locator resolved to <input value=\"\" id=\"email\" required=\"\" type=\"email\" name=\"email\" inputmode=\"email\" autocomplete=\"email\" placeholder=\"email@studio.com…\" class=\"w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all\"/>\u001b[22m\n\u001b[2m    - fill(\"admin@photostudio.com\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n\n\n\u001b[90m   at \u001b[39mhelpers.ts:11\n\n\u001b[0m \u001b[90m  9 |\u001b[39m \u001b[36mexport\u001b[39m \u001b[36masync\u001b[39m \u001b[36mfunction\u001b[39m login(page\u001b[33m:\u001b[39m \u001b[33mPage\u001b[39m) {\n \u001b[90m 10 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m\"/login\"\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 11 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[name=\"email\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[33mTEST_USER\u001b[39m\u001b[33m.\u001b[39memail)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m              \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 12 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[name=\"password\"]'\u001b[39m\u001b[33m,\u001b[39m \u001b[33mTEST_USER\u001b[39m\u001b[33m.\u001b[39mpassword)\u001b[33m;\u001b[39m\n \u001b[90m 13 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 14 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForURL(\u001b[32m\"/admin\"\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at login (/home/ubuntu/hafiportrait-saas/tests/e2e/helpers.ts:11:14)\u001b[22m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts:7:5\u001b[22m"
+                          "message": "Error: page.click: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('text=Create Gallery')\u001b[22m\n\n\n\u001b[0m \u001b[90m 13 |\u001b[39m     \u001b[90m// Create gallery first\u001b[39m\n \u001b[90m 14 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/galleries'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 15 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'text=Create Gallery'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 16 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mfill(\u001b[32m'input[name=\"namaProject\"]'\u001b[39m\u001b[33m,\u001b[39m testData\u001b[33m.\u001b[39mgalleryName)\u001b[33m;\u001b[39m\n \u001b[90m 17 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 18 |\u001b[39m     \u001b[36mawait\u001b[39m waitForToast(page\u001b[33m,\u001b[39m \u001b[32m'Gallery created'\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts:15:16\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-02T19:47:25.363Z",
+                      "startTime": "2026-05-02T20:18:13.679Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -712,9 +558,9 @@
                         }
                       ],
                       "errorLocation": {
-                        "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/helpers.ts",
-                        "column": 14,
-                        "line": 11
+                        "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts",
+                        "column": 16,
+                        "line": 15
                       }
                     }
                   ],
@@ -728,7 +574,7 @@
             },
             {
               "title": "should reject invalid file type",
-              "ok": true,
+              "ok": false,
               "tags": [],
               "tests": [
                 {
@@ -737,8 +583,57 @@
                   "expectedStatus": "passed",
                   "projectId": "admin",
                   "projectName": "admin",
-                  "results": [],
-                  "status": "skipped"
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 3,
+                      "status": "failed",
+                      "duration": 6682,
+                      "error": {
+                        "message": "Error: ENOENT: no such file or directory, stat '/home/ubuntu/hafiportrait-saas/tests/e2e/fixtures/invalid-file.txt'",
+                        "stack": "Error: ENOENT: no such file or directory, stat '/home/ubuntu/hafiportrait-saas/tests/e2e/fixtures/invalid-file.txt'\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts:38:5",
+                        "location": {
+                          "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts",
+                          "column": 5,
+                          "line": 38
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 36 |\u001b[39m     \n \u001b[90m 37 |\u001b[39m     \u001b[36mconst\u001b[39m fileInput \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'input[type=\"file\"]'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 38 |\u001b[39m     \u001b[36mawait\u001b[39m fileInput\u001b[33m.\u001b[39msetInputFiles(path\u001b[33m.\u001b[39mjoin(__dirname\u001b[33m,\u001b[39m \u001b[32m'../fixtures/invalid-file.txt'\u001b[39m))\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m     \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 39 |\u001b[39m     \n \u001b[90m 40 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Invalid file type'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 41 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts",
+                            "column": 5,
+                            "line": 38
+                          },
+                          "message": "Error: ENOENT: no such file or directory, stat '/home/ubuntu/hafiportrait-saas/tests/e2e/fixtures/invalid-file.txt'\n\n\u001b[0m \u001b[90m 36 |\u001b[39m     \n \u001b[90m 37 |\u001b[39m     \u001b[36mconst\u001b[39m fileInput \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'input[type=\"file\"]'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 38 |\u001b[39m     \u001b[36mawait\u001b[39m fileInput\u001b[33m.\u001b[39msetInputFiles(path\u001b[33m.\u001b[39mjoin(__dirname\u001b[33m,\u001b[39m \u001b[32m'../fixtures/invalid-file.txt'\u001b[39m))\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m     \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 39 |\u001b[39m     \n \u001b[90m 40 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Invalid file type'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m 41 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts:38:5\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-02T20:18:39.492Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/02-upload-Photo-Upload-Flow-should-reject-invalid-file-type-admin/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/02-upload-Photo-Upload-Flow-should-reject-invalid-file-type-admin/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts",
+                        "column": 5,
+                        "line": 38
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
                 }
               ],
               "id": "c4edad4cbc4b153bf890-3f33704bc38403b92b9b",
@@ -757,7 +652,56 @@
                   "expectedStatus": "passed",
                   "projectId": "admin",
                   "projectName": "admin",
-                  "results": [],
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 1,
+                      "status": "interrupted",
+                      "duration": 18448,
+                      "error": {
+                        "message": "Error: locator.textContent: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"storage-usage\"]')\u001b[22m\n",
+                        "stack": "Error: locator.textContent: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"storage-usage\"]')\u001b[22m\n\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts:46:77",
+                        "location": {
+                          "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts",
+                          "column": 77,
+                          "line": 46
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 44 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/storage'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 45 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 46 |\u001b[39m     \u001b[36mconst\u001b[39m usageBefore \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'[data-testid=\"storage-usage\"]'\u001b[39m)\u001b[33m.\u001b[39mtextContent()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 47 |\u001b[39m     \n \u001b[90m 48 |\u001b[39m     \u001b[90m// Upload photo\u001b[39m\n \u001b[90m 49 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/galleries'\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts",
+                            "column": 77,
+                            "line": 46
+                          },
+                          "message": "Error: locator.textContent: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"storage-usage\"]')\u001b[22m\n\n\n\u001b[0m \u001b[90m 44 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/storage'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 45 |\u001b[39m     \n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 46 |\u001b[39m     \u001b[36mconst\u001b[39m usageBefore \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'[data-testid=\"storage-usage\"]'\u001b[39m)\u001b[33m.\u001b[39mtextContent()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 47 |\u001b[39m     \n \u001b[90m 48 |\u001b[39m     \u001b[90m// Upload photo\u001b[39m\n \u001b[90m 49 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/galleries'\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts:46:77\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-02T20:18:58.264Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/02-upload-Photo-Upload-Flo-7e803--storage-usage-after-upload-admin/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/02-upload-Photo-Upload-Flo-7e803--storage-usage-after-upload-admin/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts",
+                        "column": 77,
+                        "line": 46
+                      }
+                    }
+                  ],
                   "status": "skipped"
                 }
               ],
@@ -777,7 +721,51 @@
                   "expectedStatus": "passed",
                   "projectId": "admin",
                   "projectName": "admin",
-                  "results": [],
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 3,
+                      "status": "interrupted",
+                      "duration": 18373,
+                      "error": {
+                        "message": "Error: page.click: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('text=Test Gallery')\u001b[22m\n",
+                        "stack": "Error: page.click: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('text=Test Gallery')\u001b[22m\n\n    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts:68:16",
+                        "location": {
+                          "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts",
+                          "column": 16,
+                          "line": 68
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 66 |\u001b[39m     \n \u001b[90m 67 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/galleries'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 68 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'text=Test Gallery'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 69 |\u001b[39m     \n \u001b[90m 70 |\u001b[39m     \u001b[36mconst\u001b[39m fileInput \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'input[type=\"file\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 71 |\u001b[39m     \u001b[36mawait\u001b[39m fileInput\u001b[33m.\u001b[39msetInputFiles(path\u001b[33m.\u001b[39mjoin(__dirname\u001b[33m,\u001b[39m \u001b[32m'../fixtures/test-photo.jpg'\u001b[39m))\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts",
+                            "column": 16,
+                            "line": 68
+                          },
+                          "message": "Error: page.click: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('text=Test Gallery')\u001b[22m\n\n\n\u001b[0m \u001b[90m 66 |\u001b[39m     \n \u001b[90m 67 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/admin/galleries'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 68 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mclick(\u001b[32m'text=Test Gallery'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 69 |\u001b[39m     \n \u001b[90m 70 |\u001b[39m     \u001b[36mconst\u001b[39m fileInput \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'input[type=\"file\"]'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 71 |\u001b[39m     \u001b[36mawait\u001b[39m fileInput\u001b[33m.\u001b[39msetInputFiles(path\u001b[33m.\u001b[39mjoin(__dirname\u001b[33m,\u001b[39m \u001b[32m'../fixtures/test-photo.jpg'\u001b[39m))\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts:68:16\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-02T20:18:58.860Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/02-upload-Photo-Upload-Flo-38c1e-e-upload-failure-gracefully-admin/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin/02-upload.spec.ts",
+                        "column": 16,
+                        "line": 68
+                      }
+                    }
+                  ],
                   "status": "skipped"
                 }
               ],
@@ -4959,11 +4947,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-05-02T19:46:11.684Z",
-    "duration": 75820.43400000001,
+    "startTime": "2026-05-02T20:16:39.279Z",
+    "duration": 165815.412,
     "expected": 3,
-    "skipped": 200,
-    "unexpected": 3,
+    "skipped": 197,
+    "unexpected": 4,
     "flaky": 0
   }
 }
