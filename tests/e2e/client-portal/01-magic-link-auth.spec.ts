@@ -50,7 +50,7 @@ test.describe("Client Portal - Magic Link Authentication", () => {
     const expiredToken = generateMagicLinkToken(clientId, testEmail);
 
     await page.goto(`/portal/verify?token=${expiredToken}`);
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState("networkidle");
 
     await expect(page).toHaveURL(/\/portal/);
   });
