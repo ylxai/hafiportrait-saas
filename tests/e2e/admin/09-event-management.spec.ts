@@ -3,13 +3,13 @@ import { seedClient, seedEvent, cleanupClient } from '../fixtures/db-seed';
 
 test.describe('Event Management API', () => {
   let testClientId: string;
-  let _testEventId: string;
+  let testEventId: string;
 
   test.afterEach(async () => {
     if (testClientId) {
       await cleanupClient(testClientId).catch(() => {});
       testClientId = '';
-      _testEventId = '';
+      testEventId = '';
     }
   });
 
@@ -37,7 +37,7 @@ test.describe('Event Management API', () => {
     expect(data.data.namaProject).toBe(`Test Event ${timestamp}`);
     expect(data.data.clientId).toBe(client.id);
     
-    _testEventId = data.data.id;
+    testEventId = data.data.id;
   });
 
   test('should auto-generate kodeBooking', async ({ request }) => {
@@ -114,7 +114,7 @@ test.describe('Event Management API', () => {
     const client = await seedClient();
     testClientId = client.id;
     const event = await seedEvent(client.id);
-    _testEventId = event.id;
+    testEventId = event.id;
 
     const response = await request.get('/api/admin/events?page=1&limit=10');
 
@@ -235,7 +235,7 @@ test.describe('Event Management API', () => {
     const getResponse = await request.get(`/api/admin/events/${event.id}`);
     expect(getResponse.status()).toBe(404);
     
-    _testEventId = '';
+    testEventId = '';
   });
 
   test('should return 404 when deleting non-existent event', async ({ request }) => {
