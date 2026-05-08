@@ -393,6 +393,7 @@ export default function GalleryPage() {
         ) : activeTab === 'all' ? (
           <>
             <Masonry
+              data-testid="photo-grid"
               breakpointCols={breakpointColumns}
               className="flex -ml-4 w-auto"
               columnClassName="pl-4 bg-clip-padding"
@@ -405,6 +406,8 @@ export default function GalleryPage() {
                 return (
                   <div
                     key={photo.id}
+                    data-testid="photo-card"
+                    data-selected={isSelected}
                     className="relative mb-4 rounded-lg overflow-hidden cursor-pointer group"
                     style={{ paddingBottom: `${aspectRatio * 100}%` }}
                     onClick={() => openLightbox(index)}
@@ -574,6 +577,7 @@ export default function GalleryPage() {
       )}
 
       <YARLightbox
+        data-testid="lightbox"
         open={lightboxIndex >= 0}
         close={closeLightbox}
         index={lightboxIndex >= 0 ? lightboxIndex : 0}

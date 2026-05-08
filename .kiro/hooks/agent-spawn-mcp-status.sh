@@ -14,7 +14,6 @@ print(d.get('session_id', '')[:50] if d.get('session_id') else 'default')
 echo "=== MCP Servers Status ==="
 
 for server in context7 github playwright tavily tiger cloudflare-docs sequential-thinking memory; do
-  STATUS=$(~/.kiro/settings/mcp.json 2>/dev/null | grep -A2 "\"$server\"" | grep -o '"disabled":\s*true' || echo "enabled")
   if [ "$STATUS" = "enabled" ]; then
     echo "  $server: enabled"
   else

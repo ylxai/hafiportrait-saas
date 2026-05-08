@@ -15,9 +15,6 @@ if [[ -z "$PATH_WRITTEN" ]]; then
   exit 0
 fi
 
-# Only check TypeScript files
-if [[ "$PATH_WRITTEN" == *.ts || "$PATH_WRITTEN" == *.tsx || "$PATH_WRITTEN" == *.tsx ]]; then
-  cd /home/ubuntu/hafiportrait-saas
   # Quick typecheck — lebih cepat dari full build
   npx tsc --noEmit --skipLibCheck 2>&1 | head -15
 fi

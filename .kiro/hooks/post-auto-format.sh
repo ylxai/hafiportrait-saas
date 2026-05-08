@@ -15,9 +15,6 @@ if [[ -z "$PATH_WRITTEN" ]]; then
   exit 0
 fi
 
-# Only format TypeScript files
-if [[ "$PATH_WRITTEN" == *.ts || "$PATH_WRITTEN" == *.tsx ]]; then
-  cd /home/ubuntu/hafiportrait-saas
   echo "Auto-formatting: $PATH_WRITTEN"
   npx prettier --write "$PATH_WRITTEN" 2>/dev/null || true
 fi

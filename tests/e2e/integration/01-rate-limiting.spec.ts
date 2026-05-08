@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { login } from './helpers';
+import { login } from '../helpers';
 
 test.describe('Rate Limiting', () => {
   test.beforeEach(async ({ page }) => {
@@ -13,7 +13,6 @@ test.describe('Rate Limiting', () => {
     for (let i = 0; i < 31; i++) {
       await page.fill('[data-testid="global-search"]', `query${i}`);
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(100);
     }
     
     // 31st request should be rate limited
@@ -26,7 +25,6 @@ test.describe('Rate Limiting', () => {
     // Make 11 rapid export requests
     for (let i = 0; i < 11; i++) {
       await page.click('[data-testid="export-csv"]');
-      await page.waitForTimeout(100);
     }
     
     // 11th request should be rate limited
@@ -42,7 +40,6 @@ test.describe('Rate Limiting', () => {
       await page.locator('[data-testid="photo-checkbox"]').first().check();
       await page.click('[data-testid="bulk-delete"]');
       await page.click('text=Confirm');
-      await page.waitForTimeout(100);
     }
     
     // 21st request should be rate limited
@@ -56,7 +53,6 @@ test.describe('Rate Limiting', () => {
     for (let i = 0; i < 30; i++) {
       await page.fill('[data-testid="global-search"]', `query${i}`);
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(100);
     }
     
     // Wait for rate limit window to expire (60 seconds)
@@ -84,7 +80,6 @@ test.describe('Rate Limiting', () => {
     for (let i = 0; i < 31; i++) {
       await page.fill('[data-testid="global-search"]', `query${i}`);
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(100);
     }
     
     expect(statusCode).toBe(429);

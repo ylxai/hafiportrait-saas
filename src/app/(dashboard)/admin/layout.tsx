@@ -123,6 +123,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           <div className="relative">
             <button
+              data-testid="user-menu"
               onClick={() => setProfileOpen(!profileOpen)}
               className="p-1.5 -mr-2 rounded-lg hover:bg-muted transition touch-target flex items-center justify-center"
             >
@@ -253,6 +254,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-border bg-card/50 backdrop-blur-md h-16 flex items-center">
           <button
+            data-testid="user-menu"
             onClick={() => signOut({ callbackUrl: '/login' })}
             className={`flex items-center gap-3 px-4 py-2.5 w-full rounded-xl text-destructive hover:bg-destructive/10 transition ${!sidebarOpen && 'justify-center px-0'}`}
             title={!sidebarOpen ? 'Keluar' : undefined}
