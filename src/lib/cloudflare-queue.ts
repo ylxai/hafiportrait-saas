@@ -9,7 +9,7 @@
  * - Batch processing for bulk operations
  * 
  * Environment variables needed:
- * - PHOTOSTUDIO_CF_ACCOUNT_ID (renamed to avoid conflict with Wrangler CLI)
+ * - CLOUDFLARE_ACCOUNT_ID
  * - NEXT_SERVER_CF_QUEUE_TOKEN (with Queue write permission)
  */
 
@@ -17,7 +17,7 @@ import { prisma } from '@/lib/db';
 import { Prisma } from '@/generated/prisma';
 import { recordFailedJob } from '@/lib/failed-jobs';
 
-const ACCOUNT_ID = process.env.PHOTOSTUDIO_CF_ACCOUNT_ID;
+const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const API_TOKEN = process.env.NEXT_SERVER_CF_QUEUE_TOKEN;
 const WORKER_URL = process.env.CLOUDFLARE_WORKER_URL || 'https://photostudio-deletion-worker.masipah1973.workers.dev';
 
@@ -65,7 +65,7 @@ export async function publishToQueue(
   options?: { delaySeconds?: number }
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   if (!ACCOUNT_ID || !API_TOKEN) {
-    logQueueError('Missing credentials', new Error('PHOTOSTUDIO_CF_ACCOUNT_ID or NEXT_SERVER_CF_QUEUE_TOKEN not set'));
+    logQueueError('Missing credentials', new Error('CLOUDFLARE_ACCOUNT_ID or NEXT_SERVER_CF_QUEUE_TOKEN not set'));
     return { success: false, error: 'Missing credentials' };
   }
 
