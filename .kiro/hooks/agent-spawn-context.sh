@@ -7,13 +7,14 @@ INPUT=$(cat)
 CWD=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('cwd',''))" 2>/dev/null)
 
 # Hanya inject jika bekerja di project hafiportrait-saas
-if [[ "$CWD" != "/home/ubuntu/hafiportrait-saas"* ]]; then
+PROJECT_ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+if [[ "$CWD" != "$PROJECT_ROOT"* ]]; then
   exit 0
 fi
 
-cat << 'EOF'
+cat << EOF
 === PhotoStudio SaaS — Active Project Context ===
-Path: /home/ubuntu/hafiportrait-saas
+Path: $PROJECT_ROOT
 Stack: Next.js 15.4.11, TypeScript strict, Tailwind v4, Prisma+PostgreSQL, Cloudflare R2, Cloudinary, Ably
 
 CRITICAL RULES (must follow every response):
