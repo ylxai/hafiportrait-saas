@@ -595,7 +595,6 @@ export default function GalleryDetailPage() {
                         }}
                       >
                         <input
-                          data-testid="photo-checkbox"
                           type="checkbox"
                           checked={selectedPhotoIdsForBulk.has(photo.id)}
                           readOnly

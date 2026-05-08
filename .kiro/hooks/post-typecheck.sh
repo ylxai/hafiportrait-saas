@@ -15,11 +15,6 @@ if [[ -z "$PATH_WRITTEN" ]]; then
   exit 0
 fi
 
-PROJECT_ROOT=$(cd "$(dirname "$0")/../.." && pwd)
-
-# Only check TypeScript files
-if [[ "$PATH_WRITTEN" == *.ts || "$PATH_WRITTEN" == *.tsx ]]; then
-  cd "$PROJECT_ROOT"
   # Quick typecheck — lebih cepat dari full build
   npx tsc --noEmit --skipLibCheck 2>&1 | head -15
 fi

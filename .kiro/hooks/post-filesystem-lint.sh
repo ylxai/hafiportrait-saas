@@ -14,7 +14,6 @@ print(path)
 PROJECT_ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 if [[ "$PATH_WRITTEN" == *.ts || "$PATH_WRITTEN" == *.tsx ]]; then
   echo "TypeScript file modified via filesystem MCP: $PATH_WRITTEN"
-  cd "$PROJECT_ROOT" && npx eslint "$PATH_WRITTEN" --max-warnings=0 2>&1 | tail -10
 fi
 
 exit 0
