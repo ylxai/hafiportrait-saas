@@ -15,7 +15,7 @@ export async function login(page: Page) {
 }
 
 export async function logout(page: Page) {
-  await page.click('[data-testid="user-menu"]');
+  await page.getByTestId("user-menu").click();
   await page.getByText("Logout").click();
   await page.waitForURL("/login");
 }

@@ -83,6 +83,6 @@ test.describe('Rate Limiting', () => {
       await page.keyboard.press('Enter');
     }
     
-    expect(statusCode).toBe(429);
+    await expect(statusCode).toBe(429);
   });
 });
