@@ -162,18 +162,18 @@ test.describe('Create Event', () => {
     // Click tombol "Buat Event Baru" - gunakan first() untuk ambil yang pertama
     await page.getByRole('button', { name: 'Buat Event Baru' }).first().click();
     
-    // Tunggu modal muncul
-    await page.waitForSelector('text=Buat Event Baru', { timeout: 5000 });
+    // Tunggu modal muncul dengan web-first assertion
+    await expect(page.getByText('Buat Event Baru')).toBeVisible({ timeout: 5000 });
     
     // Isi form Event - Nama Project
     await page.getByRole('textbox').nth(0).fill(eventName);
     
     // Pilih Client dari dropdown - click combobox pertama dan tunggu options muncul
     await page.getByRole('combobox').nth(0).click();
-    await page.waitForLoadState('domcontentloaded');
     
-    // Cari dan click client dari dropdown list
+    // Tunggu dropdown options muncul
     const clientOption = page.locator(`text=${clientName}`).first();
+    await clientOption.waitFor({ state: 'visible', timeout: 5000 });
     await clientOption.click();
     
     // Isi tanggal event
@@ -184,10 +184,10 @@ test.describe('Create Event', () => {
     
     // Pilih Package - click combobox kedua
     await page.getByRole('combobox').nth(1).click();
-    await page.waitForLoadState('domcontentloaded');
     
-    // Cari dan click package dari dropdown list
+    // Tunggu dropdown options muncul
     const packageOption = page.locator(`text=${packageName}`).first();
+    await packageOption.waitFor({ state: 'visible', timeout: 5000 });
     await packageOption.click();
     
     // Isi total harga (spinbutton pertama)
@@ -238,7 +238,7 @@ test.describe('Create Gallery', () => {
     await page.waitForLoadState('networkidle');
     
     // Verifikasi URL mengandung /admin/galleries/
-    expect(page.url()).toMatch(/\/admin\/galleries\//);
+    await expect(page).toHaveURL(/\/admin\/galleries\//);
   });
 });
 
@@ -287,8 +287,8 @@ test.describe('Upload Photos', () => {
     const startUploadBtn = page.locator('button:has-text("Start Upload")');
     await startUploadBtn.click();
     
-    // Tunggu upload selesai - timeout lebih lama untuk upload besar
-    await page.waitForLoadState('networkidle', { timeout: 60000 });
+    // Tunggu upload selesai - wait for upload button to disappear or success message
+    await expect(startUploadBtn).not.toBeVisible({ timeout: 60000 });
     
     // Verifikasi dengan screenshot atau check photo count
     const photoCount = await page.locator('.grid > div, [data-photo]').count();
