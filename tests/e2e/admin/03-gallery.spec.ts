@@ -4,7 +4,7 @@ import { seedClient, seedEvent, seedGallery, cleanupClient } from '../fixtures/d
 test.describe('Gallery Management API', () => {
   let testClientId: string;
   let testEventId: string;
-  let _testGalleryId: string;
+  let testGalleryId: string;
 
   test.beforeEach(async () => {
     const client = await seedClient();
@@ -18,7 +18,7 @@ test.describe('Gallery Management API', () => {
       await cleanupClient(testClientId).catch(() => {});
       testClientId = '';
       testEventId = '';
-      _testGalleryId = '';
+      testGalleryId = '';
     }
   });
 
@@ -40,7 +40,7 @@ test.describe('Gallery Management API', () => {
     expect(data.data).toHaveProperty('id');
     expect(data.data.namaProject).toBe(`Test Gallery ${timestamp}`);
     
-    _testGalleryId = data.data.id;
+    testGalleryId = data.data.id;
   });
 
   test('should reject gallery creation with missing required fields', async ({ request }) => {
@@ -72,7 +72,7 @@ test.describe('Gallery Management API', () => {
 
   test('should list galleries with pagination', async ({ request }) => {
     const gallery = await seedGallery(testEventId);
-    _testGalleryId = gallery.id;
+    testGalleryId = gallery.id;
 
     const response = await request.get('/api/admin/galleries?page=1&limit=10');
 
