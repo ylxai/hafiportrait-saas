@@ -1,12 +1,16 @@
-import { prisma } from '@/lib/db';
-import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
-import { getCachedData } from '@/lib/cache';
+import { prisma } from "@/lib/db";
+import {
+  successResponse,
+  errorResponse,
+  serverErrorResponse,
+} from "@/lib/api/response";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/options";
+import { getCachedData } from "@/lib/cache";
 
 /**
  * GET /api/admin/stats
- * 
+ *
  * Returns dashboard statistics with caching (5 minutes TTL).
  * No input validation needed - read-only endpoint with no parameters.
  */
@@ -14,7 +18,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return errorResponse('Unauthorized', 401);
+      return errorResponse("Unauthorized", 401);
     }
 
     // Cache dashboard stats for 5 minutes
@@ -34,12 +38,12 @@ export async function GET() {
           prisma.gallery.count(),
           prisma.photo.count(),
           prisma.event.findMany({
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: "desc" },
             take: 5,
             include: { client: true },
           }),
           prisma.gallery.findMany({
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: "desc" },
             take: 5,
             include: {
               event: { select: { client: { select: { nama: true } } } },
@@ -50,7 +54,7 @@ export async function GET() {
 
         const revenueResult = await prisma.event.aggregate({
           _sum: { totalPrice: true },
-          where: { paymentStatus: 'paid' },
+          where: { paymentStatus: "paid" },
         });
 
         return {
@@ -59,29 +63,33 @@ export async function GET() {
           totalGalleries,
           totalPhotos,
           totalRevenue: revenueResult._sum.totalPrice?.toString() ?? "0",
-           recentEvents: recentEvents.map((e: typeof recentEvents[number]) => ({
-            id: e.id,
-            namaProject: e.namaProject,
-            kodeBooking: e.kodeBooking,
-            eventDate: e.eventDate,
-            status: e.status,
-            client: e.client.nama,
-          })),
-           recentGalleries: recentGalleries.map((g: typeof recentGalleries[number]) => ({
-            id: g.id,
-            namaProject: g.namaProject,
-            status: g.status,
-            photoCount: g._count.photos,
-            client: g.event.client.nama,
-          })),
+          recentEvents: recentEvents.map(
+            (e: (typeof recentEvents)[number]) => ({
+              id: e.id,
+              namaProject: e.namaProject,
+              kodeBooking: e.kodeBooking,
+              eventDate: e.eventDate,
+              status: e.status,
+              client: e.client.nama,
+            }),
+          ),
+          recentGalleries: recentGalleries.map(
+            (g: (typeof recentGalleries)[number]) => ({
+              id: g.id,
+              namaProject: g.namaProject,
+              status: g.status,
+              photoCount: g._count.photos,
+              client: g.event.client?.nama || "Unknown",
+            }),
+          ),
         };
       },
-      300 // 5 minutes TTL
+      300, // 5 minutes TTL
     );
 
     return successResponse(stats);
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    return serverErrorResponse('Failed to fetch stats');
+    console.error("Error fetching dashboard stats:", error);
+    return serverErrorResponse("Failed to fetch stats");
   }
 }

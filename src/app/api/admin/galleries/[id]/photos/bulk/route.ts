@@ -106,20 +106,21 @@ export async function POST(
       if (isQueueConfigured()) {
         try {
           const result = await queueStorageDeletionBulk(deletionJobs);
-          if (result.success) {
-            console.log(`[Delete] Queued ${deletionJobs.length} deletions to Cloudflare Queue`);
-          } else {
+          if (!result.success) {
             console.error(`[Delete] Cloudflare Queue bulk error:`, result.error);
+            return errorResponse('Failed to queue storage deletion', 500);
           }
+          console.log(`[Delete] Queued ${deletionJobs.length} deletions to Cloudflare Queue`);
         } catch (cfError) {
           console.error(`[Delete] Cloudflare Queue bulk error:`, cfError);
+          return errorResponse('Failed to queue storage deletion', 500);
         }
       } else {
         console.warn(`[Delete] Cloudflare Queue not configured. Storage cleanup skipped for ${deletionJobs.length} photos`);
       }
     }
 
-    // Delete all from database immediately
+    // Delete all from database setelah queue berhasil
     await prisma.photo.deleteMany({
       where: { 
         id: { in: photos.map((p: typeof photos[number]) => p.id) },

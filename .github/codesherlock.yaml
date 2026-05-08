@@ -1,0 +1,41 @@
+---
+# Generated: 2026-04-29
+# Project:  PhotoStudio SaaS — Next.js 15 / Prisma / Tailwind v4
+# Theme:    Aura Noir (OLED dark theme, OKLCH semantic colors)
+---
+
+# Trigger reviews for ALL pull requests (regardless of branch name)
+# target_branches removed → reviews run on feat/*, fix/*, refactor/*, chore/*, main, develop, etc.
+
+# Focus review on these quality characteristics
+preferred_characteristics:
+  - "Modularity"
+  - "Resource Utilization"
+  - "Exception Handling"
+  - "Monitoring and Logging"
+  - "Dependency Injection"
+  - "Code Injection"
+  - "Input Validation"
+
+# Project-specific rules (from AGENTS.md + code review findings)
+additional_instructions:
+  - Never use alert() — use sonner toast() instead (import { toast } from 'sonner')
+  - Never use static Tailwind colors (amber-500, gray-800, green-100, red-500, etc.) — use OKLCH semantic tokens only (bg-primary, bg-card, text-muted-foreground, bg-destructive, etc.)
+  - Never use rgba(var(--primary)) syntax in Tailwind v4
+  - Never use any type — use unknown or specific TypeScript interfaces
+  - All Prisma BigInt fields MUST be serialized via serializeBigInt() before JSON.stringify
+  - In photo deletion flows, queue storage deletion BEFORE deleting from database (queue-first pattern) — see priority-fix.md #3, #4, #5
+  - Webhook payload schemas (Zod) must match exactly what the Cloudflare Worker sends — see priority-fix.md #1, #2
+  - Use timingSafeEqual from node:crypto for webhook secret comparisons — not string equality
+  - All /api/admin/* routes must call getServerSession(authOptions) at the top
+  - All /api/* routes must validate input with Zod schemas
+  - API responses must use helpers from @/lib/api/response: successResponse, errorResponse, notFoundResponse, paginatedResponse
+  - Native HTML inputs (<input>, <textarea>) must include explicit Tailwind styling: border border-border rounded-lg bg-background text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20
+  - No unbounded DB queries — always paginate with limit/max (100 records max per query)
+  - No secrets, tokens, or credentials committed to source code
+  - Cloudinary and R2 credentials come from StorageAccount table in PostgreSQL — NEVER from .env
+  - Background jobs use Cloudflare Queues only — NO BullMQ, PM2, or Redis queues
+  - Route params and searchParams in Next.js 15 must be awaited as Promise before destructuring
+  - Handle Prisma P2025 (not found) → return 404; P2002 (unique) → return 409
+  - Photo fileSize is BigInt — must call .toString() before JSON serialization in all API responses
+  - Gallery photo bulk-delete and single-delete must follow queue-first deletion pattern (queue storage → verify success → delete from DB)

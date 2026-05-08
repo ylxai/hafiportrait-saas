@@ -534,8 +534,8 @@ export function isQueueConfigured(): boolean {
  * Use this for bulk deletes or cascading deletes (Gallery, Event, Client)
  * where deleting the parent entity would orphan files in storage.
  */
-export async function queuePhotosDeletionForEntities(whereCriteria: Prisma.PhotoWhereInput): Promise<void> {
-  if (!isQueueConfigured()) return;
+export async function queuePhotosDeletionForEntities(whereCriteria: Prisma.PhotoWhereInput): Promise<{ success: boolean; error?: string }> {
+  if (!isQueueConfigured()) return { success: true }; // No queue configured, consider it success
   
   const photos = await prisma.photo.findMany({
     where: whereCriteria,
@@ -548,7 +548,7 @@ export async function queuePhotosDeletionForEntities(whereCriteria: Prisma.Photo
     }
   });
 
-  if (photos.length === 0) return;
+  if (photos.length === 0) return { success: true }; // No photos to delete
 
   // Mengumpulkan semua storageAccountId unik dari foto-foto yang akan dihapus
   const uniqueStorageAccountIds = Array.from(new Set(photos.map((p: typeof photos[number]) => p.storageAccountId).filter(Boolean))) as string[];
@@ -608,13 +608,18 @@ export async function queuePhotosDeletionForEntities(whereCriteria: Prisma.Photo
       const result = await queueStorageDeletionBulk(deletionJobs);
       if (result.success) {
         console.log(`[Delete] Queued ${deletionJobs.length} associated photos to Cloudflare Queue`);
+        return { success: true };
       } else {
         console.error(`[Delete] Failed to queue ${result.failedCount || 'some'} deletion jobs:`, result.error);
+        return { success: false, error: result.error };
       }
     } catch (cfError) {
       logQueueError('Bulk deletion queue error', cfError, {
         photoCount: deletionJobs.length,
       });
+      return { success: false, error: cfError instanceof Error ? cfError.message : 'Unknown error' };
     }
   }
+  
+  return { success: true };
 }

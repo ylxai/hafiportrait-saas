@@ -1,0 +1,493 @@
+{
+  "config": {
+    "configFile": "/home/ubuntu/hafiportrait-saas/playwright.config.ts",
+    "rootDir": "/home/ubuntu/hafiportrait-saas/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/ubuntu/hafiportrait-saas/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "setup",
+        "name": "setup",
+        "testDir": "/home/ubuntu/hafiportrait-saas/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/auth\\.setup\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/ubuntu/hafiportrait-saas/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "admin",
+        "name": "admin",
+        "testDir": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/home/ubuntu/hafiportrait-saas/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "client",
+        "name": "client",
+        "testDir": "/home/ubuntu/hafiportrait-saas/tests/e2e/client-portal",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/ubuntu/hafiportrait-saas/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "public",
+        "name": "public",
+        "testDir": "/home/ubuntu/hafiportrait-saas/tests/e2e/public",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/ubuntu/hafiportrait-saas/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "integration",
+        "name": "integration",
+        "testDir": "/home/ubuntu/hafiportrait-saas/tests/e2e/integration",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.59.1",
+    "workers": 4,
+    "webServer": {
+      "command": "npm run dev",
+      "url": "http://localhost:3000",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "admin/01-auth.spec.ts",
+      "file": "admin/01-auth.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Authentication Flow",
+          "file": "admin/01-auth.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should login with valid credentials",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 14,
+                      "error": {
+                        "message": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'",
+                        "stack": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'"
+                      },
+                      "errors": [
+                        {
+                          "message": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-08T13:38:15.609Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flo-303c0-ogin-with-valid-credentials-admin/error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "791b3c4e0869e77b2651-945b11581c7b744f3e56",
+              "file": "admin/01-auth.spec.ts",
+              "line": 4,
+              "column": 7
+            },
+            {
+              "title": "should reject invalid credentials",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 6,
+                      "error": {
+                        "message": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'",
+                        "stack": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'"
+                      },
+                      "errors": [
+                        {
+                          "message": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-08T13:38:31.834Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flo-9dff3--reject-invalid-credentials-admin/error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "791b3c4e0869e77b2651-a12a978530e65948078c",
+              "file": "admin/01-auth.spec.ts",
+              "line": 9,
+              "column": 7
+            },
+            {
+              "title": "should persist session after refresh",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 7,
+                      "error": {
+                        "message": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'",
+                        "stack": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'"
+                      },
+                      "errors": [
+                        {
+                          "message": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-08T13:38:32.916Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flo-2eda8-rsist-session-after-refresh-admin/error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "791b3c4e0869e77b2651-6db222e7a6fc87b0d859",
+              "file": "admin/01-auth.spec.ts",
+              "line": 18,
+              "column": 7
+            },
+            {
+              "title": "should logout successfully",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 6,
+                      "error": {
+                        "message": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'",
+                        "stack": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'"
+                      },
+                      "errors": [
+                        {
+                          "message": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-08T13:38:34.133Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flow-should-logout-successfully-admin/error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "791b3c4e0869e77b2651-956fa5806b754fd8a844",
+              "file": "admin/01-auth.spec.ts",
+              "line": 26,
+              "column": 7
+            },
+            {
+              "title": "should redirect to login when accessing protected route",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 9,
+                      "error": {
+                        "message": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'",
+                        "stack": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'"
+                      },
+                      "errors": [
+                        {
+                          "message": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-08T13:38:35.343Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flo-4fc74-n-accessing-protected-route-admin/error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "791b3c4e0869e77b2651-5da037b5fb7310b3e3f5",
+              "file": "admin/01-auth.spec.ts",
+              "line": 32,
+              "column": 7
+            },
+            {
+              "title": "should show loading state during login",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 7,
+                      "error": {
+                        "message": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'",
+                        "stack": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'"
+                      },
+                      "errors": [
+                        {
+                          "message": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-08T13:38:36.663Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flo-5db95--loading-state-during-login-admin/error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "791b3c4e0869e77b2651-8fdd4998d978b5dd3ffe",
+              "file": "admin/01-auth.spec.ts",
+              "line": 41,
+              "column": 7
+            },
+            {
+              "title": "should handle session expiry",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "admin",
+                  "projectName": "admin",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 6,
+                      "error": {
+                        "message": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'",
+                        "stack": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'"
+                      },
+                      "errors": [
+                        {
+                          "message": "Error: Error reading storage state from playwright/.auth/admin.json:\nENOENT: no such file or directory, open 'playwright/.auth/admin.json'"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-08T13:38:37.977Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/ubuntu/hafiportrait-saas/test-results/01-auth-Authentication-Flow-should-handle-session-expiry-admin/error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "791b3c4e0869e77b2651-dc4aaa01645db6f0f11b",
+              "file": "admin/01-auth.spec.ts",
+              "line": 52,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-05-08T13:37:15.675Z",
+    "duration": 82683.743,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 7,
+    "flaky": 0
+  }
+}

@@ -54,11 +54,13 @@ export function LazyImage({
 
   // Automatically apply Cloudinary f_auto, q_auto optimizations
   const getOptimizedSrc = (url: string) => {
-    if (!url) return url;
-    if (url.includes('cloudinary.com') && !url.includes('f_auto')) {
-      return url.replace(/\/upload\/(v\d+\/)?/, '/upload/f_auto,q_auto/$1');
+    if (!url || !url.includes('cloudinary.com')) return url;
+    if (url.includes('f_auto')) return url;
+    
+    if (url.includes('/image/fetch/')) {
+      return url.replace(/\/image\/fetch\//, '/image/fetch/f_auto,q_auto/');
     }
-    return url;
+    return url.replace(/\/upload\/(v\d+\/)?/, '/upload/f_auto,q_auto/$1');
   };
 
   const displaySrc = getOptimizedSrc(hasError && fallbackSrc ? fallbackSrc : src);
@@ -91,6 +93,7 @@ export function LazyImage({
           onLoad={() => setIsLoaded(true)}
           onError={() => setHasError(true)}
           priority={priority}
+          unoptimized={displaySrc.includes('cloudinary.com')}
           {...props}
         />
       )}

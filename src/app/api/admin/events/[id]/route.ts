@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { successResponse, notFoundResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
+import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -12,7 +13,7 @@ async function checkAuth() {
   return session;
 }
 
-export async function GET(
+export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -22,21 +23,25 @@ export async function GET(
 
     const { id } = await params;
 
-    const event = await prisma.event.findUnique({
-      where: { id },
-      include: {
-        client: true,
-        package: true,
-      },
-    });
-
-    if (!event) {
-      return notFoundResponse('Event not found');
+    if (!id) {
+      return errorResponse('Event ID is required', 400);
     }
 
-    return successResponse({ event });
+    const result = await queuePhotosDeletionForEntities({ gallery: { eventId: id } });
+    
+    if (!result.success) {
+      console.error('[Delete] Failed to queue photos deletion:', result.error);
+      return errorResponse('Failed to queue storage deletion', 500);
+    }
+
+    await prisma.event.delete({ where: { id } });
+
+    return successResponse({ success: true });
   } catch (error) {
-    console.error('Error fetching event:', error);
-    return serverErrorResponse('Failed to fetch event');
+    console.error('Error deleting event:', error);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return notFoundResponse('Event not found');
+    }
+    return serverErrorResponse('Failed to delete event');
   }
 }

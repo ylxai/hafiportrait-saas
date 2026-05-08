@@ -889,7 +889,7 @@ function AccountCard({
         </div>
       </div>
 
-      <div className="text-xs text-muted-foreground mb-1">
+      <div className="text-xs text-muted-foreground mb-1" data-testid="storage-usage">
         {account.totalPhotos} foto • {formatBytes(account.usedStorage)} digunakan
       </div>
 

@@ -50,8 +50,33 @@ export async function GET(request: Request) {
       prisma.client.count(),
     ]);
 
+    // Fetch storage usage for each client
+    const clientsWithUsage = await Promise.all(
+      clients.map(async (client: typeof clients[number]) => {
+        const usage = await prisma.photo.aggregate({
+          where: {
+            gallery: {
+              event: {
+                clientId: client.id,
+              },
+            },
+          },
+          _sum: {
+            fileSize: true,
+          },
+          _count: true,
+        });
+
+        return {
+          ...client,
+          usedStorageBytes: (usage._sum.fileSize || BigInt(0)).toString(),
+          photoCount: usage._count,
+        };
+      })
+    );
+
     return successResponse({
-      clients,
+      clients: clientsWithUsage,
       pagination: createAdminPaginationResponse(page, limit, total),
     });
   } catch (error) {
@@ -150,7 +175,12 @@ export async function DELETE(request: Request) {
 
     const { id } = idValidation.data;
 
-    await queuePhotosDeletionForEntities({ gallery: { event: { clientId: id } } });
+    const result = await queuePhotosDeletionForEntities({ gallery: { event: { clientId: id } } });
+    
+    if (!result.success) {
+      console.error('[Delete] Failed to queue photos deletion:', result.error);
+      return errorResponse('Failed to queue storage deletion', 500);
+    }
 
     await prisma.client.delete({ where: { id } });
 
