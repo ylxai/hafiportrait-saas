@@ -8,12 +8,13 @@ if (process.env.NODE_ENV === 'test') {
     datasourceUrl: process.env.TEST_DATABASE_URL || process.env.DATABASE_URL,
   });
 } else {
-  if (!(global as any).prisma) {
-    (global as any).prisma = new PrismaClient({
+  const globalWithPrisma = global as typeof global & { prisma?: PrismaClient };
+  if (!globalWithPrisma.prisma) {
+    globalWithPrisma.prisma = new PrismaClient({
       datasourceUrl: process.env.TEST_DATABASE_URL || process.env.DATABASE_URL,
     });
   }
-  prisma = (global as any).prisma;
+  prisma = globalWithPrisma.prisma;
 }
 
 export interface TestClient {
