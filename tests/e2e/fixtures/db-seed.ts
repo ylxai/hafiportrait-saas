@@ -1,9 +1,20 @@
 import { PrismaClient } from "@/generated/prisma";
 import * as bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient({
-  datasourceUrl: process.env.TEST_DATABASE_URL || process.env.DATABASE_URL,
-});
+let prisma: PrismaClient;
+
+if (process.env.NODE_ENV === 'test') {
+  prisma = new PrismaClient({
+    datasourceUrl: process.env.TEST_DATABASE_URL || process.env.DATABASE_URL,
+  });
+} else {
+  if (!(global as any).prisma) {
+    (global as any).prisma = new PrismaClient({
+      datasourceUrl: process.env.TEST_DATABASE_URL || process.env.DATABASE_URL,
+    });
+  }
+  prisma = (global as any).prisma;
+}
 
 export interface TestClient {
   id: string;
