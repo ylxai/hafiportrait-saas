@@ -128,3 +128,7 @@ workers/.dev.vars
 # Pi project-local packages (if using pi install -l)
 .pi/npm/
 scripts/setup-vercel-env.sh
+
+# Sensitive env files
+.env.vercel
+.env.test
