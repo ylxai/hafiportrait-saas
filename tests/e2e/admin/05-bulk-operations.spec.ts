@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { HTTP_STATUS } from '../constants/http-status';
 import { seedClient, seedEvent, seedGallery, seedPhoto, cleanupClient } from '../fixtures/db-seed';
 
 test.describe('Bulk Operations API', () => {
@@ -25,7 +26,7 @@ test.describe('Bulk Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
   });
@@ -37,7 +38,7 @@ test.describe('Bulk Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -49,7 +50,7 @@ test.describe('Bulk Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -68,7 +69,7 @@ test.describe('Bulk Operations API', () => {
     });
 
     // Should still succeed for valid IDs
-    expect([200, 207]).toContain(response.status());
+    expect([HTTP_STATUS.OK, HTTP_STATUS.MULTI_STATUS]).toContain(response.status());
   });
 
   test('should bulk delete events', async ({ request }) => {
@@ -84,7 +85,7 @@ test.describe('Bulk Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
   });
@@ -97,7 +98,7 @@ test.describe('Bulk Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -110,7 +111,7 @@ test.describe('Bulk Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -126,7 +127,7 @@ test.describe('Bulk Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
   });
@@ -139,7 +140,7 @@ test.describe('Bulk Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -158,7 +159,7 @@ test.describe('Bulk Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
   });
@@ -171,7 +172,7 @@ test.describe('Bulk Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(401);
+    expect(response.status()).toBe(HTTP_STATUS.UNAUTHORIZED);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -194,7 +195,7 @@ test.describe('Bulk Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
   });
@@ -206,7 +207,7 @@ test.describe('Bulk Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -219,7 +220,7 @@ test.describe('Bulk Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { HTTP_STATUS } from '../constants/http-status';
 import { seedClient, seedEvent, seedGallery, cleanupClient } from '../fixtures/db-seed';
 
 test.describe('Client and Event Integration API', () => {
@@ -23,7 +24,7 @@ test.describe('Client and Event Integration API', () => {
       }
     });
 
-    expect(clientResponse.status()).toBe(200);
+    expect(clientResponse.status()).toBe(HTTP_STATUS.OK);
     const clientData = await clientResponse.json();
     testClientId = clientData.data.id;
 
@@ -39,7 +40,7 @@ test.describe('Client and Event Integration API', () => {
       }
     });
 
-    expect(eventResponse.status()).toBe(200);
+    expect(eventResponse.status()).toBe(HTTP_STATUS.OK);
     const eventData = await eventResponse.json();
     expect(eventData.data.clientId).toBe(testClientId);
   });
@@ -75,7 +76,7 @@ test.describe('Client and Event Integration API', () => {
       }
     });
 
-    expect(galleryResponse.status()).toBe(200);
+    expect(galleryResponse.status()).toBe(HTTP_STATUS.OK);
     const galleryData = await galleryResponse.json();
     expect(galleryData.data.eventId).toBe(eventId);
   });
@@ -101,11 +102,11 @@ test.describe('Client and Event Integration API', () => {
 
     const response = await request.delete(`/api/admin/clients/${client.id}`);
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
 
     // Verify event is also deleted
     const eventResponse = await request.get(`/api/admin/events/${event.id}`);
-    expect(eventResponse.status()).toBe(404);
+    expect(eventResponse.status()).toBe(HTTP_STATUS.NOT_FOUND);
     
     testClientId = '';
   });
@@ -123,7 +124,7 @@ test.describe('Client and Event Integration API', () => {
       }
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.data.clientId).toBe(client2.id);
     
@@ -171,7 +172,7 @@ test.describe('Client and Event Integration API', () => {
       const data = await response.json();
       expect(data.success).toBe(false);
     } else {
-      expect(response.status()).toBe(200);
+      expect(response.status()).toBe(HTTP_STATUS.OK);
       testClientId = '';
     }
   });

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { HTTP_STATUS } from '../constants/http-status';
 import { seedClient, seedEvent, seedGallery, seedPhoto, cleanupClient } from '../fixtures/db-seed';
 
 test.describe('Stats Dashboard API', () => {
@@ -19,7 +20,7 @@ test.describe('Stats Dashboard API', () => {
   test('should return dashboard stats for authenticated admin', async ({ request }) => {
     const response = await request.get('/api/admin/stats');
     
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     
     const data = await response.json();
     expect(data.success).toBe(true);
@@ -74,7 +75,7 @@ test.describe('Stats Dashboard API', () => {
       headers: { Cookie: '' }
     });
     
-    expect(response.status()).toBe(401);
+    expect(response.status()).toBe(HTTP_STATUS.UNAUTHORIZED);
     const data = await response.json();
     expect(data.success).toBe(false);
   });

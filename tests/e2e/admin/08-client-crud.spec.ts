@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { HTTP_STATUS } from '../constants/http-status';
 import { seedClient, cleanupClient } from '../fixtures/db-seed';
 
 test.describe('Client CRUD Operations API', () => {
@@ -23,7 +24,7 @@ test.describe('Client CRUD Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.data).toHaveProperty('id');
@@ -40,7 +41,7 @@ test.describe('Client CRUD Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -54,7 +55,7 @@ test.describe('Client CRUD Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -71,7 +72,7 @@ test.describe('Client CRUD Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -82,7 +83,7 @@ test.describe('Client CRUD Operations API', () => {
 
     const response = await request.get('/api/admin/clients?page=1&limit=10');
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.data).toHaveProperty('items');
@@ -96,7 +97,7 @@ test.describe('Client CRUD Operations API', () => {
   test('should reject invalid pagination parameters', async ({ request }) => {
     const response = await request.get('/api/admin/clients?page=0&limit=10');
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -104,7 +105,7 @@ test.describe('Client CRUD Operations API', () => {
   test('should reject pagination limit exceeding max', async ({ request }) => {
     const response = await request.get('/api/admin/clients?page=1&limit=200');
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -115,7 +116,7 @@ test.describe('Client CRUD Operations API', () => {
 
     const response = await request.get(`/api/admin/clients/${client.id}`);
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.data.id).toBe(client.id);
@@ -126,7 +127,7 @@ test.describe('Client CRUD Operations API', () => {
   test('should return 404 for non-existent client', async ({ request }) => {
     const response = await request.get('/api/admin/clients/clnonexistent123');
 
-    expect(response.status()).toBe(404);
+    expect(response.status()).toBe(HTTP_STATUS.NOT_FOUND);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -142,7 +143,7 @@ test.describe('Client CRUD Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.data.nama).toBe('Updated Client Name');
@@ -159,7 +160,7 @@ test.describe('Client CRUD Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -170,13 +171,13 @@ test.describe('Client CRUD Operations API', () => {
 
     const response = await request.delete(`/api/admin/clients/${client.id}`);
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
 
     // Verify deletion
     const getResponse = await request.get(`/api/admin/clients/${client.id}`);
-    expect(getResponse.status()).toBe(404);
+    expect(getResponse.status()).toBe(HTTP_STATUS.NOT_FOUND);
     
     testClientId = '';
   });
@@ -184,7 +185,7 @@ test.describe('Client CRUD Operations API', () => {
   test('should return 404 when deleting non-existent client', async ({ request }) => {
     const response = await request.delete('/api/admin/clients/clnonexistent123');
 
-    expect(response.status()).toBe(404);
+    expect(response.status()).toBe(HTTP_STATUS.NOT_FOUND);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -194,7 +195,7 @@ test.describe('Client CRUD Operations API', () => {
       headers: { Cookie: '' }
     });
 
-    expect(response.status()).toBe(401);
+    expect(response.status()).toBe(HTTP_STATUS.UNAUTHORIZED);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -209,7 +210,7 @@ test.describe('Client CRUD Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.data.storageQuotaGB).toBe(50);
@@ -225,7 +226,7 @@ test.describe('Client CRUD Operations API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { seedClient, seedEvent, cleanupClient } from '../fixtures/db-seed';
+import { HTTP_STATUS } from '../constants/http-status';
 
 test.describe('Event Management API', () => {
   let testClientId: string;
@@ -29,7 +30,7 @@ test.describe('Event Management API', () => {
       }
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.data).toHaveProperty('id');
@@ -55,7 +56,7 @@ test.describe('Event Management API', () => {
       }
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.data.kodeBooking).toBeTruthy();
     expect(data.data.kodeBooking).toMatch(/^BK/);
@@ -68,7 +69,7 @@ test.describe('Event Management API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -85,7 +86,7 @@ test.describe('Event Management API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -105,7 +106,7 @@ test.describe('Event Management API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -118,7 +119,7 @@ test.describe('Event Management API', () => {
 
     const response = await request.get('/api/admin/events?page=1&limit=10');
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.data).toHaveProperty('items');
@@ -150,7 +151,7 @@ test.describe('Event Management API', () => {
 
     const response = await request.get(`/api/admin/events/${event.id}`);
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.data.id).toBe(event.id);
@@ -160,7 +161,7 @@ test.describe('Event Management API', () => {
   test('should return 404 for non-existent event', async ({ request }) => {
     const response = await request.get('/api/admin/events/evnonexistent123');
 
-    expect(response.status()).toBe(404);
+    expect(response.status()).toBe(HTTP_STATUS.NOT_FOUND);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -177,7 +178,7 @@ test.describe('Event Management API', () => {
       }
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.data.status).toBe('completed');
@@ -196,7 +197,7 @@ test.describe('Event Management API', () => {
       }
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.data.paymentStatus).toBe('paid');
@@ -214,7 +215,7 @@ test.describe('Event Management API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -227,13 +228,13 @@ test.describe('Event Management API', () => {
 
     const response = await request.delete(`/api/admin/events/${event.id}`);
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
 
     // Verify deletion
     const getResponse = await request.get(`/api/admin/events/${event.id}`);
-    expect(getResponse.status()).toBe(404);
+    expect(getResponse.status()).toBe(HTTP_STATUS.NOT_FOUND);
     
     testEventId = '';
   });
@@ -241,7 +242,7 @@ test.describe('Event Management API', () => {
   test('should return 404 when deleting non-existent event', async ({ request }) => {
     const response = await request.delete('/api/admin/events/evnonexistent123');
 
-    expect(response.status()).toBe(404);
+    expect(response.status()).toBe(HTTP_STATUS.NOT_FOUND);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -251,7 +252,7 @@ test.describe('Event Management API', () => {
       headers: { Cookie: '' }
     });
 
-    expect(response.status()).toBe(401);
+    expect(response.status()).toBe(HTTP_STATUS.UNAUTHORIZED);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -268,7 +269,7 @@ test.describe('Event Management API', () => {
       }
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.data.eventDate).toContain('2026-12-31');
@@ -289,7 +290,7 @@ test.describe('Event Management API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -307,7 +308,7 @@ test.describe('Event Management API', () => {
       }
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
   });
@@ -320,7 +321,7 @@ test.describe('Event Management API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -333,7 +334,7 @@ test.describe('Event Management API', () => {
       }
     });
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });

@@ -1,4 +1,5 @@
 import { test, expect, TEST_USER } from "../fixtures/auth";
+import { HTTP_STATUS } from '../constants/http-status';
 
 test.describe("Authentication Flow", () => {
   test("should login with valid credentials", async ({ adminPage }) => {

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { HTTP_STATUS } from '../constants/http-status';
 import { seedClient, seedEvent, cleanupClient } from '../fixtures/db-seed';
 
 test.describe('Search and Export API', () => {
@@ -20,7 +21,7 @@ test.describe('Search and Export API', () => {
   test('should search across all entities', async ({ request }) => {
     const response = await request.get('/api/admin/search?q=Searchable');
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.data).toHaveProperty('clients');
@@ -31,7 +32,7 @@ test.describe('Search and Export API', () => {
   test('should find clients by name', async ({ request }) => {
     const response = await request.get('/api/admin/search?q=Searchable+Client');
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.data.clients.length).toBeGreaterThan(0);
@@ -40,7 +41,7 @@ test.describe('Search and Export API', () => {
   test('should find events by project name', async ({ request }) => {
     const response = await request.get('/api/admin/search?q=Searchable+Event');
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.data.events.length).toBeGreaterThan(0);
@@ -49,7 +50,7 @@ test.describe('Search and Export API', () => {
   test('should return empty results for non-existent query', async ({ request }) => {
     const response = await request.get('/api/admin/search?q=NonExistentQuery12345');
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.data.clients.length).toBe(0);
@@ -60,7 +61,7 @@ test.describe('Search and Export API', () => {
   test('should reject search without query parameter', async ({ request }) => {
     const response = await request.get('/api/admin/search');
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -68,7 +69,7 @@ test.describe('Search and Export API', () => {
   test('should reject search with empty query', async ({ request }) => {
     const response = await request.get('/api/admin/search?q=');
 
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(HTTP_STATUS.BAD_REQUEST);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -76,7 +77,7 @@ test.describe('Search and Export API', () => {
   test('should handle special characters in search query', async ({ request }) => {
     const response = await request.get('/api/admin/search?q=%40%23%24%25');
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
   });
@@ -84,7 +85,7 @@ test.describe('Search and Export API', () => {
   test('should limit search results', async ({ request }) => {
     const response = await request.get('/api/admin/search?q=Test&limit=5');
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.data.clients.length).toBeLessThanOrEqual(5);
@@ -95,7 +96,7 @@ test.describe('Search and Export API', () => {
   test('should export events to CSV', async ({ request }) => {
     const response = await request.get('/api/admin/export/events');
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     expect(response.headers()['content-type']).toContain('text/csv');
     
     const csvContent = await response.text();
@@ -106,7 +107,7 @@ test.describe('Search and Export API', () => {
   test('should export clients to CSV', async ({ request }) => {
     const response = await request.get('/api/admin/export/clients');
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     expect(response.headers()['content-type']).toContain('text/csv');
     
     const csvContent = await response.text();
@@ -140,7 +141,7 @@ test.describe('Search and Export API', () => {
       headers: { Cookie: '' }
     });
 
-    expect(response.status()).toBe(401);
+    expect(response.status()).toBe(HTTP_STATUS.UNAUTHORIZED);
   });
 
   test('should reject search without authentication', async ({ request }) => {
@@ -148,7 +149,7 @@ test.describe('Search and Export API', () => {
       headers: { Cookie: '' }
     });
 
-    expect(response.status()).toBe(401);
+    expect(response.status()).toBe(HTTP_STATUS.UNAUTHORIZED);
     const data = await response.json();
     expect(data.success).toBe(false);
   });
@@ -179,7 +180,7 @@ test.describe('Search and Export API', () => {
     const longQuery = 'a'.repeat(200);
     const response = await request.get(`/api/admin/search?q=${longQuery}`);
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(HTTP_STATUS.OK);
     const data = await response.json();
     expect(data.success).toBe(true);
   });
