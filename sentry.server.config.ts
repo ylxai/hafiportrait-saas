@@ -14,6 +14,7 @@ Sentry.init({
   // Tracing must be enabled for profiling to work.
   tracesSampleRate: isProd ? 0.1 : 1.0,
   // Sample rate decided once per SDK.init call.
+  profilesSampleRate: isProd ? 0.1 : 1.0,
   profileSessionSampleRate: isProd ? 0.1 : 1.0,
   // Trace lifecycle automatically enables profiling during active traces.
   profileLifecycle: 'trace',

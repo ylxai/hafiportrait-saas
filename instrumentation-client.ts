@@ -22,6 +22,7 @@ Sentry.init({
     /^\/(?:api|portal|admin|gallery)\//,
   ],
   // Decision evaluated once per session.
+  profilesSampleRate: isProd ? 0.1 : 1.0,
   profileSessionSampleRate: isProd ? 0.1 : 1.0,
   sendDefaultPii: false,
 });
