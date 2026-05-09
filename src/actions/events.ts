@@ -49,7 +49,7 @@ const bulkUpdateSchema = z
   .object({
     ids: bulkIdsSchema,
     status: z.enum(['pending', 'confirmed', 'completed', 'cancelled']).optional(),
-    paymentStatus: z.enum(['unpaid', 'partial', 'paid']).optional(),
+    paymentStatus: z.enum(['unpaid', 'partial', 'paid', 'awaiting_confirmation']).optional(),
   })
   .refine((d) => d.status || d.paymentStatus, {
     message: 'At least one of status or paymentStatus must be provided',
@@ -120,7 +120,7 @@ export async function deleteEventsBulk(
 export async function updateEventsBulk(input: {
   ids: string[];
   status?: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  paymentStatus?: 'unpaid' | 'partial' | 'paid';
+  paymentStatus?: 'unpaid' | 'partial' | 'paid' | 'awaiting_confirmation';
 }): Promise<ActionResult<{ updated: number }>> {
   const auth = await requireAdmin();
   if (!auth.success) return auth;

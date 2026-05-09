@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
@@ -8,15 +9,15 @@ type PageProps = {
   params: Promise<{ token: string }>;
 };
 
-// SEO / OpenGraph: fetch only the minimum gallery data needed for tags.
-// Keeping this lightweight so unfurl previews (WhatsApp, social media) work
-// without forcing the heavy interactive bundle to render server-side.
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { token } = await params;
-
-  const gallery = await prisma.gallery.findUnique({
+// `React.cache` deduplicates the gallery lookup across `generateMetadata` and
+// the page render within a single request — Next.js does not auto-dedup ORM
+// calls (only `fetch`). One DB round-trip serves both SEO tags and the
+// existence check / 404.
+const getGalleryHead = cache(async (token: string) => {
+  return prisma.gallery.findUnique({
     where: { clientToken: token },
     select: {
+      id: true,
       namaProject: true,
       welcomeMessage: true,
       bannerClientName: true,
@@ -27,6 +28,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       },
     },
   });
+});
+
+// SEO / OpenGraph: fetch only the minimum gallery data needed for tags.
+// Keeping this lightweight so unfurl previews (WhatsApp, social media) work
+// without forcing the heavy interactive bundle to render server-side.
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { token } = await params;
+  const gallery = await getGalleryHead(token);
 
   if (!gallery) {
     return {
@@ -66,12 +75,9 @@ export default async function GalleryPage({ params }: PageProps) {
 
   // Existence check at the server boundary so a bad token returns 404 with the
   // proper Next.js error UI instead of a blank "Galeri tidak ditemukan" client
-  // state. The interactive bundle continues to fetch full data via /api.
-  const exists = await prisma.gallery.findUnique({
-    where: { clientToken: token },
-    select: { id: true },
-  });
-  if (!exists) {
+  // state. Reuses the cached head query above — no extra DB round-trip.
+  const gallery = await getGalleryHead(token);
+  if (!gallery) {
     notFound();
   }
 

@@ -206,7 +206,7 @@ export default function EventsPage() {
     startTransition(async () => {
       const result = await deleteEvent(id);
       if (result.success) {
-        setEvents(events.filter((e) => e.id !== id));
+        setEvents((prev) => prev.filter((e) => e.id !== id));
       } else {
         toast.error(result.error);
       }
@@ -233,7 +233,8 @@ export default function EventsPage() {
     startTransition(async () => {
       const result = await deleteEventsBulk(selectedIds);
       if (result.success) {
-        setEvents(events.filter((e) => !selectedIds.includes(e.id)));
+        const removed = new Set(selectedIds);
+        setEvents((prev) => prev.filter((e) => !removed.has(e.id)));
         setSelectedIds([]);
         setShowBulkModal(false);
       } else {
@@ -251,13 +252,14 @@ export default function EventsPage() {
         input.status = bulkValue as 'pending' | 'confirmed' | 'completed' | 'cancelled';
       }
       if (bulkAction === 'payment') {
-        input.paymentStatus = bulkValue as 'unpaid' | 'partial' | 'paid';
+        input.paymentStatus = bulkValue as 'unpaid' | 'partial' | 'paid' | 'awaiting_confirmation';
       }
 
       const result = await updateEventsBulk(input);
       if (result.success) {
-        setEvents(events.map((e) =>
-          selectedIds.includes(e.id)
+        const targets = new Set(selectedIds);
+        setEvents((prev) => prev.map((e) =>
+          targets.has(e.id)
             ? {
                 ...e,
                 ...(bulkAction === 'status' ? { status: bulkValue } : {}),
