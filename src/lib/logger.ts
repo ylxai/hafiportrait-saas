@@ -15,7 +15,14 @@
  *   - `...ctx`  : context tambahan (dimerge ke root)
  *
  * Error di-serialize ke `{ message, name, stack }` agar tidak hilang saat JSON.stringify.
+ *
+ * Auto-forward ke Sentry: setiap `logger.error(...)` otomatis memanggil
+ * `Sentry.captureException` dengan tags = `{ event }` dan extras = sisa context.
+ * Jika `ctx.err` / `ctx.error` adalah `Error` instance → dipakai sebagai exception
+ * utama. Selain itu dibuat synthetic `Error(event)` agar tetap muncul di Sentry
+ * dengan stack ke call site logger. Tidak perlu mengubah call site yang ada.
  */
+import * as Sentry from '@sentry/nextjs';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -60,6 +67,38 @@ function normalizeContext(ctx?: LogContext): LogContext {
   return out;
 }
 
+function pickError(ctx?: LogContext): Error | undefined {
+  if (!ctx) return undefined;
+  for (const key of ['err', 'error', 'cause'] as const) {
+    const v = ctx[key];
+    if (v instanceof Error) return v;
+  }
+  return undefined;
+}
+
+function forwardToSentry(level: LogLevel, event: string, ctx?: LogContext): void {
+  // Hanya level 'error' di-forward ke Sentry untuk hemat quota.
+  // `warn`/`info`/`debug` cukup ke stdout (Vercel logs).
+  if (level !== 'error') return;
+  // Skip jika DSN belum di-set (dev tanpa Sentry) — Sentry SDK no-op,
+  // tapi kita hindari overhead pembuatan synthetic Error.
+  if (!process.env.NEXT_PUBLIC_SENTRY_DSN) return;
+
+  const existing = pickError(ctx);
+  const exception = existing ?? new Error(event);
+  // Untuk synthetic Error, pakai event sebagai name agar grouping di
+  // Sentry konsisten per event-name (bukan generic "Error").
+  if (!existing) {
+    exception.name = event;
+  }
+
+  Sentry.captureException(exception, {
+    tags: { event, source: 'logger' },
+    extra: normalizeContext(ctx),
+    level: 'error',
+  });
+}
+
 function emit(level: LogLevel, event: string, ctx?: LogContext): void {
   if (LEVEL_PRIORITY[level] < LEVEL_PRIORITY[MIN_LEVEL]) return;
 
@@ -78,6 +117,8 @@ function emit(level: LogLevel, event: string, ctx?: LogContext): void {
   } else {
     console.log(line);
   }
+
+  forwardToSentry(level, event, ctx);
 }
 
 export const logger = {
