@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   images: {
@@ -19,12 +20,25 @@ const nextConfig: NextConfig = {
     dangerouslyAllowSVG: false,
   },
   async headers() {
-    // Only apply strict CSP in production
+    // `Document-Policy: js-profiling` must be set in every environment so that
+    // Sentry's browser profiling integration can start. Strict CSP / HSTS only
+    // applied in production to avoid breaking local dev tooling.
+    const documentPolicy = {
+      source: '/:path*',
+      headers: [
+        {
+          key: 'Document-Policy',
+          value: 'js-profiling',
+        },
+      ],
+    };
+
     if (process.env.NODE_ENV !== 'production') {
-      return [];
+      return [documentPolicy];
     }
 
     return [
+      documentPolicy,
       {
         source: '/:path*',
         headers: [
@@ -68,4 +82,19 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Suppresses source map upload logs during build.
+  silent: !process.env.CI,
+  // Org/project resolved from env (configure in Vercel):
+  //   SENTRY_ORG, SENTRY_PROJECT, SENTRY_AUTH_TOKEN
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  // Upload a larger set of source maps for prettier stack traces (increases build time).
+  widenClientFileUpload: true,
+  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
+  tunnelRoute: '/monitoring',
+  // Disable Sentry telemetry.
+  telemetry: false,
+  // Automatically tree-shake Sentry logger statements to reduce bundle size.
+  disableLogger: true,
+});
