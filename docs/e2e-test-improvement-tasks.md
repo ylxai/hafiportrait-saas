@@ -1,6 +1,6 @@
 # E2E Test Improvement Tasks
 
-> Updated: 2026-05-08 - Most tasks completed, remaining fixes documented.
+> Updated: 2026-05-09 - All high-priority tasks completed, PR ready to merge.
 
 ---
 
@@ -19,35 +19,19 @@
 
 ## Remaining Issues
 
-### 🔴 P0 - High Priority
+### ✅ All High Priority Issues Resolved
 
-#### Task R1 — Fix helpers.ts
-File: `tests/e2e/helpers.ts` (line 60-62)
+All previously identified issues (R1, R2, R3) have been addressed:
+- ✅ helpers.ts - Fixed to use semantic locators
+- ✅ rate-limiting tests - Fixed to use getByTestId/getByText/getByRole
+- ✅ Empty test file - Removed
 
-```typescript
-// ❌ Still using old locators
-await page.fill('input[type="email"]', email);
-await page.click('button[type="submit"]');
+### 📝 Low Priority Observations (Non-blocking)
 
-// ✅ Should be
-await page.getByLabel(/email/i).fill(email);
-await page.getByRole('button', { name: /submit|kirim/i }).click();
-```
-
-#### Task R2 — Fix rate-limiting tests
-File: `tests/e2e/integration/01-rate-limiting.spec.ts`
-
-| Line | Issue | Fix |
-|------|-------|-----|
-| 14 | CSS selector | Use `getByTestId` |
-| 36 | text selector | Use `getByText` |
-| 59 | `waitForTimeout(61000)` | Acceptable for test, but document why |
-
-#### Task R3 — Empty test file
-File: `tests/e2e/admin/02-upload.spec.ts`
-
-- Status: Empty (0 lines)
-- Action: Remove or implement
+Some minor improvements in unchanged code (not blocking merge):
+- `waitForSelector('text=...')` in several places - can be refactored to web-first assertions
+- `waitForTimeout(500)` for modal animations - acceptable but could use animation completion events
+- Complex CSS selectors for spinbuttons - could use semantic locators
 
 ---
 
@@ -142,10 +126,11 @@ npx playwright show-report
 
 ## Next Steps
 
-1. **Fix remaining issues** (R1, R2, R3)
-2. **Add more API tests** - Already excellent in 03-gallery.spec.ts
-3. **Consider Playwright MCP** for exploratory automation
-4. **Add visual regression tests** if needed
+1. ✅ **All high-priority issues resolved** - PR ready to merge
+2. **Optional improvements** - Address low-priority observations in future PRs
+3. **Add more API tests** - Already excellent in 03-gallery.spec.ts
+4. **Consider Playwright MCP** for exploratory automation
+5. **Add visual regression tests** if needed
 
 ---
 
@@ -161,4 +146,4 @@ npx playwright show-report
 ---
 
 *Generated 2026-05-08*
-*Updated 2026-05-08 - Most tasks completed*
+*Updated 2026-05-09 - All high-priority tasks completed*
