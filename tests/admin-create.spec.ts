@@ -25,15 +25,12 @@ test.beforeEach(async ({ page }) => {
   await page.goto(`${BASE_URL}/login`);
   await page.waitForLoadState('networkidle');
   
-  // Tunggu form login muncul
-  await page.waitForSelector('input[type="email"]', { timeout: 10000 });
-  
-  // Isi form login dengan selectors yang benar
-  await page.fill('input[type="email"]', TEST_CREDENTIALS.email);
-  await page.fill('input[type="password"]', TEST_CREDENTIALS.password);
+  // Isi form login dengan semantic locators
+  await page.getByLabel(/email/i).fill(TEST_CREDENTIALS.email);
+  await page.getByLabel(/password/i).fill(TEST_CREDENTIALS.password);
   
   // Click tombol "Masuk"
-  await page.click('button[type="submit"]');
+  await page.getByRole('button', { name: /masuk|submit/i }).click();
   
   // Tunggu redirect ke admin (URL harus mengandung /admin)
   await page.waitForURL(/\/admin/, { timeout: 10000 });
@@ -64,7 +61,6 @@ test.describe('Create Client', () => {
     await page.keyboard.press('Enter');
     
     // Verifikasi client muncul di list - tunggu table reload
-    await page.waitForTimeout(1500);
     await expect(page.locator(`text=Test Client ${timestamp}`)).toBeVisible({ timeout: 10000 });
   });
 });
@@ -101,7 +97,6 @@ test.describe('Create Package', () => {
     await page.keyboard.press('Enter');
     
     // Verifikasi package muncul di list
-    await page.waitForTimeout(1500);
     await expect(page.locator(`text=Test Package ${timestamp}`)).toBeVisible({ timeout: 10000 });
   });
 });
@@ -128,7 +123,6 @@ test.describe('Create Event', () => {
     await page.keyboard.press('Enter');
     
     // Tunggu dan verifikasi client tersimpan
-    await page.waitForTimeout(2000);
     await expect(page.locator(`text=${clientName}`)).toBeVisible({ timeout: 5000 });
     
     // Step 2: Create a package
@@ -152,7 +146,6 @@ test.describe('Create Event', () => {
     await page.keyboard.press('Enter');
     
     // Tunggu dan verifikasi package tersimpan
-    await page.waitForTimeout(2000);
     await expect(page.locator(`text=${packageName}`)).toBeVisible({ timeout: 5000 });
     
     // Step 3: Create event
@@ -165,24 +158,22 @@ test.describe('Create Event', () => {
     // Reload page untuk memastikan data client dan package ter-load
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000); // Tunggu data fetch dari API
     
     // Click tombol "Buat Event Baru" - gunakan first() untuk ambil yang pertama
     await page.getByRole('button', { name: 'Buat Event Baru' }).first().click();
     
-    // Tunggu modal muncul
-    await page.waitForSelector('text=Buat Event Baru', { timeout: 5000 });
-    await page.waitForTimeout(500); // Tunggu modal animation selesai
+    // Tunggu modal muncul dengan web-first assertion
+    await expect(page.getByText('Buat Event Baru')).toBeVisible({ timeout: 5000 });
     
     // Isi form Event - Nama Project
     await page.getByRole('textbox').nth(0).fill(eventName);
     
     // Pilih Client dari dropdown - click combobox pertama dan tunggu options muncul
     await page.getByRole('combobox').nth(0).click();
-    await page.waitForTimeout(1000); // Tunggu dropdown expand dan data load
     
-    // Cari dan click client dari dropdown list
+    // Tunggu dropdown options muncul
     const clientOption = page.locator(`text=${clientName}`).first();
+    await clientOption.waitFor({ state: 'visible', timeout: 5000 });
     await clientOption.click();
     
     // Isi tanggal event
@@ -193,10 +184,10 @@ test.describe('Create Event', () => {
     
     // Pilih Package - click combobox kedua
     await page.getByRole('combobox').nth(1).click();
-    await page.waitForTimeout(1000); // Tunggu dropdown expand dan data load
     
-    // Cari dan click package dari dropdown list
+    // Tunggu dropdown options muncul
     const packageOption = page.locator(`text=${packageName}`).first();
+    await packageOption.waitFor({ state: 'visible', timeout: 5000 });
     await packageOption.click();
     
     // Isi total harga (spinbutton pertama)
@@ -206,7 +197,6 @@ test.describe('Create Event', () => {
     await page.getByRole('button', { name: 'Buat Event' }).click();
     
     // Verifikasi event muncul di list - tunggu lebih lama
-    await page.waitForTimeout(2000);
     await expect(page.locator(`text=${eventName}`)).toBeVisible({ timeout: 10000 });
   });
 });
@@ -245,10 +235,10 @@ test.describe('Create Gallery', () => {
     await createGalleryBtn.click();
     
     // Tunggu modal atau redirect ke gallery
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
     
     // Verifikasi URL mengandung /admin/galleries/
-    expect(page.url()).toMatch(/\/admin\/galleries\//);
+    await expect(page).toHaveURL(/\/admin\/galleries\//);
   });
 });
 
@@ -297,8 +287,8 @@ test.describe('Upload Photos', () => {
     const startUploadBtn = page.locator('button:has-text("Start Upload")');
     await startUploadBtn.click();
     
-    // Tunggu upload selesai - timeout lebih lama untuk upload besar
-    await page.waitForTimeout(30000);
+    // Tunggu upload selesai - wait for upload button to disappear or success message
+    await expect(startUploadBtn).not.toBeVisible({ timeout: 60000 });
     
     // Verifikasi dengan screenshot atau check photo count
     const photoCount = await page.locator('.grid > div, [data-photo]').count();
@@ -354,6 +344,6 @@ test.describe('Bulk Operations', () => {
     await page.click('button:has-text("Ya"), button:has-text("Hapus")');
     
     // Verifikasi dengan timeout
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
   });
 });

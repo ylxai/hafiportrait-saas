@@ -6,10 +6,11 @@
 
 ## TL;DR
 
-- **Stack**: Next.js 15.4.11, TypeScript strict, Tailwind v4, Prisma + PostgreSQL, Cloudflare R2, Cloudinary, Ably
+- **Stack**: Next.js 15.4.11, TypeScript strict, Tailwind v4, Prisma + TigerDB, Cloudflare R2, Cloudinary, Ably
 - **NOT standard Next.js**: Must await `params` and `searchParams` as Promise
-- **Verify before commit**: `npm run lint && npm run build`
+- **Verify before commit**: `npm run lint && npm run build && npm run test:e2e`
 - **Styling**: Tailwind v4 OKLCH semantic only — NO static colors
+- **Testing**: Playwright E2E with semantic locators only — NO CSS selectors, NO waitForTimeout
 
 ---
 
@@ -19,8 +20,38 @@
 npm run dev          # Dev server (port 3000)
 npm run build       # Production build (lint + typecheck + build)
 npm run lint       # ESLint only
-npm run db:push    # Push Prisma schema to DB
-npm run db:generate
+npm run test:e2e    # Run E2E tests
+npm run db:push    # Push Prisma schema to TigerDB
+npm run db:generate # Generate Prisma client
+```
+
+---
+
+## Testing
+
+### E2E Tests (Playwright)
+```bash
+npm run test:e2e          # Run all E2E tests
+npm run test:e2e:ui       # Run with UI mode
+npm run test:e2e:debug    # Debug mode
+```
+
+**Test Structure:**
+- `tests/e2e/admin/` — Admin dashboard tests
+- `tests/e2e/client-portal/` — Client portal tests
+- `tests/e2e/public/` — Public gallery tests
+- `tests/e2e/integration/` — Integration tests
+
+**Best Practices:**
+- Use semantic locators: `getByRole()`, `getByLabel()`, `getByText()`, `getByTestId()`
+- NO CSS selectors or XPath
+- NO `waitForTimeout()` — use Playwright auto-wait
+- Use Page Object Model (POM) in `tests/e2e/pages/`
+- Auth state cached in `playwright/.auth/`
+
+**Test Constants:**
+```typescript
+import { HTTP_STATUS } from '@/tests/e2e/constants/http-status'
 ```
 
 ---
@@ -39,7 +70,34 @@ npm run db:generate
 | `src/lib/upload/` | Presigned URLs |
 | `src/lib/cloudflare-queue.ts` | Cloudflare Queues |
 | `workers/` | Cloudflare Edge Workers |
-| `prisma/schema.prisma` | Database schema |
+| `prisma/schema.prisma` | Database schema (TigerDB) |
+
+**Database**: TigerDB (PostgreSQL-compatible) via Prisma
+
+---
+
+## Database (TigerDB)
+
+**Provider**: TigerDB (PostgreSQL-compatible)  
+**ORM**: Prisma
+
+### Database Operations
+```bash
+npm run db:push       # Push schema changes to TigerDB
+npm run db:generate   # Generate Prisma client
+```
+
+### Query Database
+Use **Tiger MCP** for direct database queries and inspection:
+- Check database schema
+- Query tables directly
+- Inspect data
+
+### Schema Changes
+1. Edit `prisma/schema.prisma`
+2. Run `npm run db:push`
+3. Run `npm run db:generate`
+4. Restart dev server
 
 ---
 
@@ -134,6 +192,9 @@ border-border
 3. **NO `alert()`** — use `sonner toast()` only
 4. **NO static Tailwind colors** — use OKLCH semantic tokens
 5. **NO unbounded queries** — always paginate
+6. **NO CSS selectors in tests** — use semantic locators only
+7. **NO `waitForTimeout()` in tests** — use Playwright auto-wait
+8. **NO magic numbers** — use named constants
 
 ---
 
@@ -176,6 +237,7 @@ claude
 | Docs lookup | Context7 MCP |
 | shadcn/ui | shadcn MCP |
 | File ops | Filesystem MCP |
+| Database queries | Tiger MCP |
 
 ---
 
@@ -217,5 +279,5 @@ Project-specific rules in `.kiro/steering/`:
 ## Verification Before Commit
 
 ```bash
-npm run lint && npm run build
+npm run lint && npm run build && npm run test:e2e
 ```

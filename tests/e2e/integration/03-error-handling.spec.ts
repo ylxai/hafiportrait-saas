@@ -105,7 +105,7 @@ test.describe("Error Handling", () => {
     ]);
 
     // Should handle gracefully without crash
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState("networkidle");
     await expect(page.getByTestId("photo-item")).toBeVisible();
   });
 
