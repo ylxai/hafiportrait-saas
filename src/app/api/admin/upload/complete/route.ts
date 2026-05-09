@@ -16,6 +16,7 @@ import { serializeBigInt } from '@/lib/bigint-utils';
 import { trackUploadResult } from '@/lib/analytics';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { rateLimitResponse } from '@/lib/api/response';
+import { logger } from '@/lib/logger';
 
 
 // Zod validation schema for upload complete request
@@ -159,7 +160,7 @@ export async function POST(request: Request) {
         const { credentials: r2Creds } = await getR2Credentials(storageAccountId || undefined);
         await deleteFromR2(verifiedR2Key, r2Creds);
       } catch (deleteErr) {
-        console.error('Failed to rollback R2 upload after quota exceeded:', deleteErr);
+        logger.error('upload.complete.rollback_quota_failed', { uploadId, r2Key: verifiedR2Key, err: deleteErr });
       }
       await cleanupUploadSession(uploadId).catch(() => {});
 
@@ -218,14 +219,14 @@ export async function POST(request: Request) {
       await prisma.client.update({
         where: { id: clientId },
         data: { usedStorage: { decrement: fileSizeBig } },
-      }).catch((e) => console.error('Failed to rollback Client.usedStorage:', e));
+      }).catch((e) => logger.error('upload.complete.rollback_used_storage_failed', { clientId, err: e }));
 
       // Always rollback the orphan R2 file
       try {
         const { credentials: r2Creds } = await getR2Credentials(storageAccountId || undefined);
         await deleteFromR2(verifiedR2Key, r2Creds);
       } catch (deleteErr) {
-        console.error('Failed to rollback R2 upload:', deleteErr);
+        logger.error('upload.complete.rollback_r2_failed', { uploadId, r2Key: verifiedR2Key, err: deleteErr });
       }
       await cleanupUploadSession(uploadId).catch(() => {});
 
@@ -235,7 +236,7 @@ export async function POST(request: Request) {
           select: { id: true, filename: true, url: true, thumbnailUrl: true },
         });
         if (existingPhoto) {
-          console.warn(`[Duplicate Detection] Duplicate (race-safe): ${photoFileHash} in gallery ${galleryId}`);
+          logger.warn('upload.complete.duplicate_detected', { galleryId, fileHash: photoFileHash, existingPhotoId: existingPhoto.id });
           return successResponse({
             photo: {
               id: existingPhoto.id,
@@ -275,7 +276,7 @@ export async function POST(request: Request) {
           apiSecret: cloudinaryAccount.apiSecret,
         },
       }).catch((err) => {
-        console.error('[Upload] Failed to queue thumbnail generation:', err);
+        logger.error('upload.complete.queue_thumbnail_failed', { photoId: photo.id, err });
         // Non-critical — image/fetch URL still works as fallback
       });
     }
@@ -307,7 +308,7 @@ export async function POST(request: Request) {
       duplicate: { isDuplicate: false },
     });
   } catch (error) {
-    console.error('Error completing upload:', error);
+    logger.error('upload.complete.unhandled', { galleryId, r2Key, err: error });
 
     // Track failed upload (non-blocking)
     if (galleryId) {
@@ -321,7 +322,7 @@ export async function POST(request: Request) {
         const { credentials: r2Creds } = await getR2Credentials(outerStorageAccountId || undefined);
         await deleteFromR2(r2Key, r2Creds);
       } catch (cleanupErr) {
-        console.error('Failed to clean up orphan R2 file:', cleanupErr);
+        logger.error('upload.complete.orphan_cleanup_failed', { r2Key, err: cleanupErr });
       }
     }
 

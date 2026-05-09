@@ -3,7 +3,17 @@ import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand, HeadObjectComm
 import { getR2Client, R2Credentials } from '@/lib/storage/r2';
 import { prisma } from '@/lib/db';
 import { PRESIGNED_URL_EXPIRY_SECONDS, UPLOAD_SESSION_EXPIRY_MS, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB, ALLOWED_EXTENSIONS } from './constants';
+import { logger } from '@/lib/logger';
 import path from 'path';
+
+// MEDIUM FIX #18: ETag-based integrity sanity check.
+// S3/R2 ETag rules:
+//   - Single-part PUT (≤5GB)  → ETag = MD5 hex (32 chars, no dash).
+//   - Multipart upload        → ETag = `<md5-of-md5s>-N` (suffixed with part count).
+// We never multipart-upload here (presigned PUT only), so a missing or `-N` ETag
+// indicates a corrupted/aborted upload. We can't compare with our SHA-256 hash, but
+// we *can* assert that the object has a valid single-part ETag, ruling out partial writes.
+const SINGLE_PART_ETAG_RE = /^"?[0-9a-f]{32}"?$/i;
 
 // HIGH FIX #6: return accountId (DB id) explicitly to avoid ambiguous re-query
 export async function getR2Credentials(accountId?: string): Promise<{ credentials: R2Credentials; bucket: string; accountDbId: string }> {
@@ -195,13 +205,28 @@ export async function verifyR2Upload(
       try {
         await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: session.r2Key }));
       } catch (delErr) {
-        console.error('Failed to delete oversized R2 object:', delErr);
+        logger.error('upload.r2.delete_oversized_failed', { uploadId, r2Key: session.r2Key, err: delErr });
       }
       await prisma.uploadSession.delete({ where: { id: uploadId } }).catch(() => {});
       return { success: false, error: `File terlalu besar. Maksimal ${MAX_FILE_SIZE_MB}MB.` };
     }
+
+    // MEDIUM FIX #18: ETag integrity sanity-check. Reject objects with multipart ETag
+    // (we never multipart-upload via presigned PUT, so `-N` suffix indicates anomaly)
+    // or missing/malformed ETag (storage corruption / aborted upload).
+    const etag = response.ETag;
+    if (!etag || !SINGLE_PART_ETAG_RE.test(etag)) {
+      logger.warn('upload.r2.etag_invalid', { uploadId, r2Key: session.r2Key, etag });
+      try {
+        await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: session.r2Key }));
+      } catch (delErr) {
+        logger.error('upload.r2.delete_invalid_etag_failed', { uploadId, r2Key: session.r2Key, err: delErr });
+      }
+      await prisma.uploadSession.delete({ where: { id: uploadId } }).catch(() => {});
+      return { success: false, error: 'File integrity check gagal (ETag tidak valid). Silakan upload ulang.' };
+    }
   } catch (error) {
-    console.error('R2 verification failed - file not found:', error);
+    logger.error('upload.r2.verify_failed', { uploadId, err: error });
     // Clean up the orphaned upload session
     await prisma.uploadSession.delete({ where: { id: uploadId } }).catch(() => {});
     return { success: false, error: 'File tidak ditemukan di storage. Upload mungkin gagal.' };

@@ -17,6 +17,7 @@ import {
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { rateLimitResponse } from '@/lib/api/response';
 import { publishStorageQuotaAlert } from '@/lib/ably';
+import { logger } from '@/lib/logger';
 
 
 // Zod validation schema for presigned upload request
@@ -170,7 +171,7 @@ export async function POST(request: Request) {
         quotaGB: storageQuotaGB,
         percentage: usagePercentAfter,
       }).catch((err) => {
-        console.error('[Quota Warning] Failed to send exceeded alert:', err);
+        logger.error('quota.alert.send_exceeded_failed', { clientId, galleryId, err });
       });
     } else {
       // Send warning/critical alerts for threshold crossings
@@ -178,8 +179,8 @@ export async function POST(request: Request) {
         if (usagePercentBefore < threshold && usagePercentAfter >= threshold) {
           const alertType = threshold >= 95 ? 'exceeded' : threshold >= 90 ? 'critical' : 'warning';
 
-          // Log locally
-          console.warn(`[Quota Warning] Client ${client?.nama || clientId} crossed ${threshold}% threshold (${usedGBAfter.toFixed(2)}GB / ${storageQuotaGB}GB)`);
+          // Log threshold crossing
+          logger.warn('quota.threshold_crossed', { clientId, clientName: client?.nama, threshold, usedGB: usedGBAfter, quotaGB: storageQuotaGB });
 
           // Send Ably notification to admin dashboard
           await publishStorageQuotaAlert({
@@ -191,7 +192,7 @@ export async function POST(request: Request) {
             quotaGB: storageQuotaGB,
             percentage: threshold,
           }).catch((err) => {
-            console.error('[Quota Warning] Failed to send Ably notification:', err);
+            logger.error('quota.alert.send_threshold_failed', { clientId, threshold, err });
           });
         }
       }
@@ -239,7 +240,7 @@ export async function POST(request: Request) {
       expiresIn: PRESIGNED_URL_EXPIRY_SECONDS,
     });
   } catch (error) {
-    console.error('Error generating presigned URL:', error);
+    logger.error('upload.presigned.unhandled', { err: error });
     return serverErrorResponse('Failed to generate upload URL');
   }
 }
