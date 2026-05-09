@@ -29,8 +29,9 @@ const PresignedRequestSchema = z.object({
       'Filename contains invalid characters'
     ),
   contentType: z.string()
+    // CRITICAL FIX #2: strict MIME allowlist — no `image/*` fallback (prevents image/svg+xml XSS, etc.)
     .refine(
-      (val) => ALLOWED_MIME_TYPES.includes(val) || val.startsWith('image/'),
+      (val) => ALLOWED_MIME_TYPES.includes(val),
       'Invalid content type'
     ),
   galleryId: z.string().min(1, 'Invalid gallery ID'),
@@ -126,7 +127,8 @@ export async function POST(request: Request) {
     const clientId = gallery.event.clientId;
     const client = gallery.event.client;
     const storageQuotaGB = client?.storageQuotaGB ?? DEFAULT_STORAGE_QUOTA_GB;
-    const storageQuotaBytes = BigInt(storageQuotaGB * BYTES_PER_GB);
+    // MEDIUM FIX #14: Use BigInt arithmetic to avoid Number overflow on large quotas
+    const storageQuotaBytes = BigInt(storageQuotaGB) * BigInt(BYTES_PER_GB);
 
     // Calculate current usage
     const storageUsage = await prisma.photo.aggregate({

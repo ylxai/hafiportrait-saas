@@ -2,10 +2,11 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getR2Client, R2Credentials } from '@/lib/storage/r2';
 import { prisma } from '@/lib/db';
-import { PRESIGNED_URL_EXPIRY_SECONDS, UPLOAD_SESSION_EXPIRY_MS } from './constants';
+import { PRESIGNED_URL_EXPIRY_SECONDS, UPLOAD_SESSION_EXPIRY_MS, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB, ALLOWED_EXTENSIONS } from './constants';
+import path from 'path';
 
-// Get R2 account credentials from database
-export async function getR2Credentials(accountId?: string): Promise<{ credentials: R2Credentials; bucket: string }> {
+// HIGH FIX #6: return accountId (DB id) explicitly to avoid ambiguous re-query
+export async function getR2Credentials(accountId?: string): Promise<{ credentials: R2Credentials; bucket: string; accountDbId: string }> {
   // If specific account requested
   if (accountId) {
     const account = await prisma.storageAccount.findUnique({
@@ -23,6 +24,7 @@ export async function getR2Credentials(accountId?: string): Promise<{ credential
           endpoint: account.endpoint || undefined,
         },
         bucket: account.bucketName || '',
+        accountDbId: account.id,
       };
     }
   }
@@ -43,6 +45,7 @@ export async function getR2Credentials(accountId?: string): Promise<{ credential
         endpoint: defaultAccount.endpoint || undefined,
       },
       bucket: defaultAccount.bucketName || '',
+      accountDbId: defaultAccount.id,
     };
   }
   
@@ -64,29 +67,26 @@ export async function generatePresignedUploadUrl(
   uploadId: string;
   r2AccountId: string | null;
 }> {
-  const { credentials, bucket } = await getR2Credentials(r2AccountId);
-  const client = getR2Client(credentials);
-  
-  // Generate unique key
-  const timestamp = Date.now();
-  const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-  const r2Key = `uploads/${galleryId}/${timestamp}-${sanitizedFilename}`;
-  
-  // Generate cryptographically secure upload ID
-  const uploadId = `${timestamp}-${globalThis.crypto.randomUUID()}`;
-  
-  // Get the actual account ID for storage tracking
-  let actualR2AccountId: string | null = r2AccountId || null;
-  if (!actualR2AccountId && credentials) {
-    const r2Account = await prisma.storageAccount.findFirst({
-      where: { 
-        provider: 'R2', 
-        isActive: true,
-        accountId: credentials.accountId || undefined,
-      },
-    });
-    actualR2AccountId = r2Account?.id || null;
+  // HIGH FIX #3: Validate galleryId format (cuid/uuid only) to prevent path traversal/injection
+  if (!/^[a-zA-Z0-9_-]+$/.test(galleryId)) {
+    throw new Error('Invalid galleryId format');
   }
+
+  // HIGH FIX #3: Validate extension against whitelist
+  const ext = path.extname(filename).toLowerCase();
+  if (!ALLOWED_EXTENSIONS.includes(ext)) {
+    throw new Error(`Unsupported file extension: ${ext}`);
+  }
+
+  const { credentials, bucket, accountDbId } = await getR2Credentials(r2AccountId);
+  const client = getR2Client(credentials);
+
+  // HIGH FIX #3: UUID-based deterministic key — eliminates timestamp collisions & filename injection
+  const uploadId = globalThis.crypto.randomUUID();
+  const r2Key = `uploads/${galleryId}/${uploadId}${ext}`;
+
+  // HIGH FIX #6: Use accountDbId returned from getR2Credentials (no ambiguous re-query)
+  const actualR2AccountId: string = accountDbId;
 
   // Validate Cloudinary account if provided
   let actualCloudinaryAccountId: string | null = cloudinaryAccountId || null;
@@ -106,15 +106,18 @@ export async function generatePresignedUploadUrl(
     actualCloudinaryAccountId = defaultCloudinary?.id || null;
   }
   
-  // Generate presigned URL
+  // CRITICAL FIX #1: Sign Content-Type only; enforce size via post-upload HeadObject check
+  // (see verifyR2Upload). R2 (S3) PUT presigned URLs cannot enforce a ranged size — only
+  // exact ContentLength can be signed. Authoritative size validation happens server-side
+  // after upload using HeadObject; oversize files are deleted and session rejected.
   const command = new PutObjectCommand({
     Bucket: bucket,
     Key: r2Key,
     ContentType: contentType,
   });
-  
-  const presignedUrl = await getSignedUrl(client, command, { 
-    expiresIn: PRESIGNED_URL_EXPIRY_SECONDS
+
+  const presignedUrl = await getSignedUrl(client, command, {
+    expiresIn: PRESIGNED_URL_EXPIRY_SECONDS,
   });
   
   const publicUrl = `${credentials.publicUrl}/${r2Key}`;
@@ -142,11 +145,9 @@ export async function generatePresignedUploadUrl(
 }
 
 // Verifikasi upload ke R2 berhasil
+// HIGH FIX #8: Removed unused _fileSize/_width/_height params — server is authoritative.
 export async function verifyR2Upload(
-  uploadId: string,
-  _fileSize: number, // Now ignored - use server-side size
-  _width?: number,
-  _height?: number
+  uploadId: string
 ): Promise<{
   success: boolean;
   r2Key?: string;
@@ -187,6 +188,18 @@ export async function verifyR2Upload(
     const response = await client.send(command);
     // Use R2's ContentLength as authoritative size (NOT client-provided)
     serverFileSize = response.ContentLength ? Number(response.ContentLength) : undefined;
+
+    // CRITICAL FIX #1: Enforce max file size server-side. If client uploaded > limit,
+    // delete the object and reject the session. This is the authoritative gate.
+    if (serverFileSize !== undefined && serverFileSize > MAX_FILE_SIZE_BYTES) {
+      try {
+        await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: session.r2Key }));
+      } catch (delErr) {
+        console.error('Failed to delete oversized R2 object:', delErr);
+      }
+      await prisma.uploadSession.delete({ where: { id: uploadId } }).catch(() => {});
+      return { success: false, error: `File terlalu besar. Maksimal ${MAX_FILE_SIZE_MB}MB.` };
+    }
   } catch (error) {
     console.error('R2 verification failed - file not found:', error);
     // Clean up the orphaned upload session
