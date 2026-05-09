@@ -601,7 +601,7 @@ export async function queuePhotosDeletionForEntities(whereCriteria: Prisma.Photo
       fileSize: photo.fileSize?.toString(),
       cloudinaryCredentials,
     };
-  }).filter((job: typeof deletionJobs[number]) => job.r2Key || job.thumbnailUrl);
+  }).filter((job) => job.r2Key || job.thumbnailUrl);
 
   if (deletionJobs.length > 0) {
     try {
