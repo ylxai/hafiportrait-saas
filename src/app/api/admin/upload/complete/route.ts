@@ -12,7 +12,6 @@ import {
 } from '@/lib/upload/constants';
 import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
 import { queueThumbnailGeneration } from '@/lib/cloudflare-queue';
-import { serializeBigInt } from '@/lib/bigint-utils';
 import { trackUploadResult } from '@/lib/analytics';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { rateLimitResponse } from '@/lib/api/response';
@@ -128,9 +127,10 @@ export async function POST(request: Request) {
     // MEDIUM FIX #14: Use BigInt arithmetic to avoid Number overflow on large quotas
     const storageQuotaBytes = BigInt(storageQuotaGB) * BigInt(BYTES_PER_GB);
 
-    // HIGH FIX #8: dimensions are 0 here; thumbnail worker extracts real dimensions and updates the photo row.
-    const imgWidth = 0;
-    const imgHeight = 0;
+    // HIGH FIX #8: dimensions are unknown here; thumbnail worker extracts real dimensions and updates the photo row.
+    // Gemini cleanup: use null instead of magic 0 so width/height NULL means "unknown" (Prisma Int?).
+    const imgWidth: number | null = null;
+    const imgHeight: number | null = null;
 
     // Get Cloudinary account for thumbnail URL
     const cloudinaryAccountId = verification.cloudinaryAccountId || null;
@@ -239,8 +239,9 @@ export async function POST(request: Request) {
 
       if (isDuplicate && photoFileHash) {
         // Review fix #3: return real metadata of the existing photo, not zero-filled placeholders.
-        const existingPhoto = await prisma.photo.findFirst({
-          where: { galleryId, fileHash: photoFileHash },
+        // Gemini cleanup: use findUnique on the composite unique index for index-only lookup.
+        const existingPhoto = await prisma.photo.findUnique({
+          where: { uniq_gallery_filehash: { galleryId, fileHash: photoFileHash } },
           select: {
             id: true,
             filename: true,
@@ -261,9 +262,10 @@ export async function POST(request: Request) {
               url: existingPhoto.url,
               thumbnailUrl: existingPhoto.thumbnailUrl,
               publicId: existingPhoto.publicId,
-              width: existingPhoto.width ?? 0,
-              height: existingPhoto.height ?? 0,
-              fileSize: serializeBigInt(existingPhoto.fileSize),
+              width: existingPhoto.width,
+              height: existingPhoto.height,
+              // Gemini cleanup: successResponse() already serializes BigInt — pass raw value.
+              fileSize: existingPhoto.fileSize,
             },
             duplicate: {
               isDuplicate: true,
@@ -320,7 +322,8 @@ export async function POST(request: Request) {
         publicId: photo.publicId,
         width: photo.width,
         height: photo.height,
-        fileSize: serializeBigInt(photo.fileSize),
+        // Gemini cleanup: successResponse() already serializes BigInt — pass raw value.
+        fileSize: photo.fileSize,
       },
       duplicate: { isDuplicate: false },
     });
