@@ -71,15 +71,15 @@ export default function AnalyticsPage() {
         </div>
         <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-4">
           <div className="text-sm text-muted-foreground">Published</div>
-          <div className="text-2xl font-bold text-green-600">{summary?.publishedGalleries ?? 0}</div>
+          <div className="text-2xl font-bold text-success">{summary?.publishedGalleries ?? 0}</div>
         </div>
         <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-4">
           <div className="text-sm text-muted-foreground">Total Views</div>
-          <div className="text-2xl font-bold text-blue-600">{summary?.totalViews ?? 0}</div>
+          <div className="text-2xl font-bold text-foreground">{summary?.totalViews ?? 0}</div>
         </div>
         <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-4">
           <div className="text-sm text-muted-foreground">Avg Views</div>
-          <div className="text-2xl font-bold text-purple-600">{summary?.avgViews ?? 0}</div>
+          <div className="text-2xl font-bold text-foreground">{summary?.avgViews ?? 0}</div>
         </div>
         <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-4">
           <div className="text-sm text-muted-foreground">Total Selections</div>
@@ -126,7 +126,7 @@ export default function AnalyticsPage() {
                     <td className="px-4 py-3 text-sm text-muted-foreground">{item.selectedPhotos}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 text-xs rounded-full ${
-                        item.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-muted text-foreground'
+                        item.status === 'published' ? 'bg-success/15 text-success' : 'bg-muted text-foreground'
                       }`}>
                         {item.status}
                       </span>

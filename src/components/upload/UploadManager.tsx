@@ -145,22 +145,22 @@ export function UploadManager({
   const getStatusIcon = (file: UploadFile) => {
     switch (file.status) {
       case 'completed':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
+        return <CheckCircle className="w-5 h-5 text-success" />;
       case 'failed':
-        return <AlertCircle className="w-5 h-5 text-red-500" />;
+        return <AlertCircle className="w-5 h-5 text-destructive" />;
       case 'uploading':
       case 'processing':
-        return <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />;
+        return <Loader2 className="w-5 h-5 text-primary animate-spin" />;
       case 'compressing':
-        return <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />;
+        return <Loader2 className="w-5 h-5 text-primary animate-spin" />;
       case 'retrying':
-        return <Loader2 className="w-5 h-5 text-amber-400 animate-spin" />;
+        return <Loader2 className="w-5 h-5 text-warning animate-spin" />;
       default:
         // Show retry indicator if file is waiting for retry
         if (file.retryCount > 0 && file.error) {
-          return <Loader2 className="w-5 h-5 text-amber-400 animate-spin" />;
+          return <Loader2 className="w-5 h-5 text-warning animate-spin" />;
         }
-        return <div className="w-5 h-5 rounded-full border-2 border-slate-300" />;
+        return <div className="w-5 h-5 rounded-full border-2 border-border" />;
     }
   };
 
@@ -201,7 +201,7 @@ export function UploadManager({
 
           <div className="space-y-4 py-4">
             <div>
-              <label className="text-sm font-medium text-slate-700 mb-2 block">
+              <label className="text-sm font-medium text-foreground mb-2 block">
                 Cloudinary Account (Thumbnail)
               </label>
               <Select value={selectedCloudinary} onValueChange={(value) => setSelectedCloudinary(value || '')}>
@@ -219,7 +219,7 @@ export function UploadManager({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-700 mb-2 block">
+              <label className="text-sm font-medium text-foreground mb-2 block">
                 R2 Account (Original File)
               </label>
               <Select value={selectedR2} onValueChange={(value) => setSelectedR2(value || '')}>
@@ -236,7 +236,7 @@ export function UploadManager({
               </Select>
             </div>
 
-            <div className="bg-slate-50 p-3 rounded-lg text-sm text-slate-600">
+            <div className="bg-muted p-3 rounded-lg text-sm text-muted-foreground">
               <p className="font-medium mb-1">Info Gallery:</p>
               <p>Project: {galleryName}</p>
               <p>Client: {clientName}</p>
@@ -250,7 +250,7 @@ export function UploadManager({
             <Button 
               onClick={() => setShowStorageSelection(false)}
               disabled={!selectedCloudinary || !selectedR2}
-              className="bg-amber-500 hover:bg-amber-600"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               Lanjutkan
             </Button>
@@ -275,12 +275,12 @@ export function UploadManager({
         </DialogHeader>
 
         {/* Storage Info */}
-        <div className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg text-sm">
+        <div className="flex items-center justify-between bg-muted px-3 py-2 rounded-lg text-sm">
           <div className="flex items-center gap-4">
-            <span className="text-slate-600">
+            <span className="text-muted-foreground">
               Cloudinary: <strong>{cloudinaryAccounts.find(a => a.id === selectedCloudinary)?.name}</strong>
             </span>
-            <span className="text-slate-600">
+            <span className="text-muted-foreground">
               R2: <strong>{r2Accounts.find(a => a.id === selectedR2)?.name}</strong>
             </span>
           </div>
@@ -296,19 +296,19 @@ export function UploadManager({
 
         {/* Invalid Files Alert */}
         {invalidFiles.length > 0 && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center gap-2 text-red-700 font-medium mb-2">
+          <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+            <div className="flex items-center gap-2 text-destructive font-medium mb-2">
               <AlertCircle className="w-5 h-5" />
               File yang tidak valid ({invalidFiles.length})
             </div>
             <div className="space-y-1 max-h-32 overflow-y-auto">
               {invalidFiles.map((file, idx) => (
-                <div key={idx} className="text-sm text-red-600">
+                <div key={idx} className="text-sm text-destructive">
                   <span className="font-medium">{file.filename}:</span> {file.reason}
                 </div>
               ))}
             </div>
-            <p className="text-xs text-red-500 mt-2">
+            <p className="text-xs text-destructive/80 mt-2">
               Format yang didukung: JPG, JPEG, PNG, WebP, HEIC, NEF, CR2, ARW, DNG, RAW (Max 50MB)
             </p>
           </div>
@@ -323,21 +323,21 @@ export function UploadManager({
             onDrop={handleDrop}
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
               isDragging 
-                ? 'border-amber-500 bg-amber-50' 
-                : 'border-slate-300 hover:border-slate-400'
+                ? 'border-primary bg-primary/5' 
+                : 'border-border hover:border-muted-foreground'
             }`}
           >
-            <ImageIcon className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-            <p className="text-slate-600 mb-2">
+            <ImageIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground mb-2">
               Drag & drop foto di sini, atau{' '}
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="text-amber-600 hover:underline"
+                className="text-primary hover:underline"
               >
                 pilih file
               </button>
             </p>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               Format: JPG, PNG, WebP, HEIC, RAW (NEF, CR2, ARW, DNG) • Max 50MB • Maks 400 file
             </p>
             <input
@@ -357,20 +357,20 @@ export function UploadManager({
             {/* Stats */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4 text-sm">
-                <span className="text-slate-600">
+                <span className="text-muted-foreground">
                   Total: <strong>{totalCount}</strong> foto
                 </span>
-                <span className="text-green-600">
+                <span className="text-success">
                   Selesai: <strong>{completedCount}</strong>
                 </span>
                 {failedCount > 0 && (
-                  <span className="text-red-600">
+                  <span className="text-destructive">
                     Gagal: <strong>{failedCount}</strong>
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-600">
+                <span className="text-sm text-muted-foreground">
                   {Math.round(progress)}%
                 </span>
                 <Button 
@@ -385,9 +385,9 @@ export function UploadManager({
             </div>
 
             {/* Progress Bar */}
-            <div className="w-full bg-slate-200 rounded-full h-2 mb-4">
+            <div className="w-full bg-muted rounded-full h-2 mb-4">
               <div 
-                className="bg-amber-500 h-2 rounded-full transition-all"
+                className="bg-primary h-2 rounded-full transition-all"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -397,15 +397,15 @@ export function UploadManager({
               {files.map((file) => (
                 <div 
                   key={file.id}
-                  className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
+                  className="flex items-center gap-3 p-3 bg-muted rounded-lg"
                 >
                   {getStatusIcon(file)}
                   
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-700 truncate">
+                    <p className="text-sm font-medium text-foreground truncate">
                       {file.file.name}
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       {formatFileSize(file.file.size)} • {getStatusText(file)}
                       {file.error && file.status === 'failed' && ` • ${file.error}`}
                     </p>
@@ -460,7 +460,7 @@ export function UploadManager({
             <Button 
               variant="outline"
               onClick={retryAllFailed}
-              className="border-amber-500 text-amber-600 hover:bg-amber-50"
+              className="border-primary text-primary hover:bg-primary/10"
             >
               Retry {failedCount} Gagal
             </Button>
@@ -470,7 +470,7 @@ export function UploadManager({
             <Button 
               onClick={handleStartUpload}
               disabled={files.every(f => f.status !== 'pending')}
-              className="bg-amber-500 hover:bg-amber-600"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               Start Upload
             </Button>

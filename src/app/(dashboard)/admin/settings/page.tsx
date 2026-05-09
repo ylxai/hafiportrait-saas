@@ -183,7 +183,7 @@ export default function SettingsPage() {
             {saving ? 'Saving...' : 'Save Settings'}
           </Button>
           {message && (
-            <span className={message.includes('success') ? 'text-green-600' : 'text-red-600'}>
+            <span className={message.includes('success') ? 'text-success' : 'text-destructive'}>
               {message}
             </span>
           )}

@@ -323,7 +323,7 @@ export default function EventsPage() {
         </div>
       ) : events.length === 0 ? (
         <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-16 text-center">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-6 shadow-inner">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center mx-auto mb-6 shadow-inner">
             <Calendar className="w-10 h-10 text-primary" />
           </div>
           <h3 className="text-2xl font-bold text-foreground mb-3">Belum ada event</h3>
@@ -408,7 +408,7 @@ export default function EventsPage() {
                   <td className="px-4 py-4 text-right">
                     <div className="flex gap-2 justify-end">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(event)}>Edit</Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(event.id)} className="text-red-600">Hapus</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(event.id)} className="text-destructive">Hapus</Button>
                     </div>
                   </td>
                 </tr>

@@ -309,7 +309,7 @@ export default function PackagesPage() {
                 <Button variant="ghost" size="sm" onClick={() => handleToggleActive(pkg)} className="flex-1 text-muted-foreground">
                   {pkg.isActive ? 'Nonaktifkan' : 'Aktifkan'}
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(pkg.id)} className="flex-1 text-red-600">Hapus</Button>
+                <Button variant="ghost" size="sm" onClick={() => handleDelete(pkg.id)} className="flex-1 text-destructive">Hapus</Button>
               </div>
             </div>
           ))}
