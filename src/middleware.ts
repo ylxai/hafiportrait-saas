@@ -15,6 +15,13 @@ export async function middleware(request: NextRequest) {
     "/api/public",
     "/api/webhook",
     "/booking",
+    // Public gallery is token-based: anyone holding the clientToken in the
+    // URL must be able to view the gallery WITHOUT logging in. Excluding it
+    // from publicRoutes (and listing it under isPortalRoute) previously
+    // forced unauthenticated visitors to /portal/login and signed-in admins
+    // to /admin, which broke the entire public-share flow plus all
+    // server-rendered SEO/OG metadata for shared links.
+    "/gallery",
   ];
 
   const isPublicRoute = publicRoutes.some(
@@ -71,7 +78,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
   const isPortalRoute =
     pathname.startsWith("/portal") ||
-    pathname.startsWith("/gallery") ||
+    // NOTE: /gallery deliberately omitted — see publicRoutes above. The
+    // public gallery is gated by the clientToken in the URL, not by an
+    // authenticated session, and must never trigger a portal redirect.
     pathname.startsWith("/api/portal/gallery");
 
   if (isAdminRoute && token.role !== "admin") {
