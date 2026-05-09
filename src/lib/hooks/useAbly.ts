@@ -20,7 +20,11 @@ function getClient(): Ably.Realtime {
 
 export interface SelectionUpdate {
   photoId: string;
-  action: 'add' | 'remove';
+  // 'finalized' is broadcast once when a client submits their selection so
+  // other viewers (admin dashboard, second tab) can refresh without polling.
+  // For 'finalized', `photoId` is empty and should be ignored by per-photo
+  // membership handlers.
+  action: 'add' | 'remove' | 'finalized';
   selectionCount: number;
   clientToken: string;
 }

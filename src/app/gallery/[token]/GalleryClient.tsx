@@ -11,7 +11,6 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { toast } from 'sonner';
 import { useSelectionSubscription, useViewCountSubscription, useAblyConnection } from '@/lib/hooks/useAbly';
-import { publishSelectionUpdate } from '@/lib/ably';
 
 type Photo = {
   id: string;
@@ -132,7 +131,16 @@ export default function GalleryClient({ token }: { token: string }) {
     }
   }, [gallery?.isSelectionLocked, gallery?.selections]);
 
-  const handleSelectionUpdate = useCallback((update: { photoId: string; action: 'add' | 'remove'; selectionCount: number }) => {
+  const handleSelectionUpdate = useCallback((update: { photoId: string; action: 'add' | 'remove' | 'finalized'; selectionCount: number }) => {
+    // 'finalized' is a broadcast-only event (no specific photo); refresh
+    // gallery state instead of mutating the per-photo Set so empty photoIds
+    // never sneak into `selectedIds`.
+    if (update.action === 'finalized') {
+      void mutate();
+      return;
+    }
+    // Defensive guard: ignore stray events without a concrete photoId.
+    if (!update.photoId) return;
     if (update.action === 'add') {
       setSelectedIds(prev => new Set([...prev, update.photoId]));
     } else {
@@ -142,7 +150,7 @@ export default function GalleryClient({ token }: { token: string }) {
         return newSet;
       });
     }
-  }, []);
+  }, [mutate]);
 
   const handleViewCountUpdate = useCallback((count: number) => {
     if (data?.data?.gallery) {
@@ -184,12 +192,10 @@ export default function GalleryClient({ token }: { token: string }) {
       });
       
       if (res.ok) {
-        publishSelectionUpdate(gallery.id, {
-          photoId: '',
-          action: 'add',
-          selectionCount: localSelectionCount,
-          clientToken: token,
-        });
+        // Realtime 'finalized' broadcast is published from the server
+        // (`/api/public/gallery/[token]/submit`) where ABLY_API_KEY is
+        // available. The browser cannot use the REST client, so calling it
+        // here was a silent no-op.
         await mutate(); // Re-fetch to update isLocked and server selections
         setShowSuccess(true);
       } else {
@@ -217,7 +223,10 @@ export default function GalleryClient({ token }: { token: string }) {
         const imageRes = await fetch(url);
         const blob = await imageRes.blob();
         
-        zip.file(photo.filename, blob);
+        // Prefix with photo id to avoid collisions when two selected
+        // photos share the same filename (e.g. duplicate originals across
+        // sub-galleries) — JSZip silently overwrites identical entries.
+        zip.file(`${photo.id}-${photo.filename}`, blob);
         setDownloadProgress(prev => ({ ...prev, current: prev.current + 1 }));
       }));
       

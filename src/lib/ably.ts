@@ -32,7 +32,7 @@ export const CHANNELS = {
 
 export async function publishSelectionUpdate(galleryId: string, data: {
   photoId: string;
-  action: 'add' | 'remove';
+  action: 'add' | 'remove' | 'finalized';
   selectionCount: number;
   clientToken: string;
 }) {

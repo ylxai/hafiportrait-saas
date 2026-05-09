@@ -118,8 +118,9 @@ export default function GalleryDetailPage() {
   const handleSelectionUpdate = useCallback(
     (_update: {
       photoId: string;
-      action: "add" | "remove";
+      action: "add" | "remove" | "finalized";
       selectionCount: number;
+      clientToken: string;
     }) => {
       mutate();
     },
