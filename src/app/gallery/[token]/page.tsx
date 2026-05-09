@@ -2,6 +2,7 @@ import { cache } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
+import { loadPublicGallery } from '@/lib/gallery/load-public-gallery';
 import GalleryClient from './GalleryClient';
 
 type PageProps = {
@@ -73,13 +74,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function GalleryPage({ params }: PageProps) {
   const { token } = await params;
 
-  // Existence check at the server boundary so a bad token returns 404 with the
-  // proper Next.js error UI instead of a blank "Galeri tidak ditemukan" client
-  // state. Reuses the cached head query above — no extra DB round-trip.
-  const gallery = await getGalleryHead(token);
-  if (!gallery) {
+  // Fetch the full gallery payload server-side so the very first paint has
+  // photos + selections without a client round-trip. The result is shaped to
+  // match the REST endpoint exactly (`{ data: { gallery } }`) and seeded
+  // into SWR via `fallbackData`, so subsequent revalidations stay coherent.
+  const payload = await loadPublicGallery(token);
+  if (!payload) {
     notFound();
   }
 
-  return <GalleryClient token={token} />;
+  // SWR expects the same envelope the fetcher returns: `{ data: ... }`.
+  // The payload was already JSON-roundtripped inside `loadPublicGallery`, so
+  // the cast to GalleryClient's strict prop type is shape-compatible.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const initialData = { data: payload } as any;
+
+  return <GalleryClient token={token} initialData={initialData} />;
 }

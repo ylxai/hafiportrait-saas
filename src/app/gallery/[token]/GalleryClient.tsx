@@ -61,27 +61,47 @@ const fetcher = (url: string) => fetch(url).then((res) => {
 });
 
 
-export default function GalleryClient({ token }: { token: string }) {
+export default function GalleryClient({
+  token,
+  initialData,
+}: {
+  token: string;
+  // Optional SSR-seeded payload coming from the Server Component. When
+  // present, SWR uses it as `fallbackData`, so the first paint already has
+  // photos and there is no client→server round-trip on hydrate.
+  initialData?: { data: GalleryData };
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [allPhotos, setAllPhotos] = useState<Photo[]>([]);
-  const [pagination, setPagination] = useState<Pagination | null>(null);
+  // Seed the photo list synchronously when SSR data is available — this
+  // avoids a one-frame "empty grid" flash before SWR's `onSuccess` fires.
+  const [allPhotos, setAllPhotos] = useState<Photo[]>(
+    () => initialData?.data.gallery.photos ?? [],
+  );
+  const [pagination, setPagination] = useState<Pagination | null>(
+    () => initialData?.data.gallery.pagination ?? null,
+  );
   const [loadingMore, setLoadingMore] = useState(false);
 
   const { data, error, isLoading, mutate } = useSWR<{ data: GalleryData }>(
     token ? `/api/public/gallery/${token}` : null,
     fetcher,
-    { 
-      revalidateOnFocus: false, 
+    {
+      revalidateOnFocus: false,
       revalidateOnReconnect: false,
+      // Skip initial revalidation when SSR data is present — the payload was
+      // just rendered server-side, refetching immediately would only
+      // duplicate work and trigger a re-render with identical content.
+      revalidateOnMount: !initialData,
+      fallbackData: initialData,
       onSuccess: (resData) => {
         // Only reset photos on initial load, not when polling
         if (allPhotos.length === 0) {
           setAllPhotos(resData.data.gallery.photos);
           setPagination(resData.data.gallery.pagination);
         }
-      }
-    }
+      },
+    },
   );
 
   const loadMore = useCallback(async () => {

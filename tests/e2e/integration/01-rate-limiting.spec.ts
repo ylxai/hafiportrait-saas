@@ -46,24 +46,53 @@ test.describe('Rate Limiting', () => {
     await expect(page.getByText('Too many requests')).toBeVisible();
   });
 
-  // Skipped: this scenario requires advancing the SERVER-side rate-limit
-  // window (60s), but Playwright's `page.clock` only mocks the browser's
-  // wall-clock — it cannot affect the rate limiter on the API server.
-  // `waitForTimeout(61000)` was previously used here, which violates the
-  // "no waitForTimeout in tests" rule in AGENTS.md and would burn a full
-  // minute of CI time per run. Proper coverage for this case belongs in a
-  // server-side unit test where the time source is injectable, or behind a
-  // test-only config that shrinks RATE_LIMIT_WINDOW. Tracked in TASK-BOARD.
-  test.skip('should reset rate limit after window expires', async ({ page }) => {
+  // The "window expires" scenario relies on the SERVER-side rate-limit
+  // window — Playwright's `page.clock` cannot mock that. Instead of an
+  // outright `test.skip` (or the previous `waitForTimeout(61000)` that
+  // violated AGENTS.md), we honour an opt-in env hook:
+  //
+  //   RATE_LIMIT_WINDOW_OVERRIDE_MS=2000 npm run test:e2e
+  //
+  // When that env var is set on the server under test, the rate limiter
+  // (see `src/lib/rate-limit.ts`) shrinks every window to that value and
+  // the test polls until the limit resets — no magic timeouts, no
+  // 60-second CI tax. Without the override the test is skipped with a
+  // clear reason so it can never quietly burn a real minute again.
+  const overrideRaw = process.env.RATE_LIMIT_WINDOW_OVERRIDE_MS;
+  const overrideMs = overrideRaw ? Number(overrideRaw) : NaN;
+  const overrideActive = Number.isFinite(overrideMs) && overrideMs > 0 && overrideMs <= 5000;
+
+  test('should reset rate limit after window expires', async ({ page, request }) => {
+    test.skip(
+      !overrideActive,
+      'Requires RATE_LIMIT_WINDOW_OVERRIDE_MS<=5000 on the server under test.',
+    );
+
     await page.goto('/admin');
 
-    // Make 30 requests
-    for (let i = 0; i < 30; i++) {
+    // Burn through the limit (30 req/min for SEARCH).
+    for (let i = 0; i < 31; i++) {
       await page.getByTestId('global-search').fill(`query${i}`);
       await page.keyboard.press('Enter');
     }
 
-    // Should be able to search again after window expires (mocked server-side).
+    // Poll the search endpoint directly until the override window has rolled
+    // over — uses Playwright's auto-wait via `expect.poll`, no `waitForTimeout`.
+    await expect
+      .poll(
+        async () => {
+          const res = await request.get('/api/admin/search?q=ping');
+          return res.status();
+        },
+        {
+          message: 'rate limit should reset within the override window',
+          timeout: overrideMs * 4,
+          intervals: [200, 500, 1000],
+        },
+      )
+      .not.toBe(429);
+
+    // After reset the UI search should succeed again.
     await page.getByTestId('global-search').fill('new query');
     await page.keyboard.press('Enter');
 

@@ -25,6 +25,13 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
 import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
+import { logger } from '@/lib/logger';
+
+// The Prisma client in this project is generated with `--no-engine`, so the
+// `Prisma.*UpdateManyInput` namespace type is not always emitted. Derive the
+// `data` argument shape directly from the runtime client instead — same
+// safety guarantee, no dependency on the generated namespace surface.
+type EventUpdateManyData = Parameters<typeof prisma.event.updateMany>[0]['data'];
 
 export type ActionResult<T = void> =
   | { success: true; data: T }
@@ -69,18 +76,23 @@ export async function deleteEvent(rawId: string): Promise<ActionResult<{ id: str
   const id = parsed.data;
 
   try {
+    // Delete the DB row first so a queue failure cannot leave us with a
+    // ghost storage-cleanup job for an event that still exists. If the
+    // queue enqueue fails afterwards, the worst case is orphan R2 objects
+    // — recoverable via lifecycle rules / reconciliation, which is
+    // strictly safer than the inverse failure mode.
+    await prisma.event.delete({ where: { id } });
     const queueResult = await queuePhotosDeletionForEntities({ gallery: { eventId: id } });
     if (!queueResult.success) {
-      return { success: false, error: 'Failed to queue storage deletion' };
+      logger.warn('action.events.delete.queue_failed', { id });
     }
-    await prisma.event.delete({ where: { id } });
     revalidatePath('/admin/events');
     return { success: true, data: { id } };
   } catch (e) {
     if (e && typeof e === 'object' && 'code' in e && e.code === 'P2025') {
       return { success: false, error: 'Event not found' };
     }
-    console.error('[action] deleteEvent failed', e);
+    logger.error('action.events.delete.failed', { id, err: e });
     return { success: false, error: 'Failed to delete event' };
   }
 }
@@ -101,15 +113,18 @@ export async function deleteEventsBulk(
   const ids = parsed.data;
 
   try {
+    // Same ordering rationale as `deleteEvent`: drop DB rows first, then
+    // enqueue storage cleanup. Orphan R2 objects are reconcilable; ghost
+    // delete jobs against still-live events are not.
+    const result = await prisma.event.deleteMany({ where: { id: { in: ids } } });
     const queueResult = await queuePhotosDeletionForEntities({ gallery: { eventId: { in: ids } } });
     if (!queueResult.success) {
-      return { success: false, error: 'Failed to queue storage deletion' };
+      logger.warn('action.events.delete_bulk.queue_failed', { count: ids.length });
     }
-    const result = await prisma.event.deleteMany({ where: { id: { in: ids } } });
     revalidatePath('/admin/events');
     return { success: true, data: { deleted: result.count } };
   } catch (e) {
-    console.error('[action] deleteEventsBulk failed', e);
+    logger.error('action.events.delete_bulk.failed', { count: ids.length, err: e });
     return { success: false, error: 'Failed to delete events' };
   }
 }
@@ -132,7 +147,10 @@ export async function updateEventsBulk(input: {
   const { ids, status, paymentStatus } = parsed.data;
 
   try {
-    const data: Record<string, string> = {};
+    // Use the Prisma `data` input type so misspelled fields / wrong values
+    // surface at compile time instead of runtime — replaces the previous
+    // unsafe `Record<string, string>` that erased Prisma's type guarantees.
+    const data: EventUpdateManyData = {};
     if (status) data.status = status;
     if (paymentStatus) data.paymentStatus = paymentStatus;
 
@@ -143,7 +161,7 @@ export async function updateEventsBulk(input: {
     revalidatePath('/admin/events');
     return { success: true, data: { updated: result.count } };
   } catch (e) {
-    console.error('[action] updateEventsBulk failed', e);
+    logger.error('action.events.update_bulk.failed', { count: ids.length, err: e });
     return { success: false, error: 'Failed to update events' };
   }
 }

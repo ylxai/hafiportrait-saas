@@ -6,6 +6,28 @@ export interface RateLimitConfig {
 }
 
 /**
+ * Test-only override for the rate-limit window. When `RATE_LIMIT_WINDOW_OVERRIDE_MS`
+ * is set on the server (e.g. in CI for the `01-rate-limiting` E2E spec), every
+ * rate-limit check uses the override instead of the per-config `windowMs`. This
+ * lets the "rate limit resets after window expires" scenario run in a few
+ * seconds instead of the full 60s window — which previously forced a
+ * `waitForTimeout(61000)` (forbidden by AGENTS.md) or a `test.skip`.
+ *
+ * The override is intentionally inert in production: the env var is read once
+ * at module load and any non-positive / unset value resolves to `null`.
+ */
+const WINDOW_OVERRIDE_MS: number | null = (() => {
+  const raw = process.env.RATE_LIMIT_WINDOW_OVERRIDE_MS;
+  if (!raw) return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+})();
+
+function effectiveWindowMs(config: RateLimitConfig): number {
+  return WINDOW_OVERRIDE_MS ?? config.windowMs;
+}
+
+/**
  * Redis/Valkey-based rate limiter with fallback to in-memory
  * Persistent across server restarts and multi-instance deployments
  */
@@ -15,7 +37,8 @@ export async function checkRateLimit(
 ): Promise<{ success: boolean; remaining: number; resetAt: number }> {
   const key = `rate-limit:${identifier}`;
   const now = Date.now();
-  const windowSeconds = Math.ceil(config.windowMs / 1000);
+  const windowMs = effectiveWindowMs(config);
+  const windowSeconds = Math.ceil(windowMs / 1000);
 
   try {
     if (redisCache) {
@@ -29,7 +52,7 @@ export async function checkRateLimit(
 
       // Get TTL for resetAt
       const ttl = await redisCache.ttl(key);
-      const resetAt = ttl > 0 ? now + (ttl * 1000) : now + config.windowMs;
+      const resetAt = ttl > 0 ? now + (ttl * 1000) : now + windowMs;
 
       if (count > config.maxRequests) {
         return {
@@ -84,7 +107,7 @@ function checkRateLimitMemory(
   if (!entry || entry.resetAt < now) {
     entry = {
       count: 0,
-      resetAt: now + config.windowMs,
+      resetAt: now + effectiveWindowMs(config),
     };
     memoryStore.set(key, entry);
   }
