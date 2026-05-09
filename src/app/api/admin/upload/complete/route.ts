@@ -231,9 +231,19 @@ export async function POST(request: Request) {
       await cleanupUploadSession(uploadId).catch(() => {});
 
       if (isDuplicate && photoFileHash) {
+        // Review fix #3: return real metadata of the existing photo, not zero-filled placeholders.
         const existingPhoto = await prisma.photo.findFirst({
           where: { galleryId, fileHash: photoFileHash },
-          select: { id: true, filename: true, url: true, thumbnailUrl: true },
+          select: {
+            id: true,
+            filename: true,
+            url: true,
+            thumbnailUrl: true,
+            publicId: true,
+            width: true,
+            height: true,
+            fileSize: true,
+          },
         });
         if (existingPhoto) {
           logger.warn('upload.complete.duplicate_detected', { galleryId, fileHash: photoFileHash, existingPhotoId: existingPhoto.id });
@@ -243,10 +253,10 @@ export async function POST(request: Request) {
               filename: existingPhoto.filename,
               url: existingPhoto.url,
               thumbnailUrl: existingPhoto.thumbnailUrl,
-              publicId: null,
-              width: 0,
-              height: 0,
-              fileSize: '0',
+              publicId: existingPhoto.publicId,
+              width: existingPhoto.width ?? 0,
+              height: existingPhoto.height ?? 0,
+              fileSize: serializeBigInt(existingPhoto.fileSize),
             },
             duplicate: {
               isDuplicate: true,

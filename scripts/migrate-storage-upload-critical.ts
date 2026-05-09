@@ -80,8 +80,10 @@ async function backfillUsedStorage() {
       try {
         await prisma.$executeRaw`UPDATE "Client" SET "usedStorage" = ${used} WHERE "id" = ${c.id}`;
       } catch (e) {
-        console.warn(
-          `   ⚠ Skipped ${c.id}: kolom usedStorage belum ada. Jalankan db:push dulu, lalu re-run script ini.`
+        // Review fix #6: align log with actual behavior. Kolom belum ada → abort,
+        // jangan klaim "skipped" karena throw di bawah ini menghentikan migration.
+        console.error(
+          `   ❌ Aborting on ${c.id}: kolom usedStorage belum ada. Jalankan \`npm run db:push\` dulu, lalu re-run script ini.`
         );
         throw e;
       }

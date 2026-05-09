@@ -77,8 +77,10 @@ export async function generatePresignedUploadUrl(
   uploadId: string;
   r2AccountId: string | null;
 }> {
-  // HIGH FIX #3: Validate galleryId format (cuid/uuid only) to prevent path traversal/injection
-  if (!/^[a-zA-Z0-9_-]+$/.test(galleryId)) {
+  // HIGH FIX #3: Validate galleryId format to prevent path traversal/injection.
+  // Allow alphanumerics, `_`, `-`, plus a single optional `payments/` prefix used by
+  // the public payment proof upload endpoint. Reject `..` and any other slashes.
+  if (galleryId.includes('..') || !/^(payments\/)?[a-zA-Z0-9_-]+$/.test(galleryId)) {
     throw new Error('Invalid galleryId format');
   }
 
