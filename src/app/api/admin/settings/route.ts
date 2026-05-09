@@ -10,11 +10,21 @@ import { z } from 'zod';
 const nullToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess((v) => (v === null ? undefined : v), schema.optional());
 
+// Phone may be entered with separators (space/dash/dot/parentheses); strip them
+// before validation so the same digits-only regex still applies.
+const phoneSchema = z
+  .string()
+  .transform((val) => val.replace(/[\s\-().]/g, ''))
+  .refine(
+    (val) => val === '' || /^(\+62|62|0)[0-9]{9,12}$/.test(val),
+    { message: 'Format nomor telepon tidak valid (contoh: 08123456789 / +628123456789)' }
+  );
+
 // Zod schema for settings update
 const updateSettingsSchema = z.object({
   namaStudio: z.string().max(100, 'Nama studio terlalu panjang').optional(),
   logoUrl: z.string().url('URL logo tidak valid').max(500).or(z.literal('')).optional(),
-  phone: z.string().regex(/^(\+62|62|0)[0-9]{9,12}$/, 'Format nomor telepon tidak valid').or(z.literal('')).optional(),
+  phone: phoneSchema.optional(),
   email: z.string().email('Email tidak valid').max(100).or(z.literal('')).optional(),
   address: z.string().max(500, 'Alamat terlalu panjang').optional(),
   socialMedia: nullToUndefined(z.record(z.string(), z.string())),

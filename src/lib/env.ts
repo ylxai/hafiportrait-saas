@@ -18,9 +18,10 @@ const envSchema = z.object({
   R2_PUBLIC_URL: z.string().optional(),
   R2_ENDPOINT: z.string().optional(),
   
-  // Ably Real-time
+  // Ably Real-time. Only the server-side `ABLY_API_KEY` is used now; the
+  // browser never sees it. Browsers authenticate via `/api/ably/token`,
+  // which mints scoped TokenRequests.
   ABLY_API_KEY: z.string().optional(),
-  NEXT_PUBLIC_ABLY_API_KEY: z.string().optional(),
   NEXT_PUBLIC_ABLY_CHANNEL_PREFIX: z.string().default('photostudio'),
 });
 

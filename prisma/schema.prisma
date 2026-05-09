@@ -48,7 +48,11 @@ model Event {
   id            String    @id @default(cuid())
   kodeBooking   String    @unique
   clientId      String
-  client        Client    @relation(fields: [clientId], references: [id])
+  // Cascade so deleting a Client also deletes all its Events (and through
+  // the Event→Gallery→Photo cascade, all storage cleanup is queued by the
+  // delete handler before the row goes away). Without this, every
+  // `prisma.client.delete` failed with FK RESTRICT in production.
+  client        Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   packageId     String?
   package       Package?  @relation(fields: [packageId], references: [id])
   namaProject   String
