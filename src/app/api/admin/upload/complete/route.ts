@@ -94,8 +94,15 @@ export async function POST(request: Request) {
       return errorResponse('Unable to verify file size from storage', 400);
     }
 
-    // Use hash from session (NOT from client payload) - client cannot rewrite
-    const photoFileHash = sessionFileHash || null;
+    // Use hash from session (NOT from client payload) - client cannot rewrite.
+    // MEDIUM FIX #4: hash is now REQUIRED at presigned-issuance time. Reject any
+    // session that somehow lacks one — the unique `(galleryId, fileHash)` index
+    // doesn't protect rows with NULL hash, leaving a race window.
+    if (!sessionFileHash) {
+      logger.warn('upload.complete.missing_hash', { uploadId, galleryId });
+      return errorResponse('Upload session tidak memiliki fileHash; silakan upload ulang.', 400);
+    }
+    const photoFileHash = sessionFileHash;
 
     // Get gallery info for quota check
     const gallery = await prisma.gallery.findUnique({

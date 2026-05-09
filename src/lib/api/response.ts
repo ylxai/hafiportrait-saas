@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { Prisma } from '@/generated/prisma';
+import { serializeBigInt } from '@/lib/bigint-utils';
 
 // Error codes for consistent error handling
 export const ERROR_CODES = {
@@ -23,8 +24,11 @@ interface ErrorResponse {
   timestamp?: string;
 }
 
+// Review fix #5: BigInt-safe wrapper. Prisma fields seperti `Client.usedStorage` BigInt
+// akan throw `TypeError: Do not know how to serialize a BigInt` saat NextResponse.json
+// melakukan serialisasi. Kita normalize dulu lewat `serializeBigInt`.
 export function successResponse<T>(data: T, status = 200) {
-  return NextResponse.json({ success: true, data }, { status });
+  return NextResponse.json({ success: true, data: serializeBigInt(data) }, { status });
 }
 
 export function errorResponse(

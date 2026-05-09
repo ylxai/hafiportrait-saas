@@ -175,15 +175,27 @@ export async function verifyR2Upload(
   const session = await prisma.uploadSession.findUnique({
     where: { id: uploadId },
   });
-  
+
   if (!session) {
     return { success: false, error: 'Upload session expired or not found' };
   }
-  
+
   // HIGH PRIORITY FIX #4: Check if session expired
   if (session.expiresAt < new Date()) {
     await prisma.uploadSession.delete({ where: { id: uploadId } }).catch(() => {});
     return { success: false, error: 'Upload session expired (1 hour limit)' };
+  }
+
+  // MEDIUM FIX #7: Atomically claim the session (consumedAt marker) to prevent
+  // retry races where two `/complete` calls verify the same uploadId before
+  // cleanup runs. `updateMany` returns count=0 if already consumed → reject.
+  const claim = await prisma.uploadSession.updateMany({
+    where: { id: uploadId, consumedAt: null },
+    data: { consumedAt: new Date() },
+  });
+  if (claim.count === 0) {
+    logger.warn('upload.session.already_consumed', { uploadId });
+    return { success: false, error: 'Upload session sudah diproses sebelumnya.' };
   }
   
   // Verify file exists and get server-side size from R2 using HeadObject

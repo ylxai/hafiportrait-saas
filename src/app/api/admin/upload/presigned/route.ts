@@ -13,6 +13,7 @@ import {
   PRESIGNED_URL_EXPIRY_SECONDS,
   ALLOWED_EXTENSIONS,
   ALLOWED_MIME_TYPES,
+  MAX_FILES_PER_BATCH,
 } from '@/lib/upload/constants';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { rateLimitResponse } from '@/lib/api/response';
@@ -42,7 +43,12 @@ const PresignedRequestSchema = z.object({
     .int('File size must be integer')
     .positive('File size must be positive')
     .max(MAX_FILE_SIZE_BYTES, `File too large. Maximum ${MAX_FILE_SIZE_MB}MB`),
-  fileHash: z.string().optional(), // Optional SHA-256 hash for integrity verification
+  // MEDIUM FIX #4: fileHash is now REQUIRED. Without it, the unique
+  // `(galleryId, fileHash)` constraint cannot prevent duplicate races
+  // (Postgres allows multiple NULLs in unique columns). Must be a 64-char
+  // SHA-256 hex string (matches the client-side `calculateFileHash` helper).
+  fileHash: z.string()
+    .regex(/^[a-f0-9]{64}$/i, 'fileHash must be a 64-char SHA-256 hex string'),
 });
 
 type _PresignedRequest = z.infer<typeof PresignedRequestSchema>;
@@ -123,6 +129,26 @@ export async function POST(request: Request) {
 
     if (!gallery) {
       return errorResponse('Gallery not found', 404);
+    }
+
+    // MEDIUM FIX #17: Server-side enforcement of MAX_FILES_PER_BATCH per gallery.
+    // Counts active upload sessions (not yet consumed, not yet expired) for this
+    // gallery and rejects further presigned URL issuance when the cap is reached.
+    // This prevents a malicious or buggy client from holding hundreds of unfinished
+    // sessions which would skew quota pre-checks and bloat R2 with orphan objects.
+    const activeSessions = await prisma.uploadSession.count({
+      where: {
+        galleryId,
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
+    if (activeSessions >= MAX_FILES_PER_BATCH) {
+      logger.warn('upload.presigned.batch_limit_reached', { galleryId, activeSessions, limit: MAX_FILES_PER_BATCH });
+      return rateLimitResponse(
+        `Batas ${MAX_FILES_PER_BATCH} upload aktif per gallery tercapai. Tunggu upload sebelumnya selesai.`,
+        60
+      );
     }
 
     const clientId = gallery.event.clientId;
