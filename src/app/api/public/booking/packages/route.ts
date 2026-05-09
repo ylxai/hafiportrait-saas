@@ -3,11 +3,10 @@ import { successResponse, serverErrorResponse } from '@/lib/api/response';
 
 export async function GET() {
   try {
-    const packages = await prisma.package.findMany({
-      where: { isActive: true },
-      orderBy: { price: 'asc' },
-      cacheStrategy: { ttl: 300, swr: 60 },
-    });
+  const packages = await prisma.package.findMany({
+    where: { isActive: true },
+    orderBy: { createdAt: 'desc' },
+  });
 
     return successResponse({ packages });
   } catch (error) {

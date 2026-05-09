@@ -45,7 +45,6 @@ export async function GET(
           take: 1,
         },
       },
-      cacheStrategy: { ttl: 60, swr: 30 },
     });
 
     if (!gallery) {

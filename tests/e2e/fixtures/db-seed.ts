@@ -161,6 +161,20 @@ export interface TestPayment {
   updatedAt: Date;
 }
 
+export interface TestPackage {
+  id: string;
+  nama: string;
+  description: string | null;
+  price: number;
+  duration: number | null;
+  fitur: string[];
+  maxSelection: number;
+  maxDownload: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export async function seedPhoto(
   galleryId: string,
   data?: Partial<TestPhoto>,
@@ -200,6 +214,31 @@ export async function seedPayment(
   });
 
   return payment;
+}
+
+export async function seedPackage(
+  data?: Partial<TestPackage>,
+): Promise<TestPackage> {
+  const timestamp = Date.now();
+
+  const pkg = await prisma.package.create({
+    data: {
+      nama: data?.nama || `Test Package ${timestamp}`,
+      description: data?.description ?? null,
+      price: data?.price ?? 1500000,
+      duration: data?.duration ?? 4,
+      fitur: data?.fitur ?? ['Feature 1', 'Feature 2'],
+      maxSelection: data?.maxSelection ?? 20,
+      maxDownload: data?.maxDownload ?? 10,
+      isActive: data?.isActive ?? true,
+    },
+  });
+
+  return pkg;
+}
+
+export async function cleanupPackage(id: string): Promise<void> {
+  await prisma.package.delete({ where: { id } });
 }
 
 export async function seedFullTestData() {
