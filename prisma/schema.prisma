@@ -1,6 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  // Vercel serverless runs on Amazon Linux 2023 (rhel-openssl-3.0.x).
+  // Without this target, Prisma falls back to "native" (the build-host
+  // binary) and the `.so.node` engine cannot be loaded at runtime, which
+  // surfaces as `prisma:error Invalid prisma.X.foo() invocation: Prisma
+  // Client could not locate the Query Engine for runtime "rhel-openssl-3.0.x"`.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {

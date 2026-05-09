@@ -1,6 +1,19 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Prisma engine lives in the custom generator output dir
+  // (`src/generated/prisma`), which Next.js' default outputFileTracing
+  // doesn't pick up. Force-include the platform `.so.node` binaries plus
+  // the schema so Vercel's serverless bundles can load Prisma at runtime.
+  outputFileTracingIncludes: {
+    '/**/*': [
+      './src/generated/prisma/libquery_engine-*.so.node',
+      './src/generated/prisma/schema.prisma',
+    ],
+  },
+  // Avoid bundling Prisma client into the serverless function — keep it
+  // resolved from the file-system tracing include above.
+  serverExternalPackages: ['@prisma/client', '.prisma/client'],
   images: {
     remotePatterns: [
       {

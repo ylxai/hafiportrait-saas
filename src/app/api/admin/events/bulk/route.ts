@@ -12,7 +12,7 @@ const bulkUpdateSchema = z.object({
     .min(1, 'At least one ID required')
     .max(100, 'Maximum 100 IDs allowed per request'),
   status: z.enum(['pending', 'confirmed', 'completed', 'cancelled']).optional(),
-  paymentStatus: z.enum(['unpaid', 'partial', 'paid']).optional(),
+  paymentStatus: z.enum(['unpaid', 'partial', 'paid', 'awaiting_confirmation']).optional(),
 }).refine(data => data.status || data.paymentStatus, {
   message: 'At least one field (status or paymentStatus) must be provided',
 });
