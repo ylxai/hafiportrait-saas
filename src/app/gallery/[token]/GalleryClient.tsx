@@ -153,10 +153,24 @@ export default function GalleryClient({ token }: { token: string }) {
   }, [mutate]);
 
   const handleViewCountUpdate = useCallback((count: number) => {
-    if (data?.data?.gallery) {
-      data.data.gallery.viewCount = count;
-    }
-  }, [data?.data?.gallery]);
+    // Use SWR's functional `mutate` so the gallery slice gets a new reference
+    // and React actually re-renders the view-count badge. Mutating
+    // `data.data.gallery.viewCount` directly kept the same reference and the
+    // UI never updated until the next refetch.
+    void mutate(
+      (curr: typeof data) => {
+        if (!curr?.data?.gallery) return curr;
+        return {
+          ...curr,
+          data: {
+            ...curr.data,
+            gallery: { ...curr.data.gallery, viewCount: count },
+          },
+        };
+      },
+      { revalidate: false },
+    );
+  }, [mutate]);
 
   const isAblyConnected = useAblyConnection();
   useSelectionSubscription(gallery?.id || '', handleSelectionUpdate);
