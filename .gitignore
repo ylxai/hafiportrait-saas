@@ -132,3 +132,4 @@ scripts/setup-vercel-env.sh
 # Sensitive env files
 .env.vercel
 .env.test
+.output.txt
