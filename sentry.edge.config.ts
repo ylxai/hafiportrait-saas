@@ -2,7 +2,7 @@
 // Profiling integrations are NOT supported on the edge runtime.
 import * as Sentry from '@sentry/nextjs';
 
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = process.env.VERCEL_ENV === 'production';
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,

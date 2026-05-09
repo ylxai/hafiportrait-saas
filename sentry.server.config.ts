@@ -3,7 +3,7 @@
 import * as Sentry from '@sentry/nextjs';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = process.env.VERCEL_ENV === 'production';
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
