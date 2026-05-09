@@ -25,6 +25,7 @@ model Client {
   phone     String?
   instagram String?
   storageQuotaGB Int  @default(10) // Configurable storage quota per client (in GB)
+  usedStorage BigInt @default(0) // CRITICAL FIX #5: Atomic quota tracking via conditional update
   password  String?
   emailVerified Boolean @default(false)
   verificationToken String?
@@ -165,7 +166,7 @@ model Photo {
   @@index([galleryId, order])
   @@index([galleryId, createdAt])
   @@index([fileHash])
-  @@index([galleryId, fileHash]) // For duplicate detection performance
+  @@unique([galleryId, fileHash], name: "uniq_gallery_filehash") // CRITICAL FIX #4: Prevent race condition duplicates
   @@index([filename]) // For search by filename
   @@index([url]) // For lookup by URL
 }
@@ -270,6 +271,7 @@ model UploadSession {
   fileHash        String?  // SHA-256 hash for integrity verification
   createdAt       DateTime @default(now())
   completedAt     DateTime?
+  consumedAt      DateTime? // MEDIUM FIX #7: marker that session was consumed by /complete; rejects retry races
   expiresAt       DateTime @default(dbgenerated("NOW() + INTERVAL '1 hour'")) // HIGH PRIORITY FIX #4: Add TTL (1 hour from creation)
   storageAccountId String?  // R2 account ID
   cloudinaryAccountId String? // Cloudinary account ID

@@ -3,7 +3,6 @@ import { verifyR2Upload, cleanupUploadSession, deleteFromR2, getR2Credentials } 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
-import type { PrismaClient } from '@/generated/prisma';
 import { getStorageAccountById } from '@/lib/storage/accounts';
 import { publishPhotoUploaded } from '@/lib/ably';
 import { z } from 'zod';
@@ -13,33 +12,25 @@ import {
 } from '@/lib/upload/constants';
 import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
 import { queueThumbnailGeneration } from '@/lib/cloudflare-queue';
-import { serializeBigInt } from '@/lib/bigint-utils';
 import { trackUploadResult } from '@/lib/analytics';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { rateLimitResponse } from '@/lib/api/response';
+import { logger } from '@/lib/logger';
 
-// Custom error for quota exceeded - allows transaction rollback
-class QuotaExceededError extends Error {
-  usedGB: number;
-  quotaGB: number;
-  constructor(message: string, usedGB: number, quotaGB: number) {
-    super(message);
-    this.name = 'QuotaExceededError';
-    this.usedGB = usedGB;
-    this.quotaGB = quotaGB;
-  }
-}
 
 // Zod validation schema for upload complete request
+// HIGH FIX #8: removed width/height — client-supplied dimensions are not trusted.
+// Dimensions are extracted server-side by the thumbnail worker and updated later.
 const CompleteUploadSchema = z.object({
   uploadId: z.string().min(1, 'Upload ID is required'),
-  width: z.number().int().min(0).optional().default(0),
-  height: z.number().int().min(0).optional().default(0),
 });
 
 export async function POST(request: Request) {
   let galleryId: string | undefined;
   let r2Key: string | undefined;
+  // HIGH FIX #9: track storageAccountId at outer scope so the outer catch can clean up orphan R2 file
+  // even if the transaction fails before the photo row is created.
+  let outerStorageAccountId: string | null | undefined;
 
   try {
     const session = await getServerSession(authOptions);
@@ -71,9 +62,9 @@ export async function POST(request: Request) {
       return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
     }
 
-    const { uploadId, width, height } = validation.data;
+    const { uploadId } = validation.data;
 
-    const verification = await verifyR2Upload(uploadId, 0, width, height);
+    const verification = await verifyR2Upload(uploadId);
     if (!verification.success) {
       return errorResponse(verification.error || 'Upload verification failed', 400);
     }
@@ -94,6 +85,7 @@ export async function POST(request: Request) {
 
     galleryId = gId;
     r2Key = verifiedR2Key;
+    outerStorageAccountId = storageAccountId;
 
     // Use server-side file size from R2 (NOT client-provided)
     const actualFileSize = serverFileSize || 0;
@@ -101,8 +93,15 @@ export async function POST(request: Request) {
       return errorResponse('Unable to verify file size from storage', 400);
     }
 
-    // Use hash from session (NOT from client payload) - client cannot rewrite
-    const photoFileHash = sessionFileHash || null;
+    // Use hash from session (NOT from client payload) - client cannot rewrite.
+    // MEDIUM FIX #4: hash is now REQUIRED at presigned-issuance time. Reject any
+    // session that somehow lacks one — the unique `(galleryId, fileHash)` index
+    // doesn't protect rows with NULL hash, leaving a race window.
+    if (!sessionFileHash) {
+      logger.warn('upload.complete.missing_hash', { uploadId, galleryId });
+      return errorResponse('Upload session tidak memiliki fileHash; silakan upload ulang.', 400);
+    }
+    const photoFileHash = sessionFileHash;
 
     // Get gallery info for quota check
     const gallery = await prisma.gallery.findUnique({
@@ -125,10 +124,13 @@ export async function POST(request: Request) {
 
     const clientId = gallery.event.clientId;
     const storageQuotaGB = gallery.event.client?.storageQuotaGB ?? DEFAULT_STORAGE_QUOTA_GB;
-    const storageQuotaBytes = BigInt(storageQuotaGB * BYTES_PER_GB);
+    // MEDIUM FIX #14: Use BigInt arithmetic to avoid Number overflow on large quotas
+    const storageQuotaBytes = BigInt(storageQuotaGB) * BigInt(BYTES_PER_GB);
 
-    const imgWidth = width || 0;
-    const imgHeight = height || 0;
+    // HIGH FIX #8: dimensions are unknown here; thumbnail worker extracts real dimensions and updates the photo row.
+    // Gemini cleanup: use null instead of magic 0 so width/height NULL means "unknown" (Prisma Int?).
+    const imgWidth: number | null = null;
+    const imgHeight: number | null = null;
 
     // Get Cloudinary account for thumbnail URL
     const cloudinaryAccountId = verification.cloudinaryAccountId || null;
@@ -147,118 +149,137 @@ export async function POST(request: Request) {
       }
     }
 
-    // TRANSACTION: Atomic duplicate check + quota check + photo creation
-    // This prevents race conditions where concurrent uploads could exceed quota
-    const result = await prisma.$transaction(async (tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use'>) => {
-      // 1. DUPLICATE DETECTION: Check if file with same hash already exists in gallery
-      let duplicateInfo: { isDuplicate: boolean; existingPhoto?: { id: string; filename: string; url: string } } = {
-        isDuplicate: false,
-      };
-
-      if (photoFileHash) {
-        const existingPhoto = await tx.photo.findFirst({
-          where: {
-            galleryId,
-            fileHash: photoFileHash,
-          },
-          select: { id: true, filename: true, url: true, thumbnailUrl: true },
-        });
-
-        if (existingPhoto) {
-          duplicateInfo = {
-            isDuplicate: true,
-            existingPhoto: {
-              id: existingPhoto.id,
-              filename: existingPhoto.filename,
-              url: existingPhoto.thumbnailUrl || existingPhoto.url,
-            },
-          };
-          console.warn(`[Duplicate Detection] Duplicate detected: ${photoFileHash} in gallery ${galleryId} (existing: ${existingPhoto.filename})`);
-        }
-      }
-
-      // 2. QUOTA CHECK: Verify quota hasn't been exceeded (protects against race conditions)
-      const storageUsage = await tx.photo.aggregate({
-        where: {
-          gallery: {
-            event: {
-              clientId,
-            },
-          },
-        },
-        _sum: {
-          fileSize: true,
-        },
-      });
-
-      const totalUsedStorage = storageUsage._sum.fileSize || BigInt(0);
-
-      if (totalUsedStorage + BigInt(actualFileSize) > storageQuotaBytes) {
-        const usedGB = Number(totalUsedStorage) / 1073741824;
-        // Throw to rollback - Prisma will automatically rollback
-        throw new QuotaExceededError(
-          `Storage quota exceeded. Used: ${usedGB.toFixed(2)}GB / ${storageQuotaGB}GB`,
-          usedGB,
-          storageQuotaGB
-        );
-      }
-
-      // 3. Create photo record
-      const newPhoto = await tx.photo.create({
-        data: {
-          galleryId: galleryId!,
-          filename,
-          url: publicUrl,
-          r2Key: verifiedR2Key,
-          thumbnailUrl,
-          publicId: null,
-          width: imgWidth,
-          height: imgHeight,
-          fileSize: BigInt(actualFileSize),
-          fileHash: photoFileHash,
-          storageAccountId: storageAccountId || null,
-          cloudinaryAccountId: cloudinaryAccountId || null,
-        },
-      });
-
-      // 4. Update storage usage atomically
-      if (storageAccountId) {
-        await tx.storageAccount.update({
-          where: { id: storageAccountId },
-          data: {
-            usedStorage: { increment: BigInt(actualFileSize) },
-            totalPhotos: { increment: 1 },
-          },
-        });
-      }
-
-      return { photo: newPhoto, duplicateInfo };
-    }).catch(async (err: unknown) => {
-      // Handle quota exceeded - rollback R2 upload
-      if (err instanceof QuotaExceededError) {
-        if (verifiedR2Key) {
-          try {
-            const { credentials: r2Creds } = await getR2Credentials(storageAccountId || undefined);
-            await deleteFromR2(verifiedR2Key, r2Creds);
-          } catch (deleteErr) {
-            console.error('Failed to rollback R2 upload:', deleteErr);
-          }
-        }
-        await cleanupUploadSession(uploadId).catch(() => {});
-        return { quotaExceeded: true, usedGB: err.usedGB, quotaGB: err.quotaGB } as const;
-      }
-      throw err; // Re-throw other errors
+    // CRITICAL FIX #5: Atomic quota check via conditional update on Client.usedStorage.
+    // Postgres "READ COMMITTED" + WHERE-clause guard makes the increment race-safe:
+    // if usedStorage + fileSize > quota, no row is updated (count=0) → quota exceeded.
+    const fileSizeBig = BigInt(actualFileSize);
+    const quotaUpdate = await prisma.client.updateMany({
+      where: {
+        id: clientId,
+        usedStorage: { lte: storageQuotaBytes - fileSizeBig },
+      },
+      data: { usedStorage: { increment: fileSizeBig } },
     });
 
-    // Check if quota was exceeded (handled in catch block above)
-    if ('quotaExceeded' in result) {
+    if (quotaUpdate.count === 0) {
+      // Rollback orphaned R2 file & session
+      try {
+        const { credentials: r2Creds } = await getR2Credentials(storageAccountId || undefined);
+        await deleteFromR2(verifiedR2Key, r2Creds);
+      } catch (deleteErr) {
+        logger.error('upload.complete.rollback_quota_failed', { uploadId, r2Key: verifiedR2Key, err: deleteErr });
+      }
+      await cleanupUploadSession(uploadId).catch(() => {});
+
+      const currentUsage = await prisma.client.findUnique({
+        where: { id: clientId },
+        select: { usedStorage: true },
+      });
+      const usedGB = Number(currentUsage?.usedStorage ?? BigInt(0)) / BYTES_PER_GB;
       return errorResponse(
-        `Storage quota exceeded. Used: ${result.usedGB.toFixed(2)}GB / ${result.quotaGB}GB`,
+        `Storage quota exceeded. Used: ${usedGB.toFixed(2)}GB / ${storageQuotaGB}GB`,
         413
       );
     }
 
-    const { photo, duplicateInfo } = result;
+    // CRITICAL FIX #4: Photo create — unique(galleryId, fileHash) catches duplicates atomically (P2002).
+    // Wrap in transaction so storageAccount update rolls back if Photo create fails.
+    let photo: Awaited<ReturnType<typeof prisma.photo.create>>;
+
+    try {
+      photo = await prisma.$transaction(async (tx) => {
+        const newPhoto = await tx.photo.create({
+          data: {
+            galleryId: galleryId!,
+            filename,
+            url: publicUrl,
+            r2Key: verifiedR2Key,
+            thumbnailUrl,
+            publicId: null,
+            width: imgWidth,
+            height: imgHeight,
+            fileSize: fileSizeBig,
+            fileHash: photoFileHash,
+            storageAccountId: storageAccountId || null,
+            cloudinaryAccountId: cloudinaryAccountId || null,
+          },
+        });
+
+        if (storageAccountId) {
+          await tx.storageAccount.update({
+            where: { id: storageAccountId },
+            data: {
+              usedStorage: { increment: fileSizeBig },
+              totalPhotos: { increment: 1 },
+            },
+          });
+        }
+
+        return newPhoto;
+      });
+    } catch (err: unknown) {
+      // P2002 = unique constraint violation on (galleryId, fileHash) → duplicate
+      const isDuplicate =
+        typeof err === 'object' && err !== null && 'code' in err && (err as { code?: string }).code === 'P2002';
+
+      // Rollback the conditional usedStorage increment we already applied above
+      await prisma.client.update({
+        where: { id: clientId },
+        data: { usedStorage: { decrement: fileSizeBig } },
+      }).catch((e) => logger.error('upload.complete.rollback_used_storage_failed', { clientId, err: e }));
+
+      // Always rollback the orphan R2 file
+      try {
+        const { credentials: r2Creds } = await getR2Credentials(storageAccountId || undefined);
+        await deleteFromR2(verifiedR2Key, r2Creds);
+      } catch (deleteErr) {
+        logger.error('upload.complete.rollback_r2_failed', { uploadId, r2Key: verifiedR2Key, err: deleteErr });
+      }
+      await cleanupUploadSession(uploadId).catch(() => {});
+
+      if (isDuplicate && photoFileHash) {
+        // Review fix #3: return real metadata of the existing photo, not zero-filled placeholders.
+        // Gemini cleanup: use findUnique on the composite unique index for index-only lookup.
+        const existingPhoto = await prisma.photo.findUnique({
+          where: { uniq_gallery_filehash: { galleryId, fileHash: photoFileHash } },
+          select: {
+            id: true,
+            filename: true,
+            url: true,
+            thumbnailUrl: true,
+            publicId: true,
+            width: true,
+            height: true,
+            fileSize: true,
+          },
+        });
+        if (existingPhoto) {
+          logger.warn('upload.complete.duplicate_detected', { galleryId, fileHash: photoFileHash, existingPhotoId: existingPhoto.id });
+          return successResponse({
+            photo: {
+              id: existingPhoto.id,
+              filename: existingPhoto.filename,
+              url: existingPhoto.url,
+              thumbnailUrl: existingPhoto.thumbnailUrl,
+              publicId: existingPhoto.publicId,
+              width: existingPhoto.width,
+              height: existingPhoto.height,
+              // Gemini cleanup: successResponse() already serializes BigInt — pass raw value.
+              fileSize: existingPhoto.fileSize,
+            },
+            duplicate: {
+              isDuplicate: true,
+              existingPhoto: {
+                id: existingPhoto.id,
+                filename: existingPhoto.filename,
+                url: existingPhoto.thumbnailUrl || existingPhoto.url,
+              },
+            },
+          });
+        }
+      }
+      throw err;
+    }
 
     // Stage 2: Queue async thumbnail generation (outside transaction - non-blocking)
     // Only queue if we have a cloudinary account configured
@@ -274,7 +295,7 @@ export async function POST(request: Request) {
           apiSecret: cloudinaryAccount.apiSecret,
         },
       }).catch((err) => {
-        console.error('[Upload] Failed to queue thumbnail generation:', err);
+        logger.error('upload.complete.queue_thumbnail_failed', { photoId: photo.id, err });
         // Non-critical — image/fetch URL still works as fallback
       });
     }
@@ -286,8 +307,8 @@ export async function POST(request: Request) {
       thumbnailUrl,
     });
 
-    // Cleanup upload session (non-blocking)
-    await cleanupUploadSession(uploadId);
+    // HIGH FIX #7: cleanup upload session non-blocking (don't await)
+    cleanupUploadSession(uploadId).catch(() => {});
 
     // Track successful upload (non-blocking)
     trackUploadResult(galleryId, true).catch(() => {});
@@ -301,12 +322,13 @@ export async function POST(request: Request) {
         publicId: photo.publicId,
         width: photo.width,
         height: photo.height,
-        fileSize: serializeBigInt(photo.fileSize),
+        // Gemini cleanup: successResponse() already serializes BigInt — pass raw value.
+        fileSize: photo.fileSize,
       },
-      duplicate: duplicateInfo,
+      duplicate: { isDuplicate: false },
     });
   } catch (error) {
-    console.error('Error completing upload:', error);
+    logger.error('upload.complete.unhandled', { galleryId, r2Key, err: error });
 
     // Track failed upload (non-blocking)
     if (galleryId) {
@@ -314,26 +336,13 @@ export async function POST(request: Request) {
       trackUploadResult(galleryId, false, errorMsg).catch(() => {});
     }
 
-    // Cleanup on error
-    if (r2Key && galleryId) {
+    // HIGH FIX #9: orphan-cleanup uses tracked storageAccountId — works even if Photo was never created.
+    if (r2Key) {
       try {
-        // Try to get storage account for cleanup
-        const gallery = await prisma.gallery.findUnique({
-          where: { id: galleryId },
-          select: {
-            photos: {
-              where: { r2Key },
-              select: { storageAccountId: true },
-              take: 1,
-            },
-          },
-        });
-        if (gallery?.photos[0]?.storageAccountId) {
-          const { credentials: r2Creds } = await getR2Credentials(gallery.photos[0].storageAccountId);
-          await deleteFromR2(r2Key, r2Creds);
-        }
-      } catch {
-        // Ignore cleanup errors
+        const { credentials: r2Creds } = await getR2Credentials(outerStorageAccountId || undefined);
+        await deleteFromR2(r2Key, r2Creds);
+      } catch (cleanupErr) {
+        logger.error('upload.complete.orphan_cleanup_failed', { r2Key, err: cleanupErr });
       }
     }
 

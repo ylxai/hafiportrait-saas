@@ -31,7 +31,7 @@ export async function POST(
 
     const { photoIds } = validation.data;
 
-    // Get photos with storage accounts
+    // Get photos with storage accounts + clientId untuk decrement quota (review fix #2)
     const photos = await prisma.photo.findMany({
       where: { 
         id: { in: photoIds },
@@ -39,6 +39,7 @@ export async function POST(
       },
       include: {
         storageAccount: true,
+        gallery: { select: { event: { select: { clientId: true } } } },
       },
     });
 
@@ -120,12 +121,29 @@ export async function POST(
       }
     }
 
-    // Delete all from database setelah queue berhasil
-    await prisma.photo.deleteMany({
-      where: { 
-        id: { in: photos.map((p: typeof photos[number]) => p.id) },
-        galleryId: galleryId
-      },
+    // Delete all from database setelah queue berhasil.
+    // Review fix #2: aggregate decrement per-client untuk Client.usedStorage.
+    const sumByClient = new Map<string, bigint>();
+    for (const p of photos) {
+      const cId = p.gallery?.event?.clientId;
+      if (!cId || !p.fileSize) continue;
+      sumByClient.set(cId, (sumByClient.get(cId) ?? BigInt(0)) + p.fileSize);
+    }
+    await prisma.$transaction(async (tx) => {
+      await tx.photo.deleteMany({
+        where: {
+          id: { in: photos.map((p: typeof photos[number]) => p.id) },
+          galleryId: galleryId,
+        },
+      });
+      for (const [cId, sum] of sumByClient) {
+        if (sum > BigInt(0)) {
+          await tx.client.update({
+            where: { id: cId },
+            data: { usedStorage: { decrement: sum } },
+          });
+        }
+      }
     });
 
     return successResponse({ 

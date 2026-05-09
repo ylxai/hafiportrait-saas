@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const validated = validation.data;
 
     // 1. Verify upload session and R2 file
-    const verification = await verifyR2Upload(validated.uploadId, 0);
+    const verification = await verifyR2Upload(validated.uploadId);
     if (!verification.success) {
       return errorResponse(verification.error || 'Verifikasi upload gagal', 400);
     }

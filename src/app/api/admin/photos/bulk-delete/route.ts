@@ -67,6 +67,8 @@ export async function POST(request: Request) {
         galleryId: true,
         storageAccountId: true,
         cloudinaryAccountId: true,
+        // Review fix #2: butuh clientId untuk decrement Client.usedStorage
+        gallery: { select: { event: { select: { clientId: true } } } },
         storageAccount: {
           select: {
             cloudName: true,
@@ -129,10 +131,25 @@ export async function POST(request: Request) {
       console.log(`[Bulk Delete] Successfully queued ${deletionJobs.length} storage deletion jobs`);
     }
 
-    // Step 4: Only delete from database AFTER successful queue
+    // Step 4: Only delete from database AFTER successful queue.
+    // Review fix #2: aggregate decrement Client.usedStorage in same transaction.
+    const sumByClient = new Map<string, bigint>();
+    for (const p of photos) {
+      const cId = p.gallery?.event?.clientId;
+      if (!cId || !p.fileSize) continue;
+      sumByClient.set(cId, (sumByClient.get(cId) ?? BigInt(0)) + p.fileSize);
+    }
     try {
-      await prisma.photo.deleteMany({
-        where: { id: { in: photoIds } },
+      await prisma.$transaction(async (tx) => {
+        await tx.photo.deleteMany({ where: { id: { in: photoIds } } });
+        for (const [cId, sum] of sumByClient) {
+          if (sum > BigInt(0)) {
+            await tx.client.update({
+              where: { id: cId },
+              data: { usedStorage: { decrement: sum } },
+            });
+          }
+        }
       });
 
       console.log(`[Bulk Delete] Successfully deleted ${photos.length} photos from database`);

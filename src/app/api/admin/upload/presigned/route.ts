@@ -13,10 +13,12 @@ import {
   PRESIGNED_URL_EXPIRY_SECONDS,
   ALLOWED_EXTENSIONS,
   ALLOWED_MIME_TYPES,
+  MAX_FILES_PER_BATCH,
 } from '@/lib/upload/constants';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { rateLimitResponse } from '@/lib/api/response';
 import { publishStorageQuotaAlert } from '@/lib/ably';
+import { logger } from '@/lib/logger';
 
 
 // Zod validation schema for presigned upload request
@@ -29,8 +31,9 @@ const PresignedRequestSchema = z.object({
       'Filename contains invalid characters'
     ),
   contentType: z.string()
+    // CRITICAL FIX #2: strict MIME allowlist — no `image/*` fallback (prevents image/svg+xml XSS, etc.)
     .refine(
-      (val) => ALLOWED_MIME_TYPES.includes(val) || val.startsWith('image/'),
+      (val) => ALLOWED_MIME_TYPES.includes(val),
       'Invalid content type'
     ),
   galleryId: z.string().min(1, 'Invalid gallery ID'),
@@ -40,7 +43,12 @@ const PresignedRequestSchema = z.object({
     .int('File size must be integer')
     .positive('File size must be positive')
     .max(MAX_FILE_SIZE_BYTES, `File too large. Maximum ${MAX_FILE_SIZE_MB}MB`),
-  fileHash: z.string().optional(), // Optional SHA-256 hash for integrity verification
+  // MEDIUM FIX #4: fileHash is now REQUIRED. Without it, the unique
+  // `(galleryId, fileHash)` constraint cannot prevent duplicate races
+  // (Postgres allows multiple NULLs in unique columns). Must be a 64-char
+  // SHA-256 hex string (matches the client-side `calculateFileHash` helper).
+  fileHash: z.string()
+    .regex(/^[a-f0-9]{64}$/i, 'fileHash must be a 64-char SHA-256 hex string'),
 });
 
 type _PresignedRequest = z.infer<typeof PresignedRequestSchema>;
@@ -123,10 +131,31 @@ export async function POST(request: Request) {
       return errorResponse('Gallery not found', 404);
     }
 
+    // MEDIUM FIX #17: Server-side enforcement of MAX_FILES_PER_BATCH per gallery.
+    // Counts active upload sessions (not yet consumed, not yet expired) for this
+    // gallery and rejects further presigned URL issuance when the cap is reached.
+    // This prevents a malicious or buggy client from holding hundreds of unfinished
+    // sessions which would skew quota pre-checks and bloat R2 with orphan objects.
+    const activeSessions = await prisma.uploadSession.count({
+      where: {
+        galleryId,
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
+    if (activeSessions >= MAX_FILES_PER_BATCH) {
+      logger.warn('upload.presigned.batch_limit_reached', { galleryId, activeSessions, limit: MAX_FILES_PER_BATCH });
+      return rateLimitResponse(
+        `Batas ${MAX_FILES_PER_BATCH} upload aktif per gallery tercapai. Tunggu upload sebelumnya selesai.`,
+        60
+      );
+    }
+
     const clientId = gallery.event.clientId;
     const client = gallery.event.client;
     const storageQuotaGB = client?.storageQuotaGB ?? DEFAULT_STORAGE_QUOTA_GB;
-    const storageQuotaBytes = BigInt(storageQuotaGB * BYTES_PER_GB);
+    // MEDIUM FIX #14: Use BigInt arithmetic to avoid Number overflow on large quotas
+    const storageQuotaBytes = BigInt(storageQuotaGB) * BigInt(BYTES_PER_GB);
 
     // Calculate current usage
     const storageUsage = await prisma.photo.aggregate({
@@ -168,7 +197,7 @@ export async function POST(request: Request) {
         quotaGB: storageQuotaGB,
         percentage: usagePercentAfter,
       }).catch((err) => {
-        console.error('[Quota Warning] Failed to send exceeded alert:', err);
+        logger.error('quota.alert.send_exceeded_failed', { clientId, galleryId, err });
       });
     } else {
       // Send warning/critical alerts for threshold crossings
@@ -176,8 +205,8 @@ export async function POST(request: Request) {
         if (usagePercentBefore < threshold && usagePercentAfter >= threshold) {
           const alertType = threshold >= 95 ? 'exceeded' : threshold >= 90 ? 'critical' : 'warning';
 
-          // Log locally
-          console.warn(`[Quota Warning] Client ${client?.nama || clientId} crossed ${threshold}% threshold (${usedGBAfter.toFixed(2)}GB / ${storageQuotaGB}GB)`);
+          // Log threshold crossing
+          logger.warn('quota.threshold_crossed', { clientId, clientName: client?.nama, threshold, usedGB: usedGBAfter, quotaGB: storageQuotaGB });
 
           // Send Ably notification to admin dashboard
           await publishStorageQuotaAlert({
@@ -189,7 +218,7 @@ export async function POST(request: Request) {
             quotaGB: storageQuotaGB,
             percentage: threshold,
           }).catch((err) => {
-            console.error('[Quota Warning] Failed to send Ably notification:', err);
+            logger.error('quota.alert.send_threshold_failed', { clientId, threshold, err });
           });
         }
       }
@@ -237,7 +266,7 @@ export async function POST(request: Request) {
       expiresIn: PRESIGNED_URL_EXPIRY_SECONDS,
     });
   } catch (error) {
-    console.error('Error generating presigned URL:', error);
+    logger.error('upload.presigned.unhandled', { err: error });
     return serverErrorResponse('Failed to generate upload URL');
   }
 }

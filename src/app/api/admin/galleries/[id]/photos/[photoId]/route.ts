@@ -32,11 +32,12 @@ export async function DELETE(
 
     const { photoId } = validation.data;
 
-    // Get photo dengan storage account (untuk credentials)
+    // Get photo dengan storage account (untuk credentials) + clientId untuk decrement quota
     const photo = await prisma.photo.findUnique({
       where: { id: photoId },
       include: {
         storageAccount: true,
+        gallery: { select: { event: { select: { clientId: true } } } },
       },
     });
 
@@ -109,9 +110,19 @@ export async function DELETE(
       }
     }
 
-    // Hapus dari database setelah queue berhasil
-    await prisma.photo.delete({
-      where: { id: photoId },
+    // Hapus dari database setelah queue berhasil.
+    // Review fix #2: decrement Client.usedStorage atomically supaya quota gate
+    // (CRITICAL FIX #5) tidak salah menolak upload setelah foto dihapus.
+    const clientId = photo.gallery?.event?.clientId;
+    const fileSize = photo.fileSize ?? BigInt(0);
+    await prisma.$transaction(async (tx) => {
+      await tx.photo.delete({ where: { id: photoId } });
+      if (clientId && fileSize > BigInt(0)) {
+        await tx.client.update({
+          where: { id: clientId },
+          data: { usedStorage: { decrement: fileSize } },
+        });
+      }
     });
 
     return successResponse({ 
