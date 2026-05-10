@@ -1,19 +1,37 @@
 import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { generateDownloadUrl } from '@/lib/upload/presigned';
+import { assertGalleryOwnership } from '@/lib/gallery/auth';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ token: string; photoId: string }> }
 ) {
   try {
-    const { photoId } = await params;
+    const { token, photoId } = await params;
+
+    // Auth gate: previously this endpoint returned a signed R2 download URL
+    // to anyone who knew (or guessed) a `(token, photoId)` pair, bypassing
+    // every other gallery-lock check on the page/API. Reject anonymous,
+    // wrong-role, and cross-client viewers with the same generic 404 the
+    // page uses so the response shape doesn't leak existence.
+    const ownership = await assertGalleryOwnership(token);
+    if ('response' in ownership) return ownership.response;
+    const { galleryId } = ownership;
 
     const photo = await prisma.photo.findUnique({
       where: { id: photoId },
+      // Make sure the photo actually belongs to *this* gallery — without
+      // this check, a valid `(token, photoId)` from one of the user's
+      // galleries could be used to download a foreign photo.
+      select: {
+        r2Key: true,
+        url: true,
+        galleryId: true,
+      },
     });
 
-    if (!photo) {
+    if (!photo || photo.galleryId !== galleryId) {
       return notFoundResponse('Photo not found');
     }
 

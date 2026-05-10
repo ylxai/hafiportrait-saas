@@ -484,7 +484,13 @@ export default function EventsPage() {
               <label className="block text-sm font-semibold text-foreground mb-2">Pilih Client</label>
               <Select value={formData.clientId} onValueChange={(v) => setFormData({ ...formData, clientId: v || '' })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih client..." />
+                  <SelectValue placeholder="Pilih client...">
+                    {(value: string | null) => {
+                      if (!value) return null;
+                      const client = clients.find((c) => c.id === value);
+                      return client ? client.nama : value;
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {isLoadingData && <SelectItem value="loading" disabled>Loading...</SelectItem>}
@@ -518,7 +524,13 @@ export default function EventsPage() {
               <label className="block text-sm font-semibold text-foreground mb-2">Paket</label>
               <Select value={formData.packageId} onValueChange={handlePackageChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih paket..." />
+                  <SelectValue placeholder="Pilih paket...">
+                    {(value: string | null) => {
+                      if (!value) return null;
+                      const pkg = packages.find((p) => p.id === value);
+                      return pkg ? `${pkg.nama} - Rp ${pkg.price.toLocaleString('id-ID')}` : value;
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {isLoadingData && <SelectItem value="loading" disabled>Loading...</SelectItem>}

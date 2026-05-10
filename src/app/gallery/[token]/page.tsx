@@ -1,7 +1,9 @@
 import { cache } from 'react';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/db';
+import { authOptions } from '@/lib/auth/options';
 import { loadPublicGallery } from '@/lib/gallery/load-public-gallery';
 import GalleryClient from './GalleryClient';
 
@@ -22,6 +24,9 @@ const getGalleryHead = cache(async (token: string) => {
       namaProject: true,
       welcomeMessage: true,
       bannerClientName: true,
+      // Used by the auth gate below to verify that the logged-in client owns
+      // the event behind this gallery before any expensive payload fetch.
+      event: { select: { clientId: true } },
       photos: {
         select: { thumbnailUrl: true, url: true },
         take: 1,
@@ -31,18 +36,41 @@ const getGalleryHead = cache(async (token: string) => {
   });
 });
 
+// Generic / safe metadata returned whenever the viewer is not allowed to see
+// the gallery (no session, wrong role, wrong owner, gallery missing, etc.).
+// Returning a generic shell prevents `<title>` and `og:*` tags from leaking
+// the existence or name of someone else's gallery to a logged-in client who
+// is not the owner — a privacy/info-disclosure issue caught during live
+// E2E testing of PR #70.
+const GENERIC_NOT_FOUND_METADATA: Metadata = {
+  title: 'Galeri tidak ditemukan',
+  robots: { index: false, follow: false },
+};
+
 // SEO / OpenGraph: fetch only the minimum gallery data needed for tags.
 // Keeping this lightweight so unfurl previews (WhatsApp, social media) work
 // without forcing the heavy interactive bundle to render server-side.
+//
+// Auth-aware: only emit the real metadata if the current viewer is allowed
+// to see this gallery. Anonymous viewers, viewers signed in with the wrong
+// role, and viewers who are not the gallery owner all get the generic
+// "Galeri tidak ditemukan" shell — identical to what a request for a
+// non-existent token would return — so an attacker cannot enumerate gallery
+// existence or names by inspecting `<title>` / `<meta og:*>`.
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { token } = await params;
   const gallery = await getGalleryHead(token);
 
   if (!gallery) {
-    return {
-      title: 'Galeri tidak ditemukan',
-      robots: { index: false, follow: false },
-    };
+    return GENERIC_NOT_FOUND_METADATA;
+  }
+
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== 'CLIENT') {
+    return GENERIC_NOT_FOUND_METADATA;
+  }
+  if (session.user.id !== gallery.event.clientId) {
+    return GENERIC_NOT_FOUND_METADATA;
   }
 
   const title = gallery.bannerClientName
@@ -73,6 +101,34 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function GalleryPage({ params }: PageProps) {
   const { token } = await params;
+
+  // -----------------------------------------------------------------------
+  //  Auth gate — galleries are NEVER public anymore.
+  //
+  //  Without this, anyone who learned (or guessed) a gallery token could
+  //  view photos and even submit selections, because the page used to be
+  //  in the public-routes allowlist. We now require that:
+  //    1. The viewer is signed in via the NextAuth `client` provider
+  //       (role === 'CLIENT').
+  //    2. The signed-in client owns the event the gallery belongs to.
+  //
+  //  Anonymous viewers get redirected to the portal login with a
+  //  `callbackUrl` so they come back here after signing in. Wrong-owner
+  //  viewers (e.g. another client's session) get a 404 — we deliberately
+  //  do not reveal whether the gallery exists for them.
+  // -----------------------------------------------------------------------
+  const head = await getGalleryHead(token);
+  if (!head) {
+    notFound();
+  }
+
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== 'CLIENT') {
+    redirect(`/portal/login?callbackUrl=${encodeURIComponent(`/gallery/${token}`)}`);
+  }
+  if (session.user.id !== head.event.clientId) {
+    notFound();
+  }
 
   // Fetch the full gallery payload server-side so the very first paint has
   // photos + selections without a client round-trip. The result is shaped to

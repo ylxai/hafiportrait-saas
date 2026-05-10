@@ -206,7 +206,13 @@ export function UploadManager({
               </label>
               <Select value={selectedCloudinary} onValueChange={(value) => setSelectedCloudinary(value || '')}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih Cloudinary account..." />
+                  <SelectValue placeholder="Pilih Cloudinary account...">
+                    {(value: string | null) => {
+                      if (!value) return null;
+                      const account = cloudinaryAccounts.find((a) => a.id === value);
+                      return account ? `${account.name}${account.isDefault ? ' (Default)' : ''}` : value;
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {cloudinaryAccounts.map((account) => (
@@ -224,7 +230,13 @@ export function UploadManager({
               </label>
               <Select value={selectedR2} onValueChange={(value) => setSelectedR2(value || '')}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih R2 account..." />
+                  <SelectValue placeholder="Pilih R2 account...">
+                    {(value: string | null) => {
+                      if (!value) return null;
+                      const account = r2Accounts.find((a) => a.id === value);
+                      return account ? `${account.name}${account.isDefault ? ' (Default)' : ''}` : value;
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {r2Accounts.map((account) => (

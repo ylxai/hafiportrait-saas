@@ -16,17 +16,27 @@ export const searchQuerySchema = z.object({
 });
 
 /**
- * String sanitization for XSS prevention.
+ * Input sanitization for stored plain-text fields.
  *
- * - Trims and removes null bytes / Unicode control characters
- * - Strips dangerous URL protocols (javascript:, data:, vbscript:)
- * - Strips inline event handlers (onclick=, onerror=, ...)
- * - HTML-escapes the remaining content (&, <, >, ", ', /) — this neutralizes
- *   tags without dropping legitimate user text like "a < b > c"
+ * Goals (input-side):
+ * - Trim and strip null bytes / Unicode control characters that could mangle
+ *   the database row or downstream logs.
+ * - Strip dangerous URL protocols (javascript:, data:, vbscript:) and inline
+ *   event handlers (onclick=, onerror=, ...) so a value cannot be re-rendered
+ *   as an active payload if it ever leaks into a context that doesn't
+ *   auto-escape (e.g. dangerouslySetInnerHTML, raw HTML email templates).
+ *
+ * What this function intentionally does NOT do:
+ * - HTML-escape ampersands / angle brackets / quotes. React (and our JSON
+ *   APIs) escape values at render time, so doing it here too caused
+ *   double-encoding bugs ("Wedding Jane & John" was being stored as
+ *   "Wedding Jane &amp; John" and shown that way to users). Output-context
+ *   escaping must live in the rendering layer, not here.
  *
  * Note: Prisma parameterizes queries, so SQL keyword stripping is intentionally
  * not done here (it corrupts legitimate user content like "Update meeting").
- * For rich text content, use a dedicated library like DOMPurify.
+ * For rich text content, use a dedicated library like DOMPurify on the
+ * rendering side.
  */
 const sanitizeString = (str: string) =>
   str
@@ -40,13 +50,7 @@ const sanitizeString = (str: string) =>
     .replace(/data:/gi, '')
     .replace(/vbscript:/gi, '')
     // Remove event handlers (onclick=, onerror=, etc.)
-    .replace(/\bon[a-z]+\s*=/gi, '')
-    // HTML-escape the remaining content (prevents XSS without dropping text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;');
+    .replace(/\bon[a-z]+\s*=/gi, '');
 
 // Email regex for stricter validation
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -64,6 +68,12 @@ export const clientSchema = z.object({
     .regex(emailRegex, 'Format email tidak valid')
     .max(100, 'Email terlalu panjang')
     .transform((str) => str.trim().toLowerCase()),
+  // Password is mandatory at create time so the client can sign in to the
+  // portal and view their (now private) gallery. The API layer hashes it
+  // with bcrypt before persisting.
+  password: z.string()
+    .min(8, 'Password minimal 8 karakter')
+    .max(72, 'Password maksimal 72 karakter (bcrypt limit)'),
   phone: z.string()
     .nullish()
     .refine((val) => val === null || val === undefined || phoneRegex.test(val), {
@@ -79,6 +89,9 @@ export const clientSchema = z.object({
     .min(1, 'Kuota minimal 1 GB')
     .max(1000, 'Kuota maksimal 1000 GB')
     .optional(),
+  // Admin can flip the approval gate via PATCH; not required at create time
+  // (defaults to `true` for admin-created rows via the schema default).
+  isApproved: z.boolean().optional(),
 });
 
 export const packageSchema = z.object({
@@ -158,6 +171,12 @@ export const bookingSchema = z.object({
     .regex(emailRegex, 'Format email tidak valid')
     .max(100, 'Email terlalu panjang')
     .transform((str) => str.trim().toLowerCase()),
+  // Required for the portal login flow that activates *after* an admin
+  // approves the booking. Same min/max constraints as `clientSchema` so the
+  // hashed value is interchangeable with admin-created clients.
+  password: z.string()
+    .min(8, 'Password minimal 8 karakter')
+    .max(72, 'Password maksimal 72 karakter (bcrypt limit)'),
   phone: z.string()
     .min(1, 'Nomor WhatsApp wajib diisi')
     .regex(phoneRegex, 'Format nomor telepon tidak valid (gunakan 08xx atau +62)'),
@@ -231,12 +250,21 @@ export const eventUpdateSchema = eventSchema.partial();
 export const clientUpdateSchema = clientSchema.partial();
 export const packageUpdateSchema = packageSchema.partial();
 
-// Helper function to validate and return error response
-export function validateRequest<T>(
-  schema: z.ZodSchema<T>,
+// Helper function to validate and return error response.
+//
+// We accept any Zod schema (`z.ZodTypeAny`) and use `z.output<S>` for the
+// returned data type. The previous `z.ZodSchema<T>` signature inferred T
+// poorly when callers passed schemas that have transforms / partial /
+// preprocessors (the inference latched on to the *input* shape rather
+// than the parsed output). That mismatch is what forced earlier callers
+// to slap `@ts-expect-error` on top of `validateRequest(eventUpdateSchema, body)`.
+// With this signature, `dataValidation.data` is correctly typed as the
+// transformed output without any cast.
+export function validateRequest<S extends z.ZodTypeAny>(
+  schema: S,
   data: unknown
-): { success: true; data: T } | { success: false; error: string } {
-  const result = schema.safeParse(data) as z.SafeParseReturnType<unknown, T>;
+): { success: true; data: z.output<S> } | { success: false; error: string } {
+  const result = schema.safeParse(data);
   if (!result.success) {
     const firstError = result.error.errors[0];
     return {

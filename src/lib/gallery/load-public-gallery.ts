@@ -3,6 +3,7 @@ import { getDefaultAccount } from '@/lib/storage/accounts';
 import { getCloudinaryThumbnailUrl, getCloudinaryLightboxUrl } from '@/lib/cloudinary';
 import { createPublicPaginationResponse } from '@/types/pagination';
 import { serializeBigInt, stringifyWithBigInt } from '@/lib/bigint-utils';
+import { safeClientSelect } from '@/lib/api/select';
 
 const PHOTOS_PER_PAGE = 100;
 
@@ -25,7 +26,9 @@ export async function loadPublicGallery(token: string, cursor?: string | null) {
   const gallery = await prisma.gallery.findUnique({
     where: { clientToken: token },
     include: {
-      event: { include: { client: true } },
+      // Strip Client.password (bcrypt hash) — this payload crosses the
+      // server→browser boundary as `fallbackData` for SWR.
+      event: { include: { client: { select: safeClientSelect } } },
       selections: { orderBy: { submittedAt: 'desc' }, take: 1 },
     },
   });

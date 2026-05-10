@@ -5,6 +5,9 @@ import {
   errorResponse,
 } from '@/lib/api/response';
 import { z } from 'zod';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/options';
+import { prisma } from '@/lib/db';
 import { parseCursorSafe } from '@/types/pagination';
 import { loadPublicGallery } from '@/lib/gallery/load-public-gallery';
 
@@ -22,6 +25,29 @@ export async function GET(
     const tokenValidation = tokenSchema.safeParse(token);
     if (!tokenValidation.success) {
       return errorResponse('Invalid gallery token format', 400);
+    }
+
+    // -------------------------------------------------------------------
+    //  Auth gate (matches src/app/gallery/[token]/page.tsx).
+    //
+    //  Galleries are no longer reachable with a token alone. The signed-in
+    //  client must own the underlying event. We respond with 404 (not 403)
+    //  to avoid leaking the existence of someone else's gallery.
+    // -------------------------------------------------------------------
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== 'CLIENT') {
+      return errorResponse('Unauthorized', 401);
+    }
+
+    const ownerLookup = await prisma.gallery.findUnique({
+      where: { clientToken: token },
+      select: { event: { select: { clientId: true } } },
+    });
+    if (!ownerLookup) {
+      return notFoundResponse('Gallery not found');
+    }
+    if (ownerLookup.event.clientId !== session.user.id) {
+      return notFoundResponse('Gallery not found');
     }
 
     const { searchParams } = new URL(request.url);
