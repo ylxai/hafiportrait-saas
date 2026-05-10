@@ -28,14 +28,26 @@ export default function GlobalError({
     // observability gets the same shape (level/event/time/digest) as the
     // rest of the app. The handler runs once per render thanks to
     // `error` reference identity in the dep array.
-    logger.error('global.error.boundary', {
+    //
+    // Review #72-3 (Gemini): match the `error.boundary.{root,admin,gallery}`
+    // naming used by the sibling error boundaries so log filters can
+    // pivot on a single common prefix.
+    logger.error('error.boundary.global', {
       error,
       digest: error.digest,
     });
   }, [error]);
 
   return (
-    <html lang="id">
+    // Review #72-2 (Gemini): `app/layout.tsx` puts the `dark` class on
+    // `<html>` so the OKLCH semantic tokens defined in
+    // `src/app/globals.css` resolve to the Aura Noir palette. Because
+    // Next.js *replaces* the root layout when this boundary fires, we
+    // have to repeat that class here — otherwise CSS variables fall
+    // back to their light defaults and the error screen renders in
+    // an off-brand colour scheme that's also harder to read against
+    // the dark `bg-background` we set on `<body>`.
+    <html lang="id" className="dark">
       <body className="bg-background text-foreground antialiased">
         {/*
           `role="alert"` + `aria-live="assertive"` make screen readers
