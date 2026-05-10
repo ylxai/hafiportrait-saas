@@ -225,12 +225,37 @@ export async function POST(request: Request) {
     if (sourceDedupPhoto && sourceDedupPhoto.r2Key) {
       // We already burned `fileSizeBig` worth of quota a few lines up;
       // give it back since the dedup path doesn't actually consume new
-      // storage. Use a conditional decrement so we never drive
-      // `usedStorage` below zero on weirdly-timed concurrent calls.
-      await prisma.client.updateMany({
+      // storage.
+      //
+      // Review #75-3 (CodeAnt): the previous version used a conditional
+      // `updateMany({ where: { usedStorage: { gte: fileSizeBig } } })`
+      // as a guard against driving `usedStorage` negative. The guard
+      // works in isolation but creates a race window: if a concurrent
+      // delete drops `usedStorage` below `fileSizeBig` between our
+      // increment above and this decrement, the `gte` predicate fails
+      // and we silently lose the rollback — the bytes stay charged
+      // forever. We now check `count` and fall back to an unconditional
+      // `update` so the rollback is never dropped. Driving below zero
+      // is acceptable here; the next quota-gate `updateMany` clamps
+      // back to a healthy state because subsequent increments use a
+      // `lte: quota - size` predicate.
+      const dedupRollback = await prisma.client.updateMany({
         where: { id: clientId, usedStorage: { gte: fileSizeBig } },
         data: { usedStorage: { decrement: fileSizeBig } },
       });
+      if (dedupRollback.count === 0) {
+        await prisma.client
+          .update({
+            where: { id: clientId },
+            data: { usedStorage: { decrement: fileSizeBig } },
+          })
+          .catch((rollbackErr) => {
+            logger.error('upload.complete.dedup.rollback_used_storage_failed', {
+              clientId,
+              err: rollbackErr,
+            });
+          });
+      }
 
       // Discard the orphan R2 object the client just uploaded — the
       // canonical copy is `sourceDedupPhoto.r2Key`.
@@ -269,17 +294,69 @@ export async function POST(request: Request) {
         });
       } catch (err: unknown) {
         // P2002 = the row this request was about to create already
-        // exists in this gallery (race against a concurrent same-gallery
-        // upload). Delegate to the standard P2002 handler below by
-        // re-throwing — the outer catch will respond with the existing
-        // photo's metadata.
-        if (
+        // exists in this gallery (a concurrent same-gallery upload won
+        // the race). Earlier the implementation re-threw the error
+        // expecting the non-dedup `try/catch` block below to surface
+        // the existing photo, but that catch is only reached from the
+        // sibling `prisma.$transaction` path — re-throwing from inside
+        // the dedup branch escapes all the way to the outer catch and
+        // returns a 500. Review #75-1 (Gemini): handle P2002 inline.
+        //
+        // The rollback (`Client.usedStorage` decrement + uploaded R2
+        // file removal) already ran above, so we only need to (a)
+        // surface the existing photo's metadata and (b) clean up the
+        // upload session so the user does not re-trigger the same
+        // dedup attempt.
+        const isDuplicate =
           typeof err === 'object' && err !== null && 'code' in err &&
-          (err as { code?: string }).code === 'P2002'
-        ) {
-          // Fall through: the per-gallery duplicate path already knows
-          // how to surface the existing row to the caller.
-          throw err;
+          (err as { code?: string }).code === 'P2002';
+
+        if (isDuplicate) {
+          const existingPhoto = await prisma.photo.findUnique({
+            where: { uniq_gallery_filehash: { galleryId: galleryId!, fileHash: photoFileHash } },
+            select: {
+              id: true,
+              filename: true,
+              url: true,
+              thumbnailUrl: true,
+              publicId: true,
+              width: true,
+              height: true,
+              fileSize: true,
+            },
+          });
+          if (existingPhoto) {
+            logger.warn('upload.complete.dedup.duplicate_detected', {
+              uploadId,
+              galleryId,
+              fileHash: photoFileHash,
+              existingPhotoId: existingPhoto.id,
+            });
+            await cleanupUploadSession(uploadId).catch(() => {});
+            return successResponse({
+              photo: {
+                id: existingPhoto.id,
+                filename: existingPhoto.filename,
+                url: existingPhoto.url,
+                thumbnailUrl: existingPhoto.thumbnailUrl,
+                publicId: existingPhoto.publicId,
+                width: existingPhoto.width,
+                height: existingPhoto.height,
+                fileSize: existingPhoto.fileSize,
+              },
+              duplicate: {
+                isDuplicate: true,
+                existingPhoto: {
+                  id: existingPhoto.id,
+                  filename: existingPhoto.filename,
+                  url: existingPhoto.thumbnailUrl || existingPhoto.url,
+                },
+              },
+            });
+          }
+          // P2002 with no row visible to a follow-up read is unusual
+          // but possible in extremely tight write windows. Fall
+          // through to the generic 500 so the client retries.
         }
         // Anything else: rollback decrement was already applied for the
         // dedup path; surface a 500 so the user retries.

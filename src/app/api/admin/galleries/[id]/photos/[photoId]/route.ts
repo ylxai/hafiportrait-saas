@@ -51,10 +51,17 @@ export async function DELETE(
     // the same client) we must NOT delete the R2 object here. Same
     // logic for the `Client.usedStorage` decrement: bytes are only
     // freed when the last reference disappears.
+    //
+    // Review #75-2 (CodeAnt): a photo with `r2Key=null` (legacy / failed
+    // upload) effectively has no storage to keep alive, so it counts as
+    // orphan for both the queue gate and the quota decrement — matching
+    // what `bulk-delete/route.ts` and `actions/events.ts` already do via
+    // `computeUsedStorageDeltaForDeletion`. Without this branch the
+    // single-photo path would silently leak quota for legacy rows.
     const orphanedR2Keys = photo.r2Key
       ? await getOrphanedR2Keys([photo.r2Key], [photo.id])
       : new Set<string>();
-    const isR2Orphan = photo.r2Key !== null && orphanedR2Keys.has(photo.r2Key);
+    const isR2Orphan = !photo.r2Key || orphanedR2Keys.has(photo.r2Key);
 
     // Queue storage deletion for background processing — but only when
     // this row holds the last reference to the R2 object.
