@@ -24,7 +24,11 @@ import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
-import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
+import {
+  aggregateUsedBytesByClient,
+  collectPhotoDeletionPayloads,
+  enqueueDeletionWithOutbox,
+} from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
 
 // The Prisma client in this project is generated with `--no-engine`, so the
@@ -76,23 +80,14 @@ export async function deleteEvent(rawId: string): Promise<ActionResult<{ id: str
   const id = parsed.data;
 
   try {
-    // Step 1 — collect (a) per-client byte totals (so we can decrement
-    // `Client.usedStorage` and keep the atomic quota gate honest after
-    // the delete) and (b) the storage-deletion payloads (so the
-    // post-commit enqueue can run without re-querying the cascaded
-    // rows).
-    const photoSizes = await prisma.photo.findMany({
-      where: { gallery: { eventId: id } },
-      select: { fileSize: true, gallery: { select: { event: { select: { clientId: true } } } } },
-    });
-    const usedByClient = new Map<string, bigint>();
-    for (const p of photoSizes) {
-      const cid = p.gallery.event.clientId;
-      usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + (p.fileSize ?? BigInt(0)));
-    }
+    // Step 1 — collect the storage-deletion payloads in a single
+    // round-trip. Review #73-2 (Gemini): the payload now carries
+    // `clientId` + `fileSize`, so the per-client byte totals come
+    // from the same query — no second `prisma.photo.findMany` needed.
     const deletionPayloads = await collectPhotoDeletionPayloads({
       gallery: { eventId: id },
     });
+    const usedByClient = aggregateUsedBytesByClient(deletionPayloads);
 
     // Step 2 — DB-first: drop the event and decrement the owning
     // client's `usedStorage` in one transaction.
@@ -148,20 +143,13 @@ export async function deleteEventsBulk(
 
   try {
     // Same ordering as `deleteEvent`: collect → DB transaction → enqueue.
-    // Decrementing `Client.usedStorage` per affected client keeps the
-    // atomic quota gate accurate after a bulk delete.
-    const photoSizes = await prisma.photo.findMany({
-      where: { gallery: { eventId: { in: ids } } },
-      select: { fileSize: true, gallery: { select: { event: { select: { clientId: true } } } } },
-    });
-    const usedByClient = new Map<string, bigint>();
-    for (const p of photoSizes) {
-      const cid = p.gallery.event.clientId;
-      usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + (p.fileSize ?? BigInt(0)));
-    }
+    // Review #73-2: `aggregateUsedBytesByClient` derives the same
+    // `usedByClient` map from the deletion payload, eliminating the
+    // duplicate `findMany`.
     const deletionPayloads = await collectPhotoDeletionPayloads({
       gallery: { eventId: { in: ids } },
     });
+    const usedByClient = aggregateUsedBytesByClient(deletionPayloads);
 
     // `$transaction` returns operations in order — the first one is
     // `deleteMany`, so its `.count` is at index 0.

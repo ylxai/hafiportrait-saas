@@ -6,7 +6,11 @@ import { safeClientSelect } from '@/lib/api/select';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { serializeBigInt } from '@/lib/bigint-utils';
-import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
+import {
+  aggregateUsedBytesByClient,
+  collectPhotoDeletionPayloads,
+  enqueueDeletionWithOutbox,
+} from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
 
 async function checkAuth() {
@@ -123,19 +127,13 @@ export async function DELETE(
       return errorResponse('Gallery ID is required', 400);
     }
 
-    // Step 1 — collect (a) per-client byte totals and (b) Cloudflare-Queue
-    // payloads BEFORE the delete commits; the Photo→Gallery cascade is
-    // about to remove the rows.
-    const photoSizes = await prisma.photo.findMany({
-      where: { galleryId: id },
-      select: { fileSize: true, gallery: { select: { event: { select: { clientId: true } } } } },
-    });
-    const usedByClient = new Map<string, bigint>();
-    for (const p of photoSizes) {
-      const cid = p.gallery.event.clientId;
-      usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + (p.fileSize ?? BigInt(0)));
-    }
+    // Step 1 — collect storage-deletion payloads BEFORE the delete
+    // commits; the Photo→Gallery cascade is about to remove the rows.
+    // Review #73-2 (Gemini): the payload now carries `clientId` +
+    // `fileSize`, so we derive the per-client `usedStorage` decrement
+    // from the same query — no separate `findMany` round-trip.
     const deletionPayloads = await collectPhotoDeletionPayloads({ galleryId: id });
+    const usedByClient = aggregateUsedBytesByClient(deletionPayloads);
 
     // Step 2 — DB-first transaction.
     await prisma.$transaction([

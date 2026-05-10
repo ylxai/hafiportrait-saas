@@ -3,7 +3,11 @@ import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
+import {
+  aggregateUsedBytesByClient,
+  collectPhotoDeletionPayloads,
+  enqueueDeletionWithOutbox,
+} from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -90,21 +94,16 @@ export async function DELETE(request: Request) {
 
     const { ids } = validation.data;
 
-    // Step 1 — collect everything we need from the DB BEFORE the delete
-    // commits, because the Gallery→Photo cascade will hide the rows the
-    // moment the events disappear.
-    const photoSizes = await prisma.photo.findMany({
-      where: { gallery: { eventId: { in: ids } } },
-      select: { fileSize: true, gallery: { select: { event: { select: { clientId: true } } } } },
-    });
-    const usedByClient = new Map<string, bigint>();
-    for (const p of photoSizes) {
-      const cid = p.gallery.event.clientId;
-      usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + (p.fileSize ?? BigInt(0)));
-    }
+    // Step 1 — collect storage-deletion payloads BEFORE the delete
+    // commits, because the Gallery→Photo cascade will hide the rows
+    // the moment the events disappear. Review #73-2 (Gemini): the
+    // payload now carries `clientId` + `fileSize`, so we derive the
+    // per-client `usedStorage` decrement from the same query — no
+    // separate `findMany` round-trip.
     const deletionPayloads = await collectPhotoDeletionPayloads({
       gallery: { eventId: { in: ids } },
     });
+    const usedByClient = aggregateUsedBytesByClient(deletionPayloads);
 
     // Step 2 — DB-first transaction (delete + per-client `usedStorage`
     // decrement). Storage stays untouched if this fails.
