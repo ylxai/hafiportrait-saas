@@ -36,18 +36,41 @@ const getGalleryHead = cache(async (token: string) => {
   });
 });
 
+// Generic / safe metadata returned whenever the viewer is not allowed to see
+// the gallery (no session, wrong role, wrong owner, gallery missing, etc.).
+// Returning a generic shell prevents `<title>` and `og:*` tags from leaking
+// the existence or name of someone else's gallery to a logged-in client who
+// is not the owner — a privacy/info-disclosure issue caught during live
+// E2E testing of PR #70.
+const GENERIC_NOT_FOUND_METADATA: Metadata = {
+  title: 'Galeri tidak ditemukan',
+  robots: { index: false, follow: false },
+};
+
 // SEO / OpenGraph: fetch only the minimum gallery data needed for tags.
 // Keeping this lightweight so unfurl previews (WhatsApp, social media) work
 // without forcing the heavy interactive bundle to render server-side.
+//
+// Auth-aware: only emit the real metadata if the current viewer is allowed
+// to see this gallery. Anonymous viewers, viewers signed in with the wrong
+// role, and viewers who are not the gallery owner all get the generic
+// "Galeri tidak ditemukan" shell — identical to what a request for a
+// non-existent token would return — so an attacker cannot enumerate gallery
+// existence or names by inspecting `<title>` / `<meta og:*>`.
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { token } = await params;
   const gallery = await getGalleryHead(token);
 
   if (!gallery) {
-    return {
-      title: 'Galeri tidak ditemukan',
-      robots: { index: false, follow: false },
-    };
+    return GENERIC_NOT_FOUND_METADATA;
+  }
+
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== 'CLIENT') {
+    return GENERIC_NOT_FOUND_METADATA;
+  }
+  if (session.user.id !== gallery.event.clientId) {
+    return GENERIC_NOT_FOUND_METADATA;
   }
 
   const title = gallery.bannerClientName
