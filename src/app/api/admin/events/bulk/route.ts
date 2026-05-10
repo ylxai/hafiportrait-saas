@@ -12,7 +12,7 @@ const bulkUpdateSchema = z.object({
     .min(1, 'At least one ID required')
     .max(100, 'Maximum 100 IDs allowed per request'),
   status: z.enum(['pending', 'confirmed', 'completed', 'cancelled']).optional(),
-  paymentStatus: z.enum(['unpaid', 'partial', 'paid']).optional(),
+  paymentStatus: z.enum(['unpaid', 'partial', 'paid', 'awaiting_confirmation']).optional(),
 }).refine(data => data.status || data.paymentStatus, {
   message: 'At least one field (status or paymentStatus) must be provided',
 });
@@ -89,16 +89,36 @@ export async function DELETE(request: Request) {
 
     const { ids } = validation.data;
 
+    // Sum bytes per client BEFORE delete so the cascade-removed Photo rows
+    // still let us decrement `Client.usedStorage` atomically.
+    const photoSizes = await prisma.photo.findMany({
+      where: { gallery: { eventId: { in: ids } } },
+      select: { fileSize: true, gallery: { select: { event: { select: { clientId: true } } } } },
+    });
+    const usedByClient = new Map<string, bigint>();
+    for (const p of photoSizes) {
+      const cid = p.gallery.event.clientId;
+      usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + (p.fileSize ?? BigInt(0)));
+    }
+
     const result = await queuePhotosDeletionForEntities({ gallery: { eventId: { in: ids } } });
-    
+
     if (!result.success) {
       console.error('[Delete] Failed to queue photos deletion:', result.error);
       return errorResponse('Failed to queue storage deletion', 500);
     }
 
-    await prisma.event.deleteMany({
-      where: { id: { in: ids } },
-    });
+    await prisma.$transaction([
+      prisma.event.deleteMany({ where: { id: { in: ids } } }),
+      ...Array.from(usedByClient.entries())
+        .filter(([, bytes]) => bytes > BigInt(0))
+        .map(([clientId, bytes]) =>
+          prisma.client.update({
+            where: { id: clientId },
+            data: { usedStorage: { decrement: bytes } },
+          }),
+        ),
+    ]);
 
     return successResponse({ deleted: ids.length });
   } catch (error) {

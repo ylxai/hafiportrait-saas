@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/loading';
 
@@ -63,14 +64,31 @@ export default function SettingsPage() {
         body: JSON.stringify(formData),
       });
 
+      // Try to surface the backend error message to the user instead of a
+      // generic "Failed to save settings" so it's actionable.
+      let payload: { error?: string; message?: string } | null = null;
+      try {
+        payload = await res.json();
+      } catch {
+        // No JSON body — keep payload null.
+      }
+
       if (res.ok) {
         setMessage('Settings saved successfully!');
+        toast.success('Settings saved successfully!');
         mutate();
       } else {
-        setMessage('Failed to save settings');
+        const detail =
+          payload?.error ||
+          payload?.message ||
+          `Failed to save settings (HTTP ${res.status})`;
+        setMessage(detail);
+        toast.error(detail);
       }
-    } catch {
-      setMessage('Failed to save settings');
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : 'Failed to save settings';
+      setMessage(detail);
+      toast.error(detail);
     }
 
     setSaving(false);
@@ -183,7 +201,7 @@ export default function SettingsPage() {
             {saving ? 'Saving...' : 'Save Settings'}
           </Button>
           {message && (
-            <span className={message.includes('success') ? 'text-green-600' : 'text-red-600'}>
+            <span className={message.includes('success') ? 'text-success' : 'text-destructive'}>
               {message}
             </span>
           )}

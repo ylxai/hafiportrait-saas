@@ -6,6 +6,7 @@ import {
   serverErrorResponse,
 } from "@/lib/api/response";
 import { selectionSubmitSchema } from "@/lib/api/validation";
+import { publishSelectionUpdate } from "@/lib/ably";
 
 export async function POST(
   request: Request,
@@ -70,6 +71,20 @@ export async function POST(
     await prisma.gallery.update({
       where: { id: gallery.id },
       data: { isSelectionLocked: true },
+    });
+
+    // Broadcast finalization on the realtime channel from the server, where
+    // ABLY_API_KEY is available. Previously this was published from the
+    // browser, which silently no-op'd because the REST client requires the
+    // server-only env var. Fire-and-forget; we don't want subscriber failures
+    // to cause the request to fail.
+    void publishSelectionUpdate(gallery.id, {
+      photoId: "",
+      action: "finalized",
+      selectionCount: photoIds.length,
+      clientToken: token,
+    }).catch(() => {
+      // Realtime is best-effort; clients will reconcile on next fetch.
     });
 
     return successResponse({ selectionId: selection.id }, 201);

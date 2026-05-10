@@ -46,23 +46,56 @@ test.describe('Rate Limiting', () => {
     await expect(page.getByText('Too many requests')).toBeVisible();
   });
 
-  test('should reset rate limit after window expires', async ({ page }) => {
+  // The "window expires" scenario relies on the SERVER-side rate-limit
+  // window — Playwright's `page.clock` cannot mock that. Instead of an
+  // outright `test.skip` (or the previous `waitForTimeout(61000)` that
+  // violated AGENTS.md), we honour an opt-in env hook:
+  //
+  //   RATE_LIMIT_WINDOW_OVERRIDE_MS=2000 npm run test:e2e
+  //
+  // When that env var is set on the server under test, the rate limiter
+  // (see `src/lib/rate-limit.ts`) shrinks every window to that value and
+  // the test polls until the limit resets — no magic timeouts, no
+  // 60-second CI tax. Without the override the test is skipped with a
+  // clear reason so it can never quietly burn a real minute again.
+  const overrideRaw = process.env.RATE_LIMIT_WINDOW_OVERRIDE_MS;
+  const overrideMs = overrideRaw ? Number(overrideRaw) : NaN;
+  const overrideActive = Number.isFinite(overrideMs) && overrideMs > 0 && overrideMs <= 5000;
+
+  test('should reset rate limit after window expires', async ({ page, request }) => {
+    test.skip(
+      !overrideActive,
+      'Requires RATE_LIMIT_WINDOW_OVERRIDE_MS<=5000 on the server under test.',
+    );
+
     await page.goto('/admin');
-    
-    // Make 30 requests
-    for (let i = 0; i < 30; i++) {
+
+    // Burn through the limit (30 req/min for SEARCH).
+    for (let i = 0; i < 31; i++) {
       await page.getByTestId('global-search').fill(`query${i}`);
       await page.keyboard.press('Enter');
     }
-    
-    // Wait for rate limit window to expire (60 seconds)
-    // Note: This test intentionally waits for rate limit reset
-    await page.waitForTimeout(61000);
-    
-    // Should be able to search again
+
+    // Poll the search endpoint directly until the override window has rolled
+    // over — uses Playwright's auto-wait via `expect.poll`, no `waitForTimeout`.
+    await expect
+      .poll(
+        async () => {
+          const res = await request.get('/api/admin/search?q=ping');
+          return res.status();
+        },
+        {
+          message: 'rate limit should reset within the override window',
+          timeout: overrideMs * 4,
+          intervals: [200, 500, 1000],
+        },
+      )
+      .not.toBe(429);
+
+    // After reset the UI search should succeed again.
     await page.getByTestId('global-search').fill('new query');
     await page.keyboard.press('Enter');
-    
+
     await expect(page.getByTestId('search-results')).toBeVisible();
   });
 

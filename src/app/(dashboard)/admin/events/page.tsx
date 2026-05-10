@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
+import { toast } from 'sonner';
+import { deleteEvent, deleteEventsBulk, updateEventsBulk } from '@/actions/events';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +50,7 @@ export default function EventsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [, startTransition] = useTransition();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkAction, setBulkAction] = useState<'delete' | 'status' | 'payment' | ''>('');
@@ -198,12 +201,16 @@ export default function EventsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Hapus event ini?')) return;
 
-    try {
-      await fetch(`/api/admin/events?id=${id}`, { method: 'DELETE' });
-      setEvents(events.filter(e => e.id !== id));
-    } catch (error) {
-      console.error('Error deleting event:', error);
-    }
+    // Server Action call (replaces fetch DELETE /api/admin/events?id=).
+    // useTransition keeps the UI responsive while the action runs.
+    startTransition(async () => {
+      const result = await deleteEvent(id);
+      if (result.success) {
+        setEvents((prev) => prev.filter((e) => e.id !== id));
+      } else {
+        toast.error(result.error);
+      }
+    });
   };
 
   const toggleSelect = (id: string) => {
@@ -223,44 +230,49 @@ export default function EventsPage() {
   const handleBulkDelete = async () => {
     if (!confirm(`Hapus ${selectedIds.length} event ini?`)) return;
 
-    try {
-      await fetch('/api/admin/events/bulk', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: selectedIds }),
-      });
-      setEvents(events.filter(e => !selectedIds.includes(e.id)));
-      setSelectedIds([]);
-      setShowBulkModal(false);
-    } catch (error) {
-      console.error('Error bulk deleting:', error);
-    }
+    startTransition(async () => {
+      const result = await deleteEventsBulk(selectedIds);
+      if (result.success) {
+        const removed = new Set(selectedIds);
+        setEvents((prev) => prev.filter((e) => !removed.has(e.id)));
+        setSelectedIds([]);
+        setShowBulkModal(false);
+      } else {
+        toast.error(result.error);
+      }
+    });
   };
 
   const handleBulkUpdate = async () => {
     if (!selectedIds.length) return;
 
-    try {
-      const data: Record<string, string | string[]> = { ids: selectedIds };
-      if (bulkAction === 'status') data.status = bulkValue;
-      if (bulkAction === 'payment') data.paymentStatus = bulkValue;
+    startTransition(async () => {
+      const input: Parameters<typeof updateEventsBulk>[0] = { ids: selectedIds };
+      if (bulkAction === 'status') {
+        input.status = bulkValue as 'pending' | 'confirmed' | 'completed' | 'cancelled';
+      }
+      if (bulkAction === 'payment') {
+        input.paymentStatus = bulkValue as 'unpaid' | 'partial' | 'paid' | 'awaiting_confirmation';
+      }
 
-      await fetch('/api/admin/events/bulk', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      setEvents(events.map(e => 
-        selectedIds.includes(e.id) 
-          ? { ...e, ...(bulkAction === 'status' ? { status: bulkValue } : {}), ...(bulkAction === 'payment' ? { paymentStatus: bulkValue } : {}) }
-          : e
-      ));
-      setSelectedIds([]);
-      setShowBulkModal(false);
-    } catch (error) {
-      console.error('Error bulk updating:', error);
-    }
+      const result = await updateEventsBulk(input);
+      if (result.success) {
+        const targets = new Set(selectedIds);
+        setEvents((prev) => prev.map((e) =>
+          targets.has(e.id)
+            ? {
+                ...e,
+                ...(bulkAction === 'status' ? { status: bulkValue } : {}),
+                ...(bulkAction === 'payment' ? { paymentStatus: bulkValue } : {}),
+              }
+            : e
+        ));
+        setSelectedIds([]);
+        setShowBulkModal(false);
+      } else {
+        toast.error(result.error);
+      }
+    });
   };
 
   const openBulkModal = (action: 'delete' | 'status' | 'payment') => {
@@ -323,7 +335,7 @@ export default function EventsPage() {
         </div>
       ) : events.length === 0 ? (
         <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-16 text-center">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-6 shadow-inner">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center mx-auto mb-6 shadow-inner">
             <Calendar className="w-10 h-10 text-primary" />
           </div>
           <h3 className="text-2xl font-bold text-foreground mb-3">Belum ada event</h3>
@@ -408,7 +420,7 @@ export default function EventsPage() {
                   <td className="px-4 py-4 text-right">
                     <div className="flex gap-2 justify-end">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(event)}>Edit</Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(event.id)} className="text-red-600">Hapus</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(event.id)} className="text-destructive">Hapus</Button>
                     </div>
                   </td>
                 </tr>

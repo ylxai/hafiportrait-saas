@@ -75,16 +75,36 @@ export async function DELETE(request: Request) {
 
     const { ids } = validation.data;
 
+    // Sum bytes per client BEFORE delete; the cascade is about to remove the
+    // photo rows so we can't compute this afterwards.
+    const photoSizes = await prisma.photo.findMany({
+      where: { galleryId: { in: ids } },
+      select: { fileSize: true, gallery: { select: { event: { select: { clientId: true } } } } },
+    });
+    const usedByClient = new Map<string, bigint>();
+    for (const p of photoSizes) {
+      const cid = p.gallery.event.clientId;
+      usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + (p.fileSize ?? BigInt(0)));
+    }
+
     const result = await queuePhotosDeletionForEntities({ galleryId: { in: ids } });
-    
+
     if (!result.success) {
       console.error('[Delete] Failed to queue photos deletion:', result.error);
       return errorResponse('Failed to queue storage deletion', 500);
     }
 
-    await prisma.gallery.deleteMany({
-      where: { id: { in: ids } },
-    });
+    await prisma.$transaction([
+      prisma.gallery.deleteMany({ where: { id: { in: ids } } }),
+      ...Array.from(usedByClient.entries())
+        .filter(([, bytes]) => bytes > BigInt(0))
+        .map(([clientId, bytes]) =>
+          prisma.client.update({
+            where: { id: clientId },
+            data: { usedStorage: { decrement: bytes } },
+          }),
+        ),
+    ]);
 
     return successResponse({ deleted: ids.length });
   } catch (error) {

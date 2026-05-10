@@ -130,9 +130,11 @@ export function handlePrismaError(error: unknown) {
 }
 
 export function paginatedResponse<T>(items: T[], total: number, page: number, limit: number) {
+  // Mirror successResponse: normalize BigInt fields (Photo.fileSize, Client.usedStorage,
+  // …) so NextResponse.json never throws "Do not know how to serialize a BigInt".
   return NextResponse.json({
     success: true,
-    data: items,
+    data: serializeBigInt(items),
     pagination: {
       total,
       page,

@@ -41,9 +41,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo & Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-100 mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
             <svg
-              className="w-8 h-8 text-amber-600"
+              className="w-8 h-8 text-primary"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -69,7 +69,7 @@ export default function LoginPage() {
         <div className="bg-card text-foreground rounded-2xl shadow-lg border border-border p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="p-3 bg-red-50/80 backdrop-blur-sm text-red-600 text-sm rounded-xl border border-red-100">
+              <div className="p-3 bg-destructive/10 backdrop-blur-sm text-destructive text-sm rounded-xl border border-destructive/20">
                 {error}
               </div>
             )}
@@ -77,7 +77,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-slate-700 mb-2"
+                className="block text-sm font-medium text-foreground mb-2"
               >
                 Email
               </label>
@@ -89,7 +89,7 @@ export default function LoginPage() {
                 inputMode="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all"
+                className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground transition-all"
                 placeholder="email@studio.com…"
                 required
               />
@@ -98,7 +98,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-slate-800 mb-2"
+                className="block text-sm font-medium text-foreground mb-2"
               >
                 Password
               </label>
@@ -109,7 +109,7 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all"
+                className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground transition-all"
                 placeholder="••••••••…"
                 required
               />
@@ -118,10 +118,10 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
             >
               {loading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
                 <>
                   <svg
@@ -147,7 +147,7 @@ export default function LoginPage() {
           <div className="mt-6 text-center">
             <Link
               href="/"
-              className="text-sm text-slate-500 hover:text-amber-600 transition-smooth"
+              className="text-sm text-muted-foreground hover:text-primary transition-smooth"
             >
               ← Kembali ke beranda
             </Link>
@@ -155,7 +155,7 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-slate-400 text-xs mt-8">
+        <p className="text-center text-muted-foreground text-xs mt-8">
           © {new Date().getFullYear()} PhotoStudio
         </p>
       </div>

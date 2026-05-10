@@ -244,7 +244,7 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
                   {confirmedPayments.map((p, i) => (
                     <div key={p.id} className="flex justify-between items-center text-sm">
                       <p className="text-muted-foreground">Pembayaran {i + 1} ({p.type.toUpperCase()})</p>
-                      <p className="text-green-500 font-medium">- Rp {p.amount.toLocaleString('id-ID')}</p>
+                      <p className="text-success font-medium">- Rp {p.amount.toLocaleString('id-ID')}</p>
                     </div>
                   ))}
                 </div>
@@ -283,7 +283,7 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
                     </p>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => handleCopy((pendingPayment.amount + pendingPayment.uniqueCode).toString(), 'Nominal')}>
-                    {copied === 'Nominal' ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                    {copied === 'Nominal' ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
                   </Button>
                 </div>
 
@@ -293,7 +293,7 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
                     <div className="flex justify-between items-center">
                       <p className="font-bold">1234567890</p>
                       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy('1234567890', 'Nomor Rekening')}>
-                        {copied === 'Nomor Rekening' ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                        {copied === 'Nomor Rekening' ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
                       </Button>
                     </div>
                     <p className="text-xs">A/N Studio Foto</p>
@@ -303,7 +303,7 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
                     <div className="flex justify-between items-center">
                       <p className="font-bold">0987654321</p>
                       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy('0987654321', 'Nomor Rekening')}>
-                        {copied === 'Nomor Rekening' ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                        {copied === 'Nomor Rekening' ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
                       </Button>
                     </div>
                     <p className="text-xs">A/N Studio Foto</p>
@@ -317,9 +317,9 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
             )}
 
             {awaitingConfirmation && (
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-6 text-center space-y-2">
-                <Clock className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-                <h3 className="font-bold text-amber-500">Menunggu Konfirmasi</h3>
+              <div className="bg-warning/10 border border-warning/20 rounded-xl p-6 text-center space-y-2">
+                <Clock className="w-8 h-8 text-warning mx-auto mb-2" />
+                <h3 className="font-bold text-warning">Menunggu Konfirmasi</h3>
                 <p className="text-sm text-muted-foreground">
                   Bukti pembayaran Anda telah kami terima dan sedang dalam proses verifikasi oleh admin.
                   Halaman ini akan diperbarui secara otomatis setelah pembayaran dikonfirmasi.
@@ -328,9 +328,9 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
             )}
 
             {event.paymentStatus === 'paid' && (
-              <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-6 text-center space-y-2">
-                <CheckCircle2 className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                <h3 className="font-bold text-green-500">Pembayaran Selesai</h3>
+              <div className="bg-success/10 border border-success/20 rounded-xl p-6 text-center space-y-2">
+                <CheckCircle2 className="w-8 h-8 text-success mx-auto mb-2" />
+                <h3 className="font-bold text-success">Pembayaran Selesai</h3>
                 <p className="text-sm text-muted-foreground">
                   Terima kasih! Seluruh tagihan Anda telah lunas. Sampai jumpa di sesi foto!
                 </p>

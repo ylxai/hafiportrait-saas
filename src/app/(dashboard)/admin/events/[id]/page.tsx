@@ -78,7 +78,7 @@ export default function EventDetailPage() {
       </div>
 
       {message && (
-        <div className={`mb-4 p-3 rounded-lg ${message.includes('success') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+        <div className={`mb-4 p-3 rounded-lg ${message.includes('success') ? 'bg-success/15 text-success' : 'bg-destructive/10 text-destructive'}`}>
           {message}
         </div>
       )}

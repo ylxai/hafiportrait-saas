@@ -73,7 +73,7 @@ export function parseAdminPagination(
 ): AdminPaginationParams {
   // Validate with Zod
   const validation = adminPaginationSchema.safeParse({
-    page: searchParams.get('page'),
+    page: searchParams.get('page') ?? undefined,
     limit: searchParams.get('limit') ?? String(defaultLimit),
   });
   
@@ -107,7 +107,7 @@ export function parseAdminPaginationSafe(
   defaultLimit = 20
 ): z.SafeParseReturnType<unknown, AdminPaginationParams> {
   const validation = adminPaginationSchema.safeParse({
-    page: searchParams.get('page'),
+    page: searchParams.get('page') ?? undefined,
     limit: searchParams.get('limit') ?? String(defaultLimit),
   });
   

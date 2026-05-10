@@ -2,6 +2,7 @@
 
 import { SessionProvider } from 'next-auth/react';
 import { SWRConfig } from 'swr';
+import { Toaster } from '@/components/ui/sonner';
 
 const fetcher = async (url: string): Promise<unknown> => {
   const res = await fetch(url);
@@ -25,6 +26,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
         }}
       >
         {children}
+        {/* Global toast notifications. Mounted once at the root so any
+            client component can call `toast.success/error/...` from sonner
+            and have them rendered (previously this was missing, so toasts
+            silently no-op'd everywhere). */}
+        <Toaster richColors closeButton position="top-right" />
       </SWRConfig>
     </SessionProvider>
   );

@@ -26,6 +26,23 @@ export function serializeBigInt(obj: unknown): unknown {
     return String(obj);
   }
 
+  // Preserve special object types as-is — recursing into them would corrupt
+  // their value. `Date` in particular has no enumerable own properties, so
+  // `Object.entries(date)` returns `[]` and the date would be silently
+  // serialized to `{}` (regression introduced when wrapping all
+  // `successResponse`/`paginatedResponse` payloads).
+  if (
+    obj instanceof Date ||
+    obj instanceof Map ||
+    obj instanceof Set ||
+    obj instanceof RegExp ||
+    obj instanceof ArrayBuffer ||
+    ArrayBuffer.isView(obj) ||
+    Buffer.isBuffer(obj as Buffer)
+  ) {
+    return obj;
+  }
+
   if (Array.isArray(obj)) {
     return obj.map(item => serializeBigInt(item));
   }
