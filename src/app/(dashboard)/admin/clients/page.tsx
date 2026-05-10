@@ -1,12 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, User, ShieldCheck, Clock } from 'lucide-react';
+import {
+  approveClient,
+  createClient,
+  deleteClient,
+  deleteClientsBulk,
+  updateClient,
+} from '@/actions/clients';
 
 type Client = {
   id: string;
@@ -45,7 +52,10 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  // `useTransition` keeps the UI responsive while the Server Action runs.
+  // We surface `isPending` to the existing "Menyimpan…" / disabled-button
+  // UX so the swap from `fetch`-based pending state is invisible.
+  const [isPending, startTransition] = useTransition();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -104,10 +114,12 @@ export default function ClientsPage() {
     setShowModal(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
 
+    // Build the payload the Server Action's Zod schema expects. The
+    // `password` field is only forwarded when non-empty so an edit
+    // submit doesn't clobber the existing bcrypt hash with `null`.
     type ClientPayload = {
       nama: string;
       email: string;
@@ -115,9 +127,7 @@ export default function ClientsPage() {
       instagram: string | null;
       storageQuotaGB: number;
       password?: string;
-      id?: string;
     };
-
     const payload: ClientPayload = {
       nama: formData.nama,
       email: formData.email,
@@ -125,95 +135,73 @@ export default function ClientsPage() {
       instagram: formData.instagram || null,
       storageQuotaGB: formData.storageQuotaGB || 10,
     };
-
-    // Password is mandatory at create time, optional at edit time.
-    // Never send an empty string on edit so we don't accidentally
-    // wipe / re-hash the existing credential.
     if (formData.password) {
       payload.password = formData.password;
     }
 
-    try {
-      const url = '/api/admin/clients';
-      const method = editingClient ? 'PATCH' : 'POST';
-      // PATCH expects the id inside the body (validateRequest(idSchema, body)).
-      const finalPayload = editingClient
-        ? { ...payload, id: editingClient.id }
-        : payload;
+    // `startTransition` guarantees React batches the resulting state
+    // updates and surfaces `isPending=true` until the action resolves —
+    // so the modal's "Menyimpan…" button stays disabled without us
+    // having to track that flag manually.
+    startTransition(async () => {
+      const result = editingClient
+        ? await updateClient({ id: editingClient.id, ...payload })
+        : await createClient(payload);
 
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(finalPayload),
-      });
-
-      if (res.ok) {
-        const result = await res.json();
-        const clientData = result.data?.client || result.client;
-        if (editingClient && clientData?.id) {
-          setClients((prev) =>
-            prev.map((c) => (c.id === editingClient.id ? { ...c, ...clientData } : c)),
-          );
-        } else if (clientData?.id) {
-          setClients((prev) => [clientData, ...prev]);
-        } else {
-          // If no client data, refresh the list
-          fetchClients();
-        }
-        setShowModal(false);
-        resetForm();
-      } else {
+      if (!result.success) {
         // Surface the specific server-side error (e.g. "Email sudah
-        // terdaftar", "Password minimal 8 karakter") instead of the
-        // generic banner. AGENTS.md prohibits `alert()` so we use the
-        // global Sonner toaster mounted in `Providers`.
-        const errBody = await res.json().catch(() => ({} as { error?: string }));
-        toast.error(errBody?.error || 'Gagal menyimpan client');
+        // terdaftar", "Password minimal 8 karakter") instead of a
+        // generic banner. AGENTS.md prohibits `alert()`.
+        toast.error(result.error || 'Gagal menyimpan client');
+        return;
       }
-    } catch (error) {
-      console.error('Error saving client:', error);
-    } finally {
-      setSubmitting(false);
-    }
+
+      const clientData = result.data.client;
+      if (editingClient) {
+        setClients((prev) =>
+          prev.map((c) => (c.id === editingClient.id ? { ...c, ...clientData } : c)),
+        );
+      } else {
+        setClients((prev) => [clientData, ...prev]);
+      }
+      setShowModal(false);
+      resetForm();
+    });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!confirm('Hapus client ini?')) return;
 
-    try {
-      await fetch(`/api/admin/clients?id=${id}`, { method: 'DELETE' });
-      setClients(clients.filter(c => c.id !== id));
-    } catch (error) {
-      console.error('Error deleting client:', error);
-    }
+    startTransition(async () => {
+      const result = await deleteClient(id);
+      if (!result.success) {
+        toast.error(result.error || 'Gagal menghapus client');
+        return;
+      }
+      // Functional updater avoids the stale-closure trap when multiple
+      // deletes are dispatched in flight at once (cf. PR #67 review).
+      setClients((prev) => prev.filter((c) => c.id !== id));
+    });
   };
 
   // Flip a booking-created client's `isApproved` flag to `true` so they
-  // can sign in to the portal. The PATCH endpoint shares the
-  // `clientUpdateSchema` validator, which now accepts `isApproved` as an
-  // optional boolean alongside the regular profile fields.
-  const handleApprove = async (id: string) => {
-    try {
-      const res = await fetch('/api/admin/clients', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, isApproved: true }),
-      });
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({} as { error?: string }));
-        toast.error(errBody?.error || 'Gagal menyetujui client');
+  // can sign in to the portal. Uses the dedicated `approveClient`
+  // Server Action which is just a typed wrapper around
+  // `prisma.client.update({ data: { isApproved: true } })`.
+  const handleApprove = (id: string) => {
+    startTransition(async () => {
+      const result = await approveClient(id);
+      if (!result.success) {
+        toast.error(result.error || 'Gagal menyetujui client');
         return;
       }
-      // Optimistically update the row so the badge flips and the
+      // Optimistically flip the row so the badge updates and the
       // "Setujui" button disappears without a full refetch.
       setClients((prev) =>
         prev.map((c) => (c.id === id ? { ...c, isApproved: true } : c)),
       );
       toast.success('Client disetujui dan dapat login portal');
-    } catch (error) {
-      console.error('Error approving client:', error);
-      toast.error('Terjadi kesalahan saat menyetujui client');
-    }
+    });
   };
 
   const toggleSelect = (id: string) => {
@@ -230,21 +218,22 @@ export default function ClientsPage() {
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (!confirm(`Hapus ${selectedIds.length} client ini?`)) return;
 
-    try {
-      await fetch('/api/admin/clients/bulk', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: selectedIds }),
-      });
-      setClients(clients.filter(c => !selectedIds.includes(c.id)));
+    startTransition(async () => {
+      const result = await deleteClientsBulk(selectedIds);
+      if (!result.success) {
+        toast.error(result.error || 'Gagal menghapus client');
+        return;
+      }
+      // Snapshot the IDs before clearing them so the filter below uses
+      // a stable list even if `selectedIds` is mutated mid-transition.
+      const removed = new Set(selectedIds);
+      setClients((prev) => prev.filter((c) => !removed.has(c.id)));
       setSelectedIds([]);
       setShowBulkModal(false);
-    } catch (error) {
-      console.error('Error bulk deleting:', error);
-    }
+    });
   };
 
   const openBulkModal = () => setShowBulkModal(true);
@@ -492,8 +481,8 @@ export default function ClientsPage() {
               <Button type="button" variant="outline" onClick={() => { setShowModal(false); resetForm(); }}>
                 Batal
               </Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting ? 'Menyimpan...' : editingClient ? 'Simpan' : 'Tambah'}
+              <Button type="submit" disabled={isPending}>
+                {isPending ? 'Menyimpan...' : editingClient ? 'Simpan' : 'Tambah'}
               </Button>
             </DialogFooter>
           </form>
