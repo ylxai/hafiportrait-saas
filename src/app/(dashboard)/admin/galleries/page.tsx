@@ -436,7 +436,13 @@ export default function GalleriesPage() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih event..." />
+                  <SelectValue placeholder="Pilih event...">
+                    {(value: string | null) => {
+                      if (!value) return null;
+                      const ev = events.find((e) => e.id === value);
+                      return ev ? `${ev.namaProject} (${ev.client.nama})` : value;
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {events.map((event) => (
