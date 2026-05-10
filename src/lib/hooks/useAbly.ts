@@ -3,19 +3,60 @@
 import { useEffect, useState, useRef } from 'react';
 import Ably from 'ably';
 
+// We never expose the root Ably API key to the browser. Instead, the client
+// authenticates via `/api/ably/token`, which mints a short-lived TokenRequest
+// scoped to the channels the caller is allowed to subscribe to (see
+// `src/app/api/ably/token/route.ts`).
+//
+// We keep one Realtime client per `galleryId` "scope" because the token's
+// capability is computed from that scope on the server. Switching scope means
+// reconnecting with a different token; mixing them on a single connection
+// would leak access between galleries.
 
-let ablyClient: Ably.Realtime | null = null;
-let connectionListeners = 0;
+type ClientScope = string; // e.g. `gallery:abc123` or `user`
 
-function getClient(): Ably.Realtime {
-  if (!ablyClient) {
-    const key = process.env.NEXT_PUBLIC_ABLY_API_KEY;
-    if (!key) {
-      throw new Error('NEXT_PUBLIC_ABLY_API_KEY is not configured');
-    }
-    ablyClient = new Ably.Realtime(key);
+const ablyClients: Map<ClientScope, Ably.Realtime> = new Map();
+const scopeListenerCount: Map<ClientScope, number> = new Map();
+
+function buildAuthUrl(galleryId?: string): string {
+  if (galleryId) {
+    return `/api/ably/token?galleryId=${encodeURIComponent(galleryId)}`;
   }
-  return ablyClient;
+  return '/api/ably/token';
+}
+
+function getScopedClient(scope: ClientScope, galleryId?: string): Ably.Realtime {
+  const existing = ablyClients.get(scope);
+  if (existing) return existing;
+
+  // `authUrl` causes Ably to fetch a new TokenRequest from our server before
+  // every (re)connect, so token expiry is handled automatically.
+  const client = new Ably.Realtime({
+    authUrl: buildAuthUrl(galleryId),
+    authMethod: 'GET',
+    // Don't auto-connect during SSR; this hook is `'use client'` but be safe.
+    autoConnect: typeof window !== 'undefined',
+  });
+  ablyClients.set(scope, client);
+  return client;
+}
+
+function releaseScopedClient(scope: ClientScope) {
+  const remaining = (scopeListenerCount.get(scope) ?? 1) - 1;
+  if (remaining <= 0) {
+    const client = ablyClients.get(scope);
+    if (client) {
+      client.close();
+      ablyClients.delete(scope);
+    }
+    scopeListenerCount.delete(scope);
+  } else {
+    scopeListenerCount.set(scope, remaining);
+  }
+}
+
+function reserveScopedClient(scope: ClientScope) {
+  scopeListenerCount.set(scope, (scopeListenerCount.get(scope) ?? 0) + 1);
 }
 
 export interface SelectionUpdate {
@@ -63,11 +104,13 @@ export function useSelectionSubscription(galleryId: string, onUpdate: (update: S
   }, [onUpdate]);
 
   useEffect(() => {
-    if (!galleryId || !process.env.NEXT_PUBLIC_ABLY_API_KEY) return;
+    if (!galleryId) return;
+    const scope = `gallery:${galleryId}`;
+    reserveScopedClient(scope);
 
-    const client = getClient();
+    const client = getScopedClient(scope, galleryId);
     const channel = client.channels.get(`photostudio:selections:${galleryId}`);
-    
+
     const handleUpdate = (msg: Ably.Message) => {
       callbackRef.current(msg.data as SelectionUpdate);
     };
@@ -78,6 +121,7 @@ export function useSelectionSubscription(galleryId: string, onUpdate: (update: S
     return () => {
       channel.unsubscribe('selection-update', handleUpdate);
       setIsConnected(false);
+      releaseScopedClient(scope);
     };
   }, [galleryId]);
 
@@ -93,11 +137,13 @@ export function useViewCountSubscription(galleryId: string, onUpdate: (count: nu
   }, [onUpdate]);
 
   useEffect(() => {
-    if (!galleryId || !process.env.NEXT_PUBLIC_ABLY_API_KEY) return;
+    if (!galleryId) return;
+    const scope = `gallery:${galleryId}`;
+    reserveScopedClient(scope);
 
-    const client = getClient();
+    const client = getScopedClient(scope, galleryId);
     const channel = client.channels.get(`photostudio:views:${galleryId}`);
-    
+
     const handleUpdate = (msg: Ably.Message) => {
       callbackRef.current((msg.data as ViewCountUpdate).count);
     };
@@ -108,6 +154,7 @@ export function useViewCountSubscription(galleryId: string, onUpdate: (count: nu
     return () => {
       channel.unsubscribe('view-count', handleUpdate);
       setIsConnected(false);
+      releaseScopedClient(scope);
     };
   }, [galleryId]);
 
@@ -123,11 +170,13 @@ export function useNotificationSubscription(userId: string, onNotification: (not
   }, [onNotification]);
 
   useEffect(() => {
-    if (!userId || !process.env.NEXT_PUBLIC_ABLY_API_KEY) return;
+    if (!userId) return;
+    const scope = 'user';
+    reserveScopedClient(scope);
 
-    const client = getClient();
+    const client = getScopedClient(scope);
     const channel = client.channels.get(`photostudio:notifications:${userId}`);
-    
+
     const handleNotification = (msg: Ably.Message) => {
       callbackRef.current(msg.data as Notification);
     };
@@ -138,6 +187,7 @@ export function useNotificationSubscription(userId: string, onNotification: (not
     return () => {
       channel.unsubscribe('notification', handleNotification);
       setIsConnected(false);
+      releaseScopedClient(scope);
     };
   }, [userId]);
 
@@ -153,11 +203,12 @@ export function useBookingUpdates(onUpdate: (update: BookingUpdate) => void) {
   }, [onUpdate]);
 
   useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_ABLY_API_KEY) return;
+    const scope = 'user';
+    reserveScopedClient(scope);
 
-    const client = getClient();
+    const client = getScopedClient(scope);
     const channel = client.channels.get('photostudio:bookings');
-    
+
     const handleUpdate = (msg: Ably.Message) => {
       callbackRef.current(msg.data as BookingUpdate);
     };
@@ -168,6 +219,7 @@ export function useBookingUpdates(onUpdate: (update: BookingUpdate) => void) {
     return () => {
       channel.unsubscribe('booking-update', handleUpdate);
       setIsConnected(false);
+      releaseScopedClient(scope);
     };
   }, []);
 
@@ -183,11 +235,12 @@ export function usePaymentUpdates(onUpdate: (update: PaymentUpdate) => void) {
   }, [onUpdate]);
 
   useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_ABLY_API_KEY) return;
+    const scope = 'user';
+    reserveScopedClient(scope);
 
-    const client = getClient();
+    const client = getScopedClient(scope);
     const channel = client.channels.get('photostudio:payments');
-    
+
     const handleUpdate = (msg: Ably.Message) => {
       callbackRef.current(msg.data as PaymentUpdate);
     };
@@ -198,55 +251,56 @@ export function usePaymentUpdates(onUpdate: (update: PaymentUpdate) => void) {
     return () => {
       channel.unsubscribe('payment-update', handleUpdate);
       setIsConnected(false);
+      releaseScopedClient(scope);
     };
   }, []);
 
   return isConnected;
 }
 
+/**
+ * Reflects the live connection state of any Ably client this hook tree opened.
+ *
+ * The hook deliberately *does not* open a new Realtime client of its own; it
+ * piggy-backs on whichever scoped client another hook already opened. If
+ * nothing else is subscribed, the indicator simply stays `false`, which is the
+ * accurate state.
+ */
 export function useAblyConnection() {
   const [isConnected, setIsConnected] = useState(false);
-  const listenersRef = useRef<{ 
-    onConnected: () => void; 
-    onDisconnected: () => void; 
-    onClosed: () => void;
-  } | null>(null);
 
   useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_ABLY_API_KEY) return;
-
-    const client = getClient();
-    
-    // Create stable handler references
-    listenersRef.current = {
-      onConnected: () => setIsConnected(true),
-      onDisconnected: () => setIsConnected(false),
-      onClosed: () => setIsConnected(false),
+    const update = () => {
+      let connected = false;
+      for (const client of ablyClients.values()) {
+        if (client.connection.state === 'connected') {
+          connected = true;
+          break;
+        }
+      }
+      setIsConnected(connected);
     };
 
-    // Use Ably's listener API with proper typing
-    client.connection.on('connected', listenersRef.current.onConnected);
-    client.connection.on('disconnected', listenersRef.current.onDisconnected);
-    client.connection.on('closed', listenersRef.current.onClosed);
+    // Listen on every currently-known client; recompute when any changes state.
+    const detachers: Array<() => void> = [];
+    for (const client of ablyClients.values()) {
+      const onConnected = () => update();
+      const onDisconnected = () => update();
+      const onClosed = () => update();
+      client.connection.on('connected', onConnected);
+      client.connection.on('disconnected', onDisconnected);
+      client.connection.on('closed', onClosed);
+      detachers.push(() => {
+        client.connection.off('connected', onConnected);
+        client.connection.off('disconnected', onDisconnected);
+        client.connection.off('closed', onClosed);
+      });
+    }
 
-    // Set initial state
-    setIsConnected(client.connection.state === 'connected');
-
-    connectionListeners++;
+    update();
 
     return () => {
-      if (listenersRef.current) {
-        client.connection.off('connected', listenersRef.current.onConnected);
-        client.connection.off('disconnected', listenersRef.current.onDisconnected);
-        client.connection.off('closed', listenersRef.current.onClosed);
-      }
-      connectionListeners--;
-      
-      // Close client if no more listeners (optional cleanup)
-      if (connectionListeners === 0 && ablyClient) {
-        ablyClient.close();
-        ablyClient = null;
-      }
+      for (const detach of detachers) detach();
     };
   }, []);
 

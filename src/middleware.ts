@@ -22,6 +22,11 @@ export async function middleware(request: NextRequest) {
     // to /admin, which broke the entire public-share flow plus all
     // server-rendered SEO/OG metadata for shared links.
     "/gallery",
+    // Ably token endpoint is intentionally public so anonymous public-gallery
+    // viewers can subscribe to realtime updates. The endpoint itself reads
+    // the (optional) session and scopes the issued capability accordingly,
+    // so anonymous callers cannot escalate beyond gallery-level subscribe.
+    "/api/ably/token",
   ];
 
   const isPublicRoute = publicRoutes.some(
