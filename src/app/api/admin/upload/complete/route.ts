@@ -182,6 +182,137 @@ export async function POST(request: Request) {
       );
     }
 
+    // CRITICAL FIX #10 / PR #76 — Cross-gallery dedup per-client.
+    //
+    // The same client just uploaded the same file to a different gallery.
+    // Instead of paying for a second copy in R2 + Cloudinary we reuse the
+    // source photo's storage references and roll back this upload's
+    // bytes. Net effect:
+    //   - R2 holds exactly one copy of the file across the client's
+    //     account (savings scale with how often the same gallery is
+    //     re-imported into different galleries).
+    //   - `Client.usedStorage` reflects unique bytes per client — ideal
+    //     for tier / billing semantics.
+    //   - The per-gallery `(galleryId, fileHash)` unique index still
+    //     catches the same-gallery duplicate path below.
+    //
+    // We deliberately match on `clientId` (via `event`) so dedup never
+    // crosses tenants. The `NOT: { galleryId }` predicate excludes the
+    // row this request is about to create, leaving the existing P2002
+    // catch responsible for the within-gallery case.
+    const sourceDedupPhoto = await prisma.photo.findFirst({
+      where: {
+        fileHash: photoFileHash,
+        gallery: { event: { clientId } },
+        NOT: { galleryId },
+      },
+      // We need every storage-side field so the new row can be a true
+      // pointer; nothing else.
+      select: {
+        r2Key: true,
+        url: true,
+        thumbnailUrl: true,
+        publicId: true,
+        width: true,
+        height: true,
+        fileSize: true,
+        storageAccountId: true,
+        cloudinaryAccountId: true,
+      },
+      orderBy: { createdAt: 'asc' }, // pick the oldest "source" row
+    });
+
+    if (sourceDedupPhoto && sourceDedupPhoto.r2Key) {
+      // We already burned `fileSizeBig` worth of quota a few lines up;
+      // give it back since the dedup path doesn't actually consume new
+      // storage. Use a conditional decrement so we never drive
+      // `usedStorage` below zero on weirdly-timed concurrent calls.
+      await prisma.client.updateMany({
+        where: { id: clientId, usedStorage: { gte: fileSizeBig } },
+        data: { usedStorage: { decrement: fileSizeBig } },
+      });
+
+      // Discard the orphan R2 object the client just uploaded — the
+      // canonical copy is `sourceDedupPhoto.r2Key`.
+      try {
+        const { credentials: r2Creds } = await getR2Credentials(storageAccountId || undefined);
+        await deleteFromR2(verifiedR2Key, r2Creds);
+      } catch (err) {
+        // Non-fatal: the R2 file becomes a true orphan but the dedup
+        // succeeds. R2 lifecycle rules will eventually reclaim it.
+        logger.warn('upload.complete.dedup.cleanup_r2_failed', {
+          uploadId,
+          r2Key: verifiedR2Key,
+          err,
+        });
+      }
+
+      let dedupPhoto: Awaited<ReturnType<typeof prisma.photo.create>>;
+      try {
+        dedupPhoto = await prisma.photo.create({
+          data: {
+            galleryId: galleryId!,
+            filename,
+            // Reuse the source's storage references verbatim; the
+            // resulting Photo row is effectively a hard-link.
+            url: sourceDedupPhoto.url,
+            r2Key: sourceDedupPhoto.r2Key,
+            thumbnailUrl: sourceDedupPhoto.thumbnailUrl,
+            publicId: sourceDedupPhoto.publicId,
+            width: sourceDedupPhoto.width,
+            height: sourceDedupPhoto.height,
+            fileSize: sourceDedupPhoto.fileSize,
+            fileHash: photoFileHash,
+            storageAccountId: sourceDedupPhoto.storageAccountId,
+            cloudinaryAccountId: sourceDedupPhoto.cloudinaryAccountId,
+          },
+        });
+      } catch (err: unknown) {
+        // P2002 = the row this request was about to create already
+        // exists in this gallery (race against a concurrent same-gallery
+        // upload). Delegate to the standard P2002 handler below by
+        // re-throwing — the outer catch will respond with the existing
+        // photo's metadata.
+        if (
+          typeof err === 'object' && err !== null && 'code' in err &&
+          (err as { code?: string }).code === 'P2002'
+        ) {
+          // Fall through: the per-gallery duplicate path already knows
+          // how to surface the existing row to the caller.
+          throw err;
+        }
+        // Anything else: rollback decrement was already applied for the
+        // dedup path; surface a 500 so the user retries.
+        logger.error('upload.complete.dedup.create_failed', { uploadId, galleryId, err });
+        return errorResponse('Gagal menyimpan foto (dedup path)', 500);
+      }
+
+      logger.info('upload.complete.dedup.cross_gallery', {
+        uploadId,
+        galleryId,
+        clientId,
+        sharedR2Key: sourceDedupPhoto.r2Key,
+        bytesSaved: sourceDedupPhoto.fileSize?.toString() ?? null,
+      });
+      await cleanupUploadSession(uploadId).catch(() => {});
+
+      return successResponse({
+        photo: {
+          id: dedupPhoto.id,
+          filename: dedupPhoto.filename,
+          url: dedupPhoto.url,
+          thumbnailUrl: dedupPhoto.thumbnailUrl,
+          publicId: dedupPhoto.publicId,
+          width: dedupPhoto.width,
+          height: dedupPhoto.height,
+          fileSize: dedupPhoto.fileSize,
+        },
+        // Caller-visible signal that this row reused storage; UI can
+        // surface a "deduplicated" badge if it cares.
+        duplicate: { isDuplicate: false, isCrossGalleryDedup: true },
+      });
+    }
+
     // CRITICAL FIX #4: Photo create — unique(galleryId, fileHash) catches duplicates atomically (P2002).
     // Wrap in transaction so storageAccount update rolls back if Photo create fails.
     let photo: Awaited<ReturnType<typeof prisma.photo.create>>;

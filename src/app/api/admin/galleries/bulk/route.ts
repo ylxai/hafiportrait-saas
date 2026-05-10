@@ -3,7 +3,11 @@ import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
+import {
+  collectPhotoDeletionPayloads,
+  computeUsedStorageDeltaForDeletion,
+  enqueueDeletionWithOutbox,
+} from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -77,16 +81,12 @@ export async function DELETE(request: Request) {
     const { ids } = validation.data;
 
     // Step 1 — collect quotas + storage payloads BEFORE the delete
-    // commits; the cascade is about to remove the photo rows.
-    const photoSizes = await prisma.photo.findMany({
-      where: { galleryId: { in: ids } },
-      select: { fileSize: true, gallery: { select: { event: { select: { clientId: true } } } } },
+    // commits; the cascade is about to remove the photo rows. PR #76:
+    // the byte delta only counts photos whose r2Key becomes orphan
+    // (cross-gallery deduped files keep at least one live reference).
+    const usedByClient = await computeUsedStorageDeltaForDeletion({
+      galleryId: { in: ids },
     });
-    const usedByClient = new Map<string, bigint>();
-    for (const p of photoSizes) {
-      const cid = p.gallery.event.clientId;
-      usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + (p.fileSize ?? BigInt(0)));
-    }
     const deletionPayloads = await collectPhotoDeletionPayloads({
       galleryId: { in: ids },
     });

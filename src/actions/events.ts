@@ -24,7 +24,11 @@ import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
-import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
+import {
+  collectPhotoDeletionPayloads,
+  computeUsedStorageDeltaForDeletion,
+  enqueueDeletionWithOutbox,
+} from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
 
 // The Prisma client in this project is generated with `--no-engine`, so the
@@ -80,16 +84,12 @@ export async function deleteEvent(rawId: string): Promise<ActionResult<{ id: str
     // `Client.usedStorage` and keep the atomic quota gate honest after
     // the delete) and (b) the storage-deletion payloads (so the
     // post-commit enqueue can run without re-querying the cascaded
-    // rows).
-    const photoSizes = await prisma.photo.findMany({
-      where: { gallery: { eventId: id } },
-      select: { fileSize: true, gallery: { select: { event: { select: { clientId: true } } } } },
+    // rows). PR #76: `computeUsedStorageDeltaForDeletion` only counts
+    // bytes for photos whose r2Key becomes orphan after the delete —
+    // so cross-gallery deduped files are accounted for correctly.
+    const usedByClient = await computeUsedStorageDeltaForDeletion({
+      gallery: { eventId: id },
     });
-    const usedByClient = new Map<string, bigint>();
-    for (const p of photoSizes) {
-      const cid = p.gallery.event.clientId;
-      usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + (p.fileSize ?? BigInt(0)));
-    }
     const deletionPayloads = await collectPhotoDeletionPayloads({
       gallery: { eventId: id },
     });
@@ -149,16 +149,12 @@ export async function deleteEventsBulk(
   try {
     // Same ordering as `deleteEvent`: collect → DB transaction → enqueue.
     // Decrementing `Client.usedStorage` per affected client keeps the
-    // atomic quota gate accurate after a bulk delete.
-    const photoSizes = await prisma.photo.findMany({
-      where: { gallery: { eventId: { in: ids } } },
-      select: { fileSize: true, gallery: { select: { event: { select: { clientId: true } } } } },
+    // atomic quota gate accurate after a bulk delete. PR #76: the
+    // helper folds in the cross-gallery dedup orphan check so we don't
+    // release bytes that another gallery still pins.
+    const usedByClient = await computeUsedStorageDeltaForDeletion({
+      gallery: { eventId: { in: ids } },
     });
-    const usedByClient = new Map<string, bigint>();
-    for (const p of photoSizes) {
-      const cid = p.gallery.event.clientId;
-      usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + (p.fileSize ?? BigInt(0)));
-    }
     const deletionPayloads = await collectPhotoDeletionPayloads({
       gallery: { eventId: { in: ids } },
     });

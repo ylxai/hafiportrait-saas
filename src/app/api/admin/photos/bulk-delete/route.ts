@@ -4,7 +4,7 @@ import { successResponse, unauthorizedResponse, handlePrismaError, validationErr
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { z } from 'zod';
-import { queueStorageDeletionBulk } from '@/lib/cloudflare-queue';
+import { getOrphanedR2Keys, queueStorageDeletionBulk } from '@/lib/cloudflare-queue';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 const bulkDeleteSchema = z.object({
@@ -90,16 +90,26 @@ export async function POST(request: Request) {
       return errorResponse('No photos found', 404);
     }
 
+    // PR #76 / issue #10 — drop r2Key/thumbnailUrl from any payload whose
+    // file is still referenced by another Photo row (cross-gallery dedup).
+    // The set of orphan r2Keys also drives the per-client usedStorage
+    // decrement below so we only release bytes that are genuinely freed.
+    const orphanedR2Keys = await getOrphanedR2Keys(
+      photos.map((p: typeof photos[number]) => p.r2Key).filter((k: string | null): k is string => Boolean(k)),
+      photos.map((p: typeof photos[number]) => p.id),
+    );
+
     // Step 2: Prepare deletion jobs
     const deletionJobs = photos
-      .filter((photo: typeof photos[number]) => photo.r2Key || photo.thumbnailUrl)
       .map((photo: typeof photos[number]) => {
         const cloudinaryCredentials = photo.cloudinaryAccount || photo.storageAccount;
-        
+        const isShared = photo.r2Key !== null && !orphanedR2Keys.has(photo.r2Key);
+
         return {
           photoId: photo.id,
-          r2Key: photo.r2Key || undefined,
-          thumbnailUrl: photo.thumbnailUrl || undefined,
+          // Strip storage refs when shared so the worker has nothing to do.
+          r2Key: isShared ? undefined : (photo.r2Key || undefined),
+          thumbnailUrl: isShared ? undefined : (photo.thumbnailUrl || undefined),
           fileSize: photo.fileSize ? photo.fileSize.toString() : undefined,
           storageAccountId: photo.storageAccountId || undefined,
           cloudinaryCredentials: cloudinaryCredentials ? {
@@ -108,7 +118,8 @@ export async function POST(request: Request) {
             apiSecret: cloudinaryCredentials.apiSecret,
           } : undefined,
         };
-      });
+      })
+      .filter((job: { r2Key?: string; thumbnailUrl?: string }) => job.r2Key || job.thumbnailUrl);
 
     // Step 3: Queue storage deletion FIRST (with retry logic built-in)
     if (deletionJobs.length > 0) {
@@ -133,10 +144,16 @@ export async function POST(request: Request) {
 
     // Step 4: Only delete from database AFTER successful queue.
     // Review fix #2: aggregate decrement Client.usedStorage in same transaction.
+    // PR #76 / issue #10: only decrement bytes for photos whose r2Key
+    // becomes orphan after the delete — shared r2Keys (cross-gallery
+    // dedup) keep the file alive and therefore consume no new quota.
     const sumByClient = new Map<string, bigint>();
     for (const p of photos) {
       const cId = p.gallery?.event?.clientId;
       if (!cId || !p.fileSize) continue;
+      // A photo with no `r2Key` (legacy / failed upload) effectively
+      // has no storage to keep alive, so it counts as orphan.
+      if (p.r2Key !== null && !orphanedR2Keys.has(p.r2Key)) continue;
       sumByClient.set(cId, (sumByClient.get(cId) ?? BigInt(0)) + p.fileSize);
     }
     try {
