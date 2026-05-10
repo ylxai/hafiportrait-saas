@@ -5,7 +5,8 @@ import { successResponse, serverErrorResponse, errorResponse, notFoundResponse }
 import { clientSchema, clientUpdateSchema, idSchema, validateRequest } from '@/lib/api/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
+import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
+import { logger } from '@/lib/logger';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
 
 // bcrypt cost factor for client portal passwords. Matches the dummy hash
@@ -227,14 +228,26 @@ export async function DELETE(request: Request) {
 
     const { id } = idValidation.data;
 
-    const result = await queuePhotosDeletionForEntities({ gallery: { event: { clientId: id } } });
-    
-    if (!result.success) {
-      console.error('[Delete] Failed to queue photos deletion:', result.error);
-      return errorResponse('Failed to queue storage deletion', 500);
-    }
+    // Step 1 — collect storage payloads BEFORE the cascade nukes Photos
+    // (Client → Event → Gallery → Photo). No `usedStorage` decrement is
+    // necessary here because the row that holds it is itself being deleted.
+    const deletionPayloads = await collectPhotoDeletionPayloads({
+      gallery: { event: { clientId: id } },
+    });
 
+    // Step 2 — DB-first delete; queue stays untouched if this fails so
+    // the operation is safe to retry.
     await prisma.client.delete({ where: { id } });
+
+    // Step 3 — best-effort enqueue with outbox fallback.
+    const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
+    if (outcome.outboxed > 0) {
+      logger.warn('client.delete.storage_outboxed', {
+        clientId: id,
+        photoCount: outcome.outboxed,
+        outboxJobId: outcome.outboxJobId,
+      });
+    }
 
     return successResponse({ success: true });
   } catch (error) {

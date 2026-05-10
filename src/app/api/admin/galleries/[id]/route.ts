@@ -6,7 +6,8 @@ import { safeClientSelect } from '@/lib/api/select';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { serializeBigInt } from '@/lib/bigint-utils';
-import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
+import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
+import { logger } from '@/lib/logger';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -122,8 +123,9 @@ export async function DELETE(
       return errorResponse('Gallery ID is required', 400);
     }
 
-    // Sum bytes per client BEFORE delete; the cascade is about to remove the
-    // photo rows so we can't compute this afterwards.
+    // Step 1 — collect (a) per-client byte totals and (b) Cloudflare-Queue
+    // payloads BEFORE the delete commits; the Photo→Gallery cascade is
+    // about to remove the rows.
     const photoSizes = await prisma.photo.findMany({
       where: { galleryId: id },
       select: { fileSize: true, gallery: { select: { event: { select: { clientId: true } } } } },
@@ -133,14 +135,9 @@ export async function DELETE(
       const cid = p.gallery.event.clientId;
       usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + (p.fileSize ?? BigInt(0)));
     }
+    const deletionPayloads = await collectPhotoDeletionPayloads({ galleryId: id });
 
-    const result = await queuePhotosDeletionForEntities({ galleryId: id });
-
-    if (!result.success) {
-      console.error('[Delete] Failed to queue photos deletion:', result.error);
-      return errorResponse('Failed to queue storage deletion', 500);
-    }
-
+    // Step 2 — DB-first transaction.
     await prisma.$transaction([
       prisma.gallery.delete({ where: { id } }),
       ...Array.from(usedByClient.entries())
@@ -152,6 +149,17 @@ export async function DELETE(
           }),
         ),
     ]);
+
+    // Step 3 — best-effort enqueue; queue failure becomes a `FailedJob`
+    // outbox row, not an HTTP 500.
+    const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
+    if (outcome.outboxed > 0) {
+      logger.warn('gallery.delete.storage_outboxed', {
+        galleryId: id,
+        photoCount: outcome.outboxed,
+        outboxJobId: outcome.outboxJobId,
+      });
+    }
 
     return successResponse({ success: true });
   } catch (error) {

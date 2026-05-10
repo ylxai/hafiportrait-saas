@@ -5,7 +5,8 @@ import { eventUpdateSchema, validateRequest } from '@/lib/api/validation';
 import { safeClientSelect } from '@/lib/api/select';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
+import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
+import { logger } from '@/lib/logger';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -127,10 +128,13 @@ export async function DELETE(
       return errorResponse('Event ID is required', 400);
     }
 
-    // Sum bytes per client BEFORE deletion so we can decrement
-    // `Client.usedStorage` in the same transaction; the photos are about to
-    // disappear via Gallery→Photo CASCADE so we can't compute the sum
-    // afterwards.
+    // Step 1 — collect everything we need from the DB BEFORE the delete
+    // commits, because the Gallery→Photo cascade will hide the rows the
+    // moment the Event is gone:
+    //   (a) per-client byte totals so we can decrement `Client.usedStorage`
+    //       in the same transaction, and
+    //   (b) Cloudflare-Queue payloads (R2 keys + Cloudinary credentials)
+    //       so we can hand storage cleanup off after the DB succeeds.
     const photoSizes = await prisma.photo.findMany({
       where: { gallery: { eventId: id } },
       select: { fileSize: true, gallery: { select: { event: { select: { clientId: true } } } } },
@@ -140,14 +144,13 @@ export async function DELETE(
       const cid = p.gallery.event.clientId;
       usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + (p.fileSize ?? BigInt(0)));
     }
+    const deletionPayloads = await collectPhotoDeletionPayloads({
+      gallery: { eventId: id },
+    });
 
-    const result = await queuePhotosDeletionForEntities({ gallery: { eventId: id } });
-
-    if (!result.success) {
-      console.error('[Delete] Failed to queue photos deletion:', result.error);
-      return errorResponse('Failed to queue storage deletion', 500);
-    }
-
+    // Step 2 — DB-first: commit the delete plus the quota decrement in
+    // one transaction. If this fails the storage stays untouched and the
+    // user retries safely.
     await prisma.$transaction([
       prisma.event.delete({ where: { id } }),
       ...Array.from(usedByClient.entries())
@@ -159,6 +162,19 @@ export async function DELETE(
           }),
         ),
     ]);
+
+    // Step 3 — best-effort enqueue of the storage cleanup. A queue
+    // failure becomes a `FailedJob` row (status `pending`) for admin
+    // retry, NOT an HTTP 500 — the user already saw the event disappear
+    // and any orphan in R2/Cloudinary is recoverable.
+    const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
+    if (outcome.outboxed > 0) {
+      logger.warn('event.delete.storage_outboxed', {
+        eventId: id,
+        photoCount: outcome.outboxed,
+        outboxJobId: outcome.outboxJobId,
+      });
+    }
 
     return successResponse({ success: true });
   } catch (error) {

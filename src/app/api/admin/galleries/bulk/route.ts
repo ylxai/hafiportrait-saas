@@ -3,7 +3,8 @@ import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
+import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
+import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
 // Zod schemas for bulk operations
@@ -75,8 +76,8 @@ export async function DELETE(request: Request) {
 
     const { ids } = validation.data;
 
-    // Sum bytes per client BEFORE delete; the cascade is about to remove the
-    // photo rows so we can't compute this afterwards.
+    // Step 1 — collect quotas + storage payloads BEFORE the delete
+    // commits; the cascade is about to remove the photo rows.
     const photoSizes = await prisma.photo.findMany({
       where: { galleryId: { in: ids } },
       select: { fileSize: true, gallery: { select: { event: { select: { clientId: true } } } } },
@@ -86,14 +87,11 @@ export async function DELETE(request: Request) {
       const cid = p.gallery.event.clientId;
       usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + (p.fileSize ?? BigInt(0)));
     }
+    const deletionPayloads = await collectPhotoDeletionPayloads({
+      galleryId: { in: ids },
+    });
 
-    const result = await queuePhotosDeletionForEntities({ galleryId: { in: ids } });
-
-    if (!result.success) {
-      console.error('[Delete] Failed to queue photos deletion:', result.error);
-      return errorResponse('Failed to queue storage deletion', 500);
-    }
-
+    // Step 2 — DB-first transaction.
     await prisma.$transaction([
       prisma.gallery.deleteMany({ where: { id: { in: ids } } }),
       ...Array.from(usedByClient.entries())
@@ -105,6 +103,16 @@ export async function DELETE(request: Request) {
           }),
         ),
     ]);
+
+    // Step 3 — best-effort enqueue with outbox fallback.
+    const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
+    if (outcome.outboxed > 0) {
+      logger.warn('galleries.bulk_delete.storage_outboxed', {
+        galleryCount: ids.length,
+        photoCount: outcome.outboxed,
+        outboxJobId: outcome.outboxJobId,
+      });
+    }
 
     return successResponse({ deleted: ids.length });
   } catch (error) {

@@ -3,7 +3,8 @@ import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
+import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
+import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
 // Zod schema for bulk delete
@@ -42,16 +43,27 @@ export async function DELETE(request: Request) {
 
     const { ids } = validation.data;
 
-    const result = await queuePhotosDeletionForEntities({ gallery: { event: { clientId: { in: ids } } } });
-    
-    if (!result.success) {
-      console.error('[Delete] Failed to queue photos deletion:', result.error);
-      return errorResponse('Failed to queue storage deletion', 500);
-    }
+    // Step 1 — collect storage payloads BEFORE the Client→Event→
+    // Gallery→Photo cascade hides them.
+    const deletionPayloads = await collectPhotoDeletionPayloads({
+      gallery: { event: { clientId: { in: ids } } },
+    });
 
+    // Step 2 — DB-first deleteMany; the queue is left alone if this
+    // fails so the call can be retried safely.
     await prisma.client.deleteMany({
       where: { id: { in: ids } },
     });
+
+    // Step 3 — best-effort enqueue with `FailedJob` outbox fallback.
+    const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
+    if (outcome.outboxed > 0) {
+      logger.warn('clients.bulk_delete.storage_outboxed', {
+        clientCount: ids.length,
+        photoCount: outcome.outboxed,
+        outboxJobId: outcome.outboxJobId,
+      });
+    }
 
     return successResponse({ deleted: ids.length });
   } catch (error) {

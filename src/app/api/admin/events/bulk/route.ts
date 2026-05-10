@@ -3,7 +3,8 @@ import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
+import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
+import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
 // Zod schemas for bulk operations
@@ -89,8 +90,9 @@ export async function DELETE(request: Request) {
 
     const { ids } = validation.data;
 
-    // Sum bytes per client BEFORE delete so the cascade-removed Photo rows
-    // still let us decrement `Client.usedStorage` atomically.
+    // Step 1 — collect everything we need from the DB BEFORE the delete
+    // commits, because the Gallery→Photo cascade will hide the rows the
+    // moment the events disappear.
     const photoSizes = await prisma.photo.findMany({
       where: { gallery: { eventId: { in: ids } } },
       select: { fileSize: true, gallery: { select: { event: { select: { clientId: true } } } } },
@@ -100,14 +102,12 @@ export async function DELETE(request: Request) {
       const cid = p.gallery.event.clientId;
       usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + (p.fileSize ?? BigInt(0)));
     }
+    const deletionPayloads = await collectPhotoDeletionPayloads({
+      gallery: { eventId: { in: ids } },
+    });
 
-    const result = await queuePhotosDeletionForEntities({ gallery: { eventId: { in: ids } } });
-
-    if (!result.success) {
-      console.error('[Delete] Failed to queue photos deletion:', result.error);
-      return errorResponse('Failed to queue storage deletion', 500);
-    }
-
+    // Step 2 — DB-first transaction (delete + per-client `usedStorage`
+    // decrement). Storage stays untouched if this fails.
     await prisma.$transaction([
       prisma.event.deleteMany({ where: { id: { in: ids } } }),
       ...Array.from(usedByClient.entries())
@@ -119,6 +119,17 @@ export async function DELETE(request: Request) {
           }),
         ),
     ]);
+
+    // Step 3 — best-effort enqueue. A queue failure is captured into the
+    // `FailedJob` outbox; the user-facing response stays `200`.
+    const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
+    if (outcome.outboxed > 0) {
+      logger.warn('events.bulk_delete.storage_outboxed', {
+        eventCount: ids.length,
+        photoCount: outcome.outboxed,
+        outboxJobId: outcome.outboxJobId,
+      });
+    }
 
     return successResponse({ deleted: ids.length });
   } catch (error) {
