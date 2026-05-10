@@ -14,11 +14,12 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
 import { packageSchema, packageUpdateSchema } from '@/lib/api/validation';
 import { logger } from '@/lib/logger';
+// Review #74-1: shared admin gate (`role==='admin'` enforced) lives
+// in `src/lib/actions/auth.ts`.
+import { requireAdmin, type ActionResult } from '@/lib/actions/auth';
 
 // Shape returned to the admin UI. Aligns with `Package` model except
 // that `Date`s are flattened to ISO strings so the value remains
@@ -36,17 +37,9 @@ export type AdminPackage = {
   createdAt: string;
 };
 
-export type ActionResult<T = void> =
-  | { success: true; data: T }
-  | { success: false; error: string };
-
-async function requireAdmin(): Promise<ActionResult<true>> {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return { success: false, error: 'Unauthorized' };
-  }
-  return { success: true, data: true };
-}
+// Re-export `ActionResult` for callers that previously imported it
+// from this module.
+export type { ActionResult };
 
 const idSchema = z.string().min(1, 'Package id required');
 

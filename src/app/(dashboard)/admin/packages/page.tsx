@@ -155,6 +155,14 @@ export default function PackagesPage() {
   // server state — fine for multi-select, but for a single-row click
   // the user expects the inverse of the row's currently-rendered
   // `isActive` value, regardless of any concurrent edits.
+  //
+  // Review #74-2 (CodeAnt): the previous version mirrored the local
+  // optimistic state by negating `p.isActive` after the action
+  // resolved. That re-derives the value the client *thought* was
+  // current, not what the server actually applied — a fast double-tap
+  // (or any concurrent edit) would leave the row's UI lagging the DB.
+  // We now use the package returned by the action, which is the
+  // authoritative post-write snapshot.
   const handleToggleActive = (pkg: Package) => {
     startTransition(async () => {
       const result = await updatePackage({ id: pkg.id, isActive: !pkg.isActive });
@@ -162,8 +170,9 @@ export default function PackagesPage() {
         toast.error(result.error || 'Gagal mengubah status paket');
         return;
       }
+      const updated = result.data.package;
       setPackages((prev) =>
-        prev.map((p) => (p.id === pkg.id ? { ...p, isActive: !p.isActive } : p)),
+        prev.map((p) => (p.id === pkg.id ? updated : p)),
       );
     });
   };
