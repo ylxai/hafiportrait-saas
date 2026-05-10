@@ -2,7 +2,13 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import { compare } from "bcryptjs";
-import { verifyMagicToken } from "./magic-link";
+
+// Dummy bcrypt hash used to keep `compare()` cost roughly constant when the
+// user/client isn't found. Without this, an attacker could distinguish
+// "unknown email" from "wrong password" via response timing. Shared here so
+// both providers behave the same.
+const DUMMY_HASH =
+  "$2a$10$dummyhashtopreventtimingattack1234567890123456789012";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -24,11 +30,8 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email },
         });
 
-        // Always hash the password to prevent timing attacks
-        // Use a dummy hash if user doesn't exist
-        const passwordToCompare =
-          user?.password ||
-          "$2a$10$dummyhashtopreventtimingattack1234567890123456789012";
+        // Always hash-compare to prevent timing attacks (use dummy if absent).
+        const passwordToCompare = user?.password || DUMMY_HASH;
         const isValid = await compare(credentials.password, passwordToCompare);
 
         if (!user || !user.password || !isValid) {
@@ -47,24 +50,29 @@ export const authOptions: NextAuthOptions = {
       id: "client",
       name: "Client",
       credentials: {
-        token: { label: "Token", type: "text" },
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.token) {
-          return null;
-        }
-
-        const payload = await verifyMagicToken(credentials.token);
-
-        if (!payload) {
+        if (!credentials?.email || !credentials?.password) {
           return null;
         }
 
         const client = await prisma.client.findUnique({
-          where: { id: payload.clientId },
+          where: { email: credentials.email.trim().toLowerCase() },
+          select: { id: true, email: true, nama: true, password: true },
         });
 
-        if (!client || client.email !== payload.email) {
+        // Constant-time compare against either the real or a dummy hash so we
+        // don't leak whether the email exists.
+        const hashToCompare = client?.password || DUMMY_HASH;
+        const isValid = await compare(credentials.password, hashToCompare);
+
+        // Reject if the row is missing OR the row is legacy and never had a
+        // password set (column nullable for backwards-compat) OR the password
+        // doesn't match. The admin must (re-)set a password before such a
+        // legacy client can log in.
+        if (!client || !client.password || !isValid) {
           return null;
         }
 

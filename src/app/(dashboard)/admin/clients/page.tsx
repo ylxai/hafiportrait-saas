@@ -49,6 +49,9 @@ export default function ClientsPage() {
     phone: '',
     instagram: '',
     storageQuotaGB: 10,
+    // Stored in admin form state only — never echoed back from the API.
+    // Required at create time; left blank when editing means "keep current".
+    password: '',
   });
 
   const handleQuotaChange = (value: string) => {
@@ -79,7 +82,7 @@ export default function ClientsPage() {
   };
 
   const resetForm = () => {
-    setFormData({ nama: '', email: '', phone: '', instagram: '', storageQuotaGB: 10 });
+    setFormData({ nama: '', email: '', phone: '', instagram: '', storageQuotaGB: 10, password: '' });
     setEditingClient(null);
   };
 
@@ -91,6 +94,7 @@ export default function ClientsPage() {
       phone: client.phone || '',
       instagram: client.instagram || '',
       storageQuotaGB: client.storageQuotaGB || 10,
+      password: '',
     });
     setShowModal(true);
   };
@@ -99,7 +103,17 @@ export default function ClientsPage() {
     e.preventDefault();
     setSubmitting(true);
 
-    const payload = {
+    type ClientPayload = {
+      nama: string;
+      email: string;
+      phone: string | null;
+      instagram: string | null;
+      storageQuotaGB: number;
+      password?: string;
+      id?: string;
+    };
+
+    const payload: ClientPayload = {
       nama: formData.nama,
       email: formData.email,
       phone: formData.phone || null,
@@ -107,31 +121,45 @@ export default function ClientsPage() {
       storageQuotaGB: formData.storageQuotaGB || 10,
     };
 
+    // Password is mandatory at create time, optional at edit time.
+    // Never send an empty string on edit so we don't accidentally
+    // wipe / re-hash the existing credential.
+    if (formData.password) {
+      payload.password = formData.password;
+    }
+
     try {
-      const url = editingClient
-        ? `/api/admin/clients?id=${editingClient.id}`
-        : '/api/admin/clients';
+      const url = '/api/admin/clients';
       const method = editingClient ? 'PATCH' : 'POST';
+      // PATCH expects the id inside the body (validateRequest(idSchema, body)).
+      const finalPayload = editingClient
+        ? { ...payload, id: editingClient.id }
+        : payload;
 
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(finalPayload),
       });
 
       if (res.ok) {
         const result = await res.json();
         const clientData = result.data?.client || result.client;
         if (editingClient && clientData?.id) {
-          setClients(clients.map(c => c.id === editingClient.id ? clientData : c));
+          setClients((prev) =>
+            prev.map((c) => (c.id === editingClient.id ? { ...c, ...clientData } : c)),
+          );
         } else if (clientData?.id) {
-          setClients([clientData, ...clients]);
+          setClients((prev) => [clientData, ...prev]);
         } else {
           // If no client data, refresh the list
           fetchClients();
         }
         setShowModal(false);
         resetForm();
+      } else {
+        const errBody = await res.json().catch(() => ({} as { error?: string }));
+        alert(errBody?.error || 'Gagal menyimpan client');
       }
     } catch (error) {
       console.error('Error saving client:', error);
@@ -356,6 +384,24 @@ export default function ClientsPage() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Password {editingClient ? '' : '*'}
+              </label>
+              <Input
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                maxLength={72}
+                required={!editingClient}
+                placeholder={editingClient ? 'Kosongkan jika tidak diubah' : 'Minimal 8 karakter'}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Dipakai client untuk login ke portal & galeri. {editingClient ? 'Kosongkan untuk mempertahankan password yang sekarang.' : 'Wajib diisi minimal 8 karakter.'}
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Phone</label>

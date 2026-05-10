@@ -7,6 +7,8 @@ import {
 } from "@/lib/api/response";
 import { selectionSubmitSchema } from "@/lib/api/validation";
 import { publishSelectionUpdate } from "@/lib/ably";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/options";
 
 export async function POST(
   request: Request,
@@ -14,6 +16,16 @@ export async function POST(
 ) {
   try {
     const { token } = await params;
+
+    // Auth gate: only the owning client may submit a selection. Without
+    // this, a user-reported bug let anyone with a leaked token finalize
+    // selections — see issue "siapapun yang memiliki token galeri tanpa
+    // login pun bisa mengada-ada selected foto".
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== "CLIENT") {
+      return errorResponse("Unauthorized", 401);
+    }
+
     const body: unknown = await request.json();
     const validation = selectionSubmitSchema.safeParse(body);
 
@@ -32,6 +44,7 @@ export async function POST(
     const gallery = await prisma.gallery.findUnique({
       where: { clientToken: token },
       include: {
+        event: { select: { clientId: true } },
         selections: {
           orderBy: { submittedAt: "desc" },
           take: 1,
@@ -40,6 +53,12 @@ export async function POST(
     });
 
     if (!gallery) {
+      return notFoundResponse("Gallery not found");
+    }
+
+    // Refuse cross-client submissions even if the attacker somehow obtained
+    // a valid client session for a different account.
+    if (gallery.event.clientId !== session.user.id) {
       return notFoundResponse("Gallery not found");
     }
 

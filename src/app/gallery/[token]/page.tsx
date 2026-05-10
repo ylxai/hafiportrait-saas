@@ -1,7 +1,9 @@
 import { cache } from 'react';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/db';
+import { authOptions } from '@/lib/auth/options';
 import { loadPublicGallery } from '@/lib/gallery/load-public-gallery';
 import GalleryClient from './GalleryClient';
 
@@ -22,6 +24,9 @@ const getGalleryHead = cache(async (token: string) => {
       namaProject: true,
       welcomeMessage: true,
       bannerClientName: true,
+      // Used by the auth gate below to verify that the logged-in client owns
+      // the event behind this gallery before any expensive payload fetch.
+      event: { select: { clientId: true } },
       photos: {
         select: { thumbnailUrl: true, url: true },
         take: 1,
@@ -73,6 +78,34 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function GalleryPage({ params }: PageProps) {
   const { token } = await params;
+
+  // -----------------------------------------------------------------------
+  //  Auth gate — galleries are NEVER public anymore.
+  //
+  //  Without this, anyone who learned (or guessed) a gallery token could
+  //  view photos and even submit selections, because the page used to be
+  //  in the public-routes allowlist. We now require that:
+  //    1. The viewer is signed in via the NextAuth `client` provider
+  //       (role === 'CLIENT').
+  //    2. The signed-in client owns the event the gallery belongs to.
+  //
+  //  Anonymous viewers get redirected to the portal login with a
+  //  `callbackUrl` so they come back here after signing in. Wrong-owner
+  //  viewers (e.g. another client's session) get a 404 — we deliberately
+  //  do not reveal whether the gallery exists for them.
+  // -----------------------------------------------------------------------
+  const head = await getGalleryHead(token);
+  if (!head) {
+    notFound();
+  }
+
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== 'CLIENT') {
+    redirect(`/portal/login?callbackUrl=${encodeURIComponent(`/gallery/${token}`)}`);
+  }
+  if (session.user.id !== head.event.clientId) {
+    notFound();
+  }
 
   // Fetch the full gallery payload server-side so the very first paint has
   // photos + selections without a client round-trip. The result is shaped to

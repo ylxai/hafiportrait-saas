@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { hash } from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
 import { clientSchema, clientUpdateSchema, idSchema, validateRequest } from '@/lib/api/validation';
@@ -6,6 +7,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
+
+// bcrypt cost factor for client portal passwords. Matches the dummy hash
+// shape used in lib/auth/options.ts for timing-attack protection.
+const BCRYPT_ROUNDS = 10;
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -108,13 +113,30 @@ export async function POST(request: Request) {
       );
     }
 
+    const { password, ...rest } = validation.data;
+    const passwordHash = await hash(password, BCRYPT_ROUNDS);
+
     const client = await prisma.client.create({
-      data: validation.data,
+      data: { ...rest, password: passwordHash },
+      // Never echo the hash (or any password material) back to the admin UI.
+      select: {
+        id: true,
+        nama: true,
+        email: true,
+        phone: true,
+        instagram: true,
+        storageQuotaGB: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
     return successResponse({ client }, 201);
   } catch (error) {
     console.error('Error creating client:', error);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      return errorResponse('Email sudah terdaftar', 409);
+    }
     return serverErrorResponse('Failed to create client');
   }
 }
@@ -145,14 +167,38 @@ export async function PATCH(request: Request) {
       return errorResponse(dataValidation.error, 400);
     }
 
+    // If a new password is supplied, hash it before persisting; never store
+    // the plaintext value the admin typed.
+    const updatePayload: Record<string, unknown> = { ...dataValidation.data };
+    if (typeof updatePayload.password === 'string' && updatePayload.password.length > 0) {
+      updatePayload.password = await hash(updatePayload.password, BCRYPT_ROUNDS);
+    } else {
+      // An undefined / empty password from the form means "keep the existing
+      // hash" — do not overwrite with null.
+      delete updatePayload.password;
+    }
+
     const client = await prisma.client.update({
       where: { id },
-      data: dataValidation.data,
+      data: updatePayload,
+      select: {
+        id: true,
+        nama: true,
+        email: true,
+        phone: true,
+        instagram: true,
+        storageQuotaGB: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
     return successResponse({ client });
   } catch (error) {
     console.error('Error updating client:', error);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      return errorResponse('Email sudah terdaftar', 409);
+    }
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
       return notFoundResponse('Client not found');
     }

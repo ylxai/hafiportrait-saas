@@ -68,6 +68,12 @@ export const clientSchema = z.object({
     .regex(emailRegex, 'Format email tidak valid')
     .max(100, 'Email terlalu panjang')
     .transform((str) => str.trim().toLowerCase()),
+  // Password is mandatory at create time so the client can sign in to the
+  // portal and view their (now private) gallery. The API layer hashes it
+  // with bcrypt before persisting.
+  password: z.string()
+    .min(8, 'Password minimal 8 karakter')
+    .max(72, 'Password maksimal 72 karakter (bcrypt limit)'),
   phone: z.string()
     .nullish()
     .refine((val) => val === null || val === undefined || phoneRegex.test(val), {
