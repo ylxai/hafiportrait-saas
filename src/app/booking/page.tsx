@@ -30,6 +30,12 @@ export default function BookingPage() {
   const [formData, setFormData] = useState({
     nama: '',
     email: '',
+    // The portal login flow uses email + password, so we collect a
+    // password at booking time. The server-side handler hashes it and
+    // creates the client row in `isApproved=false` state — the booking
+    // can be confirmed end-to-end without anyone signing in, but login
+    // is gated until an admin approves the row from the dashboard.
+    password: '',
     phone: '',
     instagram: '',
     packageId: '',
@@ -50,12 +56,18 @@ export default function BookingPage() {
         body: JSON.stringify(formData),
       });
 
-      const result: { data?: { kodeBooking?: string } } = await res.json();
+      const result: {
+        data?: { kodeBooking?: string };
+        error?: string;
+      } = await res.json();
 
       if (res.ok && result.data?.kodeBooking) {
         router.push(`/booking/invoice/${result.data.kodeBooking}`);
       } else {
-        toast.error('Terjadi kesalahan. Silakan coba lagi.');
+        // Surface the field-specific validation message (e.g. 'password:
+        // Password minimal 8 karakter') so users can self-correct rather
+        // than retry blindly.
+        toast.error(result.error || 'Terjadi kesalahan. Silakan coba lagi.');
       }
     } catch {
       toast.error('Terjadi kesalahan. Silakan coba lagi.');
@@ -137,6 +149,23 @@ export default function BookingPage() {
                 className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground touch-target"
                 placeholder="email@example.com…"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Password *</label>
+              <input
+                type="password"
+                required
+                minLength={8}
+                maxLength={72}
+                autoComplete="new-password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground touch-target"
+                placeholder="Minimal 8 karakter"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Akan digunakan untuk login melihat galeri setelah disetujui admin.
+              </p>
             </div>
           </div>
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { updateGallerySchema, validateRequest } from '@/lib/api/validation';
+import { safeClientSelect } from '@/lib/api/select';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { serializeBigInt } from '@/lib/bigint-utils';
@@ -30,7 +31,8 @@ export async function GET(
       include: {
         event: {
           include: {
-            client: true,
+            // Strip Client.password (bcrypt hash) from API response.
+            client: { select: safeClientSelect },
           },
         },
         selections: {

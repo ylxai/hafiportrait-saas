@@ -6,13 +6,47 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
 
+/**
+ * Validate a `callbackUrl` query parameter against open-redirect attacks.
+ *
+ * Without this guard an attacker could craft a link like
+ *   `https://hafiportrait.com/portal/login?callbackUrl=https://evil.com`
+ * and the browser would happily push the user there post-login (the
+ * outer domain is legitimate, only the redirect target is malicious).
+ * The classic mitigation is to refuse anything that doesn't look like a
+ * same-origin path — i.e. starts with a single `/`, no protocol, no
+ * protocol-relative `//`, no backslash tricks.
+ */
+function safeCallbackUrl(raw: string | null): string {
+  const fallback = '/portal/dashboard'
+  if (!raw) return fallback
+  // Reject protocol-relative URLs like `//evil.com/foo` and any URL with
+  // a scheme (`http:`, `javascript:`, `data:`). Also reject `\\evil.com`
+  // which some browsers historically normalised to `//evil.com`.
+  if (!raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) {
+    return fallback
+  }
+  // Belt-and-braces: also reject strings that decode to a different
+  // scheme (e.g. `%2F%2Fevil.com` which decodes to `//evil.com`).
+  try {
+    const decoded = decodeURIComponent(raw)
+    if (!decoded.startsWith('/') || decoded.startsWith('//') || decoded.startsWith('/\\')) {
+      return fallback
+    }
+  } catch {
+    return fallback
+  }
+  return raw
+}
+
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   // Default landing after a successful client login. The middleware will
   // forward the user to the requested page if it's whitelisted for the
-  // CLIENT role (e.g. /gallery/[token], /portal/dashboard).
-  const callbackUrl = searchParams.get('callbackUrl') || '/portal/dashboard'
+  // CLIENT role (e.g. /gallery/[token], /portal/dashboard). The raw query
+  // value is run through `safeCallbackUrl` to prevent open-redirect.
+  const callbackUrl = safeCallbackUrl(searchParams.get('callbackUrl'))
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

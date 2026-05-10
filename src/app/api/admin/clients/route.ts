@@ -41,6 +41,9 @@ export async function GET(request: Request) {
         orderBy: { createdAt: 'desc' },
         take: limit,
         skip,
+        // Mirror `safeClientSelect` plus `isApproved` so the admin UI can
+        // render the "approve" affordance for booking-created rows.
+        // Crucially we never select `password`.
         select: {
           id: true,
           nama: true,
@@ -48,6 +51,7 @@ export async function GET(request: Request) {
           phone: true,
           instagram: true,
           storageQuotaGB: true,
+          isApproved: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -126,6 +130,7 @@ export async function POST(request: Request) {
         phone: true,
         instagram: true,
         storageQuotaGB: true,
+        isApproved: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -188,6 +193,7 @@ export async function PATCH(request: Request) {
         phone: true,
         instagram: true,
         storageQuotaGB: true,
+        isApproved: true,
         createdAt: true,
         updatedAt: true,
       },

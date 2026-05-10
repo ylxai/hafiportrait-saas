@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
 import { eventUpdateSchema, validateRequest } from '@/lib/api/validation';
+import { safeClientSelect } from '@/lib/api/select';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
@@ -30,7 +31,10 @@ export async function GET(
     const event = await prisma.event.findUnique({
       where: { id },
       include: {
-        client: true,
+        // Use the explicit safe column list so we never leak
+        // `Client.password` (bcrypt hash) to the admin UI. See
+        // `src/lib/api/select.ts`.
+        client: { select: safeClientSelect },
         package: true,
         galleries: {
           select: {
@@ -88,7 +92,6 @@ export async function PATCH(
       return errorResponse('Invalid JSON body', 400);
     }
 
-    // @ts-expect-error - eventUpdateSchema has transforms; type inference is complex
     const dataValidation = validateRequest(eventUpdateSchema, body);
     if (!dataValidation.success) {
       return errorResponse(dataValidation.error, 400);
@@ -97,7 +100,7 @@ export async function PATCH(
     const event = await prisma.event.update({
       where: { id },
       data: dataValidation.data,
-      include: { client: true, package: true },
+      include: { client: { select: safeClientSelect }, package: true },
     });
 
     return successResponse({ event });

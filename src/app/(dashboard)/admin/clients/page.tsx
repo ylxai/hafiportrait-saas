@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, User } from 'lucide-react';
+import { Plus, User, ShieldCheck, Clock } from 'lucide-react';
 
 type Client = {
   id: string;
@@ -14,6 +15,10 @@ type Client = {
   phone: string | null;
   instagram: string | null;
   storageQuotaGB: number;
+  // `isApproved=false` means the row was created via the public booking
+  // form and the auth provider will reject login until an admin clicks
+  // "Setujui" in the row's action column.
+  isApproved: boolean;
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -158,8 +163,12 @@ export default function ClientsPage() {
         setShowModal(false);
         resetForm();
       } else {
+        // Surface the specific server-side error (e.g. "Email sudah
+        // terdaftar", "Password minimal 8 karakter") instead of the
+        // generic banner. AGENTS.md prohibits `alert()` so we use the
+        // global Sonner toaster mounted in `Providers`.
         const errBody = await res.json().catch(() => ({} as { error?: string }));
-        alert(errBody?.error || 'Gagal menyimpan client');
+        toast.error(errBody?.error || 'Gagal menyimpan client');
       }
     } catch (error) {
       console.error('Error saving client:', error);
@@ -176,6 +185,34 @@ export default function ClientsPage() {
       setClients(clients.filter(c => c.id !== id));
     } catch (error) {
       console.error('Error deleting client:', error);
+    }
+  };
+
+  // Flip a booking-created client's `isApproved` flag to `true` so they
+  // can sign in to the portal. The PATCH endpoint shares the
+  // `clientUpdateSchema` validator, which now accepts `isApproved` as an
+  // optional boolean alongside the regular profile fields.
+  const handleApprove = async (id: string) => {
+    try {
+      const res = await fetch('/api/admin/clients', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, isApproved: true }),
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({} as { error?: string }));
+        toast.error(errBody?.error || 'Gagal menyetujui client');
+        return;
+      }
+      // Optimistically update the row so the badge flips and the
+      // "Setujui" button disappears without a full refetch.
+      setClients((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, isApproved: true } : c)),
+      );
+      toast.success('Client disetujui dan dapat login portal');
+    } catch (error) {
+      console.error('Error approving client:', error);
+      toast.error('Terjadi kesalahan saat menyetujui client');
     }
   };
 
@@ -284,6 +321,7 @@ export default function ClientsPage() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Phone</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Instagram</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Storage</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Dibuat</th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Aksi</th>
               </tr>
@@ -341,11 +379,33 @@ export default function ClientsPage() {
                       <span className="text-xs text-muted-foreground">{client.storageQuotaGB} GB</span>
                     )}
                   </td>
+                  <td className="px-4 py-4">
+                    {client.isApproved ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-success">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        Aktif
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs text-warning">
+                        <Clock className="w-3.5 h-3.5" />
+                        Menunggu persetujuan
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-4 text-muted-foreground text-sm">
                     {new Date(client.createdAt).toLocaleDateString('id-ID')}
                   </td>
                   <td className="px-4 py-4 text-right">
                     <div className="flex gap-2 justify-end">
+                      {!client.isApproved && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleApprove(client.id)}
+                        >
+                          Setujui
+                        </Button>
+                      )}
                       <Button variant="ghost" size="sm" onClick={() => openEdit(client)}>Edit</Button>
                       <Button variant="ghost" size="sm" onClick={() => handleDelete(client.id)} className="text-destructive">Hapus</Button>
                     </div>

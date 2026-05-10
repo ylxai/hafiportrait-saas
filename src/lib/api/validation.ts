@@ -89,6 +89,9 @@ export const clientSchema = z.object({
     .min(1, 'Kuota minimal 1 GB')
     .max(1000, 'Kuota maksimal 1000 GB')
     .optional(),
+  // Admin can flip the approval gate via PATCH; not required at create time
+  // (defaults to `true` for admin-created rows via the schema default).
+  isApproved: z.boolean().optional(),
 });
 
 export const packageSchema = z.object({
@@ -168,6 +171,12 @@ export const bookingSchema = z.object({
     .regex(emailRegex, 'Format email tidak valid')
     .max(100, 'Email terlalu panjang')
     .transform((str) => str.trim().toLowerCase()),
+  // Required for the portal login flow that activates *after* an admin
+  // approves the booking. Same min/max constraints as `clientSchema` so the
+  // hashed value is interchangeable with admin-created clients.
+  password: z.string()
+    .min(8, 'Password minimal 8 karakter')
+    .max(72, 'Password maksimal 72 karakter (bcrypt limit)'),
   phone: z.string()
     .min(1, 'Nomor WhatsApp wajib diisi')
     .regex(phoneRegex, 'Format nomor telepon tidak valid (gunakan 08xx atau +62)'),
@@ -241,12 +250,21 @@ export const eventUpdateSchema = eventSchema.partial();
 export const clientUpdateSchema = clientSchema.partial();
 export const packageUpdateSchema = packageSchema.partial();
 
-// Helper function to validate and return error response
-export function validateRequest<T>(
-  schema: z.ZodSchema<T>,
+// Helper function to validate and return error response.
+//
+// We accept any Zod schema (`z.ZodTypeAny`) and use `z.output<S>` for the
+// returned data type. The previous `z.ZodSchema<T>` signature inferred T
+// poorly when callers passed schemas that have transforms / partial /
+// preprocessors (the inference latched on to the *input* shape rather
+// than the parsed output). That mismatch is what forced earlier callers
+// to slap `@ts-expect-error` on top of `validateRequest(eventUpdateSchema, body)`.
+// With this signature, `dataValidation.data` is correctly typed as the
+// transformed output without any cast.
+export function validateRequest<S extends z.ZodTypeAny>(
+  schema: S,
   data: unknown
-): { success: true; data: T } | { success: false; error: string } {
-  const result = schema.safeParse(data) as z.SafeParseReturnType<unknown, T>;
+): { success: true; data: z.output<S> } | { success: false; error: string } {
+  const result = schema.safeParse(data);
   if (!result.success) {
     const firstError = result.error.errors[0];
     return {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
 import { eventSchema, eventUpdateSchema, idSchema, validateRequest } from '@/lib/api/validation';
+import { safeClientSelect } from '@/lib/api/select';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { generateKodeBooking } from '@/lib/utils';
@@ -34,7 +35,8 @@ export async function GET(request: Request) {
     const [events, total] = await Promise.all([
       prisma.event.findMany({
         include: {
-          client: true,
+          // Strip Client.password (bcrypt hash) before serialising to admin UI.
+          client: { select: safeClientSelect },
           package: true,
           galleries: {
             take: 1,
@@ -107,7 +109,7 @@ export async function POST(request: Request) {
             paymentStatus: 'unpaid',
           },
           include: {
-            client: true,
+            client: { select: safeClientSelect },
             package: true,
           },
         });
@@ -160,7 +162,6 @@ export async function PATCH(request: Request) {
     const { id } = idValidation.data;
 
     // Validate update data
-    // @ts-expect-error - eventUpdateSchema has transforms, type inference is complex
     const dataValidation = validateRequest(eventUpdateSchema, body);
     if (!dataValidation.success) {
       return errorResponse(dataValidation.error, 400);
@@ -169,7 +170,7 @@ export async function PATCH(request: Request) {
     const event = await prisma.event.update({
       where: { id },
       data: dataValidation.data,
-      include: { client: true, package: true },
+      include: { client: { select: safeClientSelect }, package: true },
     });
 
     return successResponse({ event });

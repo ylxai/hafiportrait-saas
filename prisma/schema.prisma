@@ -37,12 +37,19 @@ model Client {
   // password-auth rollout don't break db:push; the API/Zod layer enforces
   // a non-empty value at create time and the auth provider rejects null.
   password  String?
+  // Admin approval gate for clients self-registered via the public booking
+  // form. Defaults to `true` so admin-created clients (and pre-existing
+  // rows) can sign in immediately. Public-booking creations explicitly
+  // set this to `false` and the auth provider blocks login until an admin
+  // toggles it back to `true` from the dashboard.
+  isApproved Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   events    Event[]
 
   @@index([createdAt])
   @@index([nama])
+  @@index([isApproved])
 }
 
 model Event {

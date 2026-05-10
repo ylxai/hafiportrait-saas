@@ -40,7 +40,11 @@ export async function GET() {
           prisma.event.findMany({
             orderBy: { createdAt: "desc" },
             take: 5,
-            include: { client: true },
+            // Only the client name is rendered in the dashboard's "Recent
+            // events" widget, so narrow the select instead of pulling the
+            // entire row (which would include `Client.password`, the
+            // bcrypt hash). Same minimum-exposure rule as `safeClientSelect`.
+            include: { client: { select: { nama: true } } },
           }),
           prisma.gallery.findMany({
             orderBy: { createdAt: "desc" },

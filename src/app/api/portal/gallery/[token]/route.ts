@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse, errorResponse, unauthorizedResponse } from '@/lib/api/response';
 import { getDefaultAccount } from '@/lib/storage/accounts';
 import { getCloudinaryThumbnailUrl, getCloudinaryLightboxUrl } from '@/lib/cloudinary';
+import { safeClientSelect } from '@/lib/api/select';
 import { z } from 'zod';
 import { parseCursorSafe, createPublicPaginationResponse } from '@/types/pagination';
 import { serializeBigInt } from '@/lib/bigint-utils';
@@ -40,7 +41,9 @@ export async function GET(
       include: {
         event: {
           include: {
-            client: true,
+            // Strip Client.password (bcrypt hash) before returning to the
+            // portal client viewer.
+            client: { select: safeClientSelect },
           },
         },
         selections: {
