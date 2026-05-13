@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { queueStorageDeletionBulk, isQueueConfigured } from '@/lib/cloudflare-queue';
+import { getOrphanedR2Keys, queueStorageDeletionBulk, isQueueConfigured } from '@/lib/cloudflare-queue';
 import { z } from 'zod';
 import { validateRequest } from '@/lib/api/validation';
 
@@ -47,6 +47,15 @@ export async function POST(
       return errorResponse('Photos not found or unauthorized', 404);
     }
 
+    // PR #76 / issue #10 — cross-gallery dedup awareness. Compute the set
+    // of r2Keys that genuinely become orphan after this delete; we'll
+    // skip both the R2 enqueue and the usedStorage decrement for any
+    // r2Key still referenced by a Photo row outside the delete batch.
+    const orphanedR2Keys = await getOrphanedR2Keys(
+      photos.map((p: typeof photos[number]) => p.r2Key).filter((k: string | null): k is string => Boolean(k)),
+      photos.map((p: typeof photos[number]) => p.id),
+    );
+
     // Mengumpulkan semua storageAccountId unik dari foto-foto yang akan dihapus
     const uniqueStorageAccountIds = Array.from(new Set(photos.map((p: typeof photos[number]) => p.storageAccountId).filter(Boolean))) as string[];
 
@@ -78,29 +87,34 @@ export async function POST(
       apiSecret: defaultCloudinaryAccount.apiSecret,
     } : null;
 
-    // Prepare jobs for queues
+    // Prepare jobs for queues. Photos whose r2Key is still referenced by
+    // another row are NOT enqueued — the worker would otherwise delete a
+    // file that the surviving Photo row still serves to clients.
     const deletionJobs = [];
 
     for (const photo of photos) {
-      if (photo.r2Key || photo.thumbnailUrl) {
-        // Gunakan kredensial dari map berdasarkan storageAccountId, atau fallback ke default
-        let cloudinaryCredentials = defaultCloudinaryCredentials;
-        if (photo.storageAccountId && cloudinaryCredentialsMap.has(photo.storageAccountId)) {
-          const accountCreds = cloudinaryCredentialsMap.get(photo.storageAccountId);
-          if (accountCreds && accountCreds.cloudName && accountCreds.apiKey) {
-            cloudinaryCredentials = accountCreds;
-          }
-        }
+      const isShared = photo.r2Key !== null && !orphanedR2Keys.has(photo.r2Key);
+      const r2Key = isShared ? null : photo.r2Key;
+      const thumbnailUrl = isShared ? null : photo.thumbnailUrl;
+      if (!r2Key && !thumbnailUrl) continue;
 
-        deletionJobs.push({
-          photoId: photo.id,
-          r2Key: photo.r2Key,
-          thumbnailUrl: photo.thumbnailUrl,
-          storageAccountId: photo.storageAccountId,
-          fileSize: photo.fileSize?.toString(),
-          cloudinaryCredentials,
-        });
+      // Gunakan kredensial dari map berdasarkan storageAccountId, atau fallback ke default
+      let cloudinaryCredentials = defaultCloudinaryCredentials;
+      if (photo.storageAccountId && cloudinaryCredentialsMap.has(photo.storageAccountId)) {
+        const accountCreds = cloudinaryCredentialsMap.get(photo.storageAccountId);
+        if (accountCreds && accountCreds.cloudName && accountCreds.apiKey) {
+          cloudinaryCredentials = accountCreds;
+        }
       }
+
+      deletionJobs.push({
+        photoId: photo.id,
+        r2Key,
+        thumbnailUrl,
+        storageAccountId: photo.storageAccountId,
+        fileSize: photo.fileSize?.toString(),
+        cloudinaryCredentials,
+      });
     }
 
     if (deletionJobs.length > 0) {
@@ -123,10 +137,13 @@ export async function POST(
 
     // Delete all from database setelah queue berhasil.
     // Review fix #2: aggregate decrement per-client untuk Client.usedStorage.
+    // PR #76: only decrement bytes for photos whose r2Key becomes orphan
+    // — shared keys keep the file (and the consumed bytes) alive.
     const sumByClient = new Map<string, bigint>();
     for (const p of photos) {
       const cId = p.gallery?.event?.clientId;
       if (!cId || !p.fileSize) continue;
+      if (p.r2Key !== null && !orphanedR2Keys.has(p.r2Key)) continue;
       sumByClient.set(cId, (sumByClient.get(cId) ?? BigInt(0)) + p.fileSize);
     }
     await prisma.$transaction(async (tx) => {
