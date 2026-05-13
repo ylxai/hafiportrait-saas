@@ -4,8 +4,8 @@ import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/r
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import {
-  aggregateUsedBytesByClient,
   collectPhotoDeletionPayloads,
+  computeUsedStorageDeltaForDeletion,
   enqueueDeletionWithOutbox,
 } from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
@@ -80,15 +80,16 @@ export async function DELETE(request: Request) {
 
     const { ids } = validation.data;
 
-    // Step 1 — collect storage-deletion payloads BEFORE the delete
-    // commits; the cascade is about to remove the photo rows.
-    // Review #73-2 (Gemini): the payload now carries `clientId` +
-    // `fileSize`, so we derive the per-client `usedStorage` decrement
-    // from the same query — no separate `findMany` round-trip.
+    // Step 1 — collect quotas + storage payloads BEFORE the delete
+    // commits; the cascade is about to remove the photo rows. PR #75:
+    // the byte delta only counts photos whose r2Key becomes orphan
+    // (cross-gallery deduped files keep at least one live reference).
+    const usedByClient = await computeUsedStorageDeltaForDeletion({
+      galleryId: { in: ids },
+    });
     const deletionPayloads = await collectPhotoDeletionPayloads({
       galleryId: { in: ids },
     });
-    const usedByClient = aggregateUsedBytesByClient(deletionPayloads);
 
     // Step 2 — DB-first transaction.
     await prisma.$transaction([

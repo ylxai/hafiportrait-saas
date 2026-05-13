@@ -595,12 +595,115 @@ function redactPayloadsForOutbox(
 }
 
 /**
+ * Cross-gallery dedup support (PR #75 / issue #10).
+ *
+ * After a client uploads the same file twice — once to gallery A, once to
+ * gallery B — the second upload reuses the first photo's `r2Key` /
+ * `thumbnailUrl` / `publicId` so we don't pay the storage twice. That
+ * means deleting one of the photo rows must NOT delete the underlying R2
+ * object as long as the *other* photo still references it.
+ *
+ * `getOrphanedR2Keys` returns the subset of `r2Keys` that have no other
+ * `Photo` row referencing them outside `excludePhotoIds`. Callers should
+ * use the returned set as a guard before enqueuing R2 deletions and
+ * before decrementing `Client.usedStorage`.
+ *
+ * `excludePhotoIds` is the list of photos about to be deleted — those
+ * rows themselves should NOT count as a still-living reference.
+ *
+ * Empty input arrays short-circuit to an empty set so the helper is
+ * cheap on the hot path (most deletes have no shared keys).
+ */
+export async function getOrphanedR2Keys(
+  r2Keys: readonly string[],
+  excludePhotoIds: readonly string[],
+): Promise<Set<string>> {
+  // Drop falsy / duplicated values so we never run a `WHERE r2Key IN ('')`
+  // or hit Postgres' `IN (...)` parameter ceiling on huge bulk deletes.
+  const uniqueR2Keys = Array.from(new Set(r2Keys.filter(Boolean)));
+  if (uniqueR2Keys.length === 0) return new Set();
+
+  // Find every `r2Key` that *still* has a Photo row referencing it after
+  // the delete batch has been applied. Anything in `uniqueR2Keys` that
+  // doesn't show up here is therefore orphan-after-delete.
+  const stillReferenced = await prisma.photo.findMany({
+    where: {
+      r2Key: { in: uniqueR2Keys },
+      id: { notIn: Array.from(excludePhotoIds) },
+    },
+    select: { r2Key: true },
+    distinct: ['r2Key'],
+  });
+  const stillSet = new Set(
+    stillReferenced.map((p) => p.r2Key).filter((k): k is string => Boolean(k)),
+  );
+
+  const orphaned = new Set<string>();
+  for (const k of uniqueR2Keys) {
+    if (!stillSet.has(k)) orphaned.add(k);
+  }
+  return orphaned;
+}
+
+/**
+ * Per-client byte delta produced by deleting the photos matched by
+ * `whereCriteria`. Bytes are counted ONLY for photos whose `r2Key`
+ * becomes orphan after the delete — otherwise the underlying file
+ * stays in R2 and the storage was never "freed".
+ *
+ * Use the returned `Map<clientId, bigint>` to drive
+ * `Client.usedStorage` decrements inside the same transaction that
+ * runs `prisma.photo.deleteMany`. See `events.ts` / `clients.ts` /
+ * `galleries.ts` Server Actions for the canonical caller pattern.
+ */
+export async function computeUsedStorageDeltaForDeletion(
+  whereCriteria: Prisma.PhotoWhereInput,
+): Promise<Map<string, bigint>> {
+  const photos = await prisma.photo.findMany({
+    where: whereCriteria,
+    select: {
+      id: true,
+      r2Key: true,
+      fileSize: true,
+      gallery: { select: { event: { select: { clientId: true } } } },
+    },
+  });
+  if (photos.length === 0) return new Map();
+
+  const orphaned = await getOrphanedR2Keys(
+    photos.map((p) => p.r2Key).filter((k): k is string => Boolean(k)),
+    photos.map((p) => p.id),
+  );
+
+  const usedByClient = new Map<string, bigint>();
+  for (const p of photos) {
+    // If the file is still referenced by another Photo row *and* it has
+    // an `r2Key`, skip it: the storage is genuinely not freed.
+    if (p.r2Key && !orphaned.has(p.r2Key)) continue;
+    const cid = p.gallery.event.clientId;
+    const bytes = p.fileSize ?? BigInt(0);
+    if (bytes <= BigInt(0)) continue;
+    usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + bytes);
+  }
+  return usedByClient;
+}
+
+/**
  * Collect storage-deletion payloads for every Photo matching `whereCriteria`.
  *
  * **Must be called BEFORE the parent entity is deleted from the DB**: once
  * `Event` / `Gallery` / `Client` is removed Postgres cascades through the
  * `Photo` rows, so the `findMany` here would return zero results and the
  * R2 / Cloudinary objects would be orphaned.
+ *
+ * Cross-gallery dedup (PR #76 / issue #10) means more than one Photo row
+ * may share an `r2Key` — typically when a client uploads the same file
+ * to two galleries. In that case deleting one row must NOT delete the
+ * underlying R2 object. We therefore strip `r2Key` (and `thumbnailUrl`,
+ * which follows the same lifecycle in dedup mode) from any payload whose
+ * key is still referenced by another Photo outside the delete batch.
+ * The remaining payloads are filtered out so the caller never enqueues a
+ * no-op storage delete.
  *
  * The output is safe to keep across an `await` boundary; pass it to
  * {@link enqueueDeletionWithOutbox} after the transaction commits.
@@ -629,6 +732,13 @@ export async function collectPhotoDeletionPayloads(
   });
 
   if (photos.length === 0) return [];
+
+  // Compute orphan-after-delete keys so we don't enqueue R2 deletes for
+  // files that another Photo row still references (cross-gallery dedup).
+  const orphanedR2Keys = await getOrphanedR2Keys(
+    photos.map((p) => p.r2Key).filter((k): k is string => Boolean(k)),
+    photos.map((p) => p.id),
+  );
 
   // Resolve Cloudinary credentials per storage account in one round-trip.
   const uniqueStorageAccountIds = Array.from(
@@ -679,11 +789,22 @@ export async function collectPhotoDeletionPayloads(
         cloudinaryCredentials = accountCreds;
       }
     }
+    // PR #75 (cross-gallery dedup): if the r2Key is still referenced by
+    // another Photo row, null out `r2Key` / `thumbnailUrl` so the
+    // worker doesn't accidentally delete a file that another gallery
+    // still pins. The accompanying Cloudinary `publicId` follows the
+    // same lifecycle in dedup mode. `enqueueDeletionWithOutbox` will
+    // then skip enqueueing this row (no storage to clean up).
+    const isShared =
+      photo.r2Key !== null && photo.r2Key !== undefined && !orphanedR2Keys.has(photo.r2Key);
     return {
       photoId: photo.id,
+      // Review #73-2: carry the owning client so callers can hand the
+      // payload list to `aggregateUsedBytesByClient` for `usedStorage`
+      // accounting without re-issuing a `findMany`.
       clientId: photo.gallery?.event?.clientId ?? null,
-      r2Key: photo.r2Key,
-      thumbnailUrl: photo.thumbnailUrl,
+      r2Key: isShared ? null : photo.r2Key,
+      thumbnailUrl: isShared ? null : photo.thumbnailUrl,
       storageAccountId: photo.storageAccountId,
       fileSize: photo.fileSize?.toString(),
       cloudinaryCredentials,
@@ -700,10 +821,12 @@ export async function collectPhotoDeletionPayloads(
  * accumulator. Returns BigInt totals; `fileSize` strings produced by
  * `collectPhotoDeletionPayloads` round-trip safely back to BigInt here.
  *
- * Note: photos with no `r2Key` *are* counted because they still ate
- * quota at upload time, even if the R2 object never landed (legacy /
- * failed upload rows). This matches the bulk-delete logic in
- * `src/app/api/admin/photos/bulk-delete/route.ts`.
+ * Note: with PR #75 in place the payload already has `r2Key`/`thumbnailUrl`
+ * nulled for shared-dedup rows, so this aggregator counts the FULL
+ * `fileSize` for every payload row — including dedup-shared ones — which
+ * is correct for the "legacy / failed-upload" path that still ate quota
+ * at upload time. Callers that need dedup-aware byte deltas should use
+ * `computeUsedStorageDeltaForDeletion` instead.
  */
 export function aggregateUsedBytesByClient(
   payloads: PhotoDeletionPayload[],

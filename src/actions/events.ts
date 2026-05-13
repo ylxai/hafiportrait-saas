@@ -23,8 +23,8 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import {
-  aggregateUsedBytesByClient,
   collectPhotoDeletionPayloads,
+  computeUsedStorageDeltaForDeletion,
   enqueueDeletionWithOutbox,
 } from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
@@ -75,14 +75,21 @@ export async function deleteEvent(rawId: string): Promise<ActionResult<{ id: str
   const id = parsed.data;
 
   try {
-    // Step 1 — collect the storage-deletion payloads in a single
-    // round-trip. Review #73-2 (Gemini): the payload now carries
-    // `clientId` + `fileSize`, so the per-client byte totals come
-    // from the same query — no second `prisma.photo.findMany` needed.
+    // Step 1 — collect (a) per-client byte totals (so we can decrement
+    // `Client.usedStorage` and keep the atomic quota gate honest after
+    // the delete) and (b) the storage-deletion payloads (so the
+    // post-commit enqueue can run without re-querying the cascaded
+    // rows). PR #75: `computeUsedStorageDeltaForDeletion` only counts
+    // bytes for photos whose r2Key becomes orphan after the delete —
+    // so cross-gallery deduped files are accounted for correctly. The
+    // payload list still carries `clientId`/`fileSize` (PR #73 review
+    // #73-2) for any caller that prefers the simpler aggregator.
+    const usedByClient = await computeUsedStorageDeltaForDeletion({
+      gallery: { eventId: id },
+    });
     const deletionPayloads = await collectPhotoDeletionPayloads({
       gallery: { eventId: id },
     });
-    const usedByClient = aggregateUsedBytesByClient(deletionPayloads);
 
     // Step 2 — DB-first: drop the event and decrement the owning
     // client's `usedStorage` in one transaction.
@@ -138,13 +145,16 @@ export async function deleteEventsBulk(
 
   try {
     // Same ordering as `deleteEvent`: collect → DB transaction → enqueue.
-    // Review #73-2: `aggregateUsedBytesByClient` derives the same
-    // `usedByClient` map from the deletion payload, eliminating the
-    // duplicate `findMany`.
+    // Decrementing `Client.usedStorage` per affected client keeps the
+    // atomic quota gate accurate after a bulk delete. PR #75: the
+    // helper folds in the cross-gallery dedup orphan check so we don't
+    // release bytes that another gallery still pins.
+    const usedByClient = await computeUsedStorageDeltaForDeletion({
+      gallery: { eventId: { in: ids } },
+    });
     const deletionPayloads = await collectPhotoDeletionPayloads({
       gallery: { eventId: { in: ids } },
     });
-    const usedByClient = aggregateUsedBytesByClient(deletionPayloads);
 
     // `$transaction` returns operations in order — the first one is
     // `deleteMany`, so its `.count` is at index 0.
