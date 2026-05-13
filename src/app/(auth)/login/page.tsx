@@ -2,11 +2,9 @@
 
 import { signIn } from "next-auth/react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -26,12 +24,23 @@ export default function LoginPage() {
 
       if (result?.error) {
         setError("Email atau password salah");
-      } else {
-        router.push("/admin");
+        setLoading(false);
+        return;
       }
+      // Hard navigation guarantees the freshly-set `next-auth.session-token`
+      // cookie is included on the destination request. With the previous
+      // client-side `router.push()` pattern there was a race window where
+      // the edge middleware fetched the RSC payload before Set-Cookie was
+      // committed to the jar — the resulting token=null bounced the user
+      // back to /login despite a valid session. We use `replace` (not
+      // `assign`) so the login URL is removed from history — "Back" after
+      // a successful sign-in does not flash the form before middleware
+      // forwards the user to /admin. Same pattern as the client portal
+      // login (see `src/app/portal/login/page.tsx`).
+      window.location.replace("/admin");
+      // No `setLoading(false)` here on purpose; the page is unloading.
     } catch {
       setError("Terjadi kesalahan");
-    } finally {
       setLoading(false);
     }
   };
