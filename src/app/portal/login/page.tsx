@@ -75,9 +75,12 @@ function LoginForm() {
       // window where the edge middleware fetched the RSC payload before
       // the Set-Cookie was committed to the jar — the resulting token=null
       // bounced the user straight back to /portal/login despite having a
-      // valid session. `window.location.assign` triggers a full document
-      // load, which always travels with the latest cookie jar.
-      window.location.assign(callbackUrl)
+      // valid session. `window.location.replace` triggers a full document
+      // load (so the cookie jar is always current) AND removes the login
+      // page from session history — so a "Back" press after a successful
+      // sign-in does not flash the form before middleware sends the user
+      // back to the dashboard.
+      window.location.replace(callbackUrl)
       // No `setLoading(false)` here on purpose; the page is unloading and
       // re-enabling the button would briefly flicker the form.
     } catch {
