@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 export default function Error({
   error,
@@ -12,15 +13,32 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log error to monitoring service (e.g., Sentry)
-    console.error('Root error boundary caught:', error);
+    // Structured logger so error boundaries emit the same JSON shape as
+    // the rest of the app (level/event/time/digest); upstream log
+    // pipelines can filter/group by `event` instead of regex'ing strings.
+    logger.error('error.boundary.root', {
+      error,
+      digest: error.digest,
+    });
   }, [error]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    // `role="alert"` + `aria-live="assertive"` ensure screen readers
+    // announce the failure as soon as the boundary mounts — without
+    // them the heading is just a heading and the user may miss it.
+    <div
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="true"
+      className="min-h-screen flex items-center justify-center bg-background p-4"
+    >
       <div className="max-w-md w-full text-center space-y-6">
         <div className="flex justify-center">
-          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+          {/* Decorative — visible h1 below is the accessible name. */}
+          <div
+            aria-hidden="true"
+            className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center"
+          >
             <AlertCircle className="w-8 h-8 text-destructive" />
           </div>
         </div>

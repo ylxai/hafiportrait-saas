@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Home } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 export default function AdminError({
   error,
@@ -12,14 +13,25 @@ export default function AdminError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('Admin error boundary caught:', error);
+    logger.error('error.boundary.admin', {
+      error,
+      digest: error.digest,
+    });
   }, [error]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="true"
+      className="min-h-screen flex items-center justify-center bg-background p-4"
+    >
       <div className="max-w-md w-full text-center space-y-6">
         <div className="flex justify-center">
-          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+          <div
+            aria-hidden="true"
+            className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center"
+          >
             <AlertCircle className="w-8 h-8 text-destructive" />
           </div>
         </div>
