@@ -3,7 +3,12 @@ import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
+import {
+  aggregateUsedBytesByClient,
+  collectPhotoDeletionPayloads,
+  enqueueDeletionWithOutbox,
+} from '@/lib/cloudflare-queue';
+import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
 // Zod schemas for bulk operations
@@ -75,25 +80,17 @@ export async function DELETE(request: Request) {
 
     const { ids } = validation.data;
 
-    // Sum bytes per client BEFORE delete; the cascade is about to remove the
-    // photo rows so we can't compute this afterwards.
-    const photoSizes = await prisma.photo.findMany({
-      where: { galleryId: { in: ids } },
-      select: { fileSize: true, gallery: { select: { event: { select: { clientId: true } } } } },
+    // Step 1 — collect storage-deletion payloads BEFORE the delete
+    // commits; the cascade is about to remove the photo rows.
+    // Review #73-2 (Gemini): the payload now carries `clientId` +
+    // `fileSize`, so we derive the per-client `usedStorage` decrement
+    // from the same query — no separate `findMany` round-trip.
+    const deletionPayloads = await collectPhotoDeletionPayloads({
+      galleryId: { in: ids },
     });
-    const usedByClient = new Map<string, bigint>();
-    for (const p of photoSizes) {
-      const cid = p.gallery.event.clientId;
-      usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + (p.fileSize ?? BigInt(0)));
-    }
+    const usedByClient = aggregateUsedBytesByClient(deletionPayloads);
 
-    const result = await queuePhotosDeletionForEntities({ galleryId: { in: ids } });
-
-    if (!result.success) {
-      console.error('[Delete] Failed to queue photos deletion:', result.error);
-      return errorResponse('Failed to queue storage deletion', 500);
-    }
-
+    // Step 2 — DB-first transaction.
     await prisma.$transaction([
       prisma.gallery.deleteMany({ where: { id: { in: ids } } }),
       ...Array.from(usedByClient.entries())
@@ -105,6 +102,16 @@ export async function DELETE(request: Request) {
           }),
         ),
     ]);
+
+    // Step 3 — best-effort enqueue with outbox fallback.
+    const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
+    if (outcome.outboxed > 0) {
+      logger.warn('galleries.bulk_delete.storage_outboxed', {
+        galleryCount: ids.length,
+        photoCount: outcome.outboxed,
+        outboxJobId: outcome.outboxJobId,
+      });
+    }
 
     return successResponse({ deleted: ids.length });
   } catch (error) {

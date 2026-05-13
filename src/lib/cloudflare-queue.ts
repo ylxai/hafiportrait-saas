@@ -530,13 +530,84 @@ export function isQueueConfigured(): boolean {
 }
 
 /**
- * Queue photos deletion for entities before deleting them from DB.
- * Use this for bulk deletes or cascading deletes (Gallery, Event, Client)
- * where deleting the parent entity would orphan files in storage.
+ * Photo deletion payload — exposed so REST endpoints / Server Actions
+ * that follow the **collect-then-delete-then-enqueue** ordering can hold
+ * onto the value across the DB transaction.
+ *
+ * Review #73-2 (Gemini): `clientId` is denormalised onto the payload so
+ * callers don't have to re-issue a `prisma.photo.findMany` to compute
+ * the per-client `usedStorage` decrement. Together with `fileSize`
+ * (already a string for `BigInt` portability) it lets the caller derive
+ * the same `usedByClient` map that `collectPhotoDeletionPayloads` would
+ * otherwise force them to fetch a second time.
  */
-export async function queuePhotosDeletionForEntities(whereCriteria: Prisma.PhotoWhereInput): Promise<{ success: boolean; error?: string }> {
-  if (!isQueueConfigured()) return { success: true }; // No queue configured, consider it success
-  
+export interface PhotoDeletionPayload {
+  photoId: string;
+  // The owning client of the photo via Photo→Gallery→Event. Nullable
+  // because the cascade target may have already orphaned the relation
+  // by the time a retry runs through the outbox; consumers that need
+  // the value should treat `null` as "unknown — fall back to the
+  // explicit per-row decrement path".
+  clientId: string | null;
+  r2Key: string | null;
+  thumbnailUrl: string | null;
+  storageAccountId: string | null;
+  // Stringified BigInt so the value survives JSON round-trips (e.g.
+  // when persisted into `FailedJob.payload`).
+  fileSize: string | undefined;
+  cloudinaryCredentials: {
+    cloudName: string | null;
+    apiKey: string | null;
+    apiSecret: string | null;
+  } | null;
+}
+
+/**
+ * Strip secret material out of a payload before it is persisted into
+ * the `FailedJob` outbox.
+ *
+ * Review #73-1 (CodeAnt): `enqueueDeletionWithOutbox` previously stored
+ * the *full* `cloudinaryCredentials.apiSecret` into
+ * `FailedJob.payload`, even though every other call to `recordFailedJob`
+ * in this module already redacts the value. The outbox is exposed via
+ * `/api/admin/failed-jobs` and admin UIs, so the leak isn't theoretical.
+ *
+ * Retries reload credentials from `StorageAccount` keyed by
+ * `storageAccountId`, so dropping the secret here is loss-free for the
+ * recovery path.
+ */
+function redactPayloadSecrets(payload: PhotoDeletionPayload): PhotoDeletionPayload {
+  if (!payload.cloudinaryCredentials) return payload;
+  return {
+    ...payload,
+    cloudinaryCredentials: {
+      cloudName: payload.cloudinaryCredentials.cloudName,
+      apiKey: payload.cloudinaryCredentials.apiKey,
+      apiSecret: '[REDACTED]',
+    },
+  };
+}
+
+function redactPayloadsForOutbox(
+  payloads: PhotoDeletionPayload[],
+): Record<string, unknown>[] {
+  return payloads.map((p) => redactPayloadSecrets(p) as unknown as Record<string, unknown>);
+}
+
+/**
+ * Collect storage-deletion payloads for every Photo matching `whereCriteria`.
+ *
+ * **Must be called BEFORE the parent entity is deleted from the DB**: once
+ * `Event` / `Gallery` / `Client` is removed Postgres cascades through the
+ * `Photo` rows, so the `findMany` here would return zero results and the
+ * R2 / Cloudinary objects would be orphaned.
+ *
+ * The output is safe to keep across an `await` boundary; pass it to
+ * {@link enqueueDeletionWithOutbox} after the transaction commits.
+ */
+export async function collectPhotoDeletionPayloads(
+  whereCriteria: Prisma.PhotoWhereInput,
+): Promise<PhotoDeletionPayload[]> {
   const photos = await prisma.photo.findMany({
     where: whereCriteria,
     select: {
@@ -545,81 +616,200 @@ export async function queuePhotosDeletionForEntities(whereCriteria: Prisma.Photo
       thumbnailUrl: true,
       storageAccountId: true,
       fileSize: true,
-    }
+      // Review #73-2 (Gemini): pull the owning client through the
+      // existing Photo→Gallery→Event relation so callers can compute
+      // their per-client `usedStorage` decrement straight from the
+      // payload list instead of issuing a redundant `findMany`.
+      gallery: {
+        select: {
+          event: { select: { clientId: true } },
+        },
+      },
+    },
   });
 
-  if (photos.length === 0) return { success: true }; // No photos to delete
+  if (photos.length === 0) return [];
 
-  // Mengumpulkan semua storageAccountId unik dari foto-foto yang akan dihapus
-  const uniqueStorageAccountIds = Array.from(new Set(photos.map((p: typeof photos[number]) => p.storageAccountId).filter(Boolean))) as string[];
-
-  // Mengambil semua akun penyimpanan yang relevan dalam satu query
-  const storageAccounts = await prisma.storageAccount.findMany({
-    where: { id: { in: uniqueStorageAccountIds } }
-  });
-
-  // Membuat map dari storageAccountId ke kredensial Cloudinary yang sesuai
-  const cloudinaryCredentialsMap = new Map<string, { cloudName: string | null; apiKey: string | null; apiSecret: string | null } | null>();
-  
-  storageAccounts.forEach((account: typeof storageAccounts[number]) => {
-    // We pass the credentials if they exist on the account
+  // Resolve Cloudinary credentials per storage account in one round-trip.
+  const uniqueStorageAccountIds = Array.from(
+    new Set(photos.map((p) => p.storageAccountId).filter(Boolean) as string[]),
+  );
+  const storageAccounts = uniqueStorageAccountIds.length
+    ? await prisma.storageAccount.findMany({
+        where: { id: { in: uniqueStorageAccountIds } },
+      })
+    : [];
+  const cloudinaryCredentialsMap = new Map<
+    string,
+    { cloudName: string | null; apiKey: string | null; apiSecret: string | null } | null
+  >();
+  for (const account of storageAccounts) {
     cloudinaryCredentialsMap.set(account.id, {
       cloudName: account.cloudName,
       apiKey: account.apiKey,
       apiSecret: account.apiSecret,
     });
-  });
+  }
 
-  // Ambil default cloudinary account sebagai fallback jika storage account tidak memilikinya
+  // Fall back to the default active Cloudinary account when the storage
+  // account has no credentials of its own (e.g. R2-only accounts).
   const defaultCloudinaryAccount = await prisma.storageAccount.findFirst({
     where: { provider: 'CLOUDINARY', isActive: true },
     orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }],
   });
+  const defaultCloudinaryCredentials = defaultCloudinaryAccount
+    ? {
+        cloudName: defaultCloudinaryAccount.cloudName,
+        apiKey: defaultCloudinaryAccount.apiKey,
+        apiSecret: defaultCloudinaryAccount.apiSecret,
+      }
+    : null;
 
-  const defaultCloudinaryCredentials = defaultCloudinaryAccount ? {
-    cloudName: defaultCloudinaryAccount.cloudName,
-    apiKey: defaultCloudinaryAccount.apiKey,
-    apiSecret: defaultCloudinaryAccount.apiSecret,
-  } : null;
-
-  const deletionJobs = photos.map((photo: typeof photos[number]) => {
-    // Gunakan kredensial dari map berdasarkan storageAccountId, atau fallback ke default
+  // Note: every photo is mapped — including rows with no `r2Key` /
+  // `thumbnailUrl` (legacy / failed-upload). The filtering for jobs
+  // that actually have storage to clean up moved to
+  // `enqueueDeletionWithOutbox` so callers can iterate the full list
+  // for `usedStorage` accounting (a row that never hit R2 still ate
+  // quota at upload time).
+  return photos.map<PhotoDeletionPayload>((photo) => {
     let cloudinaryCredentials = defaultCloudinaryCredentials;
     if (photo.storageAccountId && cloudinaryCredentialsMap.has(photo.storageAccountId)) {
       const accountCreds = cloudinaryCredentialsMap.get(photo.storageAccountId);
-      // Hanya gunakan jika setidaknya memiliki cloudName dan apiKey
       if (accountCreds && accountCreds.cloudName && accountCreds.apiKey) {
         cloudinaryCredentials = accountCreds;
       }
     }
-
     return {
       photoId: photo.id,
+      clientId: photo.gallery?.event?.clientId ?? null,
       r2Key: photo.r2Key,
       thumbnailUrl: photo.thumbnailUrl,
       storageAccountId: photo.storageAccountId,
       fileSize: photo.fileSize?.toString(),
       cloudinaryCredentials,
     };
-  }).filter((job) => job.r2Key || job.thumbnailUrl);
+  });
+}
 
-  if (deletionJobs.length > 0) {
+/**
+ * Caller-side helper: derive the per-client byte total that should
+ * be decremented from `Client.usedStorage` after the parent entity
+ * (Event / Gallery / Client) is deleted.
+ *
+ * Centralised so each caller doesn't reinvent the same `Map<string, bigint>`
+ * accumulator. Returns BigInt totals; `fileSize` strings produced by
+ * `collectPhotoDeletionPayloads` round-trip safely back to BigInt here.
+ *
+ * Note: photos with no `r2Key` *are* counted because they still ate
+ * quota at upload time, even if the R2 object never landed (legacy /
+ * failed upload rows). This matches the bulk-delete logic in
+ * `src/app/api/admin/photos/bulk-delete/route.ts`.
+ */
+export function aggregateUsedBytesByClient(
+  payloads: PhotoDeletionPayload[],
+): Map<string, bigint> {
+  const usedByClient = new Map<string, bigint>();
+  for (const p of payloads) {
+    if (!p.clientId) continue;
+    if (!p.fileSize) continue;
+    let bytes: bigint;
     try {
-      const result = await queueStorageDeletionBulk(deletionJobs);
-      if (result.success) {
-        console.log(`[Delete] Queued ${deletionJobs.length} associated photos to Cloudflare Queue`);
-        return { success: true };
-      } else {
-        console.error(`[Delete] Failed to queue ${result.failedCount || 'some'} deletion jobs:`, result.error);
-        return { success: false, error: result.error };
-      }
-    } catch (cfError) {
-      logQueueError('Bulk deletion queue error', cfError, {
-        photoCount: deletionJobs.length,
-      });
-      return { success: false, error: cfError instanceof Error ? cfError.message : 'Unknown error' };
+      bytes = BigInt(p.fileSize);
+    } catch {
+      continue;
     }
+    usedByClient.set(p.clientId, (usedByClient.get(p.clientId) ?? BigInt(0)) + bytes);
   }
-  
+  return usedByClient;
+}
+
+/**
+ * Enqueue storage-deletion jobs with an outbox fallback.
+ *
+ * The transaction that owns the DB rows has already committed at this
+ * point, so a queue failure cannot be rolled back — instead we persist
+ * a single `FailedJob` row with `status='pending'` and the full payload,
+ * which surfaces to admins via `/admin/failed-jobs` and can be retried
+ * later. This way:
+ *
+ *  - The user-facing delete still succeeds (no 500 just because Cloudflare
+ *    Queue had a hiccup).
+ *  - The R2 / Cloudinary cleanup is recoverable instead of silently lost.
+ *
+ * Returns `{ queued, outboxed }` so callers can log a precise outcome.
+ */
+export async function enqueueDeletionWithOutbox(
+  payloads: PhotoDeletionPayload[],
+): Promise<{ queued: number; outboxed: number; outboxJobId?: string }> {
+  // Filter to rows that actually carry storage to clean up. The full
+  // payload list (including no-storage rows) is still useful to the
+  // caller for `usedStorage` accounting, but enqueueing them here
+  // would just spam the worker with no-ops.
+  const enqueueable = payloads.filter((p) => p.r2Key || p.thumbnailUrl);
+  if (enqueueable.length === 0) return { queued: 0, outboxed: 0 };
+
+  if (!isQueueConfigured()) {
+    // Without a queue configured we can't push jobs; record the payload to
+    // the outbox so the storage cleanup is still discoverable when an
+    // operator wires the queue up.
+    const outboxJobId = await recordFailedJob({
+      jobType: 'storage-deletion',
+      // Review #73-1: redact `apiSecret` before persisting; secrets
+      // can be rehydrated from `StorageAccount` on retry.
+      payload: { photos: redactPayloadsForOutbox(enqueueable) },
+      errorMessage: 'Cloudflare Queue not configured (CLOUDFLARE_ACCOUNT_ID / NEXT_SERVER_CF_QUEUE_TOKEN missing)',
+    }).catch(() => undefined);
+    return { queued: 0, outboxed: enqueueable.length, outboxJobId };
+  }
+
+  try {
+    const result = await queueStorageDeletionBulk(enqueueable);
+    if (result.success) {
+      return { queued: enqueueable.length, outboxed: 0 };
+    }
+    // Partial success is treated as a soft outbox: we don't know exactly
+    // which messages made it through (the helper aggregates on failure),
+    // so we record the whole batch and let the manual retry path
+    // re-publish — `queueStorageDeletion` itself is idempotent for the
+    // worker because it keys by `photoId`.
+    const outboxJobId = await recordFailedJob({
+      jobType: 'storage-deletion',
+      payload: { photos: redactPayloadsForOutbox(enqueueable) },
+      errorMessage: result.error || `Queue publish failed (${result.failedCount ?? '?'} jobs)`,
+    }).catch(() => undefined);
+    return { queued: 0, outboxed: enqueueable.length, outboxJobId };
+  } catch (cfError) {
+    logQueueError('Bulk deletion queue error', cfError, { photoCount: enqueueable.length });
+    const outboxJobId = await recordFailedJob({
+      jobType: 'storage-deletion',
+      payload: { photos: redactPayloadsForOutbox(enqueueable) },
+      errorMessage: cfError instanceof Error ? cfError.message : String(cfError),
+    }).catch(() => undefined);
+    return { queued: 0, outboxed: enqueueable.length, outboxJobId };
+  }
+}
+
+/**
+ * @deprecated Prefer the two-step ordering:
+ *   1. `const payloads = await collectPhotoDeletionPayloads(where)`
+ *   2. `await prisma.$transaction([...DB delete...])`
+ *   3. `await enqueueDeletionWithOutbox(payloads)`
+ *
+ * The legacy helper kept the old queue-then-delete ordering, which orphans
+ * DB rows when the queue succeeds but the DB transaction fails. This
+ * shim is retained so older callers keep building, but it is now also
+ * outbox-backed: a queue failure no longer aborts the operation.
+ */
+export async function queuePhotosDeletionForEntities(
+  whereCriteria: Prisma.PhotoWhereInput,
+): Promise<{ success: boolean; error?: string }> {
+  const payloads = await collectPhotoDeletionPayloads(whereCriteria);
+  const { outboxed } = await enqueueDeletionWithOutbox(payloads);
+  // The legacy contract is `success` in the queue-publish sense; an
+  // outboxed batch counts as a soft failure for callers that still
+  // branch on the response, but the actual delete will be retried.
+  if (outboxed > 0) {
+    return { success: false, error: `Queue publish failed; ${outboxed} jobs persisted to outbox.` };
+  }
   return { success: true };
 }

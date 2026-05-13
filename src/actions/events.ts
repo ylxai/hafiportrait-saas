@@ -24,7 +24,11 @@ import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
-import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
+import {
+  aggregateUsedBytesByClient,
+  collectPhotoDeletionPayloads,
+  enqueueDeletionWithOutbox,
+} from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
 
 // The Prisma client in this project is generated with `--no-engine`, so the
@@ -76,16 +80,41 @@ export async function deleteEvent(rawId: string): Promise<ActionResult<{ id: str
   const id = parsed.data;
 
   try {
-    // Delete the DB row first so a queue failure cannot leave us with a
-    // ghost storage-cleanup job for an event that still exists. If the
-    // queue enqueue fails afterwards, the worst case is orphan R2 objects
-    // — recoverable via lifecycle rules / reconciliation, which is
-    // strictly safer than the inverse failure mode.
-    await prisma.event.delete({ where: { id } });
-    const queueResult = await queuePhotosDeletionForEntities({ gallery: { eventId: id } });
-    if (!queueResult.success) {
-      logger.warn('action.events.delete.queue_failed', { id });
+    // Step 1 — collect the storage-deletion payloads in a single
+    // round-trip. Review #73-2 (Gemini): the payload now carries
+    // `clientId` + `fileSize`, so the per-client byte totals come
+    // from the same query — no second `prisma.photo.findMany` needed.
+    const deletionPayloads = await collectPhotoDeletionPayloads({
+      gallery: { eventId: id },
+    });
+    const usedByClient = aggregateUsedBytesByClient(deletionPayloads);
+
+    // Step 2 — DB-first: drop the event and decrement the owning
+    // client's `usedStorage` in one transaction.
+    await prisma.$transaction([
+      prisma.event.delete({ where: { id } }),
+      ...Array.from(usedByClient.entries())
+        .filter(([, bytes]) => bytes > BigInt(0))
+        .map(([clientId, bytes]) =>
+          prisma.client.update({
+            where: { id: clientId },
+            data: { usedStorage: { decrement: bytes } },
+          }),
+        ),
+    ]);
+
+    // Step 3 — best-effort enqueue. A queue failure goes to the
+    // `FailedJob` outbox for admin retry; the user-facing action
+    // succeeds either way.
+    const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
+    if (outcome.outboxed > 0) {
+      logger.warn('action.events.delete.storage_outboxed', {
+        id,
+        photoCount: outcome.outboxed,
+        outboxJobId: outcome.outboxJobId,
+      });
     }
+
     revalidatePath('/admin/events');
     return { success: true, data: { id } };
   } catch (e) {
@@ -113,16 +142,41 @@ export async function deleteEventsBulk(
   const ids = parsed.data;
 
   try {
-    // Same ordering rationale as `deleteEvent`: drop DB rows first, then
-    // enqueue storage cleanup. Orphan R2 objects are reconcilable; ghost
-    // delete jobs against still-live events are not.
-    const result = await prisma.event.deleteMany({ where: { id: { in: ids } } });
-    const queueResult = await queuePhotosDeletionForEntities({ gallery: { eventId: { in: ids } } });
-    if (!queueResult.success) {
-      logger.warn('action.events.delete_bulk.queue_failed', { count: ids.length });
+    // Same ordering as `deleteEvent`: collect → DB transaction → enqueue.
+    // Review #73-2: `aggregateUsedBytesByClient` derives the same
+    // `usedByClient` map from the deletion payload, eliminating the
+    // duplicate `findMany`.
+    const deletionPayloads = await collectPhotoDeletionPayloads({
+      gallery: { eventId: { in: ids } },
+    });
+    const usedByClient = aggregateUsedBytesByClient(deletionPayloads);
+
+    // `$transaction` returns operations in order — the first one is
+    // `deleteMany`, so its `.count` is at index 0.
+    const txResults = await prisma.$transaction([
+      prisma.event.deleteMany({ where: { id: { in: ids } } }),
+      ...Array.from(usedByClient.entries())
+        .filter(([, bytes]) => bytes > BigInt(0))
+        .map(([clientId, bytes]) =>
+          prisma.client.update({
+            where: { id: clientId },
+            data: { usedStorage: { decrement: bytes } },
+          }),
+        ),
+    ]);
+    const deleted = (txResults[0] as { count: number }).count;
+
+    const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
+    if (outcome.outboxed > 0) {
+      logger.warn('action.events.delete_bulk.storage_outboxed', {
+        eventCount: ids.length,
+        photoCount: outcome.outboxed,
+        outboxJobId: outcome.outboxJobId,
+      });
     }
+
     revalidatePath('/admin/events');
-    return { success: true, data: { deleted: result.count } };
+    return { success: true, data: { deleted } };
   } catch (e) {
     logger.error('action.events.delete_bulk.failed', { count: ids.length, err: e });
     return { success: false, error: 'Failed to delete events' };
