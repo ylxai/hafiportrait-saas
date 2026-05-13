@@ -21,8 +21,6 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db';
 import {
   aggregateUsedBytesByClient,
@@ -30,6 +28,11 @@ import {
   enqueueDeletionWithOutbox,
 } from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
+// Review #74-1: shared admin gate (`role==='admin'` enforced) lives
+// in `src/lib/actions/auth.ts` so all Server Actions get the same
+// defense-in-depth check rather than the role-blind copy-pasted
+// helper we previously had inline here.
+import { requireAdmin, type ActionResult } from '@/lib/actions/auth';
 
 // The Prisma client in this project is generated with `--no-engine`, so the
 // `Prisma.*UpdateManyInput` namespace type is not always emitted. Derive the
@@ -37,17 +40,9 @@ import { logger } from '@/lib/logger';
 // safety guarantee, no dependency on the generated namespace surface.
 type EventUpdateManyData = Parameters<typeof prisma.event.updateMany>[0]['data'];
 
-export type ActionResult<T = void> =
-  | { success: true; data: T }
-  | { success: false; error: string };
-
-async function requireAdmin(): Promise<ActionResult<true>> {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return { success: false, error: 'Unauthorized' };
-  }
-  return { success: true, data: true };
-}
+// Re-export `ActionResult` for callers that previously imported it
+// from this module.
+export type { ActionResult };
 
 const idSchema = z.string().min(1, 'Event id required');
 
