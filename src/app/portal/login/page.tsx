@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from 'react'
 import { signIn } from 'next-auth/react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { Loader2, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -40,7 +40,6 @@ function safeCallbackUrl(raw: string | null): string {
 }
 
 function LoginForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   // Default landing after a successful client login. The middleware will
   // forward the user to the requested page if it's whitelisted for the
@@ -65,15 +64,24 @@ function LoginForm() {
 
       if (result?.error) {
         toast.error('Email atau password salah')
+        setLoading(false)
         return
       }
 
       toast.success('Login berhasil')
-      router.push(callbackUrl)
-      router.refresh()
+      // Hard navigation guarantees the freshly-set `next-auth.session-token`
+      // cookie is included on the destination request. With the previous
+      // `router.push()` + `router.refresh()` pattern there was a race
+      // window where the edge middleware fetched the RSC payload before
+      // the Set-Cookie was committed to the jar — the resulting token=null
+      // bounced the user straight back to /portal/login despite having a
+      // valid session. `window.location.assign` triggers a full document
+      // load, which always travels with the latest cookie jar.
+      window.location.assign(callbackUrl)
+      // No `setLoading(false)` here on purpose; the page is unloading and
+      // re-enabling the button would briefly flicker the form.
     } catch {
       toast.error('Terjadi kesalahan')
-    } finally {
       setLoading(false)
     }
   }
