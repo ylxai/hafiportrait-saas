@@ -10,7 +10,12 @@ import "yet-another-react-lightbox/styles.css";
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { toast } from 'sonner';
-import { useSelectionSubscription, useViewCountSubscription, useAblyConnection } from '@/lib/hooks/useAbly';
+import {
+  useSelectionSubscription,
+  useViewCountSubscription,
+  useAblyConnection,
+  usePhotoUploadSubscription,
+} from '@/lib/hooks/useAbly';
 
 type Photo = {
   id: string;
@@ -95,10 +100,21 @@ export default function GalleryClient({
       revalidateOnMount: !initialData,
       fallbackData: initialData,
       onSuccess: (resData) => {
-        // Only reset photos on initial load, not when polling
+        const fresh = resData.data.gallery.photos;
+        // Initial hydrate: straight assignment.
         if (allPhotos.length === 0) {
-          setAllPhotos(resData.data.gallery.photos);
+          setAllPhotos(fresh);
           setPagination(resData.data.gallery.pagination);
+          return;
+        }
+        // Refresh path (e.g. after a realtime `photo-uploaded` mutate):
+        // merge any photos we don't have yet onto the front of the array.
+        // We can't blindly replace because the user may have called
+        // `loadMore` and replacing would lose photos beyond the first page.
+        const seen = new Set(allPhotos.map((p) => p.id));
+        const incoming = fresh.filter((p) => !seen.has(p.id));
+        if (incoming.length > 0) {
+          setAllPhotos((prev) => [...incoming, ...prev]);
         }
       },
     },
@@ -192,9 +208,20 @@ export default function GalleryClient({
     );
   }, [mutate]);
 
+  const handlePhotoUploaded = useCallback(() => {
+    // The Ably payload is intentionally thin (`photoId / filename /
+    // thumbnailUrl?`); rich Photo rows (url, dimensions, lightboxUrl) are
+    // assembled server-side in `loadPublicGallery`. So we treat this as a
+    // refresh signal and let SWR re-fetch — the existing `onSuccess`
+    // handler will merge any unseen photo IDs into `allPhotos` without
+    // disturbing already-paginated state.
+    void mutate();
+  }, [mutate]);
+
   const isAblyConnected = useAblyConnection();
   useSelectionSubscription(gallery?.id || '', handleSelectionUpdate);
   useViewCountSubscription(gallery?.id || '', handleViewCountUpdate);
+  usePhotoUploadSubscription(gallery?.id || '', handlePhotoUploaded);
 
   useEffect(() => {
     if (token) {
