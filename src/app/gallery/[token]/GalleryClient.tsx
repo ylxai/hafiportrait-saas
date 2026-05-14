@@ -15,6 +15,7 @@ import {
   useViewCountSubscription,
   useAblyConnection,
   usePhotoUploadSubscription,
+  type PhotoUploadedEvent,
 } from '@/lib/hooks/useAbly';
 
 type Photo = {
@@ -101,21 +102,25 @@ export default function GalleryClient({
       fallbackData: initialData,
       onSuccess: (resData) => {
         const fresh = resData.data.gallery.photos;
-        // Initial hydrate: straight assignment.
-        if (allPhotos.length === 0) {
-          setAllPhotos(fresh);
-          setPagination(resData.data.gallery.pagination);
-          return;
-        }
-        // Refresh path (e.g. after a realtime `photo-uploaded` mutate):
-        // merge any photos we don't have yet onto the front of the array.
-        // We can't blindly replace because the user may have called
-        // `loadMore` and replacing would lose photos beyond the first page.
-        const seen = new Set(allPhotos.map((p) => p.id));
-        const incoming = fresh.filter((p) => !seen.has(p.id));
-        if (incoming.length > 0) {
-          setAllPhotos((prev) => [...incoming, ...prev]);
-        }
+        const freshPagination = resData.data.gallery.pagination;
+        // Dedup runs *inside* the updater so each merge is computed against
+        // the latest committed `allPhotos` value. Reading `seen` from the
+        // outer closure used to race when SWR fired two revalidations back
+        // to back (e.g. submit `mutate()` + a realtime `photo-uploaded`
+        // refresh) — both `onSuccess` callbacks would see the same stale
+        // `allPhotos` and prepend duplicate tiles.
+        setAllPhotos((prev) => {
+          // Initial hydrate (no SSR/`fallbackData` present): straight assignment.
+          if (prev.length === 0) return fresh;
+          const seen = new Set(prev.map((p) => p.id));
+          const incoming = fresh.filter((p) => !seen.has(p.id));
+          return incoming.length > 0 ? [...incoming, ...prev] : prev;
+        });
+        // Only seed pagination during the very first hydrate — after
+        // `loadMore`, `pagination` already points at the user's cursor and
+        // overwriting it with page-1's `nextCursor` would let them re-fetch
+        // the same slice forever.
+        setPagination((prev) => prev ?? freshPagination);
       },
     },
   );
@@ -208,15 +213,58 @@ export default function GalleryClient({
     );
   }, [mutate]);
 
-  const handlePhotoUploaded = useCallback(() => {
-    // The Ably payload is intentionally thin (`photoId / filename /
-    // thumbnailUrl?`); rich Photo rows (url, dimensions, lightboxUrl) are
-    // assembled server-side in `loadPublicGallery`. So we treat this as a
-    // refresh signal and let SWR re-fetch — the existing `onSuccess`
-    // handler will merge any unseen photo IDs into `allPhotos` without
-    // disturbing already-paginated state.
-    void mutate();
-  }, [mutate]);
+  const handlePhotoUploaded = useCallback(
+    (event: PhotoUploadedEvent) => {
+      // Realtime payload only carries (photoId, filename, thumbnailUrl?).
+      // Rich Photo rows (url, dimensions, lightboxUrl) are assembled in
+      // `loadPublicGallery` / `/api/public/gallery/[token]/photos/:id`, so
+      // we *targeted-fetch* the new row by id and prepend it.
+      //
+      // Why not just `mutate()` the list? `loadPublicGallery` orders
+      // `order ASC, id ASC` with `PHOTOS_PER_PAGE = 20`. For galleries
+      // larger than 20 photos a fresh upload lands in the *tail* of the
+      // dataset and would never appear in SWR's page-1 response — the
+      // realtime signal would arrive but `onSuccess` would have nothing
+      // new to merge.
+      const photoId = event?.photoId;
+      if (!photoId || !token) {
+        // Fallback for legacy/empty payloads — best-effort refetch.
+        void mutate();
+        return;
+      }
+      void (async () => {
+        try {
+          const res = await fetch(
+            `/api/public/gallery/${token}/photos/${photoId}`,
+          );
+          // 404 here typically means the photo belongs to a different
+          // client (token-scoped) or was deleted between publish and
+          // fetch — silently ignore, the grid just won't update.
+          if (!res.ok) return;
+          const json = (await res.json()) as {
+            success?: boolean;
+            data?: { photo?: Photo };
+          };
+          const photo = json?.data?.photo;
+          if (!photo) return;
+          setAllPhotos((prev) => {
+            // Skip if it's already in the grid (e.g. user navigated to a
+            // gallery that was just refetched before the realtime event
+            // fired, or `usePhotoUploadSubscription` reconnected and
+            // replayed the same event).
+            if (prev.some((p) => p.id === photo.id)) return prev;
+            return [photo, ...prev];
+          });
+        } catch (err) {
+          console.error(
+            '[gallery] Failed to fetch newly uploaded photo:',
+            err,
+          );
+        }
+      })();
+    },
+    [mutate, token],
+  );
 
   const isAblyConnected = useAblyConnection();
   useSelectionSubscription(gallery?.id || '', handleSelectionUpdate);

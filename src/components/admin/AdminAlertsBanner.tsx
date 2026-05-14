@@ -124,8 +124,13 @@ export default function AdminAlertsBanner() {
     if (!isPersistentAlert(alert)) return;
     setPinned((prev) => {
       const key = alertKey(alert);
-      if (prev.some((p) => alertKey(p) === key)) return prev;
-      return [alert, ...prev].slice(0, MAX_VISIBLE_BANNERS);
+      // Replace any existing banner with the same key instead of dropping
+      // the incoming event. The publisher re-emits with updated fields
+      // (e.g. `usedGB` climbing, `errorMessage` rotating to the latest
+      // failure) — keeping the older copy would freeze the banner on
+      // stale data and hide the now-actionable state.
+      const filtered = prev.filter((p) => alertKey(p) !== key);
+      return [alert, ...filtered].slice(0, MAX_VISIBLE_BANNERS);
     });
   }, []);
 

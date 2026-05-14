@@ -5,7 +5,44 @@ import { createPublicPaginationResponse } from '@/types/pagination';
 import { serializeBigInt, stringifyWithBigInt } from '@/lib/bigint-utils';
 import { safeClientSelect } from '@/lib/api/select';
 
-const PHOTOS_PER_PAGE = 100;
+const PHOTOS_PER_PAGE = 20;
+
+// Re-exported `Photo` row shape we pass through (Prisma model, but
+// `serializeGalleryPhoto` widens `fileSize` from BigInt → string so the
+// output is wire-safe and can be JSON-roundtripped without throwing).
+type PrismaPhotoRow = Awaited<ReturnType<typeof prisma.photo.findUnique>>;
+
+/**
+ * Shared per-photo serializer used by both the list loader and the single
+ * photo lookup endpoint (`/api/public/gallery/[token]/photos/[photoId]`).
+ *
+ * Centralised here so the realtime `photo-uploaded` subscriber can append a
+ * newly-uploaded photo with the *exact* shape the SWR cache already holds —
+ * any drift between the list and the targeted fetch would break the dedupe
+ * logic in `GalleryClient.onSuccess` (we key off `photo.id` but render
+ * `thumbnailUrl` / `lightboxUrl`).
+ */
+export function serializeGalleryPhoto(
+  photo: NonNullable<PrismaPhotoRow>,
+  cloudName: string | undefined,
+) {
+  let thumbnailUrl = photo.thumbnailUrl;
+  let lightboxUrl = photo.url;
+
+  if (cloudName) {
+    if (!thumbnailUrl) {
+      thumbnailUrl = getCloudinaryThumbnailUrl(photo.url, { width: 400, cloudName });
+    }
+    lightboxUrl = getCloudinaryLightboxUrl(photo.url, cloudName);
+  }
+
+  return {
+    ...photo,
+    thumbnailUrl: thumbnailUrl || photo.url,
+    lightboxUrl,
+    fileSize: serializeBigInt(photo.fileSize),
+  };
+}
 
 /**
  * Shared loader for the public gallery payload.
@@ -60,24 +97,7 @@ export async function loadPublicGallery(token: string, cursor?: string | null) {
   const cloudName =
     cloudinaryAccount?.cloudName || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 
-  const serializedPhotos = photoList.map((photo) => {
-    let thumbnailUrl = photo.thumbnailUrl;
-    let lightboxUrl = photo.url;
-
-    if (cloudName) {
-      if (!thumbnailUrl) {
-        thumbnailUrl = getCloudinaryThumbnailUrl(photo.url, { width: 400, cloudName });
-      }
-      lightboxUrl = getCloudinaryLightboxUrl(photo.url, cloudName);
-    }
-
-    return {
-      ...photo,
-      thumbnailUrl: thumbnailUrl || photo.url,
-      lightboxUrl,
-      fileSize: serializeBigInt(photo.fileSize),
-    };
-  });
+  const serializedPhotos = photoList.map((photo) => serializeGalleryPhoto(photo, cloudName));
 
   const payload = {
     gallery: {
