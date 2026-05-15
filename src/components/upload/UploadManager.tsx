@@ -80,7 +80,15 @@ export function UploadManager({
       console.error('Upload error:', error, errorCode);
     },
     onInvalidFile: (filename, reason) => {
-      setInvalidFiles(prev => [...prev, { filename, reason }]);
+      setInvalidFiles(prev => {
+        const filtered = prev.filter(f => f.filename !== filename);
+        return [...filtered, { filename, reason }];
+      });
+
+      if (invalidTimers.current.has(filename)) {
+        clearTimeout(invalidTimers.current.get(filename));
+      }
+
       const timer = setTimeout(() => {
         setInvalidFiles(prev => prev.filter(f => f.filename !== filename));
         invalidTimers.current.delete(filename);
@@ -98,12 +106,16 @@ export function UploadManager({
     };
   }, []);
 
-  // Call onSuccess when all uploads complete
+  // Call onSuccess when all uploads complete (guard with ref to prevent infinite loops)
   const uploadFinished = !isUploading && totalCount > 0 && completedCount === totalCount && failedCount === 0;
+  const wasFinished = useRef(false);
 
   useEffect(() => {
-    if (uploadFinished) {
+    if (uploadFinished && !wasFinished.current) {
       onSuccess();
+      wasFinished.current = true;
+    } else if (!uploadFinished) {
+      wasFinished.current = false;
     }
   }, [uploadFinished, onSuccess]);
 
@@ -116,18 +128,17 @@ export function UploadManager({
     });
   }, [files, retryFile]);
 
-  // Set default accounts (only on initial mount)
-  const defaultsSet = useRef(false);
+  // Set default accounts (only if not already selected)
   useEffect(() => {
-    if (defaultsSet.current) return;
-    const defaultCloudinary = cloudinaryAccounts.find(a => a.isDefault);
-    const defaultR2 = r2Accounts.find(a => a.isDefault);
-    if (defaultCloudinary) setSelectedCloudinary(defaultCloudinary.id);
-    if (defaultR2) setSelectedR2(defaultR2.id);
-    if (cloudinaryAccounts.length > 0 || r2Accounts.length > 0) {
-      defaultsSet.current = true;
+    if (!selectedCloudinary) {
+      const defaultCloudinary = cloudinaryAccounts.find(a => a.isDefault);
+      if (defaultCloudinary) setSelectedCloudinary(defaultCloudinary.id);
     }
-  }, [cloudinaryAccounts, r2Accounts]);
+    if (!selectedR2) {
+      const defaultR2 = r2Accounts.find(a => a.isDefault);
+      if (defaultR2) setSelectedR2(defaultR2.id);
+    }
+  }, [cloudinaryAccounts, r2Accounts, selectedCloudinary, selectedR2]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -415,6 +426,7 @@ export function UploadManager({
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
@@ -430,13 +442,7 @@ export function UploadManager({
               <ImageIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground mb-2">
                 Drag & drop foto di sini, atau{' '}
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') fileInputRef.current?.click(); }}
-                  className="text-primary hover:underline cursor-pointer"
-                >
+                <span className="text-primary hover:underline">
                   pilih file
                 </span>
               </p>
