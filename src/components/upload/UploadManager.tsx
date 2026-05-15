@@ -1,7 +1,14 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDirectUpload, UploadFile } from '@/hooks/useDirectUpload';
@@ -32,7 +39,7 @@ export function UploadManager({
   clientName,
   isOpen,
   onClose,
-  onSuccess: _onSuccess,
+  onSuccess,
   cloudinaryAccounts,
   r2Accounts,
 }: UploadManagerProps) {
@@ -43,11 +50,12 @@ export function UploadManager({
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [invalidFiles, setInvalidFiles] = useState<{ filename: string; reason: string }[]>([]);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const invalidTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   const {
     files,
     isUploading,
-    errors: _errors,
     addFiles,
     removeFile,
     startUpload,
@@ -61,24 +69,43 @@ export function UploadManager({
   } = useDirectUpload({
     galleryId,
     r2AccountId: selectedR2,
-    cloudinaryAccountId: selectedCloudinary, // Pass selected Cloudinary account
+    cloudinaryAccountId: selectedCloudinary,
     maxConcurrent: 10,
     maxRetries: 3,
-    autoUpload: true,
+    autoUpload: false,
     onComplete: (photo) => {
       console.log('Photo uploaded:', photo);
     },
-    onError: (fileId, error, errorCode) => {
+    onError: (_fileId, error, errorCode) => {
       console.error('Upload error:', error, errorCode);
     },
     onInvalidFile: (filename, reason) => {
       setInvalidFiles(prev => [...prev, { filename, reason }]);
-      // Auto hide after 5 seconds
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setInvalidFiles(prev => prev.filter(f => f.filename !== filename));
+        invalidTimers.current.delete(filename);
       }, 5000);
+      invalidTimers.current.set(filename, timer);
     },
   });
+
+  // Cleanup invalid file timers on unmount
+  useEffect(() => {
+    const timers = invalidTimers.current;
+    return () => {
+      timers.forEach(timer => clearTimeout(timer));
+      timers.clear();
+    };
+  }, []);
+
+  // Call onSuccess when all uploads complete
+  const uploadFinished = !isUploading && totalCount > 0 && completedCount === totalCount && failedCount === 0;
+
+  useEffect(() => {
+    if (uploadFinished) {
+      onSuccess();
+    }
+  }, [uploadFinished, onSuccess]);
 
   // Retry all failed files
   const retryAllFailed = useCallback(() => {
@@ -89,13 +116,17 @@ export function UploadManager({
     });
   }, [files, retryFile]);
 
-  // Set default accounts
+  // Set default accounts (only on initial mount)
+  const defaultsSet = useRef(false);
   useEffect(() => {
+    if (defaultsSet.current) return;
     const defaultCloudinary = cloudinaryAccounts.find(a => a.isDefault);
     const defaultR2 = r2Accounts.find(a => a.isDefault);
-    
     if (defaultCloudinary) setSelectedCloudinary(defaultCloudinary.id);
     if (defaultR2) setSelectedR2(defaultR2.id);
+    if (cloudinaryAccounts.length > 0 || r2Accounts.length > 0) {
+      defaultsSet.current = true;
+    }
   }, [cloudinaryAccounts, r2Accounts]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -111,7 +142,6 @@ export function UploadManager({
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
     const droppedFiles = e.dataTransfer.files;
     if (droppedFiles.length > 0) {
       addFiles(droppedFiles);
@@ -121,21 +151,40 @@ export function UploadManager({
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       addFiles(e.target.files);
+      // Reset input value so same file can be re-selected
+      e.target.value = '';
     }
   }, [addFiles]);
 
   const handleStartUpload = async () => {
-    // Set storage accounts untuk upload hook
-    // (Ini akan di-pass ke API saat upload)
     await startUpload();
   };
 
   const handleClose = () => {
     if (isUploading) {
-      if (!confirm('Upload masih berjalan. Yakin ingin menutup?')) {
-        return;
-      }
+      setShowCloseConfirm(true);
+      return;
     }
+    clearFiles();
+    clearErrors();
+    setInvalidFiles([]);
+    onClose();
+  };
+
+  const confirmClose = () => {
+    setShowCloseConfirm(false);
+    clearFiles();
+    clearErrors();
+    setInvalidFiles([]);
+    onClose();
+  };
+
+  const handleUploadAgain = () => {
+    clearFiles();
+    clearErrors();
+  };
+
+  const handleDone = () => {
     clearFiles();
     clearErrors();
     setInvalidFiles([]);
@@ -150,13 +199,11 @@ export function UploadManager({
         return <AlertCircle className="w-5 h-5 text-destructive" />;
       case 'uploading':
       case 'processing':
-        return <Loader2 className="w-5 h-5 text-primary animate-spin" />;
       case 'compressing':
         return <Loader2 className="w-5 h-5 text-primary animate-spin" />;
       case 'retrying':
         return <Loader2 className="w-5 h-5 text-warning animate-spin" />;
       default:
-        // Show retry indicator if file is waiting for retry
         if (file.retryCount > 0 && file.error) {
           return <Loader2 className="w-5 h-5 text-warning animate-spin" />;
         }
@@ -179,7 +226,6 @@ export function UploadManager({
       case 'retrying':
         return file.error || 'Mencoba ulang...';
       default:
-        // Show retry info if there's an error message (during auto-retry)
         if (file.error && file.retryCount > 0) {
           return file.error;
         }
@@ -200,53 +246,63 @@ export function UploadManager({
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">
-                Cloudinary Account (Thumbnail)
-              </label>
-              <Select value={selectedCloudinary} onValueChange={(value) => setSelectedCloudinary(value || '')}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih Cloudinary account...">
-                    {(value: string | null) => {
-                      if (!value) return null;
-                      const account = cloudinaryAccounts.find((a) => a.id === value);
-                      return account ? `${account.name}${account.isDefault ? ' (Default)' : ''}` : value;
-                    }}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {cloudinaryAccounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.name} {account.isDefault && '(Default)'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {cloudinaryAccounts.length === 0 || r2Accounts.length === 0 ? (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-sm text-destructive">
+                <AlertCircle className="w-4 h-4 inline mr-2" />
+                Storage account belum dikonfigurasi. Silakan tambahkan di{' '}
+                <strong>Settings → Storage</strong>.
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label htmlFor="cloudinary-select" className="text-sm font-medium text-foreground mb-2 block">
+                    Cloudinary Account (Thumbnail)
+                  </label>
+                  <Select value={selectedCloudinary} onValueChange={(value) => setSelectedCloudinary(value || '')}>
+                    <SelectTrigger id="cloudinary-select">
+                      <SelectValue placeholder="Pilih Cloudinary account...">
+                        {(value: string | null) => {
+                          if (!value) return null;
+                          const account = cloudinaryAccounts.find((a) => a.id === value);
+                          return account ? `${account.name}${account.isDefault ? ' (Default)' : ''}` : value;
+                        }}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cloudinaryAccounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name} {account.isDefault && '(Default)'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">
-                R2 Account (Original File)
-              </label>
-              <Select value={selectedR2} onValueChange={(value) => setSelectedR2(value || '')}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih R2 account...">
-                    {(value: string | null) => {
-                      if (!value) return null;
-                      const account = r2Accounts.find((a) => a.id === value);
-                      return account ? `${account.name}${account.isDefault ? ' (Default)' : ''}` : value;
-                    }}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {r2Accounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.name} {account.isDefault && '(Default)'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <div>
+                  <label htmlFor="r2-select" className="text-sm font-medium text-foreground mb-2 block">
+                    R2 Account (Original File)
+                  </label>
+                  <Select value={selectedR2} onValueChange={(value) => setSelectedR2(value || '')}>
+                    <SelectTrigger id="r2-select">
+                      <SelectValue placeholder="Pilih R2 account...">
+                        {(value: string | null) => {
+                          if (!value) return null;
+                          const account = r2Accounts.find((a) => a.id === value);
+                          return account ? `${account.name}${account.isDefault ? ' (Default)' : ''}` : value;
+                        }}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {r2Accounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name} {account.isDefault && '(Default)'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
 
             <div className="bg-muted p-3 rounded-lg text-sm text-muted-foreground">
               <p className="font-medium mb-1">Info Gallery:</p>
@@ -259,7 +315,7 @@ export function UploadManager({
             <Button variant="outline" onClick={handleClose}>
               Batal
             </Button>
-            <Button 
+            <Button
               onClick={() => setShowStorageSelection(false)}
               disabled={!selectedCloudinary || !selectedR2}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
@@ -274,221 +330,285 @@ export function UploadManager({
 
   // Step 2: File Upload
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Upload className="w-5 h-5" />
-            Upload Foto
-          </DialogTitle>
-          <DialogDescription>
-            Upload foto ke gallery <strong>{galleryName}</strong> ({clientName})
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Upload Foto
+            </DialogTitle>
+            <DialogDescription>
+              Upload foto ke gallery <strong>{galleryName}</strong> ({clientName})
+            </DialogDescription>
+          </DialogHeader>
 
-        {/* Storage Info */}
-        <div className="flex items-center justify-between bg-muted px-3 py-2 rounded-lg text-sm">
-          <div className="flex items-center gap-4">
-            <span className="text-muted-foreground">
-              Cloudinary: <strong>{cloudinaryAccounts.find(a => a.id === selectedCloudinary)?.name}</strong>
-            </span>
-            <span className="text-muted-foreground">
-              R2: <strong>{r2Accounts.find(a => a.id === selectedR2)?.name}</strong>
-            </span>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setShowStorageSelection(true)}
-            disabled={isUploading}
-          >
-            Ubah
-          </Button>
-        </div>
-
-        {/* Invalid Files Alert */}
-        {invalidFiles.length > 0 && (
-          <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-            <div className="flex items-center gap-2 text-destructive font-medium mb-2">
-              <AlertCircle className="w-5 h-5" />
-              File yang tidak valid ({invalidFiles.length})
+          {/* Storage Info */}
+          <div className="flex items-center justify-between bg-muted px-3 py-2 rounded-lg text-sm">
+            <div className="flex items-center gap-4">
+              <span className="text-muted-foreground">
+                Cloudinary: <strong>{cloudinaryAccounts.find(a => a.id === selectedCloudinary)?.name ?? '—'}</strong>
+              </span>
+              <span className="text-muted-foreground">
+                R2: <strong>{r2Accounts.find(a => a.id === selectedR2)?.name ?? '—'}</strong>
+              </span>
             </div>
-            <div className="space-y-1 max-h-32 overflow-y-auto">
-              {invalidFiles.map((file, idx) => (
-                <div key={idx} className="text-sm text-destructive">
-                  <span className="font-medium">{file.filename}:</span> {file.reason}
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-destructive/80 mt-2">
-              Format yang didukung: JPG, JPEG, PNG, WebP, HEIC, NEF, CR2, ARW, DNG, RAW (Max 50MB)
-            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowStorageSelection(true)}
+              disabled={isUploading}
+            >
+              Ubah
+            </Button>
           </div>
-        )}
 
-        {/* Drop Zone */}
-        {files.length === 0 && (
-          <div
-            ref={dropZoneRef}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-              isDragging 
-                ? 'border-primary bg-primary/5' 
-                : 'border-border hover:border-muted-foreground'
-            }`}
-          >
-            <ImageIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground mb-2">
-              Drag & drop foto di sini, atau{' '}
-              <button 
-                onClick={() => fileInputRef.current?.click()}
-                className="text-primary hover:underline"
-              >
-                pilih file
-              </button>
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Format: JPG, PNG, WebP, HEIC, RAW (NEF, CR2, ARW, DNG) • Max 50MB • Maks 400 file
-            </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept=".jpg,.jpeg,.png,.webp,.heic,.nef,.cr2,.arw,.dng,.raw,image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-          </div>
-        )}
-
-        {/* File List */}
-        {files.length > 0 && (
-          <div className="flex-1 overflow-hidden flex flex-col">
-            {/* Stats */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-4 text-sm">
-                <span className="text-muted-foreground">
-                  Total: <strong>{totalCount}</strong> foto
-                </span>
-                <span className="text-success">
-                  Selesai: <strong>{completedCount}</strong>
-                </span>
-                {failedCount > 0 && (
-                  <span className="text-destructive">
-                    Gagal: <strong>{failedCount}</strong>
-                  </span>
-                )}
+          {/* Invalid Files Alert */}
+          {invalidFiles.length > 0 && (
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <div className="flex items-center gap-2 text-destructive font-medium mb-2">
+                <AlertCircle className="w-5 h-5" />
+                File yang tidak valid ({invalidFiles.length})
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  {Math.round(progress)}%
-                </span>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={clearFiles}
-                  disabled={isUploading}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="w-full bg-muted rounded-full h-2 mb-4">
-              <div 
-                className="bg-primary h-2 rounded-full transition-all"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-
-            {/* File List */}
-            <div className="flex-1 overflow-y-auto space-y-2 max-h-[300px]">
-              {files.map((file) => (
-                <div 
-                  key={file.id}
-                  className="flex items-center gap-3 p-3 bg-muted rounded-lg"
-                >
-                  {getStatusIcon(file)}
-                  
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {file.file.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatFileSize(file.file.size)} • {getStatusText(file)}
-                      {file.error && file.status === 'failed' && ` • ${file.error}`}
-                    </p>
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {invalidFiles.map((file) => (
+                  <div key={`${file.filename}-${file.reason}`} className="text-sm text-destructive">
+                    <span className="font-medium">{file.filename}:</span> {file.reason}
                   </div>
-
-                  {file.status === 'failed' && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => retryFile(file.id)}
-                    >
-                      Retry
-                    </Button>
-                  )}
-
-                  {(file.status === 'pending' || file.status === 'failed' || file.status === 'retrying') && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => removeFile(file.id)}
-                      disabled={isUploading && file.status !== 'failed' && file.status !== 'retrying'}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Format yang didukung: JPG, JPEG, PNG, WebP, HEIC, NEF, CR2, ARW, DNG, RAW (Max 50MB)
+              </p>
             </div>
+          )}
 
-            {/* Add More Files */}
-            {!isUploading && (
-              <div className="mt-4 flex justify-center">
-                <Button 
-                  variant="outline" 
-                  onClick={() => fileInputRef.current?.click()}
-                >
+          {/* Success State */}
+          {uploadFinished && (
+            <div className="flex flex-col items-center py-8 gap-4">
+              <CheckCircle className="w-16 h-16 text-success" />
+              <div className="text-center">
+                <p className="text-lg font-semibold text-foreground">Upload Selesai!</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {completedCount} foto berhasil diupload ke gallery.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={handleUploadAgain}>
                   <Upload className="w-4 h-4 mr-2" />
-                  Tambah Foto
+                  Upload Lagi
+                </Button>
+                <Button onClick={handleDone} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                  Selesai
                 </Button>
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
 
-        {/* Footer */}
-        <div className="flex justify-end gap-2 mt-4">
-          <Button variant="outline" onClick={handleClose}>
-            {isUploading ? 'Tutup (Lanjut Background)' : 'Batal'}
-          </Button>
-          
-          {files.length > 0 && !isUploading && failedCount > 0 && (
-            <Button 
-              variant="outline"
-              onClick={retryAllFailed}
-              className="border-primary text-primary hover:bg-primary/10"
+          {/* Drop Zone - show when no files or all completed (handled by success state above) */}
+          {files.length === 0 && !uploadFinished && (
+            <div
+              ref={dropZoneRef}
+              role="button"
+              tabIndex={0}
+              aria-label="Drop zone untuk upload foto"
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+                isDragging
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-muted-foreground'
+              }`}
             >
-              Retry {failedCount} Gagal
-            </Button>
+              <ImageIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground mb-2">
+                Drag & drop foto di sini, atau{' '}
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') fileInputRef.current?.click(); }}
+                  className="text-primary hover:underline cursor-pointer"
+                >
+                  pilih file
+                </span>
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Format: JPG, PNG, WebP, HEIC, RAW (NEF, CR2, ARW, DNG) • Max 50MB • Maks 400 file
+              </p>
+            </div>
           )}
-          
-          {files.length > 0 && !isUploading && completedCount < totalCount && (
-            <Button 
-              onClick={handleStartUpload}
-              disabled={files.every(f => f.status !== 'pending')}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
-              Start Upload
-            </Button>
+
+          {/* File List - show when uploading or has pending/failed files */}
+          {files.length > 0 && !uploadFinished && (
+            <div className="flex-1 overflow-hidden flex flex-col">
+              {/* Stats */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4 text-sm" aria-live="polite">
+                  <span className="text-muted-foreground">
+                    Total: <strong>{totalCount}</strong> foto
+                  </span>
+                  <span className="text-success">
+                    Selesai: <strong>{completedCount}</strong>
+                  </span>
+                  {failedCount > 0 && (
+                    <span className="text-destructive">
+                      Gagal: <strong>{failedCount}</strong>
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {Math.round(progress)}%
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFiles}
+                    disabled={isUploading}
+                    aria-label="Hapus semua file dari antrian"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full bg-muted rounded-full h-2 mb-4" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100}>
+                <div
+                  className="bg-primary h-2 rounded-full transition-all"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+
+              {/* File List */}
+              <div className="flex-1 overflow-y-auto space-y-2 max-h-[300px]">
+                {files.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center gap-3 p-3 bg-muted rounded-lg"
+                  >
+                    {getStatusIcon(file)}
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {file.file.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatFileSize(file.file.size)} • {getStatusText(file)}
+                        {file.error && file.status === 'failed' && ` • ${file.error}`}
+                      </p>
+                    </div>
+
+                    {file.status === 'failed' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => retryFile(file.id)}
+                        aria-label={`Retry upload ${file.file.name}`}
+                      >
+                        Retry
+                      </Button>
+                    )}
+
+                    {(file.status === 'pending' || file.status === 'failed' || file.status === 'retrying') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(file.id)}
+                        disabled={isUploading && file.status !== 'failed' && file.status !== 'retrying'}
+                        aria-label={`Hapus ${file.file.name} dari antrian`}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Add More Files */}
+              {!isUploading && (
+                <div className="mt-4 flex justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Tambah Foto
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
-        </div>
-      </DialogContent>
-    </Dialog>
+
+          {/* Footer - only show when not in success state */}
+          {!uploadFinished && (
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={handleClose}>
+                {isUploading ? 'Tutup & Batalkan Upload' : 'Batal'}
+              </Button>
+
+              {files.length > 0 && !isUploading && failedCount > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={retryAllFailed}
+                  className="border-primary text-primary hover:bg-primary/10"
+                >
+                  Retry {failedCount} Gagal
+                </Button>
+              )}
+
+              {files.length > 0 && !isUploading && completedCount < totalCount && (
+                <Button
+                  onClick={handleStartUpload}
+                  disabled={files.every(f => f.status !== 'pending')}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  Start Upload
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Hidden file input - always rendered */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".jpg,.jpeg,.png,.webp,.heic,.nef,.cr2,.arw,.dng,.raw"
+            onChange={handleFileSelect}
+            className="hidden"
+            aria-hidden="true"
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Close Confirmation Dialog */}
+      <Dialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Batalkan Upload?</DialogTitle>
+            <DialogDescription>
+              Upload masih berjalan. Menutup modal akan membatalkan semua upload yang belum selesai.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCloseConfirm(false)}>
+              Lanjutkan Upload
+            </Button>
+            <Button variant="destructive" onClick={confirmClose}>
+              Batalkan & Tutup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
