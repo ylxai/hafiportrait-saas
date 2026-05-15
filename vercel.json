@@ -4,8 +4,45 @@
   "framework": "nextjs",
   "regions": ["sin1"],
   "functions": {
-    "app/api/**/*.ts": {
-      "maxDuration": 30
+    "app/api/admin/**/*.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    },
+    "app/api/webhook/**/*.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "app/api/public/**/*.ts": {
+      "maxDuration": 10,
+      "memory": 512
     }
-  }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    }
+  ]
 }
