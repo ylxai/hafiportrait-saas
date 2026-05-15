@@ -3,6 +3,7 @@
 import { useState, useEffect, useTransition } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { toast } from 'sonner';
 import { deleteEvent, deleteEventsBulk, updateEventsBulk } from '@/actions/events';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -47,6 +48,7 @@ type Event = {
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [showModal, setShowModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -199,7 +201,8 @@ export default function EventsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Hapus event ini?')) return;
+    const ok = await confirm({ description: 'Hapus event ini?', variant: 'destructive', confirmLabel: 'Hapus' });
+    if (!ok) return;
 
     // Server Action call (replaces fetch DELETE /api/admin/events?id=).
     // useTransition keeps the UI responsive while the action runs.
@@ -228,7 +231,8 @@ export default function EventsPage() {
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Hapus ${selectedIds.length} event ini?`)) return;
+    const ok = await confirm({ description: `Hapus ${selectedIds.length} event ini?`, variant: 'destructive', confirmLabel: 'Hapus' });
+    if (!ok) return;
 
     startTransition(async () => {
       const result = await deleteEventsBulk(selectedIds);
@@ -282,6 +286,7 @@ export default function EventsPage() {
   };
 
   return (
+    <>
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">Events</h1>
@@ -658,5 +663,7 @@ export default function EventsPage() {
         </DialogContent>
       </Dialog>
     </div>
+    <ConfirmDialog />
+    </>
   );
 }

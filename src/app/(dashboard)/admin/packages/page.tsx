@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition } from 'react';
 import { toast } from 'sonner';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ type Package = {
 export default function PackagesPage() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [showModal, setShowModal] = useState(false);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
   // `useTransition` powers the disabled state on the dialog footer's
@@ -137,8 +139,9 @@ export default function PackagesPage() {
     });
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Hapus paket ini?')) return;
+  const handleDelete = async (id: string) => {
+    const ok = await confirm({ description: 'Hapus paket ini?', variant: 'destructive', confirmLabel: 'Hapus' });
+    if (!ok) return;
 
     startTransition(async () => {
       const result = await deletePackage(id);
@@ -184,8 +187,9 @@ export default function PackagesPage() {
   };
 
 
-  const handleBulkDelete = () => {
-    if (!confirm(`Hapus ${selectedIds.length} paket ini?`)) return;
+  const handleBulkDelete = async () => {
+    const ok = await confirm({ description: `Hapus ${selectedIds.length} paket ini?`, variant: 'destructive', confirmLabel: 'Hapus' });
+    if (!ok) return;
 
     startTransition(async () => {
       const result = await deletePackagesBulk(selectedIds);
@@ -224,6 +228,7 @@ export default function PackagesPage() {
   const openBulkModal = () => setShowBulkModal(true);
 
   return (
+    <>
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">Packages</h1>
@@ -443,5 +448,7 @@ export default function PackagesPage() {
         </DialogContent>
       </Dialog>
     </div>
+    <ConfirmDialog />
+    </>
   );
 }

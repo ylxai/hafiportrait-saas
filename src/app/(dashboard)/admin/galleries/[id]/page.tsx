@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Upload } from "lucide-react";
 import { PhotoImage } from "@/components/photo/PhotoImage";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import YARLightbox from "yet-another-react-lightbox";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import "yet-another-react-lightbox/styles.css";
@@ -61,6 +62,7 @@ type Gallery = {
 export default function GalleryDetailPage() {
   const params = useParams();
   const galleryId = params.id as string;
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const [selectedPhotoIdsForBulk, setSelectedPhotoIdsForBulk] = useState<
     Set<string>
@@ -147,7 +149,8 @@ export default function GalleryDetailPage() {
 
   const deletePhoto = useCallback(
     async (photoId: string) => {
-      if (!confirm("Hapus foto ini?")) return;
+      const ok = await confirm({ description: "Hapus foto ini?", variant: "destructive", confirmLabel: "Hapus" });
+      if (!ok) return;
 
       try {
         await fetch(`/api/admin/galleries/${galleryId}/photos/${photoId}`, {
@@ -158,7 +161,7 @@ export default function GalleryDetailPage() {
         console.error("Error deleting photo:", error);
       }
     },
-    [galleryId, mutatePhotos],
+    [galleryId, mutatePhotos, confirm],
   );
 
   // Save gallery settings
@@ -241,8 +244,8 @@ export default function GalleryDetailPage() {
   };
 
   const deleteSelectedPhotos = useCallback(async () => {
-    if (!confirm(`Hapus ${selectedPhotoIdsForBulk.size} foto yang dipilih?`))
-      return;
+    const ok = await confirm({ description: `Hapus ${selectedPhotoIdsForBulk.size} foto yang dipilih?`, variant: "destructive", confirmLabel: "Hapus" });
+    if (!ok) return;
 
     try {
       const response = await fetch(
@@ -269,7 +272,7 @@ export default function GalleryDetailPage() {
     setSelectedPhotoIdsForBulk(new Set());
     setBulkMode(false);
     mutatePhotos();
-  }, [galleryId, mutatePhotos, selectedPhotoIdsForBulk]);
+  }, [galleryId, mutatePhotos, selectedPhotoIdsForBulk, confirm]);
 
   const handleExport = () => {
     // Only exports actual selection file names
@@ -331,6 +334,7 @@ export default function GalleryDetailPage() {
   }
 
   return (
+    <>
     <div>
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -817,5 +821,7 @@ export default function GalleryDetailPage() {
         </div>
       </div>
     </div>
+    <ConfirmDialog />
+    </>
   );
 }
