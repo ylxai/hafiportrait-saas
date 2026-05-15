@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { parseCursorSafe, createPublicPaginationResponse } from '@/types/pagination';
 import { serializeBigInt } from '@/lib/bigint-utils';
 
-const PHOTOS_PER_PAGE = 100;
+const PHOTOS_PER_PAGE = 20;
 const tokenSchema = z.string().cuid().or(z.string().min(10).max(50));
 
 export async function GET(

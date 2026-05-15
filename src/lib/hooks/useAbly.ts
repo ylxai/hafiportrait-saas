@@ -94,6 +94,45 @@ export interface PaymentUpdate {
   amount: number;
 }
 
+// Shape published by `/api/admin/upload/complete` after a photo finishes
+// uploading. Only the discriminator fields the subscriber needs to refresh
+// its grid are forwarded — the full photo row (url/width/height/etc.) is
+// fetched separately from `/api/public/gallery/[token]` via SWR.
+export interface PhotoUploadedEvent {
+  photoId: string;
+  filename: string;
+  thumbnailUrl?: string | null;
+}
+
+// Shape published by `/api/admin/upload/presigned` when a client crosses
+// a quota threshold and by `src/lib/failed-jobs.ts` when a background job
+// crosses an alert threshold. Kept as a discriminated union via the
+// `type` tag so a single subscriber can dispatch on it without inspecting
+// channel/event names.
+export type AdminAlert =
+  | {
+      type: 'storage_quota';
+      clientId: string;
+      clientName: string;
+      galleryId: string;
+      alertType: 'warning' | 'critical' | 'exceeded';
+      usedGB: number;
+      quotaGB: number;
+      percentage: number;
+      userId?: string;
+      timestamp: string;
+    }
+  | {
+      type: 'failed_job';
+      jobId: string;
+      jobType: string;
+      alertType: 'failed' | 'retry' | 'resolved';
+      errorMessage?: string;
+      attemptCount?: number;
+      resolvedBy?: string;
+      timestamp: string;
+    };
+
 export function useSelectionSubscription(galleryId: string, onUpdate: (update: SelectionUpdate) => void) {
   const [isConnected, setIsConnected] = useState(false);
   const callbackRef = useRef(onUpdate);
@@ -254,6 +293,113 @@ export function usePaymentUpdates(onUpdate: (update: PaymentUpdate) => void) {
       releaseScopedClient(scope);
     };
   }, []);
+
+  return isConnected;
+}
+
+/**
+ * Subscribes the public gallery viewer to `photo-uploaded` broadcasts so
+ * newly uploaded photos appear without a manual refresh.
+ *
+ * The Ably payload is intentionally small (`photoId / filename /
+ * thumbnailUrl?`); the rich Photo row (url, dimensions, lightbox URL) is
+ * derived server-side in `loadPublicGallery`, so callers should treat this
+ * hook as a refresh signal and re-read the API rather than rendering from
+ * the event payload directly.
+ *
+ * The channel is reused with the same `gallery:{id}` scope as the existing
+ * selection / view-count subscribers, so all three share a single Ably
+ * Realtime connection per gallery.
+ */
+export function usePhotoUploadSubscription(
+  galleryId: string,
+  onUpload: (event: PhotoUploadedEvent) => void,
+) {
+  const [isConnected, setIsConnected] = useState(false);
+  const callbackRef = useRef(onUpload);
+
+  useEffect(() => {
+    callbackRef.current = onUpload;
+  }, [onUpload]);
+
+  useEffect(() => {
+    if (!galleryId) return;
+    const scope = `gallery:${galleryId}`;
+    reserveScopedClient(scope);
+
+    const client = getScopedClient(scope, galleryId);
+    const channel = client.channels.get(`photostudio:uploads:${galleryId}`);
+
+    const handleUpload = (msg: Ably.Message) => {
+      callbackRef.current(msg.data as PhotoUploadedEvent);
+    };
+
+    channel.subscribe('photo-uploaded', handleUpload);
+    setIsConnected(true);
+
+    return () => {
+      channel.unsubscribe('photo-uploaded', handleUpload);
+      setIsConnected(false);
+      releaseScopedClient(scope);
+    };
+  }, [galleryId]);
+
+  return isConnected;
+}
+
+/**
+ * Subscribes the admin dashboard to the global `admin:alerts` channel for
+ * proactive warnings (storage quota crossings, failed background jobs).
+ *
+ * `enabled` lets callers gate the subscription on session presence and the
+ * admin role — when `false` the hook is a no-op so non-admins do not even
+ * attempt to mint a TokenRequest (the server-side `/api/ably/token` route
+ * would 403 them anyway, but suppressing the request avoids the noise).
+ *
+ * Both `storage-quota-alert` and `failed-job-alert` events are handed to the
+ * same callback as a discriminated `AdminAlert` union; callers dispatch on
+ * `alert.type`.
+ */
+export function useAdminAlertsSubscription(
+  enabled: boolean,
+  onAlert: (alert: AdminAlert) => void,
+) {
+  const [isConnected, setIsConnected] = useState(false);
+  const callbackRef = useRef(onAlert);
+
+  useEffect(() => {
+    callbackRef.current = onAlert;
+  }, [onAlert]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    // Dedicated scope so the admin-alerts socket is not co-mingled with
+    // gallery-viewer connections; closing one client should not interrupt
+    // the other.
+    const scope = 'admin';
+    reserveScopedClient(scope);
+
+    const client = getScopedClient(scope);
+    const channel = client.channels.get('photostudio:admin:alerts');
+
+    const handleQuota = (msg: Ably.Message) => {
+      callbackRef.current(msg.data as AdminAlert);
+    };
+    const handleFailedJob = (msg: Ably.Message) => {
+      callbackRef.current(msg.data as AdminAlert);
+    };
+
+    channel.subscribe('storage-quota-alert', handleQuota);
+    channel.subscribe('failed-job-alert', handleFailedJob);
+    setIsConnected(true);
+
+    return () => {
+      channel.unsubscribe('storage-quota-alert', handleQuota);
+      channel.unsubscribe('failed-job-alert', handleFailedJob);
+      setIsConnected(false);
+      releaseScopedClient(scope);
+    };
+  }, [enabled]);
 
   return isConnected;
 }

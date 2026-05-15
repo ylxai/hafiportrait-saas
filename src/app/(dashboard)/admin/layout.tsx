@@ -4,6 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import AdminAlertsBanner from '@/components/admin/AdminAlertsBanner';
 
 const navItems = [
   { 
@@ -270,6 +271,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main Content */}
       <main className={`pt-16 lg:pt-0 ${sidebarOpen ? 'lg:pl-64' : 'lg:pl-20'} min-h-screen pb-24 lg:pb-0 transition-all duration-300`}>
         <div className="p-4 lg:p-8 max-w-7xl mx-auto">
+          {/* Realtime admin alerts (storage quota / failed jobs). Renders
+              nothing for non-admin sessions and stays out of the layout
+              flow when there are no active alerts. */}
+          <AdminAlertsBanner />
           {children}
         </div>
       </main>
