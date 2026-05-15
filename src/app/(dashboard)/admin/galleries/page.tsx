@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -63,6 +64,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export default function GalleriesPage() {
   const [page, setPage] = useState(1);
   const limit = 20;
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const { data, isLoading, mutate } = useSWR<GalleriesResponse>(
     `/api/admin/galleries?page=${page}&limit=${limit}`,
@@ -144,7 +146,8 @@ export default function GalleriesPage() {
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Hapus ${selectedIds.length} gallery ini?`)) return;
+    const ok = await confirm({ description: `Hapus ${selectedIds.length} gallery ini?`, variant: "destructive", confirmLabel: "Hapus" });
+    if (!ok) return;
     try {
       await fetch("/api/admin/galleries/bulk", {
         method: "DELETE",
@@ -183,6 +186,7 @@ export default function GalleriesPage() {
   };
 
   return (
+    <>
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">Galleries</h1>
@@ -221,10 +225,7 @@ export default function GalleriesPage() {
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => {
-                if (confirm(`Hapus ${selectedIds.length} gallery?`))
-                  handleBulkDelete();
-              }}
+              onClick={() => handleBulkDelete()}
             >
               Hapus
             </Button>
@@ -590,5 +591,7 @@ export default function GalleriesPage() {
         </DialogContent>
       </Dialog>
     </div>
+    <ConfirmDialog />
+    </>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition } from 'react';
 import { toast } from 'sonner';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +51,7 @@ const ClientAvatar = ({ name }: { name: string }) => {
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   // `useTransition` keeps the UI responsive while the Server Action runs.
@@ -169,8 +171,9 @@ export default function ClientsPage() {
     });
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Hapus client ini?')) return;
+  const handleDelete = async (id: string) => {
+    const ok = await confirm({ description: 'Hapus client ini?', variant: 'destructive', confirmLabel: 'Hapus' });
+    if (!ok) return;
 
     startTransition(async () => {
       const result = await deleteClient(id);
@@ -218,8 +221,9 @@ export default function ClientsPage() {
     }
   };
 
-  const handleBulkDelete = () => {
-    if (!confirm(`Hapus ${selectedIds.length} client ini?`)) return;
+  const handleBulkDelete = async () => {
+    const ok = await confirm({ description: `Hapus ${selectedIds.length} client ini?`, variant: 'destructive', confirmLabel: 'Hapus' });
+    if (!ok) return;
 
     startTransition(async () => {
       const result = await deleteClientsBulk(selectedIds);
@@ -239,6 +243,7 @@ export default function ClientsPage() {
   const openBulkModal = () => setShowBulkModal(true);
 
   return (
+    <>
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">Clients</h1>
@@ -509,5 +514,7 @@ export default function ClientsPage() {
         </DialogContent>
       </Dialog>
     </div>
+    <ConfirmDialog />
+    </>
   );
 }
