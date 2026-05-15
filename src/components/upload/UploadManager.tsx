@@ -106,18 +106,8 @@ export function UploadManager({
     };
   }, []);
 
-  // Call onSuccess when all uploads complete (guard with ref to prevent infinite loops)
+  // Track upload completion for success state display
   const uploadFinished = !isUploading && totalCount > 0 && completedCount === totalCount && failedCount === 0;
-  const wasFinished = useRef(false);
-
-  useEffect(() => {
-    if (uploadFinished && !wasFinished.current) {
-      onSuccess();
-      wasFinished.current = true;
-    } else if (!uploadFinished) {
-      wasFinished.current = false;
-    }
-  }, [uploadFinished, onSuccess]);
 
   // Retry all failed files
   const retryAllFailed = useCallback(() => {
@@ -128,15 +118,15 @@ export function UploadManager({
     });
   }, [files, retryFile]);
 
-  // Set default accounts (only if not already selected)
+  // Set default accounts and validate selected IDs still exist
   useEffect(() => {
-    if (!selectedCloudinary) {
-      const defaultCloudinary = cloudinaryAccounts.find(a => a.isDefault);
-      if (defaultCloudinary) setSelectedCloudinary(defaultCloudinary.id);
+    if (!selectedCloudinary || !cloudinaryAccounts.some(a => a.id === selectedCloudinary)) {
+      const defaultCloudinary = cloudinaryAccounts.find(a => a.isDefault) ?? cloudinaryAccounts[0];
+      setSelectedCloudinary(defaultCloudinary?.id ?? '');
     }
-    if (!selectedR2) {
-      const defaultR2 = r2Accounts.find(a => a.isDefault);
-      if (defaultR2) setSelectedR2(defaultR2.id);
+    if (!selectedR2 || !r2Accounts.some(a => a.id === selectedR2)) {
+      const defaultR2 = r2Accounts.find(a => a.isDefault) ?? r2Accounts[0];
+      setSelectedR2(defaultR2?.id ?? '');
     }
   }, [cloudinaryAccounts, r2Accounts, selectedCloudinary, selectedR2]);
 
@@ -196,6 +186,7 @@ export function UploadManager({
   };
 
   const handleDone = () => {
+    onSuccess();
     clearFiles();
     clearErrors();
     setInvalidFiles([]);
@@ -588,7 +579,7 @@ export function UploadManager({
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".jpg,.jpeg,.png,.webp,.heic,.nef,.cr2,.arw,.dng,.raw"
+            accept=".jpg,.jpeg,.png,.webp,.heic,.nef,.cr2,.arw,.dng,.raw,image/*"
             onChange={handleFileSelect}
             className="hidden"
             aria-hidden="true"
