@@ -166,6 +166,9 @@ export function UploadManager({
       setShowCloseConfirm(true);
       return;
     }
+    if (uploadFinished) {
+      onSuccess();
+    }
     clearFiles();
     clearErrors();
     setInvalidFiles([]);
