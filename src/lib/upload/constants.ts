@@ -33,6 +33,7 @@ export const CLEANUP_INTERVAL_MINUTES = 30;
 // Retry configuration
 export const MAX_RETRY_ATTEMPTS = 3;
 export const RETRY_DELAYS_MS = [1000, 2000, 4000]; // Exponential backoff: 1s, 2s, 4s
+export const UPLOAD_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes for large file uploads
 
 // Compression settings
 export const COMPRESSION_MAX_SIZE_MB = 10;

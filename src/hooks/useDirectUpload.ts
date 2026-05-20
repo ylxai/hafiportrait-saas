@@ -12,6 +12,7 @@ import {
   MAX_UPLOAD_WORKERS,
   MAX_RETRY_ATTEMPTS,
   RETRY_DELAYS_MS,
+  UPLOAD_TIMEOUT_MS,
   MIN_COMPRESSION_SIZE_BYTES,
   COMPRESSION_MAX_DIMENSION,
   COMPRESSION_QUALITY,
@@ -143,8 +144,8 @@ function uploadWithProgress(
     signal.addEventListener('abort', onAbort, { once: true });
 
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) {
-        const percent = Math.round((e.loaded / e.total) * 100);
+      if (e.lengthComputable && e.total > 0) {
+        const percent = Math.round((e.loaded * 100) / e.total);
         // Throttle: only update if delta >= 1%
         if (percent > lastReportedPercent) {
           lastReportedPercent = percent;
@@ -170,7 +171,7 @@ function uploadWithProgress(
 
     xhr.open('PUT', url);
     xhr.setRequestHeader('Content-Type', contentType);
-    xhr.timeout = 5 * 60 * 1000; // 5 minutes timeout for large files
+    xhr.timeout = UPLOAD_TIMEOUT_MS;
     xhr.send(file);
   });
 }
