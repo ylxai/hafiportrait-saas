@@ -541,7 +541,7 @@ export function UploadManager({
                 <div
                   role="button"
                   tabIndex={0}
-                  aria-label="Drop zone untuk upload foto tambahan"
+                  aria-label="Tambah foto tambahan"
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
@@ -552,14 +552,14 @@ export function UploadManager({
                       fileInputRef.current?.click();
                     }
                   }}
-                  className={`group mt-4 border-2 border-dashed rounded-lg p-3 text-center transition-colors cursor-pointer ${
+                  className={`group mt-4 border-2 border-dashed rounded-lg p-3 text-center transition-colors cursor-pointer outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 ${
                     isDragging
                       ? 'border-primary bg-primary/5'
                       : 'border-border hover:border-muted-foreground'
                   }`}
                 >
                   <p className="text-sm text-muted-foreground pointer-events-none">
-                    <Upload className="w-4 h-4 inline mr-1" />
+                    <Upload className="size-4 inline mr-2" />
                     Drop foto di sini atau <span className="text-primary group-hover:underline">pilih file</span>
                   </p>
                 </div>
