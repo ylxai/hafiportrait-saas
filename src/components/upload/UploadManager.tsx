@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Dialog,
   DialogContent,
@@ -254,8 +255,10 @@ export function UploadManager({
             {cloudinaryAccounts.length === 0 || r2Accounts.length === 0 ? (
               <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-sm text-destructive">
                 <AlertCircle className="w-4 h-4 inline mr-2" />
-                Storage account belum dikonfigurasi. Silakan tambahkan di{' '}
-                <strong>Settings → Storage</strong>.
+                Storage account belum dikonfigurasi.{' '}
+                <Link href="/admin/storage" className="underline font-medium hover:text-destructive">
+                  Tambahkan di Settings → Storage
+                </Link>.
               </div>
             ) : (
               <>
