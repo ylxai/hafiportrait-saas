@@ -536,16 +536,23 @@ export function UploadManager({
                 ))}
               </div>
 
-              {/* Add More Files */}
+              {/* Compact Drop Zone - always visible when not uploading */}
               {!isUploading && (
-                <div className="mt-4 flex justify-center">
-                  <Button
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Tambah Foto
-                  </Button>
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`mt-4 border-2 border-dashed rounded-lg p-3 text-center transition-colors cursor-pointer ${
+                    isDragging
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-muted-foreground'
+                  }`}
+                >
+                  <p className="text-sm text-muted-foreground">
+                    <Upload className="w-4 h-4 inline mr-1" />
+                    Drop foto di sini atau <span className="text-primary hover:underline">pilih file</span>
+                  </p>
                 </div>
               )}
             </div>
