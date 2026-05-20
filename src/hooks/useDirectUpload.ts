@@ -116,6 +116,7 @@ interface UploadProgressResult {
   ok: boolean;
   status: number;
   statusText: string;
+  response: string;
 }
 
 function uploadWithProgress(
@@ -154,7 +155,7 @@ function uploadWithProgress(
 
     xhr.onload = () => {
       signal.removeEventListener('abort', onAbort);
-      resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, statusText: xhr.statusText });
+      resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, statusText: xhr.statusText, response: xhr.responseText });
     };
 
     xhr.onerror = () => {
@@ -343,7 +344,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       );
 
       if (!r2Res.ok) {
-        throw new Error(`R2 upload failed (${r2Res.status}): ${r2Res.statusText}`);
+        throw new Error(`R2 upload failed (${r2Res.status}): ${r2Res.response || r2Res.statusText}`);
       }
 
       // Update status: Processing thumbnail
