@@ -540,6 +540,25 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         });
         continue;
       }
+
+      // Client-side dedup: skip if same name+size+lastModified already in queue
+      const isDuplicateInQueue = filesRef.current.some(f =>
+        f.file.name === file.name &&
+        f.file.size === file.size &&
+        f.file.lastModified === file.lastModified
+      );
+      const isDuplicateInBatch = validFiles.some(f =>
+        f.file.name === file.name &&
+        f.file.size === file.size &&
+        f.file.lastModified === file.lastModified
+      );
+      if (isDuplicateInQueue || isDuplicateInBatch) {
+        invalidFiles.push({
+          filename: file.name,
+          reason: 'File sudah ada di antrian upload',
+        });
+        continue;
+      }
       
       validFiles.push({
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
