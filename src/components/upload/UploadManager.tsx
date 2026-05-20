@@ -539,10 +539,19 @@ export function UploadManager({
               {/* Compact Drop Zone - always visible when not uploading */}
               {!isUploading && (
                 <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Drop zone untuk upload foto tambahan"
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      fileInputRef.current?.click();
+                    }
+                  }}
                   className={`mt-4 border-2 border-dashed rounded-lg p-3 text-center transition-colors cursor-pointer ${
                     isDragging
                       ? 'border-primary bg-primary/5'
