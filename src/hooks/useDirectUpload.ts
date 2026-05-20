@@ -115,7 +115,8 @@ function isRetryableError(errorCode: UploadFile['errorCode']): boolean {
 let picaInstance: ReturnType<typeof Pica> | null = null;
 function getPicaInstance() {
   if (!picaInstance) {
-    picaInstance = Pica();
+    // Prefer WASM + Web Worker for off-main-thread processing
+    picaInstance = Pica({ features: ['wasm', 'ww', 'js'] });
   }
   return picaInstance;
 }
