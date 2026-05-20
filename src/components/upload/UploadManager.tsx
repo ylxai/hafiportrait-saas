@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Dialog,
   DialogContent,
@@ -255,9 +256,9 @@ export function UploadManager({
               <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-sm text-destructive">
                 <AlertCircle className="w-4 h-4 inline mr-2" />
                 Storage account belum dikonfigurasi.{' '}
-                <a href="/admin/storage" className="underline font-medium hover:text-destructive">
+                <Link href="/admin/storage" className="underline font-medium hover:text-destructive">
                   Tambahkan di Settings → Storage
-                </a>.
+                </Link>.
               </div>
             ) : (
               <>
