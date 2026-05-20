@@ -541,18 +541,13 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         continue;
       }
 
-      // Client-side dedup: skip if same name+size+lastModified already in queue
-      const isDuplicateInQueue = filesRef.current.some(f =>
+      // Client-side dedup: skip if same name+size+lastModified already in queue or batch
+      const isDuplicate = [...filesRef.current, ...validFiles].some(f =>
         f.file.name === file.name &&
         f.file.size === file.size &&
         f.file.lastModified === file.lastModified
       );
-      const isDuplicateInBatch = validFiles.some(f =>
-        f.file.name === file.name &&
-        f.file.size === file.size &&
-        f.file.lastModified === file.lastModified
-      );
-      if (isDuplicateInQueue || isDuplicateInBatch) {
+      if (isDuplicate) {
         invalidFiles.push({
           filename: file.name,
           reason: 'File sudah ada di antrian upload',
