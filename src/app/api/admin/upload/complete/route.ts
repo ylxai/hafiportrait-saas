@@ -246,7 +246,7 @@ export async function POST(request: Request) {
         where: { id: clientId, usedStorage: { gte: fileSizeBig } },
         data: { 
           usedStorage: { decrement: fileSizeBig },
-          photoCount: { decrement: 1 },
+          // NOTE: Do NOT decrement photoCount here - Photo record is still created at line 286
         },
       });
       if (dedupRollback.count === 0) {
@@ -255,7 +255,7 @@ export async function POST(request: Request) {
             where: { id: clientId },
             data: { 
               usedStorage: { decrement: fileSizeBig },
-              photoCount: { decrement: 1 },
+              // NOTE: Do NOT decrement photoCount here - Photo record is still created at line 286
             },
           })
           .catch((rollbackErr) => {
