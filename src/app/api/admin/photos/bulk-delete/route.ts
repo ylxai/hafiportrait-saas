@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/auth/options';
 import { z } from 'zod';
 import { getOrphanedR2Keys, queueStorageDeletionBulk } from '@/lib/cloudflare-queue';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { Prisma } from '@/generated/prisma';
 
 const bulkDeleteSchema = z.object({
   photoIds: z.array(z.string()).min(1).max(100),
@@ -166,31 +167,23 @@ export async function POST(request: Request) {
     try {
       await prisma.$transaction(async (tx) => {
         await tx.photo.deleteMany({ where: { id: { in: photoIds } } });
-        for (const [cId, sum] of sumByClient) {
-          const count = countByClient.get(cId) ?? 0;
-          if (sum > BigInt(0)) {
+        // Unified loop: update storage and count for all clients
+        for (const [cId, count] of countByClient) {
+          const sum = sumByClient.get(cId) ?? BigInt(0);
+          try {
             await tx.client.update({
               where: { id: cId },
-              data: { 
+              data: {
                 usedStorage: { decrement: sum },
                 photoCount: { decrement: count },
               },
             });
-          } else if (count > 0) {
-            // Dedup case: decrement photoCount only
-            await tx.client.update({
-              where: { id: cId },
-              data: { photoCount: { decrement: count } },
-            });
-          }
-        }
-        // Handle clients that only have count (no storage to decrement)
-        for (const [cId, count] of countByClient) {
-          if (!sumByClient.has(cId) && count > 0) {
-            await tx.client.update({
-              where: { id: cId },
-              data: { photoCount: { decrement: count } },
-            });
+          } catch (error) {
+            // Handle 'record not found' gracefully
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+              continue;
+            }
+            throw error;
           }
         }
       });

@@ -63,18 +63,10 @@ export async function GET(request: Request) {
     ]);
 
     // Transform to match expected response shape
-    const clientsWithUsage = clients.map((client) => ({
-      id: client.id,
-      nama: client.nama,
-      email: client.email,
-      phone: client.phone,
-      instagram: client.instagram,
-      storageQuotaGB: client.storageQuotaGB,
-      isApproved: client.isApproved,
-      createdAt: client.createdAt,
-      updatedAt: client.updatedAt,
-      usedStorageBytes: client.usedStorage.toString(),
-      photoCount: client.photoCount, // Now using maintained column
+    const clientsWithUsage = clients.map(({ usedStorage, photoCount, ...client }) => ({
+      ...client,
+      usedStorageBytes: usedStorage.toString(),
+      photoCount,
     }));
 
     return successResponse({
