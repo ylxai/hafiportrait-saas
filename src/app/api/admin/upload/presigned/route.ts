@@ -120,7 +120,7 @@ export async function POST(request: Request) {
           select: {
             clientId: true,
             client: {
-              select: { storageQuotaGB: true, nama: true, email: true },
+              select: { storageQuotaGB: true, usedStorage: true, nama: true, email: true },
             },
           },
         },
@@ -157,21 +157,10 @@ export async function POST(request: Request) {
     // MEDIUM FIX #14: Use BigInt arithmetic to avoid Number overflow on large quotas
     const storageQuotaBytes = BigInt(storageQuotaGB) * BigInt(BYTES_PER_GB);
 
-    // Calculate current usage
-    const storageUsage = await prisma.photo.aggregate({
-      where: {
-        gallery: {
-          event: {
-            clientId,
-          },
-        },
-      },
-      _sum: {
-        fileSize: true,
-      },
-    });
-
-    const totalUsedStorage = storageUsage._sum.fileSize || BigInt(0);
+    // Read authoritative quota counter — same source of truth as the
+    // atomic gate in complete/route.ts. Avoids a full-table aggregate
+    // and is dedup-aware (cross-gallery dedup rolls back increments).
+    const totalUsedStorage = client?.usedStorage ?? BigInt(0);
 
     if (totalUsedStorage + BigInt(fileSize) > storageQuotaBytes) {
       const usedGB = Number(totalUsedStorage) / 1073741824;

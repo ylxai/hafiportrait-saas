@@ -4,7 +4,7 @@ import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/r
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import {
-  aggregateUsedBytesByClient,
+  computeUsedStorageDeltaForDeletion,
   collectPhotoDeletionPayloads,
   enqueueDeletionWithOutbox,
 } from '@/lib/cloudflare-queue';
@@ -94,16 +94,18 @@ export async function DELETE(request: Request) {
 
     const { ids } = validation.data;
 
-    // Step 1 — collect storage-deletion payloads BEFORE the delete
-    // commits, because the Gallery→Photo cascade will hide the rows
-    // the moment the events disappear. Review #73-2 (Gemini): the
-    // payload now carries `clientId` + `fileSize`, so we derive the
-    // per-client `usedStorage` decrement from the same query — no
-    // separate `findMany` round-trip.
+    // Step 1 — compute dedup-aware byte deltas and collect storage-
+    // deletion payloads BEFORE the delete commits, because the
+    // Gallery→Photo cascade will hide the rows the moment the events
+    // disappear.
+    // FIX: use computeUsedStorageDeltaForDeletion (dedup-aware) instead
+    // of aggregateUsedBytesByClient which overcounts shared photo bytes.
+    const usedByClient = await computeUsedStorageDeltaForDeletion({
+      gallery: { eventId: { in: ids } },
+    });
     const deletionPayloads = await collectPhotoDeletionPayloads({
       gallery: { eventId: { in: ids } },
     });
-    const usedByClient = aggregateUsedBytesByClient(deletionPayloads);
 
     // Step 2 — DB-first transaction (delete + per-client `usedStorage`
     // decrement). Storage stays untouched if this fails.

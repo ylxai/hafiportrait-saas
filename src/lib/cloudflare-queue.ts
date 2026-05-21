@@ -813,40 +813,6 @@ export async function collectPhotoDeletionPayloads(
 }
 
 /**
- * Caller-side helper: derive the per-client byte total that should
- * be decremented from `Client.usedStorage` after the parent entity
- * (Event / Gallery / Client) is deleted.
- *
- * Centralised so each caller doesn't reinvent the same `Map<string, bigint>`
- * accumulator. Returns BigInt totals; `fileSize` strings produced by
- * `collectPhotoDeletionPayloads` round-trip safely back to BigInt here.
- *
- * Note: with PR #75 in place the payload already has `r2Key`/`thumbnailUrl`
- * nulled for shared-dedup rows, so this aggregator counts the FULL
- * `fileSize` for every payload row — including dedup-shared ones — which
- * is correct for the "legacy / failed-upload" path that still ate quota
- * at upload time. Callers that need dedup-aware byte deltas should use
- * `computeUsedStorageDeltaForDeletion` instead.
- */
-export function aggregateUsedBytesByClient(
-  payloads: PhotoDeletionPayload[],
-): Map<string, bigint> {
-  const usedByClient = new Map<string, bigint>();
-  for (const p of payloads) {
-    if (!p.clientId) continue;
-    if (!p.fileSize) continue;
-    let bytes: bigint;
-    try {
-      bytes = BigInt(p.fileSize);
-    } catch {
-      continue;
-    }
-    usedByClient.set(p.clientId, (usedByClient.get(p.clientId) ?? BigInt(0)) + bytes);
-  }
-  return usedByClient;
-}
-
-/**
  * Enqueue storage-deletion jobs with an outbox fallback.
  *
  * The transaction that owns the DB rows has already committed at this
