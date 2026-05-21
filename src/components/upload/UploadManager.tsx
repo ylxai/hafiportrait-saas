@@ -521,7 +521,7 @@ export function UploadManager({
                       </Button>
                     )}
 
-                    {(file.status === 'uploading' || file.status === 'processing' || file.status === 'compressing') && (
+                    {(file.status === 'uploading' || file.status === 'processing') && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -532,7 +532,7 @@ export function UploadManager({
                       </Button>
                     )}
 
-                    {(file.status === 'pending' || file.status === 'failed' || file.status === 'retrying') && (
+                    {(file.status === 'pending' || file.status === 'failed' || file.status === 'retrying' || file.status === 'compressing') && (
                       <Button
                         variant="ghost"
                         size="sm"
