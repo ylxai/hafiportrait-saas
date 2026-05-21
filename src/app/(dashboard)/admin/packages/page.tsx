@@ -67,7 +67,7 @@ export default function PackagesPage() {
         return;
       }
       const data = await res.json();
-      setPackages(data.packages || []);
+      setPackages(data.data?.packages || data.packages || []);
     } catch (error) {
       console.error('Error fetching packages:', error);
     } finally {
