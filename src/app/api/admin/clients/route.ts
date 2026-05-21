@@ -52,38 +52,44 @@ export async function GET(request: Request) {
           phone: true,
           instagram: true,
           storageQuotaGB: true,
+          usedStorage: true, // Use existing column instead of N+1 aggregate
           isApproved: true,
           createdAt: true,
           updatedAt: true,
+          _count: {
+            select: {
+              events: {
+                where: {
+                  galleries: {
+                    some: {
+                      photos: {
+                        some: {},
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       }),
       prisma.client.count(),
     ]);
 
-    // Fetch storage usage for each client
-    const clientsWithUsage = await Promise.all(
-      clients.map(async (client: typeof clients[number]) => {
-        const usage = await prisma.photo.aggregate({
-          where: {
-            gallery: {
-              event: {
-                clientId: client.id,
-              },
-            },
-          },
-          _sum: {
-            fileSize: true,
-          },
-          _count: true,
-        });
-
-        return {
-          ...client,
-          usedStorageBytes: (usage._sum.fileSize || BigInt(0)).toString(),
-          photoCount: usage._count,
-        };
-      })
-    );
+    // Transform to match expected response shape
+    const clientsWithUsage = clients.map((client) => ({
+      id: client.id,
+      nama: client.nama,
+      email: client.email,
+      phone: client.phone,
+      instagram: client.instagram,
+      storageQuotaGB: client.storageQuotaGB,
+      isApproved: client.isApproved,
+      createdAt: client.createdAt,
+      updatedAt: client.updatedAt,
+      usedStorageBytes: client.usedStorage.toString(),
+      photoCount: client._count.events, // Approximate count via events
+    }));
 
     return successResponse({
       clients: clientsWithUsage,
