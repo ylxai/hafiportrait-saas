@@ -12,6 +12,7 @@ import {
   MAX_UPLOAD_WORKERS,
   MAX_RETRY_ATTEMPTS,
   RETRY_DELAYS_MS,
+  UPLOAD_TIMEOUT_MS,
   MIN_COMPRESSION_SIZE_BYTES,
   COMPRESSION_MAX_DIMENSION,
   COMPRESSION_QUALITY,
@@ -109,6 +110,70 @@ function formatErrorMessage(error: unknown, context: string): { message: string;
 // Check if error is retryable
 function isRetryableError(errorCode: UploadFile['errorCode']): boolean {
   return RETRYABLE_ERROR_CODES.includes(errorCode);
+}
+
+// Upload file with real progress tracking via XMLHttpRequest
+interface UploadProgressResult {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  response: string;
+}
+
+function uploadWithProgress(
+  url: string,
+  file: File,
+  contentType: string,
+  onProgress: (percent: number) => void,
+  signal: AbortSignal,
+): Promise<UploadProgressResult> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'));
+      return;
+    }
+
+    const xhr = new XMLHttpRequest();
+    let lastReportedPercent = 0;
+
+    const onAbort = () => {
+      xhr.abort();
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+
+    signal.addEventListener('abort', onAbort, { once: true });
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && e.total > 0) {
+        const percent = Math.round((e.loaded * 100) / e.total);
+        // Throttle: only update if delta >= 1%
+        if (percent > lastReportedPercent) {
+          lastReportedPercent = percent;
+          onProgress(percent);
+        }
+      }
+    };
+
+    xhr.onload = () => {
+      signal.removeEventListener('abort', onAbort);
+      resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, statusText: xhr.statusText, response: xhr.responseText });
+    };
+
+    xhr.onerror = () => {
+      signal.removeEventListener('abort', onAbort);
+      reject(new Error('Network error during upload'));
+    };
+
+    xhr.ontimeout = () => {
+      signal.removeEventListener('abort', onAbort);
+      reject(new Error('Upload timed out'));
+    };
+
+    xhr.open('PUT', url);
+    xhr.setRequestHeader('Content-Type', contentType);
+    xhr.timeout = UPLOAD_TIMEOUT_MS;
+    xhr.send(file);
+  });
 }
 
 // Reusable Pica instance (avoid creating new instance per file)
@@ -264,25 +329,27 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       const { presignedUrl, publicUrl: _publicUrl, r2Key: _r2Key, uploadId } = presignedData.data || presignedData;
 
       // Update status: Uploading
-      updateFileStatus(uploadFile.id, { status: 'uploading', progress: 10 });
+      updateFileStatus(uploadFile.id, { status: 'uploading', progress: 5 });
 
-      // Step 3: Upload langsung ke R2 (bypass server!)
-      const r2Res = await fetch(presignedUrl, {
-        method: 'PUT',
-        body: fileToUpload,
-        headers: {
-          'Content-Type': fileToUpload.type,
+      // Step 3: Upload langsung ke R2 with real progress tracking
+      const r2Res = await uploadWithProgress(
+        presignedUrl,
+        fileToUpload,
+        fileToUpload.type || 'image/jpeg',
+        (percent) => {
+          // Map XHR progress (0-100%) to overall progress (5-90%)
+          const mappedProgress = 5 + Math.round(percent * 0.85);
+          updateFileStatus(uploadFile.id, { progress: mappedProgress });
         },
-        signal: abortController.signal,
-      });
+        abortController.signal,
+      );
 
       if (!r2Res.ok) {
-        const errorText = await r2Res.text().catch(() => 'Unknown error');
-        throw new Error(`R2 upload failed (${r2Res.status}): ${errorText}`);
+        throw new Error(`R2 upload failed (${r2Res.status}): ${r2Res.response || r2Res.statusText}`);
       }
 
       // Update status: Processing thumbnail
-      updateFileStatus(uploadFile.id, { status: 'processing', progress: 50 });
+      updateFileStatus(uploadFile.id, { status: 'processing', progress: 92 });
 
       // Step 4: Notify server untuk generate thumbnail
       const completeRes = await fetch('/api/admin/upload/complete', {
