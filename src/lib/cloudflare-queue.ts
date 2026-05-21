@@ -658,6 +658,7 @@ export async function collectDeletionDataForTransaction(
   whereCriteria: Prisma.PhotoWhereInput,
 ): Promise<{
   usedByClient: Map<string, bigint>;
+  photoCountByClient: Map<string, number>;
   payloads: PhotoDeletionPayload[];
 }> {
   const photos = await prisma.photo.findMany({
@@ -677,7 +678,7 @@ export async function collectDeletionDataForTransaction(
   });
 
   if (photos.length === 0) {
-    return { usedByClient: new Map(), payloads: [] };
+    return { usedByClient: new Map(), photoCountByClient: new Map(), payloads: [] };
   }
 
   const orphanedR2Keys = await getOrphanedR2Keys(
@@ -685,11 +686,17 @@ export async function collectDeletionDataForTransaction(
     photos.map((p) => p.id),
   );
 
-  // Compute storage delta
+  // Compute storage delta and photo count
   const usedByClient = new Map<string, bigint>();
+  const photoCountByClient = new Map<string, number>();
   for (const p of photos) {
-    if (p.r2Key && !orphanedR2Keys.has(p.r2Key)) continue;
     const cid = p.gallery.event.clientId;
+    
+    // Always count photos
+    photoCountByClient.set(cid, (photoCountByClient.get(cid) ?? 0) + 1);
+    
+    // Only count storage for orphaned files
+    if (p.r2Key && !orphanedR2Keys.has(p.r2Key)) continue;
     const bytes = p.fileSize ?? BigInt(0);
     if (bytes <= BigInt(0)) continue;
     usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + bytes);
@@ -750,7 +757,7 @@ export async function collectDeletionDataForTransaction(
     };
   });
 
-  return { usedByClient, payloads };
+  return { usedByClient, photoCountByClient, payloads };
 }
 
 /**

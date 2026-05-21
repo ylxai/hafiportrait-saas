@@ -158,7 +158,10 @@ export async function POST(request: Request) {
         id: clientId,
         usedStorage: { lte: storageQuotaBytes - fileSizeBig },
       },
-      data: { usedStorage: { increment: fileSizeBig } },
+      data: { 
+        usedStorage: { increment: fileSizeBig },
+        photoCount: { increment: 1 },
+      },
     });
 
     if (quotaUpdate.count === 0) {
@@ -241,13 +244,19 @@ export async function POST(request: Request) {
       // `lte: quota - size` predicate.
       const dedupRollback = await prisma.client.updateMany({
         where: { id: clientId, usedStorage: { gte: fileSizeBig } },
-        data: { usedStorage: { decrement: fileSizeBig } },
+        data: { 
+          usedStorage: { decrement: fileSizeBig },
+          // NOTE: Do NOT decrement photoCount here - Photo record is still created at line 286
+        },
       });
       if (dedupRollback.count === 0) {
         await prisma.client
           .update({
             where: { id: clientId },
-            data: { usedStorage: { decrement: fileSizeBig } },
+            data: { 
+              usedStorage: { decrement: fileSizeBig },
+              // NOTE: Do NOT decrement photoCount here - Photo record is still created at line 286
+            },
           })
           .catch((rollbackErr) => {
             logger.error('upload.complete.dedup.rollback_used_storage_failed', {
@@ -433,7 +442,10 @@ export async function POST(request: Request) {
       // Rollback the conditional usedStorage increment we already applied above
       await prisma.client.update({
         where: { id: clientId },
-        data: { usedStorage: { decrement: fileSizeBig } },
+        data: { 
+          usedStorage: { decrement: fileSizeBig },
+          photoCount: { decrement: 1 },
+        },
       }).catch((e) => logger.error('upload.complete.rollback_used_storage_failed', { clientId, err: e }));
 
       // Always rollback the orphan R2 file

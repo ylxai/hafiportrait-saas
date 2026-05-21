@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { getOrphanedR2Keys, queueStorageDeletion, isQueueConfigured } from '@/lib/cloudflare-queue';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 
 // Zod schema for route params
 const paramsSchema = z.object({
@@ -140,10 +141,37 @@ export async function DELETE(
     await prisma.$transaction(async (tx) => {
       await tx.photo.delete({ where: { id: photoId } });
       if (clientId && decrementBytes > BigInt(0)) {
-        await tx.client.update({
-          where: { id: clientId },
-          data: { usedStorage: { decrement: decrementBytes } },
-        });
+        try {
+          await tx.client.update({
+            where: { id: clientId },
+            data: { 
+              usedStorage: { decrement: decrementBytes },
+              photoCount: { decrement: 1 },
+            },
+          });
+        } catch (error) {
+          // Handle 'record not found' gracefully (concurrent deletion)
+          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+            // Client was deleted, skip quota update
+          } else {
+            throw error;
+          }
+        }
+      } else if (clientId) {
+        // Dedup case: decrement photoCount only (no storage freed)
+        try {
+          await tx.client.update({
+            where: { id: clientId },
+            data: { photoCount: { decrement: 1 } },
+          });
+        } catch (error) {
+          // Handle 'record not found' gracefully (concurrent deletion)
+          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+            // Client was deleted, skip quota update
+          } else {
+            throw error;
+          }
+        }
       }
     });
 

@@ -136,7 +136,7 @@ export async function DELETE(
     // cascade will hide the rows the moment the Event is gone.
     // Review #96 (Gemini): use combined helper to eliminate redundant
     // database queries.
-    const { usedByClient, payloads: deletionPayloads } =
+    const { usedByClient, photoCountByClient, payloads: deletionPayloads } =
       await collectDeletionDataForTransaction({
         gallery: { eventId: id },
       });
@@ -144,16 +144,25 @@ export async function DELETE(
     // Step 2 — DB-first: commit the delete plus the quota decrement in
     // one transaction. If this fails the storage stays untouched and the
     // user retries safely.
+    // Collect all unique client IDs from both maps
+    const allClientIds = new Set([
+      ...usedByClient.keys(),
+      ...photoCountByClient.keys(),
+    ]);
+
     await prisma.$transaction([
       prisma.event.delete({ where: { id } }),
-      ...Array.from(usedByClient.entries())
-        .filter(([, bytes]) => bytes > BigInt(0))
-        .map(([clientId, bytes]) =>
-          prisma.client.update({
-            where: { id: clientId },
-            data: { usedStorage: { decrement: bytes } },
-          }),
-        ),
+      ...Array.from(allClientIds).map((clientId) => {
+        const bytes = usedByClient.get(clientId) ?? BigInt(0);
+        const count = photoCountByClient.get(clientId) ?? 0;
+        return prisma.client.update({
+          where: { id: clientId },
+          data: {
+            usedStorage: bytes > BigInt(0) ? { decrement: bytes } : undefined,
+            photoCount: count > 0 ? { decrement: count } : undefined,
+          },
+        });
+      }),
     ]);
 
     // Step 3 — best-effort enqueue of the storage cleanup. A queue

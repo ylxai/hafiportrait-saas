@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/auth/options';
 import { z } from 'zod';
 import { getOrphanedR2Keys, queueStorageDeletionBulk } from '@/lib/cloudflare-queue';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { Prisma } from '@/generated/prisma';
 
 const bulkDeleteSchema = z.object({
   photoIds: z.array(z.string()).min(1).max(100),
@@ -148,23 +149,41 @@ export async function POST(request: Request) {
     // becomes orphan after the delete — shared r2Keys (cross-gallery
     // dedup) keep the file alive and therefore consume no new quota.
     const sumByClient = new Map<string, bigint>();
+    const countByClient = new Map<string, number>();
     for (const p of photos) {
       const cId = p.gallery?.event?.clientId;
-      if (!cId || !p.fileSize) continue;
+      if (!cId) continue;
+      
+      // Always count photos
+      countByClient.set(cId, (countByClient.get(cId) ?? 0) + 1);
+      
+      // Only count storage for orphaned files
       // A photo with no `r2Key` (legacy / failed upload) effectively
       // has no storage to keep alive, so it counts as orphan.
-      if (p.r2Key !== null && !orphanedR2Keys.has(p.r2Key)) continue;
-      sumByClient.set(cId, (sumByClient.get(cId) ?? BigInt(0)) + p.fileSize);
+      if (p.fileSize && (p.r2Key === null || orphanedR2Keys.has(p.r2Key))) {
+        sumByClient.set(cId, (sumByClient.get(cId) ?? BigInt(0)) + p.fileSize);
+      }
     }
     try {
       await prisma.$transaction(async (tx) => {
         await tx.photo.deleteMany({ where: { id: { in: photoIds } } });
-        for (const [cId, sum] of sumByClient) {
-          if (sum > BigInt(0)) {
+        // Unified loop: update storage and count for all clients
+        for (const [cId, count] of countByClient) {
+          const sum = sumByClient.get(cId) ?? BigInt(0);
+          try {
             await tx.client.update({
               where: { id: cId },
-              data: { usedStorage: { decrement: sum } },
+              data: {
+                usedStorage: { decrement: sum },
+                photoCount: { decrement: count },
+              },
             });
+          } catch (error) {
+            // Handle 'record not found' gracefully
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+              continue;
+            }
+            throw error;
           }
         }
       });
