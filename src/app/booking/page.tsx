@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, ChevronRight } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 type Package = {
   id: string;
@@ -28,6 +29,7 @@ export default function BookingPage() {
   const packages = data?.data?.packages ?? [];
 
   const [submitting, setSubmitting] = useState(false);
+  const [showPackageModal, setShowPackageModal] = useState(false);
   const [formData, setFormData] = useState({
     nama: '',
     email: '',
@@ -40,16 +42,9 @@ export default function BookingPage() {
     notes: '',
   });
 
-  const formRef = useRef<HTMLFieldSetElement>(null);
-
   const handlePackageSelect = (packageId: string) => {
     setFormData({ ...formData, packageId });
-    // Auto-scroll to form on mobile only (< 640px)
-    if (window.innerWidth < 640) {
-      setTimeout(() => {
-        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 150);
-    }
+    setShowPackageModal(false);
   };
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -83,6 +78,8 @@ export default function BookingPage() {
   const formatCurrency = (price: number) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(price);
 
+  const selectedPackage = packages.find(p => p.id === formData.packageId);
+
   return (
     <div className="min-h-screen bg-background py-6 px-3">
       <div className="max-w-lg mx-auto">
@@ -99,67 +96,32 @@ export default function BookingPage() {
               <span className="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">1</span>
               Pilih Paket
             </legend>
-            {isLoading ? (
-              <div className="animate-pulse h-24 bg-muted rounded-lg" />
-            ) : packages.length > 0 ? (
-              <div className="grid grid-cols-1 gap-2">
-                {packages.map((pkg) => {
-                  const isSelected = formData.packageId === pkg.id;
-                  return (
-                    <label
-                      key={pkg.id}
-                      className={`relative block p-3 border-2 rounded-lg cursor-pointer transition ${
-                        isSelected
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="packageId"
-                        value={pkg.id}
-                        required
-                        onChange={() => handlePackageSelect(pkg.id)}
-                        className="sr-only"
-                      />
-                      {isSelected && (
-                        <div className="absolute top-3 right-3">
-                          <CheckCircle className="size-5 text-primary" />
-                        </div>
-                      )}
-                      <div className="flex justify-between items-center pr-7">
-                        <div>
-                          <span className="font-semibold text-foreground">{pkg.nama}</span>
-                          {pkg.duration && <span className="text-xs text-muted-foreground ml-2">{pkg.duration} menit</span>}
-                        </div>
-                        <span className="text-primary font-bold text-sm">{formatCurrency(pkg.price)}</span>
-                      </div>
-                      {/* Show description & fitur only when selected */}
-                      {isSelected && (
-                        <div className="mt-2 pt-2 border-t border-border/50">
-                          {pkg.description && <p className="text-sm text-muted-foreground">{pkg.description}</p>}
-                          {pkg.fitur && pkg.fitur.length > 0 && (
-                            <ul className="mt-1.5 flex flex-wrap gap-1.5">
-                              {pkg.fitur.map((f, i) => (
-                                <li key={i} className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-                                  {f}
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-sm">Tidak ada paket tersedia</p>
-            )}
+            <button
+              type="button"
+              onClick={() => setShowPackageModal(true)}
+              className={`w-full p-4 border-2 rounded-lg text-left transition flex items-center justify-between ${
+                formData.packageId
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border hover:border-primary/50'
+              }`}
+            >
+              {formData.packageId ? (
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="size-5 text-primary shrink-0" />
+                  <div>
+                    <p className="font-semibold text-foreground">{selectedPackage?.nama}</p>
+                    <p className="text-sm text-primary font-bold">{selectedPackage ? formatCurrency(selectedPackage.price) : ''}</p>
+                  </div>
+                </div>
+              ) : (
+                <span className="text-muted-foreground">Tap untuk memilih paket...</span>
+              )}
+              <ChevronRight className="size-5 text-muted-foreground shrink-0" />
+            </button>
           </fieldset>
 
           {/* Section 2: Personal Info */}
-          <fieldset ref={formRef}>
+          <fieldset>
             <legend className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">2</span>
               Data Diri
@@ -292,6 +254,59 @@ export default function BookingPage() {
             </button>
           </div>
         </form>
+
+        {/* Package Selection Modal */}
+        <Dialog open={showPackageModal} onOpenChange={setShowPackageModal}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Pilih Paket</DialogTitle>
+              <DialogDescription>Pilih paket yang sesuai kebutuhan Anda</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              {isLoading ? (
+                <div className="animate-pulse h-24 bg-muted rounded-lg" />
+              ) : packages.length > 0 ? (
+                packages.map((pkg) => (
+                  <button
+                    key={pkg.id}
+                    type="button"
+                    onClick={() => handlePackageSelect(pkg.id)}
+                    className={`w-full text-left p-4 border-2 rounded-lg transition ${
+                      formData.packageId === pkg.id
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-start gap-3">
+                        {formData.packageId === pkg.id && (
+                          <CheckCircle className="size-5 text-primary shrink-0 mt-0.5" />
+                        )}
+                        <div>
+                          <p className="font-semibold text-foreground">{pkg.nama}</p>
+                          {pkg.description && <p className="text-sm text-muted-foreground mt-0.5">{pkg.description}</p>}
+                          {pkg.duration && <p className="text-xs text-muted-foreground mt-0.5">{pkg.duration} menit</p>}
+                        </div>
+                      </div>
+                      <span className="text-primary font-bold text-sm shrink-0 ml-2">{formatCurrency(pkg.price)}</span>
+                    </div>
+                    {pkg.fitur && pkg.fitur.length > 0 && (
+                      <ul className="mt-2 flex flex-wrap gap-1.5 pl-8">
+                        {pkg.fitur.map((f, i) => (
+                          <li key={i} className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </button>
+                ))
+              ) : (
+                <p className="text-muted-foreground text-sm text-center py-4">Tidak ada paket tersedia</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
