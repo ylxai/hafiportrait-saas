@@ -376,6 +376,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         progress: 100,
         photoId: photo.id,
         thumbnailUrl: photo.thumbnailUrl,
+        compressed: undefined, // Release memory
       });
 
       // Reset retry count on success
