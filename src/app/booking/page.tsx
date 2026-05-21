@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { CheckCircle } from 'lucide-react';
 
 type Package = {
   id: string;
@@ -14,7 +15,7 @@ type Package = {
   fitur: string[];
 };
 
-type PackagesResponse = { data: { packages: Package[] } };
+type PackagesResponse = { success: boolean; data: { packages: Package[] } };
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -23,18 +24,13 @@ export default function BookingPage() {
   const { data, isLoading } = useSWR<PackagesResponse>('/api/public/booking/packages', fetcher, {
     revalidateOnFocus: false,
   });
-  
+
   const packages = data?.data?.packages ?? [];
-  
+
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     nama: '',
     email: '',
-    // The portal login flow uses email + password, so we collect a
-    // password at booking time. The server-side handler hashes it and
-    // creates the client row in `isApproved=false` state — the booking
-    // can be confirmed end-to-end without anyone signing in, but login
-    // is gated until an admin approves the row from the dashboard.
     password: '',
     phone: '',
     instagram: '',
@@ -44,6 +40,15 @@ export default function BookingPage() {
     notes: '',
   });
 
+  const formRef = useRef<HTMLFieldSetElement>(null);
+
+  const handlePackageSelect = (packageId: string) => {
+    setFormData({ ...formData, packageId });
+    // Auto-scroll to form on mobile after selecting package
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+  };
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,9 +69,6 @@ export default function BookingPage() {
       if (res.ok && result.data?.kodeBooking) {
         router.push(`/booking/invoice/${result.data.kodeBooking}`);
       } else {
-        // Surface the field-specific validation message (e.g. 'password:
-        // Password minimal 8 karakter') so users can self-correct rather
-        // than retry blindly.
         toast.error(result.error || 'Terjadi kesalahan. Silakan coba lagi.');
       }
     } catch {
@@ -76,6 +78,9 @@ export default function BookingPage() {
     }
   }, [formData, router]);
 
+  const formatCurrency = (price: number) =>
+    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(price);
+
   return (
     <div className="min-h-screen bg-background py-6 px-3">
       <div className="max-w-lg mx-auto">
@@ -84,18 +89,22 @@ export default function BookingPage() {
           <p className="text-muted-foreground text-sm">Isi form di bawah untuk booking sesi foto</p>
         </div>
 
-        <form onSubmit={(e) => { void handleSubmit(e); }} className="bg-card text-foreground rounded-xl shadow-sm border border-border p-4 sm:p-6 space-y-5">
-          {/* Package Selection */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Pilih Paket *</label>
+        <form onSubmit={(e) => { void handleSubmit(e); }} className="bg-card text-foreground rounded-xl shadow-sm border border-border p-4 sm:p-6 space-y-6">
+
+          {/* Section 1: Package Selection */}
+          <fieldset>
+            <legend className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">1</span>
+              Pilih Paket
+            </legend>
             {isLoading ? (
-              <div className="animate-pulse h-24 bg-muted rounded-lg"></div>
+              <div className="animate-pulse h-24 bg-muted rounded-lg" />
             ) : packages.length > 0 ? (
               <div className="grid grid-cols-1 gap-3">
                 {packages.map((pkg) => (
                   <label
                     key={pkg.id}
-                    className={`block p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition ${
+                    className={`relative block p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition ${
                       formData.packageId === pkg.id
                         ? 'border-primary bg-primary/10'
                         : 'border-border hover:border-primary/50'
@@ -106,137 +115,172 @@ export default function BookingPage() {
                       name="packageId"
                       value={pkg.id}
                       required
-                      onChange={(e) => setFormData({ ...formData, packageId: e.target.value })}
+                      onChange={() => handlePackageSelect(pkg.id)}
                       className="sr-only"
                     />
-                    <div className="flex justify-between items-start">
-                      <span className="font-semibold">{pkg.nama}</span>
-                      <span className="text-primary font-bold">Rp {pkg.price.toLocaleString('id-ID')}</span>
+                    {/* Selected indicator */}
+                    {formData.packageId === pkg.id && (
+                      <div className="absolute top-3 right-3">
+                        <CheckCircle className="size-5 text-primary" />
+                      </div>
+                    )}
+                    <div className="flex justify-between items-start pr-7">
+                      <span className="font-semibold text-foreground">{pkg.nama}</span>
+                      <span className="text-primary font-bold text-sm">{formatCurrency(pkg.price)}</span>
                     </div>
                     {pkg.description && <p className="text-sm text-muted-foreground mt-1">{pkg.description}</p>}
                     {pkg.duration && <p className="text-xs text-muted-foreground mt-1">{pkg.duration} menit</p>}
+                    {/* Fitur list */}
+                    {pkg.fitur && pkg.fitur.length > 0 && (
+                      <ul className="mt-2 flex flex-wrap gap-1.5">
+                        {pkg.fitur.map((f, i) => (
+                          <li key={i} className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </label>
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground">Tidak ada paket tersedia</p>
+              <p className="text-muted-foreground text-sm">Tidak ada paket tersedia</p>
             )}
-          </div>
+          </fieldset>
 
-          {/* Personal Info */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Nama Lengkap *</label>
-              <input
-                type="text"
-                required
-                autoComplete="name"
-                value={formData.nama}
-                onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground touch-target"
-                placeholder="Nama lengkap Anda…"
-              />
+          {/* Section 2: Personal Info */}
+          <fieldset ref={formRef}>
+            <legend className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">2</span>
+              Data Diri
+            </legend>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="nama" className="block text-sm font-medium text-foreground mb-1.5">Nama Lengkap *</label>
+                <input
+                  id="nama"
+                  type="text"
+                  required
+                  autoComplete="name"
+                  value={formData.nama}
+                  onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                  placeholder="Nama lengkap Anda…"
+                />
+              </div>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">Email *</label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  inputMode="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                  placeholder="email@example.com"
+                />
+              </div>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1.5">Password *</label>
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  minLength={8}
+                  maxLength={72}
+                  autoComplete="new-password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                  placeholder="Minimal 8 karakter"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Untuk login melihat galeri setelah disetujui admin.
+                </p>
+              </div>
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-foreground mb-1.5">Nomor WhatsApp *</label>
+                <input
+                  id="phone"
+                  type="tel"
+                  required
+                  autoComplete="tel"
+                  inputMode="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                  placeholder="0812 3456 7890"
+                />
+              </div>
+              <div>
+                <label htmlFor="instagram" className="block text-sm font-medium text-foreground mb-1.5">Instagram</label>
+                <input
+                  id="instagram"
+                  type="text"
+                  value={formData.instagram}
+                  onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                  placeholder="@username"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Email *</label>
-              <input
-                type="email"
-                required
-                autoComplete="email"
-                inputMode="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground touch-target"
-                placeholder="email@example.com…"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Password *</label>
-              <input
-                type="password"
-                required
-                minLength={8}
-                maxLength={72}
-                autoComplete="new-password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground touch-target"
-                placeholder="Minimal 8 karakter"
-              />
-              <p className="mt-1 text-xs text-muted-foreground">
-                Akan digunakan untuk login melihat galeri setelah disetujui admin.
-              </p>
-            </div>
-          </div>
+          </fieldset>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Nomor WhatsApp *</label>
-              <input
-                type="tel"
-                required
-                autoComplete="tel"
-                inputMode="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground touch-target"
-                placeholder="0812 3456 7890…"
-              />
+          {/* Section 3: Event Details */}
+          <fieldset>
+            <legend className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">3</span>
+              Detail Event
+            </legend>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="eventDate" className="block text-sm font-medium text-foreground mb-1.5">Tanggal Event *</label>
+                <input
+                  id="eventDate"
+                  type="date"
+                  required
+                  value={formData.eventDate}
+                  onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                />
+              </div>
+              <div>
+                <label htmlFor="location" className="block text-sm font-medium text-foreground mb-1.5">Lokasi</label>
+                <input
+                  id="location"
+                  type="text"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                  placeholder="Jakarta / Outdoor / Studio"
+                />
+              </div>
+              <div>
+                <label htmlFor="notes" className="block text-sm font-medium text-foreground mb-1.5">Catatan Tambahan</label>
+                <textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                  placeholder="Permintaan khusus, theme, konsep foto, dll."
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Instagram</label>
-              <input
-                type="text"
-                value={formData.instagram}
-                onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
-                className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground touch-target"
-                placeholder="@username"
-              />
-            </div>
-          </div>
+          </fieldset>
 
-          {/* Event Details */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Tanggal Event *</label>
-              <input
-                type="date"
-                required
-                value={formData.eventDate}
-                onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-                className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground touch-target"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Lokasi</label>
-              <input
-                type="text"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground touch-target"
-                placeholder="Jakarta / Outdoor / Studio"
-              />
-            </div>
+          {/* Submit - sticky on mobile */}
+          <div className="sticky bottom-0 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 px-4 sm:px-6 py-4 bg-card border-t border-border rounded-b-xl">
+            <button
+              type="submit"
+              disabled={submitting || !formData.packageId}
+              className="w-full py-3 sm:py-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg transition disabled:opacity-50"
+            >
+              {submitting ? 'Mengirim...' : 'Kirim Booking'}
+            </button>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Catatan Tambahan</label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              rows={3}
-              className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground touch-target"
-              placeholder="Permintaan khusus, theme, konsep foto, dll."
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full py-3 sm:py-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg transition disabled:opacity-50 touch-target"
-          >
-            {submitting ? 'Mengirim...' : 'Kirim Booking'}
-          </button>
         </form>
       </div>
     </div>
