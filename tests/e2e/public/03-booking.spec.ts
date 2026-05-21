@@ -10,7 +10,7 @@ test.describe('Public Booking', () => {
         nama: 'Test Package',
         price: 5000000,
         description: 'Test package for booking',
-        features: ['Feature 1', 'Feature 2'],
+        fitur: ['Feature 1', 'Feature 2'],
         isActive: true,
       },
     });

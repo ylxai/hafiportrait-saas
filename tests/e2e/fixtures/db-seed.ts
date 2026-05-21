@@ -25,9 +25,8 @@ export interface TestClient {
   instagram: string | null;
   password: string | null;
   storageQuotaGB: number;
-  emailVerified: boolean;
-  verificationToken: string | null;
-  tokenExpiry: Date | null;
+  usedStorage: bigint;
+  isApproved: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,7 +81,7 @@ export async function seedClient(
       email: data?.email || `client${timestamp}@test.com`,
       phone: data?.phone || `+62812${timestamp.toString().slice(-8)}`,
       password: hashedPassword,
-      emailVerified: true,
+      isApproved: true,
     },
   });
 
@@ -239,6 +238,20 @@ export async function seedPackage(
 
 export async function cleanupPackage(id: string): Promise<void> {
   await prisma.package.delete({ where: { id } });
+}
+
+export async function cleanupClient(id: string): Promise<void> {
+  // Delete related events (and their galleries/photos) first
+  const events = await prisma.event.findMany({ where: { clientId: id }, select: { id: true } });
+  for (const event of events) {
+    const galleries = await prisma.gallery.findMany({ where: { eventId: event.id }, select: { id: true } });
+    for (const gallery of galleries) {
+      await prisma.photo.deleteMany({ where: { galleryId: gallery.id } });
+    }
+    await prisma.gallery.deleteMany({ where: { eventId: event.id } });
+  }
+  await prisma.event.deleteMany({ where: { clientId: id } });
+  await prisma.client.delete({ where: { id } });
 }
 
 export async function seedFullTestData() {
