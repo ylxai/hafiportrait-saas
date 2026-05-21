@@ -89,6 +89,7 @@ export default function GalleryClient({
   );
   const [loadingMore, setLoadingMore] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const loadingMoreRef = useRef(false);
 
   const { data, error, isLoading, mutate } = useSWR<{ data: GalleryData }>(
     token ? `/api/public/gallery/${token}` : null,
@@ -127,8 +128,9 @@ export default function GalleryClient({
   );
 
   const loadMore = useCallback(async () => {
-    if (!pagination?.hasMore || !pagination.nextCursor || loadingMore) return;
+    if (!pagination?.hasMore || !pagination.nextCursor || loadingMoreRef.current) return;
     
+    loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
       const res = await fetch(`/api/public/gallery/${token}?cursor=${pagination.nextCursor}`);
@@ -139,9 +141,10 @@ export default function GalleryClient({
     } catch (err) {
       console.error('Error loading more photos:', err);
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [pagination, token, loadingMore]);
+  }, [pagination, token]);
 
   // Auto infinite scroll via IntersectionObserver
   useEffect(() => {
