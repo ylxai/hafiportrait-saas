@@ -6,6 +6,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
 
+function isPrismaError(error: unknown, code: string): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === code;
+}
+
 async function checkAuth() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -79,7 +83,7 @@ export async function POST(request: Request) {
     return successResponse({ package: pkg }, 201);
   } catch (error) {
     console.error('Error creating package:', error);
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+    if (isPrismaError(error, 'P2002')) {
       return errorResponse('Nama paket sudah digunakan', 409);
     }
     return serverErrorResponse('Failed to create package');
@@ -115,10 +119,10 @@ export async function PATCH(request: Request) {
     return successResponse({ package: pkg });
   } catch (error) {
     console.error('Error updating package:', error);
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+    if (isPrismaError(error, 'P2025')) {
       return notFoundResponse('Package not found');
     }
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+    if (isPrismaError(error, 'P2002')) {
       return errorResponse('Nama paket sudah digunakan', 409);
     }
     return serverErrorResponse('Failed to update package');
@@ -145,7 +149,7 @@ export async function DELETE(request: Request) {
     return successResponse({ success: true });
   } catch (error) {
     console.error('Error deleting package:', error);
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+    if (isPrismaError(error, 'P2025')) {
       return notFoundResponse('Package not found');
     }
     return serverErrorResponse('Failed to delete package');
