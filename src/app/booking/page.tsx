@@ -102,48 +102,56 @@ export default function BookingPage() {
             {isLoading ? (
               <div className="animate-pulse h-24 bg-muted rounded-lg" />
             ) : packages.length > 0 ? (
-              <div className="grid grid-cols-1 gap-3">
-                {packages.map((pkg) => (
-                  <label
-                    key={pkg.id}
-                    className={`relative block p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition ${
-                      formData.packageId === pkg.id
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="packageId"
-                      value={pkg.id}
-                      required
-                      onChange={() => handlePackageSelect(pkg.id)}
-                      className="sr-only"
-                    />
-                    {/* Selected indicator */}
-                    {formData.packageId === pkg.id && (
-                      <div className="absolute top-3 right-3">
-                        <CheckCircle className="size-5 text-primary" />
+              <div className="grid grid-cols-1 gap-2">
+                {packages.map((pkg) => {
+                  const isSelected = formData.packageId === pkg.id;
+                  return (
+                    <label
+                      key={pkg.id}
+                      className={`relative block p-3 border-2 rounded-lg cursor-pointer transition ${
+                        isSelected
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="packageId"
+                        value={pkg.id}
+                        required
+                        onChange={() => handlePackageSelect(pkg.id)}
+                        className="sr-only"
+                      />
+                      {isSelected && (
+                        <div className="absolute top-3 right-3">
+                          <CheckCircle className="size-5 text-primary" />
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center pr-7">
+                        <div>
+                          <span className="font-semibold text-foreground">{pkg.nama}</span>
+                          {pkg.duration && <span className="text-xs text-muted-foreground ml-2">{pkg.duration} menit</span>}
+                        </div>
+                        <span className="text-primary font-bold text-sm">{formatCurrency(pkg.price)}</span>
                       </div>
-                    )}
-                    <div className="flex justify-between items-start pr-7">
-                      <span className="font-semibold text-foreground">{pkg.nama}</span>
-                      <span className="text-primary font-bold text-sm">{formatCurrency(pkg.price)}</span>
-                    </div>
-                    {pkg.description && <p className="text-sm text-muted-foreground mt-1">{pkg.description}</p>}
-                    {pkg.duration && <p className="text-xs text-muted-foreground mt-1">{pkg.duration} menit</p>}
-                    {/* Fitur list */}
-                    {pkg.fitur && pkg.fitur.length > 0 && (
-                      <ul className="mt-2 flex flex-wrap gap-1.5">
-                        {pkg.fitur.map((f, i) => (
-                          <li key={i} className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-                            {f}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </label>
-                ))}
+                      {/* Show description & fitur only when selected */}
+                      {isSelected && (
+                        <div className="mt-2 pt-2 border-t border-border/50">
+                          {pkg.description && <p className="text-sm text-muted-foreground">{pkg.description}</p>}
+                          {pkg.fitur && pkg.fitur.length > 0 && (
+                            <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                              {pkg.fitur.map((f, i) => (
+                                <li key={i} className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                                  {f}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+                    </label>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-muted-foreground text-sm">Tidak ada paket tersedia</p>
