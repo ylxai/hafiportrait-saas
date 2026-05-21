@@ -66,8 +66,8 @@ export default function PackagesPage() {
         setLoading(false);
         return;
       }
-      const data = await res.json();
-      setPackages(data.data?.packages || data.packages || []);
+      const data: { success: boolean; data: { packages: Package[] } } = await res.json();
+      setPackages(data.data.packages);
     } catch (error) {
       console.error('Error fetching packages:', error);
     } finally {
