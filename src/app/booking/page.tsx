@@ -44,10 +44,12 @@ export default function BookingPage() {
 
   const handlePackageSelect = (packageId: string) => {
     setFormData({ ...formData, packageId });
-    // Auto-scroll to form on mobile after selecting package
-    setTimeout(() => {
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 150);
+    // Auto-scroll to form on mobile only (< 640px)
+    if (window.innerWidth < 640) {
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+    }
   };
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
