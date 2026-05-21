@@ -345,11 +345,25 @@ export default function GalleryClient({
     try {
       // Sequential download to avoid memory spike (80 photos × 10MB = 800MB if parallel)
       for (const photo of activeSelectedPhotos) {
-        const res = await fetch(`/api/public/gallery/${token}/photos/${photo.id}/download`);
-        const data = await res.json();
-        const url = data.success && data.data?.downloadUrl ? data.data.downloadUrl : photo.url;
+        let downloadUrl = photo.url;
+        try {
+          const res = await fetch(`/api/public/gallery/${token}/photos/${photo.id}/download`);
+          if (res.ok) {
+            const json: { success?: boolean; data?: { downloadUrl?: string } } = await res.json();
+            if (json.success && json.data?.downloadUrl) {
+              downloadUrl = json.data.downloadUrl;
+            }
+          }
+        } catch {
+          // Fallback to photo.url
+        }
         
-        const imageRes = await fetch(url);
+        const imageRes = await fetch(downloadUrl);
+        if (!imageRes.ok) {
+          console.warn(`Failed to download ${photo.filename}, skipping`);
+          setDownloadProgress(prev => ({ ...prev, current: prev.current + 1 }));
+          continue;
+        }
         const blob = await imageRes.blob();
         
         zip.file(`${photo.id}-${photo.filename}`, blob);
