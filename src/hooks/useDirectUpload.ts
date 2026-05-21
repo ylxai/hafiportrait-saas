@@ -27,6 +27,8 @@ export interface UploadFile {
   file: File;
   compressed?: File;
   fileHash?: string; // SHA-256 hash for integrity/duplicate detection
+  presignedUrl?: string; // Pre-fetched via batch endpoint
+  uploadId?: string; // From batch presigned response
   status: 'pending' | 'compressing' | 'uploading' | 'processing' | 'completed' | 'failed' | 'retrying';
   progress: number;
   error?: string;
@@ -303,30 +305,42 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         }
       }
 
-      // Step 2: Get presigned URL dari server
+      // Step 2: Get presigned URL (use pre-fetched from batch, or request individually)
       updateFileStatus(uploadFile.id, { status: 'uploading', progress: 5 });
-      
-      const presignedRes = await fetch('/api/admin/upload/presigned', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filename: fileToUpload.name,
-          contentType: fileToUpload.type || 'image/jpeg', // Fallback content type
-          galleryId,
-          r2AccountId,
-          cloudinaryAccountId,
-          fileSize: fileToUpload.size,
-          fileHash, // Include hash for integrity verification
-        }),
-        signal: abortController.signal,
-      });
 
-      const presignedData = await presignedRes.json();
-      if (!presignedRes.ok) {
-        throw new Error(presignedData.error || `Server error: ${presignedRes.status}`);
+      let presignedUrl: string;
+      let uploadId: string;
+
+      if (uploadFile.presignedUrl && uploadFile.uploadId) {
+        // Use pre-fetched batch URL
+        presignedUrl = uploadFile.presignedUrl;
+        uploadId = uploadFile.uploadId;
+      } else {
+        // Fallback: request individually
+        const presignedRes = await fetch('/api/admin/upload/presigned', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: fileToUpload.name,
+            contentType: fileToUpload.type || 'image/jpeg',
+            galleryId,
+            r2AccountId,
+            cloudinaryAccountId,
+            fileSize: fileToUpload.size,
+            fileHash,
+          }),
+          signal: abortController.signal,
+        });
+
+        const presignedData = await presignedRes.json();
+        if (!presignedRes.ok) {
+          throw new Error(presignedData.error || `Server error: ${presignedRes.status}`);
+        }
+
+        const result = presignedData.data || presignedData;
+        presignedUrl = result.presignedUrl;
+        uploadId = result.uploadId;
       }
-
-      const { presignedUrl, publicUrl: _publicUrl, r2Key: _r2Key, uploadId } = presignedData.data || presignedData;
 
       // Update status: Uploading
       updateFileStatus(uploadFile.id, { status: 'uploading', progress: 5 });
@@ -498,6 +512,75 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     }
   };
 
+  // Batch prefetch presigned URLs for large batches (50 per request)
+  const batchPrefetchPresignedUrls = async (files: UploadFile[]) => {
+    const BATCH_SIZE = 50;
+    const filesToPrefetch = files.filter(f => !f.presignedUrl);
+
+    for (let i = 0; i < filesToPrefetch.length; i += BATCH_SIZE) {
+      const batch = filesToPrefetch.slice(i, i + BATCH_SIZE);
+
+      // Calculate hashes for batch if not already done
+      await Promise.all(batch.map(async (file) => {
+        if (!file.fileHash) {
+          const fileToHash = file.compressed || file.file;
+          try {
+            const hash = await calculateFileHash(fileToHash);
+            updateFileStatus(file.id, { fileHash: hash });
+            file.fileHash = hash;
+          } catch {
+            // Skip batch for this file — will fallback to individual request
+          }
+        }
+      }));
+
+      const batchFiles = batch
+        .filter(f => f.fileHash)
+        .map(f => ({
+          filename: (f.compressed || f.file).name,
+          contentType: (f.compressed || f.file).type || 'image/jpeg',
+          fileSize: (f.compressed || f.file).size,
+          fileHash: f.fileHash!,
+        }));
+
+      if (batchFiles.length === 0) continue;
+
+      try {
+        const res = await fetch('/api/admin/upload/presigned/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            galleryId,
+            r2AccountId,
+            cloudinaryAccountId,
+            files: batchFiles,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const urls = data.data?.urls || [];
+
+          // Map URLs back to files by filename
+          for (const url of urls) {
+            const file = batch.find(f => (f.compressed || f.file).name === url.filename);
+            if (file) {
+              updateFileStatus(file.id, {
+                presignedUrl: url.presignedUrl,
+                uploadId: url.uploadId,
+              });
+              file.presignedUrl = url.presignedUrl;
+              file.uploadId = url.uploadId;
+            }
+          }
+        }
+        // If batch request fails, files will fallback to individual presigned requests
+      } catch (err) {
+        console.warn('[Upload] Batch presigned failed, will fallback to individual:', err);
+      }
+    }
+  };
+
   // Start upload semua file
   const startUpload = async () => {
     setIsUploading(true);
@@ -566,6 +649,9 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       }
       
       await Promise.all(compressionWorkers);
+
+      // Batch prefetch presigned URLs (50 per batch)
+      await batchPrefetchPresignedUrls(pendingFiles);
 
       // Start upload workers dengan concurrency control
       const workers: Promise<void>[] = [];
