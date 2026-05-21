@@ -88,6 +88,8 @@ export default function GalleryClient({
     () => initialData?.data.gallery.pagination ?? null,
   );
   const [loadingMore, setLoadingMore] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const loadingMoreRef = useRef(false);
 
   const { data, error, isLoading, mutate } = useSWR<{ data: GalleryData }>(
     token ? `/api/public/gallery/${token}` : null,
@@ -126,8 +128,9 @@ export default function GalleryClient({
   );
 
   const loadMore = useCallback(async () => {
-    if (!pagination?.hasMore || !pagination.nextCursor || loadingMore) return;
+    if (!pagination?.hasMore || !pagination.nextCursor || loadingMoreRef.current) return;
     
+    loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
       const res = await fetch(`/api/public/gallery/${token}?cursor=${pagination.nextCursor}`);
@@ -138,9 +141,28 @@ export default function GalleryClient({
     } catch (err) {
       console.error('Error loading more photos:', err);
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [pagination, token, loadingMore]);
+  }, [pagination, token]);
+
+  // Auto infinite scroll via IntersectionObserver
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && pagination?.hasMore && !loadingMore) {
+          void loadMore();
+        }
+      },
+      { rootMargin: '200px' }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [pagination?.hasMore, loadingMore, loadMore]);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'all' | 'selected'>('all');
@@ -324,20 +346,32 @@ export default function GalleryClient({
     const zip = new JSZip();
     
     try {
-      await Promise.all(activeSelectedPhotos.map(async (photo) => {
-        const res = await fetch(`/api/public/gallery/${token}/photos/${photo.id}/download`);
-        const data = await res.json();
-        const url = data.success && data.data?.downloadUrl ? data.data.downloadUrl : photo.url;
+      // Sequential download to avoid memory spike (80 photos × 10MB = 800MB if parallel)
+      for (const photo of activeSelectedPhotos) {
+        let downloadUrl = photo.url;
+        try {
+          const res = await fetch(`/api/public/gallery/${token}/photos/${photo.id}/download`);
+          if (res.ok) {
+            const json: { success?: boolean; data?: { downloadUrl?: string } } = await res.json();
+            if (json.success && json.data?.downloadUrl) {
+              downloadUrl = json.data.downloadUrl;
+            }
+          }
+        } catch {
+          // Fallback to photo.url
+        }
         
-        const imageRes = await fetch(url);
+        const imageRes = await fetch(downloadUrl);
+        if (!imageRes.ok) {
+          console.warn(`Failed to download ${photo.filename}, skipping`);
+          setDownloadProgress(prev => ({ ...prev, current: prev.current + 1 }));
+          continue;
+        }
         const blob = await imageRes.blob();
         
-        // Prefix with photo id to avoid collisions when two selected
-        // photos share the same filename (e.g. duplicate originals across
-        // sub-galleries) — JSZip silently overwrites identical entries.
         zip.file(`${photo.id}-${photo.filename}`, blob);
         setDownloadProgress(prev => ({ ...prev, current: prev.current + 1 }));
-      }));
+      }
       
       const content = await zip.generateAsync({ type: 'blob' });
       saveAs(content, `${gallery?.namaProject || 'gallery'}-selected-photos.zip`);
@@ -554,26 +588,18 @@ export default function GalleryClient({
               })}
             </Masonry>
             
-            {/* Load More Button */}
+            {/* Infinite scroll sentinel */}
             {pagination?.hasMore && (
-              <div className="flex justify-center py-8">
-                <button
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                  className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {loadingMore ? (
-                    <span className="flex items-center gap-2">
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Memuat...
-                    </span>
-                  ) : (
-                    `Muat ${pagination?.perPage || 100} foto lagi`
-                  )}
-                </button>
+              <div ref={loadMoreRef} className="flex justify-center py-8">
+                {loadingMore && (
+                  <span className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Memuat foto...
+                  </span>
+                )}
               </div>
             )}
           </>
@@ -659,7 +685,7 @@ export default function GalleryClient({
         )}
       </main>
 
-      <footer className="py-6 pb-28 text-center text-xs text-muted-foreground">© {new Date().getFullYear()} PhotoStudio</footer>
+      <footer className={`py-6 text-center text-xs text-muted-foreground ${hasPickspace && !isLocked && localSelectionCount > 0 ? 'pb-28' : ''}`}>© {new Date().getFullYear()} PhotoStudio</footer>
 
       {hasPickspace && !isLocked && localSelectionCount > 0 && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border z-40 transform transition-transform duration-300">
@@ -697,7 +723,7 @@ export default function GalleryClient({
         close={closeLightbox}
         index={lightboxIndex >= 0 ? lightboxIndex : 0}
         on={{ view: ({ index }) => setLightboxIndex(index) }}
-        slides={photos.map((p) => ({ src: p.lightboxUrl || p.thumbnailUrl || p.url, alt: p.filename }))}
+        slides={photos.map((p) => ({ src: p.lightboxUrl || p.url, alt: p.filename }))}
         plugins={[Zoom]}
         carousel={{ finite: false }}
         toolbar={{
