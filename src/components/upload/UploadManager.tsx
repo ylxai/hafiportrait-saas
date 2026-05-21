@@ -521,12 +521,22 @@ export function UploadManager({
                       </Button>
                     )}
 
+                    {(file.status === 'uploading' || file.status === 'processing' || file.status === 'compressing') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(file.id)}
+                        aria-label={`Batalkan upload ${file.file.name}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+
                     {(file.status === 'pending' || file.status === 'failed' || file.status === 'retrying') && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => removeFile(file.id)}
-                        disabled={isUploading && file.status !== 'failed' && file.status !== 'retrying'}
                         aria-label={`Hapus ${file.file.name} dari antrian`}
                       >
                         <X className="w-4 h-4" />
