@@ -79,6 +79,9 @@ export async function POST(request: Request) {
     return successResponse({ package: pkg }, 201);
   } catch (error) {
     console.error('Error creating package:', error);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      return errorResponse('Nama paket sudah digunakan', 409);
+    }
     return serverErrorResponse('Failed to create package');
   }
 }
@@ -114,6 +117,9 @@ export async function PATCH(request: Request) {
     console.error('Error updating package:', error);
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
       return notFoundResponse('Package not found');
+    }
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      return errorResponse('Nama paket sudah digunakan', 409);
     }
     return serverErrorResponse('Failed to update package');
   }
