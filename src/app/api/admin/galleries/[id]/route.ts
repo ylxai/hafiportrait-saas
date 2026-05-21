@@ -7,8 +7,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { serializeBigInt } from '@/lib/bigint-utils';
 import {
-  computeUsedStorageDeltaForDeletion,
-  collectPhotoDeletionPayloads,
+  collectDeletionDataForTransaction,
   enqueueDeletionWithOutbox,
 } from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
@@ -127,13 +126,13 @@ export async function DELETE(
       return errorResponse('Gallery ID is required', 400);
     }
 
-    // Step 1 — compute dedup-aware byte deltas and collect storage-
-    // deletion payloads BEFORE the delete commits; the Photo→Gallery
-    // cascade is about to remove the rows.
-    // FIX: use computeUsedStorageDeltaForDeletion (dedup-aware) instead
-    // of aggregateUsedBytesByClient which overcounts shared photo bytes.
-    const usedByClient = await computeUsedStorageDeltaForDeletion({ galleryId: id });
-    const deletionPayloads = await collectPhotoDeletionPayloads({ galleryId: id });
+    // Step 1 — collect dedup-aware byte deltas and storage-deletion
+    // payloads BEFORE the delete commits; the Photo→Gallery cascade
+    // is about to remove the rows.
+    // Review #96 (Gemini): use combined helper to eliminate redundant
+    // database queries.
+    const { usedByClient, payloads: deletionPayloads } =
+      await collectDeletionDataForTransaction({ galleryId: id });
 
     // Step 2 — DB-first transaction.
     await prisma.$transaction([

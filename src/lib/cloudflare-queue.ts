@@ -646,6 +646,114 @@ export async function getOrphanedR2Keys(
 }
 
 /**
+ * Combined helper that returns both storage delta and deletion payloads
+ * in a single database round-trip. Eliminates redundant queries when
+ * both values are needed (e.g., REST deletion endpoints).
+ *
+ * Review #96 (Gemini): `computeUsedStorageDeltaForDeletion` and
+ * `collectPhotoDeletionPayloads` previously issued separate `findMany`
+ * queries with identical `whereCriteria`, causing double database hits.
+ */
+export async function collectDeletionDataForTransaction(
+  whereCriteria: Prisma.PhotoWhereInput,
+): Promise<{
+  usedByClient: Map<string, bigint>;
+  payloads: PhotoDeletionPayload[];
+}> {
+  const photos = await prisma.photo.findMany({
+    where: whereCriteria,
+    select: {
+      id: true,
+      r2Key: true,
+      thumbnailUrl: true,
+      storageAccountId: true,
+      fileSize: true,
+      gallery: {
+        select: {
+          event: { select: { clientId: true } },
+        },
+      },
+    },
+  });
+
+  if (photos.length === 0) {
+    return { usedByClient: new Map(), payloads: [] };
+  }
+
+  const orphanedR2Keys = await getOrphanedR2Keys(
+    photos.map((p) => p.r2Key).filter((k): k is string => Boolean(k)),
+    photos.map((p) => p.id),
+  );
+
+  // Compute storage delta
+  const usedByClient = new Map<string, bigint>();
+  for (const p of photos) {
+    if (p.r2Key && !orphanedR2Keys.has(p.r2Key)) continue;
+    const cid = p.gallery.event.clientId;
+    const bytes = p.fileSize ?? BigInt(0);
+    if (bytes <= BigInt(0)) continue;
+    usedByClient.set(cid, (usedByClient.get(cid) ?? BigInt(0)) + bytes);
+  }
+
+  // Resolve Cloudinary credentials
+  const uniqueStorageAccountIds = Array.from(
+    new Set(photos.map((p) => p.storageAccountId).filter(Boolean) as string[]),
+  );
+  const storageAccounts = uniqueStorageAccountIds.length
+    ? await prisma.storageAccount.findMany({
+        where: { id: { in: uniqueStorageAccountIds } },
+      })
+    : [];
+  const cloudinaryCredentialsMap = new Map<
+    string,
+    { cloudName: string | null; apiKey: string | null; apiSecret: string | null } | null
+  >();
+  for (const account of storageAccounts) {
+    cloudinaryCredentialsMap.set(account.id, {
+      cloudName: account.cloudName,
+      apiKey: account.apiKey,
+      apiSecret: account.apiSecret,
+    });
+  }
+
+  const defaultCloudinaryAccount = await prisma.storageAccount.findFirst({
+    where: { provider: 'CLOUDINARY', isActive: true },
+    orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }],
+  });
+  const defaultCloudinaryCredentials = defaultCloudinaryAccount
+    ? {
+        cloudName: defaultCloudinaryAccount.cloudName,
+        apiKey: defaultCloudinaryAccount.apiKey,
+        apiSecret: defaultCloudinaryAccount.apiSecret,
+      }
+    : null;
+
+  // Build payloads
+  const payloads = photos.map<PhotoDeletionPayload>((photo) => {
+    let cloudinaryCredentials = defaultCloudinaryCredentials;
+    if (photo.storageAccountId && cloudinaryCredentialsMap.has(photo.storageAccountId)) {
+      const accountCreds = cloudinaryCredentialsMap.get(photo.storageAccountId);
+      if (accountCreds && accountCreds.cloudName && accountCreds.apiKey) {
+        cloudinaryCredentials = accountCreds;
+      }
+    }
+    const isShared =
+      photo.r2Key !== null && photo.r2Key !== undefined && !orphanedR2Keys.has(photo.r2Key);
+    return {
+      photoId: photo.id,
+      clientId: photo.gallery?.event?.clientId ?? null,
+      r2Key: isShared ? null : photo.r2Key,
+      thumbnailUrl: isShared ? null : photo.thumbnailUrl,
+      storageAccountId: photo.storageAccountId,
+      fileSize: photo.fileSize?.toString(),
+      cloudinaryCredentials,
+    };
+  });
+
+  return { usedByClient, payloads };
+}
+
+/**
  * Per-client byte delta produced by deleting the photos matched by
  * `whereCriteria`. Bytes are counted ONLY for photos whose `r2Key`
  * becomes orphan after the delete — otherwise the underlying file
@@ -655,6 +763,9 @@ export async function getOrphanedR2Keys(
  * `Client.usedStorage` decrements inside the same transaction that
  * runs `prisma.photo.deleteMany`. See `events.ts` / `clients.ts` /
  * `galleries.ts` Server Actions for the canonical caller pattern.
+ *
+ * @deprecated Use `collectDeletionDataForTransaction` when both delta
+ * and payloads are needed to avoid redundant queries.
  */
 export async function computeUsedStorageDeltaForDeletion(
   whereCriteria: Prisma.PhotoWhereInput,

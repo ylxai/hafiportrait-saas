@@ -163,7 +163,7 @@ export async function POST(request: Request) {
     const totalUsedStorage = client?.usedStorage ?? BigInt(0);
 
     if (totalUsedStorage + BigInt(fileSize) > storageQuotaBytes) {
-      const usedGB = Number(totalUsedStorage) / 1073741824;
+      const usedGB = Number(totalUsedStorage) / BYTES_PER_GB;
       return errorResponse(
         `Storage quota exceeded. Used: ${usedGB.toFixed(2)}GB / ${storageQuotaGB}GB`,
         413

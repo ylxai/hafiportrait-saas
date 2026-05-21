@@ -6,8 +6,7 @@ import { safeClientSelect } from '@/lib/api/select';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import {
-  computeUsedStorageDeltaForDeletion,
-  collectPhotoDeletionPayloads,
+  collectDeletionDataForTransaction,
   enqueueDeletionWithOutbox,
 } from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
@@ -132,18 +131,15 @@ export async function DELETE(
       return errorResponse('Event ID is required', 400);
     }
 
-    // Step 1 — compute dedup-aware byte deltas and collect storage-
-    // deletion payloads BEFORE the delete commits, because the
-    // Gallery→Photo cascade will hide the rows the moment the Event
-    // is gone.
-    // FIX: use computeUsedStorageDeltaForDeletion (dedup-aware) instead
-    // of aggregateUsedBytesByClient which overcounts shared photo bytes.
-    const usedByClient = await computeUsedStorageDeltaForDeletion({
-      gallery: { eventId: id },
-    });
-    const deletionPayloads = await collectPhotoDeletionPayloads({
-      gallery: { eventId: id },
-    });
+    // Step 1 — collect dedup-aware byte deltas and storage-deletion
+    // payloads BEFORE the delete commits, because the Gallery→Photo
+    // cascade will hide the rows the moment the Event is gone.
+    // Review #96 (Gemini): use combined helper to eliminate redundant
+    // database queries.
+    const { usedByClient, payloads: deletionPayloads } =
+      await collectDeletionDataForTransaction({
+        gallery: { eventId: id },
+      });
 
     // Step 2 — DB-first: commit the delete plus the quota decrement in
     // one transaction. If this fails the storage stays untouched and the
