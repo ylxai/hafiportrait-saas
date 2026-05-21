@@ -34,6 +34,25 @@ interface UploadManagerProps {
   r2Accounts: StorageAccount[];
 }
 
+const STORAGE_KEY_CLOUDINARY = 'upload-storage-cloudinary';
+const STORAGE_KEY_R2 = 'upload-storage-r2';
+
+function getStoredValue(key: string): string {
+  try {
+    return localStorage.getItem(key) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function setStoredValue(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Silently fail (private browsing, quota exceeded)
+  }
+}
+
 export function UploadManager({
   galleryId,
   galleryName,
@@ -46,6 +65,12 @@ export function UploadManager({
 }: UploadManagerProps) {
   const [selectedCloudinary, setSelectedCloudinary] = useState<string>('');
   const [selectedR2, setSelectedR2] = useState<string>('');
+
+  // Restore from localStorage on mount (client-only, avoids hydration mismatch)
+  useEffect(() => {
+    setSelectedCloudinary(getStoredValue(STORAGE_KEY_CLOUDINARY));
+    setSelectedR2(getStoredValue(STORAGE_KEY_R2));
+  }, []);
   const [showStorageSelection, setShowStorageSelection] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
@@ -121,6 +146,9 @@ export function UploadManager({
 
   // Set default accounts and validate selected IDs still exist
   useEffect(() => {
+    // Skip validation until both account lists are loaded from API
+    if (cloudinaryAccounts.length === 0 || r2Accounts.length === 0) return;
+
     if (!selectedCloudinary || !cloudinaryAccounts.some(a => a.id === selectedCloudinary)) {
       const defaultCloudinary = cloudinaryAccounts.find(a => a.isDefault) ?? cloudinaryAccounts[0];
       setSelectedCloudinary(defaultCloudinary?.id ?? '');
@@ -266,7 +294,7 @@ export function UploadManager({
                   <label htmlFor="cloudinary-select" className="text-sm font-medium text-foreground mb-2 block">
                     Cloudinary Account (Thumbnail)
                   </label>
-                  <Select value={selectedCloudinary} onValueChange={(value) => setSelectedCloudinary(value || '')}>
+                  <Select value={selectedCloudinary} onValueChange={(value) => { setSelectedCloudinary(value || ''); setStoredValue(STORAGE_KEY_CLOUDINARY, value || ''); }}>
                     <SelectTrigger id="cloudinary-select">
                       <SelectValue placeholder="Pilih Cloudinary account...">
                         {(value: string | null) => {
@@ -290,7 +318,7 @@ export function UploadManager({
                   <label htmlFor="r2-select" className="text-sm font-medium text-foreground mb-2 block">
                     R2 Account (Original File)
                   </label>
-                  <Select value={selectedR2} onValueChange={(value) => setSelectedR2(value || '')}>
+                  <Select value={selectedR2} onValueChange={(value) => { setSelectedR2(value || ''); setStoredValue(STORAGE_KEY_R2, value || ''); }}>
                     <SelectTrigger id="r2-select">
                       <SelectValue placeholder="Pilih R2 account...">
                         {(value: string | null) => {
