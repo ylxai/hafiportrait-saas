@@ -131,6 +131,9 @@ export function UploadManager({
 
   // Set default accounts and validate selected IDs still exist
   useEffect(() => {
+    // Skip validation until accounts are loaded from API
+    if (cloudinaryAccounts.length === 0 && r2Accounts.length === 0) return;
+
     if (!selectedCloudinary || !cloudinaryAccounts.some(a => a.id === selectedCloudinary)) {
       const defaultCloudinary = cloudinaryAccounts.find(a => a.isDefault) ?? cloudinaryAccounts[0];
       setSelectedCloudinary(defaultCloudinary?.id ?? '');
