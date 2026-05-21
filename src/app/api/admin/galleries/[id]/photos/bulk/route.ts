@@ -140,11 +140,18 @@ export async function POST(
     // PR #76: only decrement bytes for photos whose r2Key becomes orphan
     // — shared keys keep the file (and the consumed bytes) alive.
     const sumByClient = new Map<string, bigint>();
+    const countByClient = new Map<string, number>();
     for (const p of photos) {
       const cId = p.gallery?.event?.clientId;
-      if (!cId || !p.fileSize) continue;
-      if (p.r2Key !== null && !orphanedR2Keys.has(p.r2Key)) continue;
-      sumByClient.set(cId, (sumByClient.get(cId) ?? BigInt(0)) + p.fileSize);
+      if (!cId) continue;
+      
+      // Always count photos
+      countByClient.set(cId, (countByClient.get(cId) ?? 0) + 1);
+      
+      // Only count storage for orphaned files
+      if (p.fileSize && p.r2Key !== null && orphanedR2Keys.has(p.r2Key)) {
+        sumByClient.set(cId, (sumByClient.get(cId) ?? BigInt(0)) + p.fileSize);
+      }
     }
     await prisma.$transaction(async (tx) => {
       await tx.photo.deleteMany({
@@ -154,10 +161,29 @@ export async function POST(
         },
       });
       for (const [cId, sum] of sumByClient) {
+        const count = countByClient.get(cId) ?? 0;
         if (sum > BigInt(0)) {
           await tx.client.update({
             where: { id: cId },
-            data: { usedStorage: { decrement: sum } },
+            data: { 
+              usedStorage: { decrement: sum },
+              photoCount: { decrement: count },
+            },
+          });
+        } else if (count > 0) {
+          // Dedup case: decrement photoCount only
+          await tx.client.update({
+            where: { id: cId },
+            data: { photoCount: { decrement: count } },
+          });
+        }
+      }
+      // Handle clients that only have count (no storage to decrement)
+      for (const [cId, count] of countByClient) {
+        if (!sumByClient.has(cId) && count > 0) {
+          await tx.client.update({
+            where: { id: cId },
+            data: { photoCount: { decrement: count } },
           });
         }
       }

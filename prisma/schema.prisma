@@ -32,6 +32,7 @@ model Client {
   instagram String?
   storageQuotaGB Int  @default(10) // Configurable storage quota per client (in GB)
   usedStorage BigInt @default(0) // CRITICAL FIX #5: Atomic quota tracking via conditional update
+  photoCount  Int    @default(0) // Total photo count across all client events (maintained by upload/delete flows)
   // bcrypt hash of the client's password. Required for portal login.
   // Kept nullable at the column level so legacy rows from before the
   // password-auth rollout don't break db:push; the API/Zod layer enforces

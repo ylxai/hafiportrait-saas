@@ -142,7 +142,16 @@ export async function DELETE(
       if (clientId && decrementBytes > BigInt(0)) {
         await tx.client.update({
           where: { id: clientId },
-          data: { usedStorage: { decrement: decrementBytes } },
+          data: { 
+            usedStorage: { decrement: decrementBytes },
+            photoCount: { decrement: 1 },
+          },
+        });
+      } else if (clientId) {
+        // Dedup case: decrement photoCount only (no storage freed)
+        await tx.client.update({
+          where: { id: clientId },
+          data: { photoCount: { decrement: 1 } },
         });
       }
     });

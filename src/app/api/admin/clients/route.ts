@@ -53,24 +53,10 @@ export async function GET(request: Request) {
           instagram: true,
           storageQuotaGB: true,
           usedStorage: true, // Use existing column instead of N+1 aggregate
+          photoCount: true, // Use maintained column for accurate photo count
           isApproved: true,
           createdAt: true,
           updatedAt: true,
-          _count: {
-            select: {
-              events: {
-                where: {
-                  galleries: {
-                    some: {
-                      photos: {
-                        some: {},
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
         },
       }),
       prisma.client.count(),
@@ -88,7 +74,7 @@ export async function GET(request: Request) {
       createdAt: client.createdAt,
       updatedAt: client.updatedAt,
       usedStorageBytes: client.usedStorage.toString(),
-      photoCount: client._count.events, // Approximate count via events
+      photoCount: client.photoCount, // Now using maintained column
     }));
 
     return successResponse({

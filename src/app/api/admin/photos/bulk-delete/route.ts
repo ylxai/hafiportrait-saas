@@ -148,22 +148,48 @@ export async function POST(request: Request) {
     // becomes orphan after the delete — shared r2Keys (cross-gallery
     // dedup) keep the file alive and therefore consume no new quota.
     const sumByClient = new Map<string, bigint>();
+    const countByClient = new Map<string, number>();
     for (const p of photos) {
       const cId = p.gallery?.event?.clientId;
-      if (!cId || !p.fileSize) continue;
+      if (!cId) continue;
+      
+      // Always count photos
+      countByClient.set(cId, (countByClient.get(cId) ?? 0) + 1);
+      
+      // Only count storage for orphaned files
       // A photo with no `r2Key` (legacy / failed upload) effectively
       // has no storage to keep alive, so it counts as orphan.
-      if (p.r2Key !== null && !orphanedR2Keys.has(p.r2Key)) continue;
-      sumByClient.set(cId, (sumByClient.get(cId) ?? BigInt(0)) + p.fileSize);
+      if (p.fileSize && (p.r2Key === null || orphanedR2Keys.has(p.r2Key))) {
+        sumByClient.set(cId, (sumByClient.get(cId) ?? BigInt(0)) + p.fileSize);
+      }
     }
     try {
       await prisma.$transaction(async (tx) => {
         await tx.photo.deleteMany({ where: { id: { in: photoIds } } });
         for (const [cId, sum] of sumByClient) {
+          const count = countByClient.get(cId) ?? 0;
           if (sum > BigInt(0)) {
             await tx.client.update({
               where: { id: cId },
-              data: { usedStorage: { decrement: sum } },
+              data: { 
+                usedStorage: { decrement: sum },
+                photoCount: { decrement: count },
+              },
+            });
+          } else if (count > 0) {
+            // Dedup case: decrement photoCount only
+            await tx.client.update({
+              where: { id: cId },
+              data: { photoCount: { decrement: count } },
+            });
+          }
+        }
+        // Handle clients that only have count (no storage to decrement)
+        for (const [cId, count] of countByClient) {
+          if (!sumByClient.has(cId) && count > 0) {
+            await tx.client.update({
+              where: { id: cId },
+              data: { photoCount: { decrement: count } },
             });
           }
         }
