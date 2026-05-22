@@ -4,7 +4,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { getOrphanedR2Keys, queueStorageDeletion, isQueueConfigured } from '@/lib/cloudflare-queue';
 import { z } from 'zod';
-import { Prisma } from '@prisma/client';
+
+// Helper to check Prisma error codes
+function isPrismaError(error: unknown, code: string): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === code;
+}
 
 // Zod schema for route params
 const paramsSchema = z.object({
@@ -151,7 +155,7 @@ export async function DELETE(
           });
         } catch (error) {
           // Handle 'record not found' gracefully (concurrent deletion)
-          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+          if (isPrismaError(error, 'P2025')) {
             // Client was deleted, skip quota update
           } else {
             throw error;
@@ -166,7 +170,7 @@ export async function DELETE(
           });
         } catch (error) {
           // Handle 'record not found' gracefully (concurrent deletion)
-          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+          if (isPrismaError(error, 'P2025')) {
             // Client was deleted, skip quota update
           } else {
             throw error;
