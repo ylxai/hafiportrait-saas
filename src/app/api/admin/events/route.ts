@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { generateKodeBooking } from '@/lib/utils';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -20,6 +21,15 @@ export async function GET(request: Request) {
   try {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
+
+    // Rate limiting
+    const rateLimitResult = await checkRateLimit(
+      `events:get:${auth.user.email}`,
+      RATE_LIMITS.ADMIN_READ
+    );
+    if (!rateLimitResult.success) {
+      return errorResponse('Too many requests', 429);
+    }
 
     const { searchParams } = new URL(request.url);
     

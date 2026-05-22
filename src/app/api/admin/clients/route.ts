@@ -8,6 +8,7 @@ import { authOptions } from '@/lib/auth/options';
 import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 // bcrypt cost factor for client portal passwords. Matches the dummy hash
 // shape used in lib/auth/options.ts for timing-attack protection.
@@ -25,6 +26,15 @@ export async function GET(request: Request) {
   try {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
+
+    // Rate limiting
+    const rateLimitResult = await checkRateLimit(
+      `clients:get:${auth.user.email}`,
+      RATE_LIMITS.ADMIN_READ
+    );
+    if (!rateLimitResult.success) {
+      return errorResponse('Too many requests', 429);
+    }
 
     const { searchParams } = new URL(request.url);
     
@@ -83,6 +93,15 @@ export async function POST(request: Request) {
   try {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
+
+    // Rate limiting
+    const rateLimitResult = await checkRateLimit(
+      `clients:post:${auth.user.email}`,
+      RATE_LIMITS.ADMIN_WRITE
+    );
+    if (!rateLimitResult.success) {
+      return errorResponse('Too many requests', 429);
+    }
 
     let body: unknown;
     try {

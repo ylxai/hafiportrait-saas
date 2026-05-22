@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth/options';
 import { createAdminPaginationResponse } from '@/types/pagination';
 import { getCachedData } from '@/lib/cache';
 import { z } from 'zod';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 // Zod schema for query parameters
 const querySchema = z.object({
@@ -17,6 +18,15 @@ export async function GET(request: Request) {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return errorResponse('Unauthorized', 401);
+    }
+
+    // Rate limiting
+    const rateLimitResult = await checkRateLimit(
+      `analytics:${session.user.email}`,
+      RATE_LIMITS.ADMIN_READ
+    );
+    if (!rateLimitResult.success) {
+      return errorResponse('Too many requests', 429);
     }
 
     // Parse and validate query params
