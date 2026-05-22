@@ -11,6 +11,7 @@ import { createAdminPaginationResponse } from '@/types/pagination';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { serializeBigInt } from '@/lib/bigint-utils';
+import { logger } from '@/lib/logger';
 
 // Zod schemas
 const paramsSchema = z.object({
@@ -130,6 +131,45 @@ export async function POST(
     }
 
     const fileSize = BigInt(file.size);
+
+    // CRITICAL FIX C2: Atomic client quota check before upload.
+    // Prevents quota bypass via the direct-upload endpoint.
+    const gallery = await prisma.gallery.findUnique({
+      where: { id: galleryId },
+      select: {
+        event: {
+          select: {
+            clientId: true,
+            client: { select: { storageQuotaGB: true } },
+          },
+        },
+      },
+    });
+
+    if (!gallery) {
+      return errorResponse('Gallery not found', 404);
+    }
+
+    const clientId = gallery.event.clientId;
+    const storageQuotaGB = gallery.event.client?.storageQuotaGB ?? 10;
+    const BYTES_PER_GB = 1_073_741_824;
+    const storageQuotaBytes = BigInt(storageQuotaGB) * BigInt(BYTES_PER_GB);
+
+    const quotaUpdate = await prisma.client.updateMany({
+      where: {
+        id: clientId,
+        usedStorage: { lte: storageQuotaBytes - fileSize },
+      },
+      data: { usedStorage: { increment: fileSize } },
+    });
+
+    if (quotaUpdate.count === 0) {
+      return errorResponse(
+        `Storage quota exceeded. Limit: ${storageQuotaGB} GB`,
+        413
+      );
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
@@ -233,21 +273,37 @@ export async function POST(
       await updateStorageUsage(primaryStorageAccountId, fileSize);
     }
 
-    const photo = await prisma.photo.create({
-      data: {
-        galleryId,
-        filename: file.name,
-        url: originalUrl,
-        thumbnailUrl,
-        publicId,
-        r2Key,
-        width,
-        height,
-        order: 0,
-        fileSize,
-        storageAccountId: primaryStorageAccountId,
-      },
-    });
+    let photo: Awaited<ReturnType<typeof prisma.photo.create>>;
+    try {
+      photo = await prisma.photo.create({
+        data: {
+          galleryId,
+          filename: file.name,
+          url: originalUrl,
+          thumbnailUrl,
+          publicId,
+          r2Key,
+          width,
+          height,
+          order: 0,
+          fileSize,
+          storageAccountId: primaryStorageAccountId,
+        },
+      });
+    } catch (createError) {
+      // Rollback the quota increment so the client doesn't lose usable quota
+      await prisma.client.update({
+        where: { id: clientId },
+        data: { usedStorage: { decrement: fileSize } },
+      }).catch((rollbackErr) => {
+        logger.error('gallery.photos.upload.rollback_failed', {
+          clientId,
+          fileSize: fileSize.toString(),
+          err: rollbackErr,
+        });
+      });
+      throw createError;
+    }
 
     const serializedPhoto = {
       ...photo,
