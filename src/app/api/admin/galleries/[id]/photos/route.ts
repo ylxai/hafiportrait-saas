@@ -153,7 +153,7 @@ export async function POST(
 
     const clientId = gallery.event.clientId;
     const storageQuotaGB = gallery.event.client?.storageQuotaGB ?? DEFAULT_STORAGE_QUOTA_GB;
-    const storageQuotaBytes = BigInt(storageQuotaGB) * BigInt(BYTES_PER_GB);
+    const storageQuotaBytes = BigInt(Math.round(storageQuotaGB * BYTES_PER_GB));
 
     const quotaUpdate = await prisma.client.updateMany({
       where: {
@@ -174,6 +174,7 @@ export async function POST(
     }
 
     let primaryStorageAccountId: string | null = null;
+    let storageUsageApplied = false;
 
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -277,6 +278,7 @@ export async function POST(
 
       if (primaryStorageAccountId) {
         await updateStorageUsage(primaryStorageAccountId, fileSize);
+        storageUsageApplied = true;
       }
 
       const photo = await prisma.photo.create({
@@ -317,8 +319,8 @@ export async function POST(
         });
       });
 
-      // Rollback storage account counters if they were incremented
-      if (primaryStorageAccountId) {
+      // Rollback storage account counters only if they were actually incremented
+      if (storageUsageApplied && primaryStorageAccountId) {
         await decreaseStorageUsage(primaryStorageAccountId, fileSize).catch((rollbackErr) => {
           logger.error('gallery.photos.upload.rollback_storage_account_failed', {
             storageAccountId: primaryStorageAccountId,
