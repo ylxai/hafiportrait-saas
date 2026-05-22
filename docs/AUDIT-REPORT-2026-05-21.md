@@ -17,31 +17,35 @@
 | 🟡 Medium | 5 | Serialization, Optimization, Race conditions |
 | 🟢 Low | 4 | Consistency, Code patterns |
 | **Total** | **19** | |
-| **Fixed** | **3** | **C2, C3, H3/H4 (partial)** |
+| **Fixed** | **5** | **C1 (PR #97), C2, C3, H3/H4 (partial, PR #98)** |
 
-**Overall Assessment:** The codebase is well-structured with good patterns (Zod validation, BigInt serialization, atomic updates). However, several critical data integrity issues remain, particularly around the new `photoCount` column logic. Rate limiting and logging consistency are the largest gaps across the API surface.
+**Overall Assessment:** The codebase is well-structured with good patterns (Zod validation, BigInt serialization, atomic updates). Critical data integrity issues (C1-C3) have been resolved. Rate limiting and logging consistency are the largest remaining gaps across the API surface.
 
 ---
 
 ## ✅ Fixes Applied (2026-05-22)
 
-| Finding | Status | Commit | Notes |
-|---------|--------|--------|-------|
-| **C2** | ✅ **Fixed** | `870e1be`, `0854148` | Atomic quota check with `updateMany` + `lte` guard. Rollback of both `usedStorage` and `StorageAccount` counters on failure. |
-| **C3** | ✅ **Fixed** | `870e1be` | Accept `fileSize` as `z.string().regex(/^\d+$/)` with `BigInt()` try/catch. `number` kept for b/w compat with `MAX_SAFE_INTEGER` guard. `console.*` replaced with `logger.*`. |
-| **H3/H4** | ✅ **Addressed** | `0854148` | `gallery/[id]/photos/route.ts` — wrapped entire upload flow in single try block, replaced all `console.*` with `logger.*`. Remaining routes still need attention. |
-| **H4** | ✅ **Addressed** | `0854148` | Expanded try block covers all post-quota operations. Added `decreaseStorageUsage` rollback for `StorageAccount`. |
+| Finding | Status | PR/Commit | Notes |
+|---------|--------|-----------|-------|
+| **C1** | ✅ **Fixed** | PR #97 (`65c6fcd`, merged as `f46508f`) | Removed `photoCount: { decrement: 1 }` from dedup rollback paths. Photo record IS created during dedup, so counter must stay +1. |
+| **C2** | ✅ **Fixed** | PR #98 (`870e1be`, `0854148`, `a2cf5b8`, `4c66c7f`) | Atomic quota check with `updateMany` + `lte` guard. Added `storageUsageApplied` flag to prevent rollback over-correction. Added `photoCount` increment/decrement in quota reservation and rollback. |
+| **C3** | ✅ **Fixed** | PR #98 (`870e1be`, `a2cf5b8`, `2040272`) | Accept `fileSize` as `z.union([z.string().regex(/^\d+$/), z.number()])` with `BigInt()` try/catch. Added negative validation for both paths. Changed MAX_SAFE_INTEGER from warning to error. `console.*` replaced with `logger.*`. |
+| **H3/H4** | ✅ **Addressed** | PR #98 (`0854148`, `a2cf5b8`) | `gallery/[id]/photos/route.ts` — wrapped entire upload flow in single try block, replaced all `console.*` with `logger.*`. Added `decreaseStorageUsage` rollback for `StorageAccount`. Remaining routes still need attention. |
 
-**Additional improvements not in original report:**
+**Additional improvements in PR #98:**
 - Magic numbers (`10`, `1_073_741_824`) replaced with `DEFAULT_STORAGE_QUOTA_GB` / `BYTES_PER_GB` from `@/lib/upload/constants`
-- `console.warn`/`console.error` in gallery photos route replaced with structured `logger.warn`/`logger.error`
-- Storage account usage rollback added to catch block (`decreaseStorageUsage`)
+- `storageUsageApplied` flag prevents storage rollback over-correction (Gemini HIGH priority)
+- `BigInt(Math.round(storageQuotaGB * BYTES_PER_GB))` handles float quotas (e.g., 0.5 GB) without RangeError (Gemini MEDIUM priority)
+- `isPrismaError` helper used for consistency across codebase
+- Removed 10 unused config files (.codex/, .continue/, .github/) — 1,286 lines deleted
 
 ---
 
 ## 🔴 Critical Issues (Fix Immediately)
 
 ### C1. `photoCount` Incorrectly Decremented During Cross-Gallery Deduplication
+
+> **Status:** ✅ **Fixed** in PR #97 (commit `65c6fcd`, merged as `f46508f`)
 
 **File:** `src/app/api/admin/upload/complete/route.ts`  
 **Lines:** ~244–258, ~377–389  
@@ -76,7 +80,7 @@ await prisma.client.update({
 - Dashboard shows incorrect photo totals
 - Data inconsistency accumulates over time
 
-**Fix:**
+**Fix Applied:**
 
 ```typescript
 // ✅ CORRECT — only rollback usedStorage
@@ -89,9 +93,7 @@ const dedupRollback = await prisma.client.updateMany({
 });
 ```
 
-Apply the same fix to the fallback `update` call and the error-rollback path (line ~418).
-
-**Also note:** The same issue exists in the P2002 duplicate-handling path (lines ~433+), where `photoCount` is decremented during rollback even though the duplicate detection means no new Photo was created. In that path, decrementing `photoCount` IS correct because `prisma.photo.create` threw and no row was inserted. However, in the **dedup path** (lines ~244+), `prisma.photo.create` at line ~286 DOES succeed, so `photoCount` must NOT be decremented.
+Applied to all dedup rollback paths in PR #97 commit `65c6fcd`, merged to main as `f46508f`.
 
 ---
 
