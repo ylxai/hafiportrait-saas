@@ -11,8 +11,12 @@ const DeletionCallbackSchema = z.object({
   storageAccountId: z.string().optional(),
   // CRITICAL FIX C3: Accept string to avoid Number.MAX_SAFE_INTEGER precision loss.
   // Workers should send fileSize as a string (e.g. "12345678901234567890").
+  // Only numeric strings (\d+) are accepted to prevent BigInt parse errors.
   // number is kept for backward compatibility during the transition.
-  fileSize: z.union([z.string(), z.number()]).optional(),
+  fileSize: z.union([
+    z.string().regex(/^\d+$/, 'fileSize must be a numeric string'),
+    z.number(),
+  ]).optional(),
 });
 
 export async function POST(request: Request) {
@@ -49,7 +53,12 @@ export async function POST(request: Request) {
       if (storageAccountId && fileSize !== undefined) {
         let fileSizeBig: bigint;
         if (typeof fileSize === 'string') {
-          fileSizeBig = BigInt(fileSize);
+          try {
+            fileSizeBig = BigInt(fileSize);
+          } catch {
+            logger.error('webhook.deletion.invalid_fileSize_string', { photoId, fileSize });
+            return errorResponse('Invalid fileSize format', 400);
+          }
         } else {
           // number path — guard against precision loss for files > 9 PB
           if (fileSize > Number.MAX_SAFE_INTEGER) {

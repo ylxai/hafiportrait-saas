@@ -3,7 +3,7 @@ import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/r
 import { uploadToR2 } from '@/lib/storage/r2';
 import { uploadToCloudinary, generateThumbnailUrl } from '@/lib/storage/cloudinary';
 import { getCloudinaryThumbnailUrl } from '@/lib/cloudinary';
-import { getDefaultAccount, updateStorageUsage, findWorkingAccount } from '@/lib/storage/accounts';
+import { getDefaultAccount, updateStorageUsage, decreaseStorageUsage, findWorkingAccount } from '@/lib/storage/accounts';
 import imageSize from 'image-size';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
@@ -12,6 +12,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { serializeBigInt } from '@/lib/bigint-utils';
 import { logger } from '@/lib/logger';
+import { DEFAULT_STORAGE_QUOTA_GB, BYTES_PER_GB } from '@/lib/upload/constants';
 
 // Zod schemas
 const paramsSchema = z.object({
@@ -151,8 +152,7 @@ export async function POST(
     }
 
     const clientId = gallery.event.clientId;
-    const storageQuotaGB = gallery.event.client?.storageQuotaGB ?? 10;
-    const BYTES_PER_GB = 1_073_741_824;
+    const storageQuotaGB = gallery.event.client?.storageQuotaGB ?? DEFAULT_STORAGE_QUOTA_GB;
     const storageQuotaBytes = BigInt(storageQuotaGB) * BigInt(BYTES_PER_GB);
 
     const quotaUpdate = await prisma.client.updateMany({
@@ -170,112 +170,113 @@ export async function POST(
       );
     }
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    let primaryStorageAccountId: string | null = null;
 
-    let width = 0;
-    let height = 0;
     try {
-      const dimensions = imageSize(buffer);
-      width = dimensions.width || 0;
-      height = dimensions.height || 0;
-    } catch (dimError) {
-      console.warn('Could not get image dimensions:', dimError);
-    }
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
 
-    let cloudinaryAccount = null;
-    if (cloudinaryAccountId) {
-      cloudinaryAccount = await prisma.storageAccount.findUnique({
-        where: { id: cloudinaryAccountId, provider: 'CLOUDINARY', isActive: true },
-      });
-    }
-    if (!cloudinaryAccount) {
-      cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
-    }
-
-    let r2Account = null;
-    if (r2AccountId) {
-      r2Account = await prisma.storageAccount.findUnique({
-        where: { id: r2AccountId, provider: 'R2', isActive: true },
-      });
-    }
-    if (!r2Account) {
-      r2Account = await getDefaultAccount('R2');
-    }
-
-    let r2Key = '';
-    let originalUrl = '';
-    let lastFailedR2Id: string | undefined;
-
-    for (let attempt = 0; attempt < 3; attempt++) {
+      let width = 0;
+      let height = 0;
       try {
-        if (!r2Account) {
-          throw new Error('No active R2 storage account configured in database');
-        }
-
-        const r2Creds = {
-          accountId: r2Account.accountId || '',
-          accessKey: r2Account.accessKey || '',
-          secretKey: r2Account.secretKey || '',
-          bucketName: r2Account.bucketName || '',
-          publicUrl: r2Account.publicUrl || '',
-          endpoint: r2Account.endpoint || undefined,
-        };
-
-        const result = await uploadToR2(buffer, file.name, file.type, r2Creds);
-        r2Key = result.key;
-        originalUrl = result.url;
-        break;
-      } catch (r2Error) {
-        console.error('R2 upload failed, trying next account:', r2Error);
-        lastFailedR2Id = r2Account?.id;
-        r2Account = await findWorkingAccount('R2', lastFailedR2Id);
-        if (!r2Account) {
-          return serverErrorResponse('All R2 accounts failed');
-        }
+        const dimensions = imageSize(buffer);
+        width = dimensions.width || 0;
+        height = dimensions.height || 0;
+      } catch (dimError) {
+        logger.warn('gallery.photos.upload.dimensions_failed', { galleryId, err: dimError });
       }
-    }
 
-    let publicId = '';
-    let thumbnailUrl = '';
-    let lastFailedCloudinaryId: string | undefined;
+      let cloudinaryAccount = null;
+      if (cloudinaryAccountId) {
+        cloudinaryAccount = await prisma.storageAccount.findUnique({
+          where: { id: cloudinaryAccountId, provider: 'CLOUDINARY', isActive: true },
+        });
+      }
+      if (!cloudinaryAccount) {
+        cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
+      }
 
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        if (!cloudinaryAccount) {
-          throw new Error('No active Cloudinary storage account configured in database');
-        }
+      let r2Account = null;
+      if (r2AccountId) {
+        r2Account = await prisma.storageAccount.findUnique({
+          where: { id: r2AccountId, provider: 'R2', isActive: true },
+        });
+      }
+      if (!r2Account) {
+        r2Account = await getDefaultAccount('R2');
+      }
 
-        const cloudinaryCreds = {
-          cloudName: cloudinaryAccount.cloudName || '',
-          apiKey: cloudinaryAccount.apiKey || '',
-          apiSecret: cloudinaryAccount.apiSecret || '',
-        };
+      let r2Key = '';
+      let originalUrl = '';
+      let lastFailedR2Id: string | undefined;
 
-        const result = await uploadToCloudinary(buffer, `gallery/${galleryId}`, cloudinaryCreds);
-        publicId = result.publicId;
-        thumbnailUrl = generateThumbnailUrl(publicId, 400, 400, cloudinaryCreds);
-        break;
-      } catch (cloudinaryError) {
-        console.error('Cloudinary upload failed, trying next account:', cloudinaryError);
-        lastFailedCloudinaryId = cloudinaryAccount?.id;
-        cloudinaryAccount = await findWorkingAccount('CLOUDINARY', lastFailedCloudinaryId);
-        if (!cloudinaryAccount) {
-          console.error('All Cloudinary accounts failed, continuing without thumbnail');
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          if (!r2Account) {
+            throw new Error('No active R2 storage account configured in database');
+          }
+
+          const r2Creds = {
+            accountId: r2Account.accountId || '',
+            accessKey: r2Account.accessKey || '',
+            secretKey: r2Account.secretKey || '',
+            bucketName: r2Account.bucketName || '',
+            publicUrl: r2Account.publicUrl || '',
+            endpoint: r2Account.endpoint || undefined,
+          };
+
+          const result = await uploadToR2(buffer, file.name, file.type, r2Creds);
+          r2Key = result.key;
+          originalUrl = result.url;
           break;
+        } catch (r2Error) {
+          logger.error('gallery.photos.upload.r2_failed', { galleryId, err: r2Error });
+          lastFailedR2Id = r2Account?.id;
+          r2Account = await findWorkingAccount('R2', lastFailedR2Id);
+          if (!r2Account) {
+            throw new Error('All R2 accounts failed');
+          }
         }
       }
-    }
 
-    const primaryStorageAccountId = r2Account?.id || null;
+      let publicId = '';
+      let thumbnailUrl = '';
+      let lastFailedCloudinaryId: string | undefined;
 
-    if (primaryStorageAccountId) {
-      await updateStorageUsage(primaryStorageAccountId, fileSize);
-    }
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          if (!cloudinaryAccount) {
+            throw new Error('No active Cloudinary storage account configured in database');
+          }
 
-    let photo: Awaited<ReturnType<typeof prisma.photo.create>>;
-    try {
-      photo = await prisma.photo.create({
+          const cloudinaryCreds = {
+            cloudName: cloudinaryAccount.cloudName || '',
+            apiKey: cloudinaryAccount.apiKey || '',
+            apiSecret: cloudinaryAccount.apiSecret || '',
+          };
+
+          const result = await uploadToCloudinary(buffer, `gallery/${galleryId}`, cloudinaryCreds);
+          publicId = result.publicId;
+          thumbnailUrl = generateThumbnailUrl(publicId, 400, 400, cloudinaryCreds);
+          break;
+        } catch (cloudinaryError) {
+          logger.error('gallery.photos.upload.cloudinary_failed', { galleryId, err: cloudinaryError });
+          lastFailedCloudinaryId = cloudinaryAccount?.id;
+          cloudinaryAccount = await findWorkingAccount('CLOUDINARY', lastFailedCloudinaryId);
+          if (!cloudinaryAccount) {
+            logger.warn('gallery.photos.upload.cloudinary_all_failed', { galleryId });
+            break;
+          }
+        }
+      }
+
+      primaryStorageAccountId = r2Account?.id || null;
+
+      if (primaryStorageAccountId) {
+        await updateStorageUsage(primaryStorageAccountId, fileSize);
+      }
+
+      const photo = await prisma.photo.create({
         data: {
           galleryId,
           filename: file.name,
@@ -290,27 +291,39 @@ export async function POST(
           storageAccountId: primaryStorageAccountId,
         },
       });
+
+      const serializedPhoto = {
+        ...photo,
+        fileSize: serializeBigInt(photo.fileSize),
+      };
+
+      return successResponse({ photo: serializedPhoto }, 201);
     } catch (createError) {
-      // Rollback the quota increment so the client doesn't lose usable quota
+      // Rollback the client quota increment
       await prisma.client.update({
         where: { id: clientId },
         data: { usedStorage: { decrement: fileSize } },
       }).catch((rollbackErr) => {
-        logger.error('gallery.photos.upload.rollback_failed', {
+        logger.error('gallery.photos.upload.rollback_client_failed', {
           clientId,
           fileSize: fileSize.toString(),
           err: rollbackErr,
         });
       });
+
+      // Rollback storage account counters if they were incremented
+      if (primaryStorageAccountId) {
+        await decreaseStorageUsage(primaryStorageAccountId, fileSize).catch((rollbackErr) => {
+          logger.error('gallery.photos.upload.rollback_storage_account_failed', {
+            storageAccountId: primaryStorageAccountId,
+            fileSize: fileSize.toString(),
+            err: rollbackErr,
+          });
+        });
+      }
+
       throw createError;
     }
-
-    const serializedPhoto = {
-      ...photo,
-      fileSize: serializeBigInt(photo.fileSize),
-    };
-
-    return successResponse({ photo: serializedPhoto }, 201);
   } catch (error) {
     console.error('Error uploading photo:', error);
     return serverErrorResponse('Failed to upload photo');
