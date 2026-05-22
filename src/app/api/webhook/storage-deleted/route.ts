@@ -56,7 +56,7 @@ export async function POST(request: Request) {
           try {
             fileSizeBig = BigInt(fileSize);
             // Validate non-negative
-            if (fileSizeBig < 0n) {
+            if (fileSizeBig < BigInt(0)) {
               logger.error('webhook.deletion.negative_fileSize', { photoId, fileSize });
               return errorResponse('fileSize must be non-negative', 400);
             }
