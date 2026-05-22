@@ -160,7 +160,10 @@ export async function POST(
         id: clientId,
         usedStorage: { lte: storageQuotaBytes - fileSize },
       },
-      data: { usedStorage: { increment: fileSize } },
+      data: { 
+        usedStorage: { increment: fileSize },
+        photoCount: { increment: 1 },
+      },
     });
 
     if (quotaUpdate.count === 0) {
@@ -302,7 +305,10 @@ export async function POST(
       // Rollback the client quota increment
       await prisma.client.update({
         where: { id: clientId },
-        data: { usedStorage: { decrement: fileSize } },
+        data: { 
+          usedStorage: { decrement: fileSize },
+          photoCount: { decrement: 1 },
+        },
       }).catch((rollbackErr) => {
         logger.error('gallery.photos.upload.rollback_client_failed', {
           clientId,
@@ -325,7 +331,7 @@ export async function POST(
       throw createError;
     }
   } catch (error) {
-    console.error('Error uploading photo:', error);
+    logger.error('[API] gallery.photos.upload.unhandled_error', { err: error });
     return serverErrorResponse('Failed to upload photo');
   }
 }

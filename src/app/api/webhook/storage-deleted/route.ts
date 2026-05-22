@@ -55,18 +55,29 @@ export async function POST(request: Request) {
         if (typeof fileSize === 'string') {
           try {
             fileSizeBig = BigInt(fileSize);
+            // Validate non-negative
+            if (fileSizeBig < 0n) {
+              logger.error('webhook.deletion.negative_fileSize', { photoId, fileSize });
+              return errorResponse('fileSize must be non-negative', 400);
+            }
           } catch {
             logger.error('webhook.deletion.invalid_fileSize_string', { photoId, fileSize });
             return errorResponse('Invalid fileSize format', 400);
           }
         } else {
-          // number path — guard against precision loss for files > 9 PB
+          // Validate non-negative number
+          if (fileSize < 0) {
+            logger.error('webhook.deletion.negative_fileSize', { photoId, fileSize });
+            return errorResponse('fileSize must be non-negative', 400);
+          }
+          // Guard against precision loss for files > 9 PB
           if (fileSize > Number.MAX_SAFE_INTEGER) {
-            logger.warn('webhook.deletion.fileSize_precision_loss', {
+            logger.error('webhook.deletion.fileSize_exceeds_safe_integer', {
               photoId,
               fileSize,
               maxSafe: Number.MAX_SAFE_INTEGER,
             });
+            return errorResponse('fileSize exceeds safe integer range, use string format', 400);
           }
           fileSizeBig = BigInt(Math.floor(fileSize));
         }
