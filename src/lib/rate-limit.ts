@@ -1,4 +1,5 @@
 import { redisCache } from './cache';
+import { logger } from './logger';
 
 export interface RateLimitConfig {
   maxRequests: number;
@@ -30,14 +31,45 @@ function effectiveWindowMs(config: RateLimitConfig): number {
 /**
  * Redis/Valkey-based rate limiter with fallback to in-memory
  * Persistent across server restarts and multi-instance deployments
+ * 
+ * Bypass logic:
+ * - Vercel preview deployments (VERCEL_ENV=preview): rate limiting disabled for testing
+ * - Emergency override (DISABLE_RATE_LIMIT=true): manual bypass for any environment
  */
 export async function checkRateLimit(
   identifier: string,
   config: RateLimitConfig
 ): Promise<{ success: boolean; remaining: number; resetAt: number }> {
-  const key = `rate-limit:${identifier}`;
   const now = Date.now();
   const windowMs = effectiveWindowMs(config);
+  
+  // 1. Bypass in Vercel preview deployments (development/testing)
+  if (process.env.VERCEL_ENV === 'preview') {
+    return {
+      success: true,
+      remaining: config.maxRequests,
+      resetAt: now + windowMs,
+    };
+  }
+
+  // 2. Emergency bypass (requires manual env var, works in any environment)
+  if (process.env.DISABLE_RATE_LIMIT === 'true') {
+    // Extract route prefix without PII (e.g., "analytics:get" from "analytics:get:user@example.com")
+    const routePrefix = identifier.split(':').slice(0, 2).join(':');
+    
+    logger.warn('[API] rate_limit.bypass', {
+      reason: 'DISABLE_RATE_LIMIT=true',
+      vercel_env: process.env.VERCEL_ENV,
+      route: routePrefix, // Log route pattern only, not user email
+    });
+    return {
+      success: true,
+      remaining: config.maxRequests,
+      resetAt: now + windowMs,
+    };
+  }
+
+  const key = `rate-limit:${identifier}`;
   const windowSeconds = Math.ceil(windowMs / 1000);
 
   try {
@@ -139,4 +171,9 @@ export const RATE_LIMITS = {
   UPLOAD_PRESIGNED: { maxRequests: 100, windowMs: 60 * 1000 }, // 100 presigned URLs/min per user
   UPLOAD_COMPLETE: { maxRequests: 100, windowMs: 60 * 1000 }, // 100 upload completions/min per user
   BOOKING: { maxRequests: 5, windowMs: 60 * 60 * 1000 }, // 5 req/hour
+  
+  // Admin routes rate limits
+  ADMIN_READ: { maxRequests: 60, windowMs: 60 * 1000 }, // 60 req/min for GET operations
+  ADMIN_WRITE: { maxRequests: 30, windowMs: 60 * 1000 }, // 30 req/min for POST/PATCH/DELETE
+  STATS: { maxRequests: 30, windowMs: 60 * 1000 }, // 30 req/min (cached endpoints)
 } as const;

@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
+import { successResponse, serverErrorResponse, errorResponse, notFoundResponse, rateLimitResponse } from '@/lib/api/response';
 import { eventSchema, eventUpdateSchema, idSchema, validateRequest } from '@/lib/api/validation';
 import { safeClientSelect } from '@/lib/api/select';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { generateKodeBooking } from '@/lib/utils';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -20,6 +21,16 @@ export async function GET(request: Request) {
   try {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
+
+    // Rate limiting
+    const rateLimitResult = await checkRateLimit(
+      `events:get:${auth.user.email}`,
+      RATE_LIMITS.ADMIN_READ
+    );
+    if (!rateLimitResult.success) {
+      const retryAfterSeconds = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
+      return rateLimitResponse('Too many requests', retryAfterSeconds);
+    }
 
     const { searchParams } = new URL(request.url);
     
