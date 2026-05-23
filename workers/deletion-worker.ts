@@ -356,6 +356,40 @@ function generateCloudinaryUrl(
   return `https://res.cloudinary.com/${cloudName}/image/upload/${transforms.join(',')}/${publicId}`;
 }
 
+// ─── Webhook Signature Helper ──────────────────────────────────────
+
+async function signWebhookBody(
+  secret: string,
+  body: string
+): Promise<{ signature: string; timestamp: string }> {
+  if (!secret) {
+    throw new Error('[Worker] VPS_WEBHOOK_SECRET is not configured');
+  }
+
+  const timestamp = new Date().toISOString();
+  const encoder = new TextEncoder();
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signatureBuffer = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    encoder.encode(timestamp + body)
+  );
+
+  const signature = Array.from(new Uint8Array(signatureBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+
+  return { signature, timestamp };
+}
+
 async function callbackThumbnailToVercel(
   job: ThumbnailJob,
   result: { thumbnailUrl: string; publicId: string; mediumUrl: string; smallUrl: string },
@@ -373,25 +407,7 @@ async function callbackThumbnailToVercel(
 
   try {
     const body = JSON.stringify(payload);
-    const timestamp = new Date().toISOString();
-    
-    // Generate HMAC-SHA256 signature for replay protection
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(env.VPS_WEBHOOK_SECRET),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    );
-    const signatureBuffer = await crypto.subtle.sign(
-      'HMAC',
-      key,
-      encoder.encode(timestamp + body)
-    );
-    const signature = Array.from(new Uint8Array(signatureBuffer))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
+    const { signature, timestamp } = await signWebhookBody(env.VPS_WEBHOOK_SECRET, body);
 
     const response = await fetch(webhookUrl, {
       method: 'POST',
@@ -470,25 +486,7 @@ async function callbackToVercel(
   };
 
   const body = JSON.stringify(payload);
-  const timestamp = new Date().toISOString();
-
-  // Generate HMAC-SHA256 signature for replay protection
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(env.VPS_WEBHOOK_SECRET),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const signatureBuffer = await crypto.subtle.sign(
-    'HMAC',
-    key,
-    encoder.encode(timestamp + body)
-  );
-  const signature = Array.from(new Uint8Array(signatureBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  const { signature, timestamp } = await signWebhookBody(env.VPS_WEBHOOK_SECRET, body);
 
   const response = await fetch(webhookUrl, {
     method: 'POST',

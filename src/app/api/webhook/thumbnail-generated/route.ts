@@ -26,7 +26,13 @@ export async function POST(request: Request) {
       return errorResponse(validation.error || 'Unauthorized', 401);
     }
 
-    const parsed = JSON.parse(body);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(body);
+    } catch {
+      return errorResponse('Invalid JSON', 400);
+    }
+
     const schemaValidation = ThumbnailCallbackSchema.safeParse(parsed);
 
     if (!schemaValidation.success) {
