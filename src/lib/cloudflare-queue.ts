@@ -28,6 +28,17 @@ const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY_MS = 1000; // 1 second
 const MAX_RETRY_DELAY_MS = 10000; // 10 seconds
 
+// Bulk-delete fan-out concurrency.
+//
+// `queueStorageDeletionBulk` POSTs once per payload to the deletion
+// worker. Sequential `await` (the previous implementation) hit ~200ms
+// per call, so 100 items took ~20s — perilously close to Vercel's 30s
+// admin-route timeout. With 10 in flight, 100 items complete in ~2s.
+//
+// Tuned conservatively to stay under the worker's effective rate
+// budget while still giving us headroom on the function timeout.
+const BULK_DELETE_CONCURRENCY = 10;
+
 /**
  * Sleep utility for retry delays
  */
@@ -370,7 +381,20 @@ export async function queueStorageDeletion(data: {
 }
 
 /**
- * Queue multiple storage deletion jobs in bulk
+ * Queue multiple storage deletion jobs in bulk.
+ *
+ * Sends one POST per payload to the deletion worker, but runs up to
+ * {@link BULK_DELETE_CONCURRENCY} requests in flight at a time using a
+ * lock-free worker pool. With ~200ms per request, 100 items finish in
+ * ~2s instead of the ~20s that the previous sequential `for...await`
+ * implementation took (uncomfortably close to Vercel's 30s function
+ * timeout for /api/admin/* routes).
+ *
+ * Audit: docs/audit-tasks.md Task 1.5 (Sprint 1).
+ *
+ * Per-item failures are still tracked individually via `failedCount`,
+ * and the first observed error message is surfaced as `error`. The
+ * deletion worker keys on `photoId` so retries are idempotent.
  */
 export async function queueStorageDeletionBulk(dataList: Array<{
   photoId: string;
@@ -384,17 +408,40 @@ export async function queueStorageDeletionBulk(dataList: Array<{
     apiSecret?: string | null;
   } | null;
 }>): Promise<{ success: boolean; error?: string; failedCount?: number }> {
-  // Send each deletion job individually to Worker HTTP endpoint
+  if (dataList.length === 0) {
+    return { success: true };
+  }
+
+  // Worker-pool concurrency. Tuned to balance fan-out latency against
+  // worker-side rate limits and Vercel function memory: too high and we
+  // can starve the worker / blow request quotas, too low and we hit the
+  // 30s timeout on a 100-item batch.
+  const MAX_CONCURRENT = Math.min(BULK_DELETE_CONCURRENCY, dataList.length);
+
   let failedCount = 0;
   let lastError: string | undefined;
+  let cursor = 0;
 
-  for (const data of dataList) {
-    const result = await queueStorageDeletion(data);
-    if (!result.success) {
-      failedCount++;
-      lastError = result.error;
+  // Each worker pulls the next index off a shared cursor. JS's single
+  // event loop makes `cursor++` and `failedCount++` atomic between
+  // awaits, so no extra locking is required.
+  const runWorker = async (): Promise<void> => {
+    while (cursor < dataList.length) {
+      const index = cursor++;
+      if (index >= dataList.length) return;
+      const result = await queueStorageDeletion(dataList[index]);
+      if (!result.success) {
+        failedCount++;
+        if (!lastError) {
+          lastError = result.error;
+        }
+      }
     }
-  }
+  };
+
+  await Promise.all(
+    Array.from({ length: MAX_CONCURRENT }, () => runWorker()),
+  );
 
   if (failedCount > 0) {
     return {
