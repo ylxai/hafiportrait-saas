@@ -17,9 +17,11 @@ const serverEnvSchema = z.object({
   NEXTAUTH_SECRET: z.string().min(1, 'NEXTAUTH_SECRET is required'),
   NEXTAUTH_URL: z.string().url().default('http://localhost:3000'),
 
-  // Public variables (also needed on the server, mirrored from env.client)
+  // Public variables (also needed on the server, mirrored from env.client).
+  // `.min(1)` guards against empty-string overrides that would produce
+  // invalid Ably channel names like `:selections:<id>`.
   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: z.string().optional(),
-  NEXT_PUBLIC_ABLY_CHANNEL_PREFIX: z.string().default('photostudio'),
+  NEXT_PUBLIC_ABLY_CHANNEL_PREFIX: z.string().min(1).default('photostudio'),
 
   // Cloudinary (thumbnails)
   CLOUDINARY_API_KEY: z.string().optional(),
@@ -39,12 +41,17 @@ const serverEnvSchema = z.object({
   // Webhook
   VPS_WEBHOOK_SECRET: z.string().optional(),
 
-  // Cloudflare Queue
-  // NOTE: prefixed with NEXT_SERVER_ to avoid colliding with Wrangler CLI's
-  // own CLOUDFLARE_ACCOUNT_ID during local development.
-  NEXT_SERVER_CF_ACCOUNT_ID: z.string().optional(),
+  // Cloudflare Queue / Worker
+  // Project deploys to Vercel only — there is no local Wrangler CLI in the
+  // runtime path, so the generic CLOUDFLARE_* names cannot conflict with
+  // Wrangler's own env lookup. NEXT_SERVER_CF_QUEUE_TOKEN keeps its existing
+  // prefix because that's the name already provisioned in Vercel.
+  CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
   NEXT_SERVER_CF_QUEUE_TOKEN: z.string().optional(),
-  NEXT_SERVER_CF_WORKER_URL: z.string().url().optional(),
+  CLOUDFLARE_WORKER_URL: z
+    .string()
+    .url()
+    .default('https://photostudio-deletion-worker.masipah1973.workers.dev'),
 });
 
 const parsed = serverEnvSchema.safeParse(process.env);

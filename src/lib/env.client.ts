@@ -9,7 +9,7 @@ import { z } from 'zod';
 
 const clientEnvSchema = z.object({
   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: z.string().optional(),
-  NEXT_PUBLIC_ABLY_CHANNEL_PREFIX: z.string().default('photostudio'),
+  NEXT_PUBLIC_ABLY_CHANNEL_PREFIX: z.string().min(1).default('photostudio'),
 });
 
 const parsed = clientEnvSchema.safeParse({
