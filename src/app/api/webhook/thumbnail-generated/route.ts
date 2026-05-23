@@ -1,4 +1,4 @@
-import { successResponse, errorResponse, unauthorizedResponse, validationError } from '@/lib/api/response';
+import { successResponse, errorResponse, unauthorizedResponse, validationError, handlePrismaError } from '@/lib/api/response';
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     logger.info('webhook.thumbnail.updated', { photoId });
     return successResponse({ updated: true });
   } catch (error) {
-    logger.error('webhook.thumbnail.unhandled_error', { err: error });
-    return errorResponse('Internal error', 500);
+    logger.error('[API] webhook.thumbnail.unhandled_error', { err: error });
+    return handlePrismaError(error);
   }
 }

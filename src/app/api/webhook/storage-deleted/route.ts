@@ -1,4 +1,4 @@
-import { successResponse, errorResponse, unauthorizedResponse, validationError } from '@/lib/api/response';
+import { successResponse, errorResponse, unauthorizedResponse, validationError, handlePrismaError } from '@/lib/api/response';
 import { decreaseStorageUsage } from '@/lib/storage/accounts';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
 
     return successResponse({ received: true });
   } catch (error) {
-    logger.error('webhook.deletion.unhandled_error', { err: error });
-    return errorResponse('Internal error', 500);
+    logger.error('[API] webhook.deletion.unhandled_error', { err: error });
+    return handlePrismaError(error);
   }
 }
