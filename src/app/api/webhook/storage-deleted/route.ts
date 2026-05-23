@@ -4,48 +4,44 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { verifyWebhookSignature } from '@/lib/webhook-validation';
 
-/**
- * Coerce a fileSize input (string of digits OR safe integer number) into a
- * non-negative `bigint`. Returns `null` for any input the schema accepts but
- * that we cannot safely convert (negative number, fractional number, number
- * outside safe-integer range). Schema regex `^\d+$` already excludes
- * negative / fractional / non-numeric strings, so a string branch only
- * needs the non-negative check after BigInt parse — which can never throw
- * given the regex.
- */
-function coerceFileSize(value: string | number): bigint | null {
-  if (typeof value === 'string') {
-    // Regex `^\d+$` guarantees BigInt(value) succeeds and is >= 0.
-    return BigInt(value);
-  }
-  // number branch — must be a non-negative safe integer.
-  if (!Number.isInteger(value) || value < 0 || value > Number.MAX_SAFE_INTEGER) {
-    return null;
-  }
-  return BigInt(value);
-}
+// Hard upper bound on the string form of `fileSize`. 32 digits is more
+// than enough for any realistic byte count (a 32-digit value is ~10^32
+// bytes, far beyond the size of all data ever produced). Capping the
+// length at the schema layer prevents a DoS where a megabyte-long
+// digit string would force `BigInt(value)` into pathological CPU /
+// memory work before the route can return a 400. (CodeAnt PR #107
+// MAJOR security finding.)
+const MAX_FILESIZE_DIGITS = 32;
 
 const DeletionCallbackSchema = z.object({
   photoId: z.string(),
   r2Deleted: z.boolean(),
   cloudinaryDeleted: z.boolean(),
   storageAccountId: z.string().optional(),
-  // CRITICAL FIX C3: accept either a numeric string (avoids precision loss
-  // for files > Number.MAX_SAFE_INTEGER) OR a JS number, but constrain both
-  // forms to non-negative integers so `BigInt()` cannot throw downstream.
-  // - String form: `^\d+$` rejects signs, decimals, exponents, and leading
-  //   `0x`/`0o`/`0b` prefixes. BigInt() is then guaranteed to succeed.
-  // - Number form: must be a finite, non-negative safe integer. Rejecting
-  //   fractional / out-of-range numbers here returns 400 (validation error)
-  //   instead of letting them crash the handler at BigInt-conversion time.
+  // CRITICAL FIX C3: accept either a digit-only string (avoids precision
+  // loss for files > Number.MAX_SAFE_INTEGER) OR a JS number, but
+  // constrain both forms to non-negative integers AND transform inline
+  // so `schemaValidation.data.fileSize` is already a `bigint` (or
+  // undefined). Centralizing the conversion here removes the runtime
+  // helper that previously had to mirror these checks.
+  // - String form: `^\d+$` rejects signs, decimals, exponents, hex/oct/
+  //   bin prefixes. `.max(MAX_FILESIZE_DIGITS)` blocks DoS via huge
+  //   digit strings. `.transform(BigInt)` then converts safely.
+  // - Number form: must be a finite, non-negative safe integer. The
+  //   transform always yields a non-negative bigint.
   fileSize: z
     .union([
-      z.string().regex(/^\d+$/, 'fileSize must be a non-negative integer string'),
+      z
+        .string()
+        .max(MAX_FILESIZE_DIGITS, `fileSize string exceeds ${MAX_FILESIZE_DIGITS}-digit limit`)
+        .regex(/^\d+$/, 'fileSize must be a non-negative integer string')
+        .transform((v) => BigInt(v)),
       z
         .number()
         .int('fileSize number must be an integer')
         .nonnegative('fileSize must be non-negative')
-        .max(Number.MAX_SAFE_INTEGER, 'fileSize exceeds safe integer range — use string'),
+        .max(Number.MAX_SAFE_INTEGER, 'fileSize exceeds safe integer range — use string')
+        .transform((v) => BigInt(v)),
     ])
     .optional(),
 });
@@ -79,6 +75,7 @@ export async function POST(request: Request) {
       return validationError(schemaValidation.error);
     }
 
+    // After schema validation `fileSize` is `bigint | undefined`.
     const { photoId, r2Deleted, cloudinaryDeleted, storageAccountId, fileSize } = schemaValidation.data;
 
     const success = r2Deleted && cloudinaryDeleted;
@@ -87,19 +84,11 @@ export async function POST(request: Request) {
       logger.info('webhook.deletion.confirmed', { photoId });
 
       if (storageAccountId && fileSize !== undefined) {
-        const fileSizeBig = coerceFileSize(fileSize);
-        if (fileSizeBig === null) {
-          // Should be unreachable: schema already rejects negative / fractional
-          // / oversized numbers and non-numeric strings. Belt-and-suspenders
-          // for callers that bypass schema validation in the future.
-          logger.error('webhook.deletion.invalid_fileSize_post_schema', { photoId, fileSize });
-          return errorResponse('Invalid fileSize value', 400);
-        }
-        await decreaseStorageUsage(storageAccountId, fileSizeBig);
+        await decreaseStorageUsage(storageAccountId, fileSize);
         logger.info('webhook.deletion.storage_decreased', {
           photoId,
           storageAccountId,
-          fileSize: fileSizeBig.toString(),
+          fileSize: fileSize.toString(),
         });
       }
     } else {
