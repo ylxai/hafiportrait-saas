@@ -35,9 +35,23 @@ export function enforceBodySizeLimit(
     return null;
   }
 
-  const bytes = Number.parseInt(contentLength, 10);
+  // STRICT digit-only validation. `Number.parseInt('123abc', 10)`
+  // partially parses and returns 123, so a hostile header like
+  // `Content-Length: 1abcdefg9999999999` would be treated as a
+  // 1-byte payload while the actual body is gigabytes — bypassing
+  // the guard. Same risk with `'5, 9999999'` (HTTP allows folded
+  // headers but the parser would only see `5`) and scientific
+  // notation like `'1e9'`. Reject anything that isn't pure digits
+  // BEFORE parsing.
+  // (CodeAnt MAJOR + Sourcery security on PR #113 commit 3e5b78d.)
+  if (!/^\d+$/.test(contentLength)) {
+    return errorResponse('Invalid Content-Length header', 400);
+  }
+
+  const bytes = Number(contentLength);
   if (!Number.isFinite(bytes) || bytes < 0) {
-    // Malformed header — treat as a hostile signal and reject.
+    // Belt-and-suspenders — regex above already excludes these
+    // shapes, but keep the guard for defense in depth.
     return errorResponse('Invalid Content-Length header', 400);
   }
 
