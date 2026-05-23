@@ -372,13 +372,36 @@ async function callbackThumbnailToVercel(
   };
 
   try {
+    const body = JSON.stringify(payload);
+    const timestamp = new Date().toISOString();
+    
+    // Generate HMAC-SHA256 signature for replay protection
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(env.VPS_WEBHOOK_SECRET),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    const signatureBuffer = await crypto.subtle.sign(
+      'HMAC',
+      key,
+      encoder.encode(timestamp + body)
+    );
+    const signature = Array.from(new Uint8Array(signatureBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${env.VPS_WEBHOOK_SECRET}`,
+        'x-webhook-signature': signature,
+        'x-webhook-timestamp': timestamp,
       },
-      body: JSON.stringify(payload),
+      body,
     });
 
     if (!response.ok) {
@@ -446,13 +469,36 @@ async function callbackToVercel(
     fileSize: job.fileSize,
   };
 
+  const body = JSON.stringify(payload);
+  const timestamp = new Date().toISOString();
+
+  // Generate HMAC-SHA256 signature for replay protection
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(env.VPS_WEBHOOK_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signatureBuffer = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    encoder.encode(timestamp + body)
+  );
+  const signature = Array.from(new Uint8Array(signatureBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+
   const response = await fetch(webhookUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${env.VPS_WEBHOOK_SECRET}`,
+      'x-webhook-signature': signature,
+      'x-webhook-timestamp': timestamp,
     },
-    body: JSON.stringify(payload),
+    body,
   });
 
   if (!response.ok) {
