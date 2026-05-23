@@ -22,7 +22,7 @@ Adding rate limiting to 11 admin routes to prevent DoS attacks and brute-force a
 
 ---
 
-## ⏳ Remaining (8 routes, 21 methods)
+## ⏳ Remaining (9 routes, 21 methods)
 
 | # | Route | Methods | Rate Limits |
 |---|-------|---------|-------------|

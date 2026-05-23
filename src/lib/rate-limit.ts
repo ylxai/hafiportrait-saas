@@ -34,38 +34,42 @@ function effectiveWindowMs(config: RateLimitConfig): number {
  * 
  * Bypass logic:
  * - Vercel preview deployments (VERCEL_ENV=preview): rate limiting disabled for testing
- * - Emergency override (DISABLE_RATE_LIMIT=true): manual bypass for production incidents
+ * - Emergency override (DISABLE_RATE_LIMIT=true): manual bypass for any environment
  */
 export async function checkRateLimit(
   identifier: string,
   config: RateLimitConfig
 ): Promise<{ success: boolean; remaining: number; resetAt: number }> {
+  const windowMs = effectiveWindowMs(config);
+  
   // 1. Bypass in Vercel preview deployments (development/testing)
   if (process.env.VERCEL_ENV === 'preview') {
     return {
       success: true,
       remaining: config.maxRequests,
-      resetAt: Date.now() + config.windowMs,
+      resetAt: Date.now() + windowMs,
     };
   }
 
-  // 2. Emergency bypass (production only, requires manual env var)
+  // 2. Emergency bypass (requires manual env var, works in any environment)
   if (process.env.DISABLE_RATE_LIMIT === 'true') {
+    // Extract route prefix without PII (e.g., "analytics:get" from "analytics:get:user@example.com")
+    const routePrefix = identifier.split(':').slice(0, 2).join(':');
+    
     logger.warn('rate_limit.bypass', {
       reason: 'DISABLE_RATE_LIMIT=true',
       vercel_env: process.env.VERCEL_ENV,
-      identifier,
+      route: routePrefix, // Log route pattern only, not user email
     });
     return {
       success: true,
       remaining: config.maxRequests,
-      resetAt: Date.now() + config.windowMs,
+      resetAt: Date.now() + windowMs,
     };
   }
 
   const key = `rate-limit:${identifier}`;
   const now = Date.now();
-  const windowMs = effectiveWindowMs(config);
   const windowSeconds = Math.ceil(windowMs / 1000);
 
   try {
