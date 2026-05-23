@@ -11,9 +11,12 @@ type Summary = {
   totalEvents: number;
   paidEvents: number;
   pendingEvents: number;
-  totalRevenue: number;
-  totalPaid: number;
-  totalPending: number;
+  // Revenue fields are emitted as strings by the API to avoid silent
+  // precision loss on large lifetime totals (BigInt-safe). Accept
+  // `number` too for backward compatibility with cached responses.
+  totalRevenue: string | number;
+  totalPaid: string | number;
+  totalPending: string | number;
 };
 
 type Event = {
@@ -61,8 +64,16 @@ export default function FinancePage() {
   const summary = data?.data?.summary;
   const events = data?.data?.events || [];
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount);
+  const formatCurrency = (amount: string | number | undefined) => {
+    if (amount === undefined || amount === null) return 'Rp 0';
+    // Revenue strings come from the API as BigInt-safe digits; parse
+    // back to Number for `Intl.NumberFormat`. Values that exceed
+    // Number.MAX_SAFE_INTEGER lose precision in the formatter regardless
+    // of input type, but at the dashboard level a 16-digit cap is fine —
+    // the precise value is preserved in the API string for downstream
+    // analytics.
+    const numAmount = typeof amount === 'string' ? parseInt(amount, 10) : amount;
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(numAmount);
   };
 
   const handleRecordPayment = async (eventId: string, amount: number) => {

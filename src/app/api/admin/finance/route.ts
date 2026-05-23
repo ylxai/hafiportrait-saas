@@ -98,13 +98,19 @@ export async function GET(request: Request) {
 
     const total = totalAgg._count.id;
 
+    // BigInt-safe revenue serialization. `totalPrice` is a Prisma BigInt
+    // (Decimal in some schemas, BigInt as the safe upper bound), so we
+    // emit strings rather than coerce to JS `number` and risk silent
+    // precision loss for accounts with large lifetime revenue. The admin
+    // dashboard already accepts `string | number` from the stats route;
+    // this aligns finance with that contract.
     const summary = {
       totalEvents: total,
       paidEvents: paidAgg._count.id,
       pendingEvents: pendingAgg._count.id,
-      totalRevenue: totalAgg._sum.totalPrice || 0,
-      totalPaid: paidAgg._sum.totalPrice || 0,
-      totalPending: pendingAgg._sum.totalPrice || 0,
+      totalRevenue: (totalAgg._sum.totalPrice ?? BigInt(0)).toString(),
+      totalPaid: (paidAgg._sum.totalPrice ?? BigInt(0)).toString(),
+      totalPending: (pendingAgg._sum.totalPrice ?? BigInt(0)).toString(),
     };
 
     const eventsList = events.map((e: typeof events[number]) => ({
