@@ -8,6 +8,9 @@ export interface RateLimitConfig {
 
 // In-memory flag to log DISABLE_RATE_LIMIT warning only once per process
 let disableRateLimitWarningLogged = false;
+// In-memory flag to log Redis-unavailable fail-open warning only once per
+// process. Avoids flooding logs every request when Redis is down.
+let redisUnavailableWarningLogged = false;
 
 /**
  * Test-only override for the rate-limit window. When `RATE_LIMIT_WINDOW_OVERRIDE_MS`
@@ -32,12 +35,33 @@ function effectiveWindowMs(config: RateLimitConfig): number {
 }
 
 /**
- * Redis/Valkey-based rate limiter with fallback to in-memory
- * Persistent across server restarts and multi-instance deployments
- * 
+ * Redis/Valkey-based distributed rate limiter.
+ *
+ * Designed for Vercel serverless: every check goes through the shared Redis
+ * store so a request hitting instance A is rate-limited consistently with a
+ * request hitting instance B. There is no in-memory fallback because:
+ *
+ *   - A `Map` is local to a single function instance. Rate limits enforced
+ *     locally are trivially bypassed by an attacker who fans requests out
+ *     across instances.
+ *   - `setInterval` for cleanup runs forever in every spawned instance and
+ *     leaks resources in serverless environments that recycle workers
+ *     unpredictably.
+ *
+ * If Redis is unavailable (no client configured, or the operation throws)
+ * we **fail open**: allow the request, log a structured warning so an
+ * operator can see the gap in enforcement, and return a "successful" check.
+ * Failing closed (rejecting all requests) would turn a Redis outage into a
+ * full outage of the API; failing open with logging is the documented
+ * trade-off in `docs/audit-tasks.md` Task 1.4 acceptance criteria.
+ *
  * Bypass logic:
- * - Vercel preview deployments (VERCEL_ENV=preview): rate limiting disabled for testing
- * - Emergency override (DISABLE_RATE_LIMIT=true): manual bypass for any environment
+ * - Vercel preview deployments (VERCEL_ENV=preview): rate limiting disabled
+ *   for testing.
+ * - Emergency override (DISABLE_RATE_LIMIT=true): manual bypass for any
+ *   environment.
+ *
+ * Closes Sprint 1 Task 1.4 (replace in-memory rate-limit fallback).
  */
 export async function checkRateLimit(
   identifier: string,
@@ -45,7 +69,7 @@ export async function checkRateLimit(
 ): Promise<{ success: boolean; remaining: number; resetAt: number }> {
   const now = Date.now();
   const windowMs = effectiveWindowMs(config);
-  
+
   // 1. Bypass in Vercel preview deployments (development/testing)
   if (process.env.VERCEL_ENV === 'preview') {
     return {
@@ -61,7 +85,7 @@ export async function checkRateLimit(
     if (!disableRateLimitWarningLogged) {
       // Extract route prefix without PII (e.g., "analytics:get" from "analytics:get:user@example.com")
       const routePrefix = identifier.split(':').slice(0, 2).join(':');
-      
+
       logger.warn('[API] rate_limit.bypass', {
         reason: 'DISABLE_RATE_LIMIT=true',
         vercel_env: process.env.VERCEL_ENV,
@@ -70,7 +94,7 @@ export async function checkRateLimit(
       });
       disableRateLimitWarningLogged = true;
     }
-    
+
     return {
       success: true,
       remaining: config.maxRequests,
@@ -82,93 +106,73 @@ export async function checkRateLimit(
   const windowSeconds = Math.ceil(windowMs / 1000);
 
   try {
-    if (redisCache) {
-      // Use Redis/Valkey for distributed rate limiting
-      const count = await redisCache.incr(key);
-      
-      // Set expiry on first request
-      if (count === 1) {
-        await redisCache.expire(key, windowSeconds);
-      }
+    if (!redisCache) {
+      return failOpen(identifier, config, now, windowMs, 'redis_not_configured');
+    }
 
-      // Get TTL for resetAt
-      const ttl = await redisCache.ttl(key);
-      const resetAt = ttl > 0 ? now + (ttl * 1000) : now + windowMs;
+    // Use Redis/Valkey for distributed rate limiting
+    const count = await redisCache.incr(key);
 
-      if (count > config.maxRequests) {
-        return {
-          success: false,
-          remaining: 0,
-          resetAt,
-        };
-      }
+    // Set expiry on first request
+    if (count === 1) {
+      await redisCache.expire(key, windowSeconds);
+    }
 
+    // Get TTL for resetAt
+    const ttl = await redisCache.ttl(key);
+    const resetAt = ttl > 0 ? now + (ttl * 1000) : now + windowMs;
+
+    if (count > config.maxRequests) {
       return {
-        success: true,
-        remaining: Math.max(0, config.maxRequests - count),
+        success: false,
+        remaining: 0,
         resetAt,
       };
     }
-  } catch (error) {
-    console.error('[RateLimit] Redis error, falling back to in-memory:', error);
-  }
 
-  // Fallback to in-memory if Redis unavailable
-  return checkRateLimitMemory(identifier, config);
-}
-
-// In-memory fallback (same as before)
-interface RateLimitEntry {
-  count: number;
-  resetAt: number;
-}
-
-const memoryStore = new Map<string, RateLimitEntry>();
-
-// Cleanup old entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of memoryStore.entries()) {
-    if (entry.resetAt < now) {
-      memoryStore.delete(key);
-    }
-  }
-}, 5 * 60 * 1000);
-
-function checkRateLimitMemory(
-  identifier: string,
-  config: RateLimitConfig
-): { success: boolean; remaining: number; resetAt: number } {
-  const now = Date.now();
-  const key = identifier;
-  
-  let entry = memoryStore.get(key);
-  
-  // Reset if window expired
-  if (!entry || entry.resetAt < now) {
-    entry = {
-      count: 0,
-      resetAt: now + effectiveWindowMs(config),
-    };
-    memoryStore.set(key, entry);
-  }
-  
-  // Check limit
-  if (entry.count >= config.maxRequests) {
     return {
-      success: false,
-      remaining: 0,
-      resetAt: entry.resetAt,
+      success: true,
+      remaining: Math.max(0, config.maxRequests - count),
+      resetAt,
     };
+  } catch (error) {
+    return failOpen(identifier, config, now, windowMs, 'redis_error', error);
   }
-  
-  // Increment counter
-  entry.count++;
-  
+}
+
+/**
+ * Fail-open path when the shared store is unreachable.
+ *
+ * Allows the request through but records a structured warning so the gap in
+ * enforcement is observable. The first occurrence per process logs at
+ * `warn`; subsequent occurrences are dropped to keep log volume bounded
+ * during prolonged Redis outages.
+ */
+function failOpen(
+  identifier: string,
+  config: RateLimitConfig,
+  now: number,
+  windowMs: number,
+  reason: 'redis_not_configured' | 'redis_error',
+  error?: unknown,
+): { success: boolean; remaining: number; resetAt: number } {
+  if (!redisUnavailableWarningLogged) {
+    const routePrefix = identifier.split(':').slice(0, 2).join(':');
+    logger.warn('[API] rate_limit.fail_open', {
+      reason,
+      route_prefix: routePrefix,
+      vercel_env: process.env.VERCEL_ENV,
+      err: error instanceof Error ? error.message : error,
+      message:
+        'Rate-limit store unavailable — request allowed through. ' +
+        'This warning logs once per process; investigate Redis health.',
+    });
+    redisUnavailableWarningLogged = true;
+  }
   return {
     success: true,
-    remaining: config.maxRequests - entry.count,
-    resetAt: entry.resetAt,
+    remaining: config.maxRequests,
+    resetAt: now + windowMs,
   };
 }
 
@@ -180,7 +184,7 @@ export const RATE_LIMITS = {
   UPLOAD_PRESIGNED: { maxRequests: 100, windowMs: 60 * 1000 }, // 100 presigned URLs/min per user
   UPLOAD_COMPLETE: { maxRequests: 100, windowMs: 60 * 1000 }, // 100 upload completions/min per user
   BOOKING: { maxRequests: 5, windowMs: 60 * 60 * 1000 }, // 5 req/hour
-  
+
   // Admin routes rate limits
   ADMIN_READ: { maxRequests: 60, windowMs: 60 * 1000 }, // 60 req/min for GET operations
   ADMIN_WRITE: { maxRequests: 30, windowMs: 60 * 1000 }, // 30 req/min for POST/PATCH/DELETE
