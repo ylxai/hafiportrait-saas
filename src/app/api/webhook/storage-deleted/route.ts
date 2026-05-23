@@ -9,8 +9,8 @@ import { verifyWebhookSignature } from '@/lib/webhook-validation';
 // bytes, far beyond the size of all data ever produced). Capping the
 // length at the schema layer prevents a DoS where a megabyte-long
 // digit string would force `BigInt(value)` into pathological CPU /
-// memory work before the route can return a 400. (CodeAnt PR #107
-// MAJOR security finding.)
+// memory work before the route can return a 422 validation error.
+// (CodeAnt PR #107 MAJOR security finding.)
 const MAX_FILESIZE_DIGITS = 32;
 
 const DeletionCallbackSchema = z.object({
