@@ -92,6 +92,37 @@ return {count, ttl}
 `;
 
 /**
+ * Register the rate-limit script once per Redis client so subsequent
+ * invocations use `EVALSHA` automatically. ioredis caches the script's
+ * SHA on the server after the first call and falls back to `EVAL` if
+ * the script ever gets evicted (e.g. SCRIPT FLUSH after a Redis
+ * restart). This avoids resending the script body on every request,
+ * which matters because the rate limiter runs on the hot path of every
+ * authenticated API call. (Gemini low on commit ccb2df5.)
+ *
+ * Wrapped in a one-shot guard: defineCommand throws if called twice
+ * with the same name on the same client, and ioredis singleton
+ * `redisCache` is reused across module reloads in dev (HMR).
+ */
+let scriptRegistered = false;
+function ensureLuaScriptRegistered(): void {
+  if (scriptRegistered || !redisCache) return;
+  // Cast through unknown to declare the dynamic command on the client
+  // type without polluting the public ioredis interface.
+  const client = redisCache as unknown as {
+    rateLimitIncr?: (key: string, windowSeconds: string) => Promise<[number, number]>;
+    defineCommand: (name: string, options: { numberOfKeys: number; lua: string }) => void;
+  };
+  if (!client.rateLimitIncr) {
+    client.defineCommand('rateLimitIncr', {
+      numberOfKeys: 1,
+      lua: RATE_LIMIT_LUA,
+    });
+  }
+  scriptRegistered = true;
+}
+
+/**
  * Extract the route name from a rate-limit identifier without leaking
  * PII. Identifiers in this codebase use varying segment counts:
  *   - `booking:user@example.com`              (2 segments, email PII)
@@ -188,14 +219,16 @@ export async function checkRateLimit(
       return failOpen(identifier, now, windowMs, 'redis_not_configured');
     }
 
-    // Atomic INCR + EXPIRE + TTL via Lua. See RATE_LIMIT_LUA docstring
-    // for why this MUST be a single atomic operation.
-    const result = (await redisCache.eval(
-      RATE_LIMIT_LUA,
-      1,
-      key,
-      windowSeconds.toString(),
-    )) as [number, number];
+    // Atomic INCR + EXPIRE + TTL via the registered Lua script. ioredis
+    // uses EVALSHA after the first call so we don't resend the script
+    // body on every request. See RATE_LIMIT_LUA docstring for why this
+    // MUST be a single atomic operation.
+    ensureLuaScriptRegistered();
+    const result = (await (
+      redisCache as unknown as {
+        rateLimitIncr: (key: string, windowSeconds: string) => Promise<[number, number]>;
+      }
+    ).rateLimitIncr(key, windowSeconds.toString())) as [number, number];
 
     const [count, ttl] = result;
     const resetAt = ttl > 0 ? now + (ttl * 1000) : now + windowMs;
