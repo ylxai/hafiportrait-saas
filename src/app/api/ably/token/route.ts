@@ -19,7 +19,7 @@ import { NextResponse } from 'next/server';
 import Ably from 'ably';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { env } from '@/lib/env';
+import { env } from '@/lib/env.server';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
