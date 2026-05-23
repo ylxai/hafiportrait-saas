@@ -22,7 +22,16 @@ type Analytics = {
 type Summary = {
   totalGalleries: number;
   publishedGalleries: number;
-  totalViews: number;
+  /**
+   * BigInt-safe: `/api/admin/analytics` emits `totalViews` as a string
+   * (always via `.toString()`) to avoid silent precision loss when the
+   * aggregate `viewCount` across all galleries combined exceeds
+   * `Number.MAX_SAFE_INTEGER`. The API contract is unconditionally a
+   * string, so the type is `string` rather than `string | number`. The
+   * page renders the value directly into a `<div>` so no numeric
+   * coercion is needed for display.
+   */
+  totalViews: string;
   avgViews: number;
   totalSelections: number;
 };
