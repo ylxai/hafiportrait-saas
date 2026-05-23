@@ -3,8 +3,7 @@ import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { updateGallerySchema, validateRequest } from '@/lib/api/validation';
 import { safeClientSelect } from '@/lib/api/select';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { serializeBigInt } from '@/lib/bigint-utils';
 import {
   collectDeletionDataForTransaction,
@@ -12,20 +11,12 @@ import {
 } from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
 
-async function checkAuth() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return errorResponse('Unauthorized', 401);
-  }
-  return session;
-}
-
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     const { id } = await params;
@@ -85,7 +76,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     const { id } = await params;
@@ -117,7 +108,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     const { id } = await params;

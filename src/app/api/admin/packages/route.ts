@@ -4,25 +4,16 @@ import { successResponse, serverErrorResponse, errorResponse, notFoundResponse }
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { packageSchema, packageUpdateSchema, idSchema, validateRequest } from '@/lib/api/validation';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
 
 function isPrismaError(error: unknown, code: string): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === code;
 }
 
-async function checkAuth() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return errorResponse('Unauthorized', 401);
-  }
-  return session;
-}
-
 export async function GET(request: Request) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     // Rate limiting
@@ -64,7 +55,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     // Rate limiting
@@ -108,7 +99,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     // Rate limiting
@@ -154,7 +145,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     // Rate limiting

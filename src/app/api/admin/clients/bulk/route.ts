@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -14,17 +13,9 @@ const bulkDeleteSchema = z.object({
     .max(100, 'Maximum 100 IDs allowed per request'),
 });
 
-async function checkAuth() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return errorResponse('Unauthorized', 401);
-  }
-  return session;
-}
-
 export async function DELETE(request: Request) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     let body: unknown;

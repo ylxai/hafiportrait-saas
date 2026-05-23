@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { successResponse, unauthorizedResponse, handlePrismaError, validationError, errorResponse } from '@/lib/api/response';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { successResponse, handlePrismaError, validationError, errorResponse } from '@/lib/api/response';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { z } from 'zod';
 import { collectDeletionDataForTransaction, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
 import { RATE_LIMITS } from '@/lib/rate-limit';
@@ -13,14 +12,6 @@ import { logger } from '@/lib/logger';
 const bulkDeleteSchema = z.object({
   photoIds: z.array(z.string()).min(1).max(100),
 });
-
-async function checkAuth() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return unauthorizedResponse();
-  }
-  return session;
-}
 
 /**
  * Bulk delete photos with collect-then-delete-then-enqueue pattern.
@@ -35,7 +26,7 @@ async function checkAuth() {
  */
 export async function POST(request: Request) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     // Rate limiting

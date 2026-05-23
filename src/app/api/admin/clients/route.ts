@@ -3,8 +3,7 @@ import { hash } from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
 import { clientSchema, clientUpdateSchema, idSchema, validateRequest } from '@/lib/api/validation';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
@@ -15,17 +14,9 @@ import { enforceRateLimit } from '@/lib/rate-limit-helper';
 // shape used in lib/auth/options.ts for timing-attack protection.
 const BCRYPT_ROUNDS = 10;
 
-async function checkAuth() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return errorResponse('Unauthorized', 401);
-  }
-  return session;
-}
-
 export async function GET(request: Request) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     // Rate limiting
@@ -90,7 +81,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     // Rate limiting
@@ -149,7 +140,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     let body: unknown;
@@ -215,7 +206,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(request.url);

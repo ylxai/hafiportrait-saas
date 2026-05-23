@@ -1,18 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { unauthorizedResponse, handlePrismaError } from '@/lib/api/response';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { handlePrismaError } from '@/lib/api/response';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
-
-async function checkAuth() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return unauthorizedResponse();
-  }
-  return session;
-}
 
 /**
  * GET /api/admin/export/clients
@@ -22,7 +13,7 @@ async function checkAuth() {
  */
 export async function GET() {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     // Rate limiting
