@@ -92,7 +92,7 @@ export async function POST(request: Request) {
 
     logger.info('[API] bulk-delete.db_committed', {
       photoCount: payloads.length,
-      photoIds,
+      photoIds: deletedPhotoIds,
     });
 
     // Step 3: Enqueue storage deletion AFTER DB commit (outbox fallback)
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
       logger.warn('[API] bulk-delete.queue_failed_outboxed', {
         outboxed,
         outboxJobId,
-        photoIds,
+        photoIds: deletedPhotoIds,
       });
     } else {
       logger.info('[API] bulk-delete.queued', { queued });
