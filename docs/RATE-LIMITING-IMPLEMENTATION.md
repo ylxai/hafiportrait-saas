@@ -38,37 +38,34 @@ Adding rate limiting to 11 admin routes to prevent DoS attacks and brute-force a
 
 ---
 
-## Implementation Pattern
+## 📝 Implementation Pattern
 
 ### 1. Add Import (if not exists)
 
 ```typescript
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { rateLimitResponse } from '@/lib/api/response';
+import { RATE_LIMITS } from '@/lib/rate-limit';
+import { enforceRateLimit } from '@/lib/rate-limit-helper';
 ```
 
 ### 2. Add Rate Limiting After Auth Check
 
 ```typescript
 export async function GET(request: Request) {
-  try {
-    const auth = await checkAuth();
-    if (auth instanceof NextResponse) return auth;
+  const auth = await checkAuth();
+  if (auth instanceof NextResponse) return auth;
 
-    // Rate limiting
-    const rateLimitResult = await checkRateLimit(
-      `route-name:method:${auth.user.email}`,
-      RATE_LIMITS.ADMIN_READ  // or ADMIN_WRITE, STATS
-    );
-    if (!rateLimitResult.success) {
-      const retryAfterSeconds = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
-      return rateLimitResponse('Too many requests', retryAfterSeconds);
-    }
+  // Rate limiting
+  const rateLimit = await enforceRateLimit({
+    identifier: `route:method:${auth.user.email}`,
+    limit: RATE_LIMITS.ADMIN_READ  // or ADMIN_WRITE, STATS
+  });
+  if (rateLimit) return rateLimit;
 
-    // ... rest of handler
-  }
+  // ... rest of handler
 }
 ```
+
+**Note:** The `enforceRateLimit` helper centralizes rate limiting logic and ensures consistent behavior across all admin routes.
 
 ### 3. Rate Limit Types
 
