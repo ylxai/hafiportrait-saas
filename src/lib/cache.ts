@@ -110,12 +110,24 @@ export async function closeRedisConnection() {
   }
 }
 
-// Register graceful shutdown handlers
-if (typeof process !== 'undefined') {
+// Register graceful shutdown handlers.
+//
+// Sprint 2 Task 2.5: `process.on(SIGTERM/SIGINT)` is unreliable in
+// Vercel serverless (the platform doesn't deliver these signals
+// predictably) and may crash in Edge runtime where `process` is
+// undefined or `process.on` is missing. Guard with BOTH a `process`
+// existence check AND a `typeof process.on === 'function'` check so
+// the bundle stays Edge-safe; the handler is still useful for
+// long-running Node processes (next dev, custom server) where signals
+// DO get delivered.
+if (
+  typeof process !== 'undefined' &&
+  typeof process.on === 'function'
+) {
   process.on('SIGTERM', async () => {
     await closeRedisConnection();
   });
-  
+
   process.on('SIGINT', async () => {
     await closeRedisConnection();
   });

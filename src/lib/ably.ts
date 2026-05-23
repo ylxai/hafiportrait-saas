@@ -2,6 +2,7 @@ import Ably from 'ably';
 import { env } from './env.server';
 
 let ablyClient: Ably.Realtime | null = null;
+let ablyRestClient: Ably.Rest | null = null;
 
 export function getAblyClient(): Ably.Realtime {
   if (!ablyClient) {
@@ -13,11 +14,24 @@ export function getAblyClient(): Ably.Realtime {
   return ablyClient;
 }
 
+/**
+ * Singleton Ably REST client.
+ *
+ * Sprint 2 Task 2.6: previously each call to `getAblyRestClient`
+ * spun up a fresh `Ably.Rest` instance. Each instance opens its own
+ * keep-alive HTTP agent and re-runs auth setup, so high-traffic
+ * publish paths (selection updates, view counts, thumbnail
+ * generation) were paying that cost on every invocation. Cache the
+ * instance the same way `getAblyClient` does.
+ */
 export function getAblyRestClient(): Ably.Rest {
-  if (!env.ABLY_API_KEY) {
-    throw new Error('ABLY_API_KEY is not configured');
+  if (!ablyRestClient) {
+    if (!env.ABLY_API_KEY) {
+      throw new Error('ABLY_API_KEY is not configured');
+    }
+    ablyRestClient = new Ably.Rest(env.ABLY_API_KEY);
   }
-  return new Ably.Rest(env.ABLY_API_KEY);
+  return ablyRestClient;
 }
 
 export const CHANNELS = {
