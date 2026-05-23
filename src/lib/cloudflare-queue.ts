@@ -11,7 +11,7 @@
  * Environment variables needed:
  * - CLOUDFLARE_ACCOUNT_ID
  * - NEXT_SERVER_CF_QUEUE_TOKEN (with Queue write permission)
- * - CLOUDFLARE_WORKER_URL (defaulted in env schema)
+ * - CLOUDFLARE_WORKER_URL (deletion worker endpoint, required for enqueue calls)
  */
 
 import { prisma } from '@/lib/db';
@@ -304,6 +304,10 @@ export async function queueStorageDeletion(data: {
     apiSecret?: string | null;
   } | null;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  if (!WORKER_URL) {
+    logQueueError('Missing CLOUDFLARE_WORKER_URL', new Error('CLOUDFLARE_WORKER_URL not set'));
+    return { success: false, error: 'Missing CLOUDFLARE_WORKER_URL' };
+  }
   try {
     const response = await fetch(`${WORKER_URL}/queue/deletion`, {
       method: 'POST',
@@ -424,6 +428,11 @@ export async function queueThumbnailGeneration(data: {
   if (!data.cloudinaryCredentials.cloudName || !data.cloudinaryCredentials.apiKey || !data.cloudinaryCredentials.apiSecret) {
     console.warn('[Queue/Thumbnail] Missing Cloudinary credentials, skipping thumbnail generation');
     return { success: false, error: 'Missing Cloudinary credentials' };
+  }
+
+  if (!WORKER_URL) {
+    logQueueError('Missing CLOUDFLARE_WORKER_URL', new Error('CLOUDFLARE_WORKER_URL not set'));
+    return { success: false, error: 'Missing CLOUDFLARE_WORKER_URL' };
   }
 
   try {
