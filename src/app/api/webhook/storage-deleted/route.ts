@@ -1,4 +1,4 @@
-import { successResponse, errorResponse } from '@/lib/api/response';
+import { successResponse, errorResponse, unauthorizedResponse, validationError } from '@/lib/api/response';
 import { decreaseStorageUsage } from '@/lib/storage/accounts';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
         errorCode: validation.errorCode,
         error: validation.error,
       });
-      return errorResponse(validation.error || 'Unauthorized', 401);
+      return unauthorizedResponse();
     }
 
     let parsed: unknown;
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     const schemaValidation = DeletionCallbackSchema.safeParse(parsed);
 
     if (!schemaValidation.success) {
-      return errorResponse('Invalid payload', 400);
+      return validationError(schemaValidation.error);
     }
 
     const { photoId, r2Deleted, cloudinaryDeleted, storageAccountId, fileSize } = schemaValidation.data;
