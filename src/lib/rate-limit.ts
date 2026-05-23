@@ -6,6 +6,25 @@ export interface RateLimitConfig {
   windowMs: number;
 }
 
+export interface RateLimitResult {
+  success: boolean;
+  /**
+   * Remaining quota in the current window. The fail-open path returns
+   * `-1` as a sentinel meaning "limiter bypassed, quota unknown" so
+   * callers that surface `remaining` as UX (countdown, "N requests
+   * left") can detect the bypass and adjust their UI accordingly.
+   * On every other path this is `>= 0`.
+   */
+  remaining: number;
+  /**
+   * Epoch ms at which the current window resets. On the fail-open path
+   * this is synthetic (`now + windowMs`) and should be treated as a
+   * placeholder, not a real reset deadline. Callers can detect the
+   * fail-open path via `remaining === -1`.
+   */
+  resetAt: number;
+}
+
 // In-memory flag to log DISABLE_RATE_LIMIT warning only once per process
 let disableRateLimitWarningLogged = false;
 // In-memory flag to log Redis-unavailable fail-open warning only once per
@@ -35,6 +54,57 @@ function effectiveWindowMs(config: RateLimitConfig): number {
 }
 
 /**
+ * Atomic INCR + EXPIRE + TTL via a single Lua script.
+ *
+ * Issuing INCR and EXPIRE as separate commands has a critical race: if
+ * INCR succeeds but EXPIRE fails (network blip after the first command,
+ * driver retry exhausted, etc.), the key is left without a TTL and
+ * grows monotonically forever. Once it crosses `maxRequests`, the
+ * affected user is rate-limited *permanently* until an operator runs
+ * `DEL` manually. This was flagged as a CRITICAL bug by CodeAnt on PR
+ * #110 — the booking endpoint and admin upload presigning would lock
+ * users out indefinitely after a single transient Redis error.
+ *
+ * Wrapping the whole sequence in a Lua script makes it atomic from
+ * Redis's perspective: either the new TTL is set together with the
+ * incremented counter, or neither side effect lands. Returns
+ * `[count, ttlSeconds]` so the caller can compute `resetAt` without a
+ * second round trip.
+ */
+const RATE_LIMIT_LUA = `
+local key = KEYS[1]
+local windowSeconds = tonumber(ARGV[1])
+local count = redis.call('INCR', key)
+if count == 1 then
+  redis.call('EXPIRE', key, windowSeconds)
+end
+local ttl = redis.call('TTL', key)
+return {count, ttl}
+`;
+
+/**
+ * Extract the route name from a rate-limit identifier without leaking
+ * PII. Identifiers in this codebase use varying segment counts:
+ *   - `booking:user@example.com`              (2 segments, email PII)
+ *   - `upload-presigned:user-id-123`           (2 segments, opaque ID)
+ *   - `admin:read:user@example.com`            (3 segments, email PII)
+ *   - `export:clients:get`                     (3 segments, no PII)
+ *
+ * The previous `.slice(0, 2).join(':')` strategy assumed a 3-segment
+ * shape and leaked the email half of every 2-segment identifier into
+ * logs. Logging only the FIRST segment is the only shape-independent
+ * way to keep PII out: the route family is enough to debug a Redis
+ * outage, and identity-level detail belongs in audit logs (which are
+ * access-controlled), not in operational warnings.
+ *
+ * (CodeAnt PR #110 MAJOR security finding + Gemini medium.)
+ */
+function routePrefixForLog(identifier: string): string {
+  const colon = identifier.indexOf(':');
+  return colon === -1 ? identifier : identifier.slice(0, colon);
+}
+
+/**
  * Redis/Valkey-based distributed rate limiter.
  *
  * Designed for Vercel serverless: every check goes through the shared Redis
@@ -50,8 +120,10 @@ function effectiveWindowMs(config: RateLimitConfig): number {
  *
  * If Redis is unavailable (no client configured, or the operation throws)
  * we **fail open**: allow the request, log a structured warning so an
- * operator can see the gap in enforcement, and return a "successful" check.
- * Failing closed (rejecting all requests) would turn a Redis outage into a
+ * operator can see the gap in enforcement, and return a sentinel
+ * `remaining: -1` so callers can surface "quota unknown" instead of
+ * showing a misleading "you have N requests left" countdown. Failing
+ * closed (rejecting all requests) would turn a Redis outage into a
  * full outage of the API; failing open with logging is the documented
  * trade-off in `docs/audit-tasks.md` Task 1.4 acceptance criteria.
  *
@@ -66,7 +138,7 @@ function effectiveWindowMs(config: RateLimitConfig): number {
 export async function checkRateLimit(
   identifier: string,
   config: RateLimitConfig
-): Promise<{ success: boolean; remaining: number; resetAt: number }> {
+): Promise<RateLimitResult> {
   const now = Date.now();
   const windowMs = effectiveWindowMs(config);
 
@@ -83,14 +155,11 @@ export async function checkRateLimit(
   if (process.env.DISABLE_RATE_LIMIT === 'true') {
     // Log warning only once per process to avoid flooding logs during incidents
     if (!disableRateLimitWarningLogged) {
-      // Extract route prefix without PII (e.g., "analytics:get" from "analytics:get:user@example.com")
-      const routePrefix = identifier.split(':').slice(0, 2).join(':');
-
       logger.warn('[API] rate_limit.bypass', {
         reason: 'DISABLE_RATE_LIMIT=true',
         vercel_env: process.env.VERCEL_ENV,
-        route_prefix: routePrefix,
-        message: 'Rate limiting disabled globally - this warning will only appear once per process; route_prefix is from first bypassed request',
+        route: routePrefixForLog(identifier),
+        message: 'Rate limiting disabled globally - this warning will only appear once per process; route is from first bypassed request',
       });
       disableRateLimitWarningLogged = true;
     }
@@ -107,19 +176,19 @@ export async function checkRateLimit(
 
   try {
     if (!redisCache) {
-      return failOpen(identifier, config, now, windowMs, 'redis_not_configured');
+      return failOpen(identifier, now, windowMs, 'redis_not_configured');
     }
 
-    // Use Redis/Valkey for distributed rate limiting
-    const count = await redisCache.incr(key);
+    // Atomic INCR + EXPIRE + TTL via Lua. See RATE_LIMIT_LUA docstring
+    // for why this MUST be a single atomic operation.
+    const result = (await redisCache.eval(
+      RATE_LIMIT_LUA,
+      1,
+      key,
+      windowSeconds.toString(),
+    )) as [number, number];
 
-    // Set expiry on first request
-    if (count === 1) {
-      await redisCache.expire(key, windowSeconds);
-    }
-
-    // Get TTL for resetAt
-    const ttl = await redisCache.ttl(key);
+    const [count, ttl] = result;
     const resetAt = ttl > 0 ? now + (ttl * 1000) : now + windowMs;
 
     if (count > config.maxRequests) {
@@ -136,7 +205,7 @@ export async function checkRateLimit(
       resetAt,
     };
   } catch (error) {
-    return failOpen(identifier, config, now, windowMs, 'redis_error', error);
+    return failOpen(identifier, now, windowMs, 'redis_error', error);
   }
 }
 
@@ -147,31 +216,37 @@ export async function checkRateLimit(
  * enforcement is observable. The first occurrence per process logs at
  * `warn`; subsequent occurrences are dropped to keep log volume bounded
  * during prolonged Redis outages.
+ *
+ * Returns `remaining: -1` as a sentinel so callers that surface quota in
+ * their UI can detect the bypass and avoid misleading countdowns.
  */
 function failOpen(
   identifier: string,
-  config: RateLimitConfig,
   now: number,
   windowMs: number,
   reason: 'redis_not_configured' | 'redis_error',
   error?: unknown,
-): { success: boolean; remaining: number; resetAt: number } {
+): RateLimitResult {
   if (!redisUnavailableWarningLogged) {
-    const routePrefix = identifier.split(':').slice(0, 2).join(':');
+    // Pass the raw error object to the logger — `src/lib/logger.ts` runs
+    // `serializeError` on any context key named `err` or `error`, so the
+    // structured log keeps the stack and error name. Manually extracting
+    // `.message` would lose that diagnostic info.
     logger.warn('[API] rate_limit.fail_open', {
       reason,
-      route_prefix: routePrefix,
+      route: routePrefixForLog(identifier),
       vercel_env: process.env.VERCEL_ENV,
-      err: error instanceof Error ? error.message : error,
+      err: error,
       message:
         'Rate-limit store unavailable — request allowed through. ' +
-        'This warning logs once per process; investigate Redis health.',
+        'remaining=-1 in the response indicates the bypass; investigate ' +
+        'Redis health. This warning logs once per process.',
     });
     redisUnavailableWarningLogged = true;
   }
   return {
     success: true,
-    remaining: config.maxRequests,
+    remaining: -1,
     resetAt: now + windowMs,
   };
 }
