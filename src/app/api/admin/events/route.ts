@@ -80,6 +80,13 @@ export async function POST(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `events:post:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_WRITE
+    });
+    if (rateLimit) return rateLimit;
+
     let body: unknown;
     try {
       body = await request.json();
@@ -154,6 +161,13 @@ export async function PATCH(request: Request) {
   try {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
+
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `events:patch:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_WRITE
+    });
+    if (rateLimit) return rateLimit;
 
     let body: unknown;
     try {

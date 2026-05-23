@@ -6,6 +6,8 @@ import {
 } from "@/lib/api/response";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
+import { RATE_LIMITS } from '@/lib/rate-limit';
+import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { getCachedData } from "@/lib/cache";
 
 /**
@@ -14,12 +16,19 @@ import { getCachedData } from "@/lib/cache";
  * Returns dashboard statistics with caching (5 minutes TTL).
  * No input validation needed - read-only endpoint with no parameters.
  */
-export async function GET() {
+export async function GET(_request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return errorResponse("Unauthorized", 401);
+      return errorResponse('Unauthorized', 401);
     }
+
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `stats:get:${session.user.email}`,
+      limit: RATE_LIMITS.STATS
+    });
+    if (rateLimit) return rateLimit;
 
     // Cache dashboard stats for 5 minutes
     const stats = await getCachedData(

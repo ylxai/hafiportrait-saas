@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
+import { RATE_LIMITS } from '@/lib/rate-limit';
+import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { packageSchema, packageUpdateSchema, idSchema, validateRequest } from '@/lib/api/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
@@ -22,6 +24,13 @@ export async function GET(request: Request) {
   try {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
+
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `packages:get:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_READ
+    });
+    if (rateLimit) return rateLimit;
 
     const { searchParams } = new URL(request.url);
     
@@ -57,6 +66,13 @@ export async function POST(request: Request) {
   try {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
+
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `packages:post:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_WRITE
+    });
+    if (rateLimit) return rateLimit;
 
     let body: unknown;
     try {
@@ -94,6 +110,13 @@ export async function PATCH(request: Request) {
   try {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
+
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `packages:patch:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_WRITE
+    });
+    if (rateLimit) return rateLimit;
 
     const body: unknown = await request.json();
     
@@ -133,6 +156,13 @@ export async function DELETE(request: Request) {
   try {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
+
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `packages:delete:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_WRITE
+    });
+    if (rateLimit) return rateLimit;
 
     const { searchParams } = new URL(request.url);
     

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
+import { RATE_LIMITS } from '@/lib/rate-limit';
+import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { serializeBigInt } from '@/lib/bigint-utils';
@@ -102,6 +104,13 @@ export async function GET() {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `storage-accounts:get:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_READ
+    });
+    if (rateLimit) return rateLimit;
+
     const accounts = await prisma.storageAccount.findMany({
       orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }],
     });
@@ -123,6 +132,13 @@ export async function POST(request: Request) {
   try {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
+
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `storage-accounts:post:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_WRITE
+    });
+    if (rateLimit) return rateLimit;
 
     let body: unknown;
     try {
@@ -177,6 +193,13 @@ export async function PATCH(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `storage-accounts:patch:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_WRITE
+    });
+    if (rateLimit) return rateLimit;
+
     let body: unknown;
     try {
       body = await request.json();
@@ -226,6 +249,13 @@ export async function DELETE(request: Request) {
   try {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
+
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `storage-accounts:delete:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_WRITE
+    });
+    if (rateLimit) return rateLimit;
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
