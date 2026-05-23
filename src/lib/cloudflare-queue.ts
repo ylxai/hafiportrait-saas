@@ -16,10 +16,11 @@
 import { prisma } from '@/lib/db';
 import { Prisma } from '@/generated/prisma';
 import { recordFailedJob } from '@/lib/failed-jobs';
+import { env } from '@/lib/env.server';
 
-const ACCOUNT_ID = process.env.NEXT_SERVER_CF_ACCOUNT_ID;
-const API_TOKEN = process.env.NEXT_SERVER_CF_QUEUE_TOKEN;
-const WORKER_URL = process.env.CLOUDFLARE_WORKER_URL || 'https://photostudio-deletion-worker.masipah1973.workers.dev';
+const ACCOUNT_ID = env.NEXT_SERVER_CF_ACCOUNT_ID;
+const API_TOKEN = env.NEXT_SERVER_CF_QUEUE_TOKEN;
+const WORKER_URL = env.NEXT_SERVER_CF_WORKER_URL ?? 'https://photostudio-deletion-worker.masipah1973.workers.dev';
 
 // Retry configuration
 const MAX_RETRIES = 3;

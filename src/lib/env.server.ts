@@ -44,6 +44,7 @@ const serverEnvSchema = z.object({
   // own CLOUDFLARE_ACCOUNT_ID during local development.
   NEXT_SERVER_CF_ACCOUNT_ID: z.string().optional(),
   NEXT_SERVER_CF_QUEUE_TOKEN: z.string().optional(),
+  NEXT_SERVER_CF_WORKER_URL: z.string().url().optional(),
 });
 
 const parsed = serverEnvSchema.safeParse(process.env);
