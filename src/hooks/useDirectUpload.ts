@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import imageCompression from 'browser-image-compression';
+import Pica from 'pica';
 import { toast } from 'sonner';
 import {
   MAX_FILE_SIZE_BYTES,
@@ -12,12 +12,10 @@ import {
   MAX_UPLOAD_WORKERS,
   MAX_RETRY_ATTEMPTS,
   RETRY_DELAYS_MS,
+  UPLOAD_TIMEOUT_MS,
   MIN_COMPRESSION_SIZE_BYTES,
-  COMPRESSION_MAX_SIZE_MB,
   COMPRESSION_MAX_DIMENSION,
   COMPRESSION_QUALITY,
-  COMPRESSION_USE_WEB_WORKER,
-  COMPRESSION_PRESERVE_EXIF,
   ALLOWED_EXTENSIONS,
   ALLOWED_MIME_TYPES,
   RAW_FILE_EXTENSIONS,
@@ -29,7 +27,9 @@ export interface UploadFile {
   file: File;
   compressed?: File;
   fileHash?: string; // SHA-256 hash for integrity/duplicate detection
-  status: 'pending' | 'compressing' | 'uploading' | 'processing' | 'completed' | 'failed';
+  presignedUrl?: string; // Pre-fetched via batch endpoint
+  uploadId?: string; // From batch presigned response
+  status: 'pending' | 'compressing' | 'uploading' | 'processing' | 'completed' | 'failed' | 'retrying';
   progress: number;
   error?: string;
   errorCode?: 'INVALID_TYPE' | 'TOO_LARGE' | 'UPLOAD_FAILED' | 'PROCESSING_FAILED' | 'NETWORK_ERROR';
@@ -46,6 +46,10 @@ interface UseDirectUploadOptions {
   autoUpload?: boolean;
   maxFileSize?: number; // in bytes, default 50MB
   maxRetries?: number; // Max retry attempts, default 3
+  // Compression config (overrides defaults from constants)
+  compressionQuality?: number; // 0-1, default 0.92
+  compressionMaxSizeMB?: number; // default 10MB
+  compressionMaxDimension?: number; // default 4096px
   onProgress?: (completed: number, total: number) => void;
   onComplete?: (photo: { id: string; filename: string; thumbnailUrl?: string }) => void;
   onError?: (fileId: string, error: string, errorCode: UploadFile['errorCode']) => void;
@@ -110,6 +114,80 @@ function isRetryableError(errorCode: UploadFile['errorCode']): boolean {
   return RETRYABLE_ERROR_CODES.includes(errorCode);
 }
 
+// Upload file with real progress tracking via XMLHttpRequest
+interface UploadProgressResult {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  response: string;
+}
+
+function uploadWithProgress(
+  url: string,
+  file: File,
+  contentType: string,
+  onProgress: (percent: number) => void,
+  signal: AbortSignal,
+): Promise<UploadProgressResult> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'));
+      return;
+    }
+
+    const xhr = new XMLHttpRequest();
+    let lastReportedPercent = 0;
+
+    const onAbort = () => {
+      xhr.abort();
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+
+    signal.addEventListener('abort', onAbort, { once: true });
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && e.total > 0) {
+        const percent = Math.round((e.loaded * 100) / e.total);
+        // Throttle: only update if delta >= 1%
+        if (percent > lastReportedPercent) {
+          lastReportedPercent = percent;
+          onProgress(percent);
+        }
+      }
+    };
+
+    xhr.onload = () => {
+      signal.removeEventListener('abort', onAbort);
+      resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, statusText: xhr.statusText, response: xhr.responseText });
+    };
+
+    xhr.onerror = () => {
+      signal.removeEventListener('abort', onAbort);
+      reject(new Error('Network error during upload'));
+    };
+
+    xhr.ontimeout = () => {
+      signal.removeEventListener('abort', onAbort);
+      reject(new Error('Upload timed out'));
+    };
+
+    xhr.open('PUT', url);
+    xhr.setRequestHeader('Content-Type', contentType);
+    xhr.timeout = UPLOAD_TIMEOUT_MS;
+    xhr.send(file);
+  });
+}
+
+// Reusable Pica instance (avoid creating new instance per file)
+let picaInstance: ReturnType<typeof Pica> | null = null;
+function getPicaInstance() {
+  if (!picaInstance) {
+    // Prefer WASM + Web Worker for off-main-thread processing
+    picaInstance = Pica({ features: ['wasm', 'ww', 'js'] });
+  }
+  return picaInstance;
+}
+
 export function useDirectUpload(options: UseDirectUploadOptions) {
   const { 
     galleryId, 
@@ -151,7 +229,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     };
   }, []);
 
-  // Compress file sebelum upload
+  // Compress file sebelum upload using Pica
   const compressFile = async (file: File): Promise<File> => {
     // Skip compression untuk file RAW (karena sudah compressed)
     const extension = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -161,17 +239,50 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     // Skip file kecil
     if (file.size < MIN_COMPRESSION_SIZE_BYTES) return file;
 
+    let img: ImageBitmap | null = null;
     try {
-      return await imageCompression(file, {
-        maxSizeMB: COMPRESSION_MAX_SIZE_MB,
-        maxWidthOrHeight: COMPRESSION_MAX_DIMENSION,
-        useWebWorker: COMPRESSION_USE_WEB_WORKER,
-        preserveExif: COMPRESSION_PRESERVE_EXIF,
-        initialQuality: COMPRESSION_QUALITY,
+      const pica = getPicaInstance();
+      img = await createImageBitmap(file);
+      
+      // Calculate target dimensions
+      const maxDimension = options.compressionMaxDimension ?? COMPRESSION_MAX_DIMENSION;
+      const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+      const targetWidth = Math.round(img.width * scale);
+      const targetHeight = Math.round(img.height * scale);
+      
+      // Create canvas for resizing
+      const canvas = document.createElement('canvas');
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      
+      // Resize with Pica (high quality Lanczos filter)
+      await pica.resize(img, canvas, {
+        unsharpAmount: 80,
+        unsharpRadius: 0.6,
+        unsharpThreshold: 2,
       });
+      
+      // Determine output format: preserve PNG/WebP, convert others to JPEG
+      const quality = options.compressionQuality ?? COMPRESSION_QUALITY;
+      const shouldPreserveFormat = file.type === 'image/png' || file.type === 'image/webp';
+      const outputType = shouldPreserveFormat ? file.type : 'image/jpeg';
+      const blob = await pica.toBlob(canvas, outputType as 'image/jpeg' | 'image/png', quality);
+      
+      // Normalize filename if converting to JPEG
+      let outputName = file.name;
+      if (outputType === 'image/jpeg' && !file.name.toLowerCase().endsWith('.jpg') && !file.name.toLowerCase().endsWith('.jpeg')) {
+        outputName = file.name.replace(/\.[^.]+$/, '.jpg');
+      }
+      
+      return new File([blob], outputName, { type: outputType });
     } catch (error) {
       console.warn('Compression failed, using original:', error);
       return file;
+    } finally {
+      // Always close ImageBitmap to free memory
+      if (img) {
+        img.close();
+      }
     }
   };
 
@@ -194,51 +305,65 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         }
       }
 
-      // Step 2: Get presigned URL dari server
+      // Step 2: Get presigned URL (use pre-fetched from batch, or request individually)
       updateFileStatus(uploadFile.id, { status: 'uploading', progress: 5 });
-      
-      const presignedRes = await fetch('/api/admin/upload/presigned', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filename: fileToUpload.name,
-          contentType: fileToUpload.type || 'image/jpeg', // Fallback content type
-          galleryId,
-          r2AccountId,
-          cloudinaryAccountId,
-          fileSize: fileToUpload.size,
-          fileHash, // Include hash for integrity verification
-        }),
-        signal: abortController.signal,
-      });
 
-      const presignedData = await presignedRes.json();
-      if (!presignedRes.ok) {
-        throw new Error(presignedData.error || `Server error: ${presignedRes.status}`);
+      let presignedUrl: string;
+      let uploadId: string;
+
+      if (uploadFile.presignedUrl && uploadFile.uploadId) {
+        // Use pre-fetched batch URL
+        presignedUrl = uploadFile.presignedUrl;
+        uploadId = uploadFile.uploadId;
+      } else {
+        // Fallback: request individually
+        const presignedRes = await fetch('/api/admin/upload/presigned', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: fileToUpload.name,
+            contentType: fileToUpload.type || 'image/jpeg',
+            galleryId,
+            r2AccountId,
+            cloudinaryAccountId,
+            fileSize: fileToUpload.size,
+            fileHash,
+          }),
+          signal: abortController.signal,
+        });
+
+        const presignedData = await presignedRes.json();
+        if (!presignedRes.ok) {
+          throw new Error(presignedData.error || `Server error: ${presignedRes.status}`);
+        }
+
+        const result = presignedData.data || presignedData;
+        presignedUrl = result.presignedUrl;
+        uploadId = result.uploadId;
       }
 
-      const { presignedUrl, publicUrl: _publicUrl, r2Key: _r2Key, uploadId } = presignedData.data || presignedData;
-
       // Update status: Uploading
-      updateFileStatus(uploadFile.id, { status: 'uploading', progress: 10 });
+      updateFileStatus(uploadFile.id, { status: 'uploading', progress: 5 });
 
-      // Step 3: Upload langsung ke R2 (bypass server!)
-      const r2Res = await fetch(presignedUrl, {
-        method: 'PUT',
-        body: fileToUpload,
-        headers: {
-          'Content-Type': fileToUpload.type,
+      // Step 3: Upload langsung ke R2 with real progress tracking
+      const r2Res = await uploadWithProgress(
+        presignedUrl,
+        fileToUpload,
+        fileToUpload.type || 'image/jpeg',
+        (percent) => {
+          // Map XHR progress (0-100%) to overall progress (5-90%)
+          const mappedProgress = 5 + Math.round(percent * 0.85);
+          updateFileStatus(uploadFile.id, { progress: mappedProgress });
         },
-        signal: abortController.signal,
-      });
+        abortController.signal,
+      );
 
       if (!r2Res.ok) {
-        const errorText = await r2Res.text().catch(() => 'Unknown error');
-        throw new Error(`R2 upload failed (${r2Res.status}): ${errorText}`);
+        throw new Error(`R2 upload failed (${r2Res.status}): ${r2Res.response || r2Res.statusText}`);
       }
 
       // Update status: Processing thumbnail
-      updateFileStatus(uploadFile.id, { status: 'processing', progress: 50 });
+      updateFileStatus(uploadFile.id, { status: 'processing', progress: 92 });
 
       // Step 4: Notify server untuk generate thumbnail
       const completeRes = await fetch('/api/admin/upload/complete', {
@@ -265,6 +390,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         progress: 100,
         photoId: photo.id,
         thumbnailUrl: photo.thumbnailUrl,
+        compressed: undefined, // Release memory
       });
 
       // Reset retry count on success
@@ -290,7 +416,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         
         // Update status dengan info retry
         updateFileStatus(uploadFile.id, { 
-          status: 'pending', 
+          status: 'retrying', 
           error: `Upload gagal, mencoba ulang (${retryCount}/${maxRetries})...`,
           progress: 0,
           retryCount,
@@ -356,9 +482,9 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     while (true) {
       const currentFiles = filesRef.current;
       
-      // Cari file pending yang tidak sedang diproses atau menunggu retry
+      // Cari file pending atau retrying yang tidak sedang diproses atau menunggu retry
       const pendingFile = currentFiles.find(f => 
-        f.status === 'pending' && 
+        (f.status === 'pending' || f.status === 'retrying') && 
         !processingIds.current.has(f.id) &&
         !retryTimeouts.current.has(f.id)
       );
@@ -386,6 +512,75 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     }
   };
 
+  // Batch prefetch presigned URLs for large batches (50 per request)
+  const batchPrefetchPresignedUrls = async (files: UploadFile[]) => {
+    const BATCH_SIZE = 50;
+    const filesToPrefetch = files.filter(f => !f.presignedUrl);
+
+    for (let i = 0; i < filesToPrefetch.length; i += BATCH_SIZE) {
+      const batch = filesToPrefetch.slice(i, i + BATCH_SIZE);
+
+      // Calculate hashes for batch if not already done
+      await Promise.all(batch.map(async (file) => {
+        if (!file.fileHash) {
+          const fileToHash = file.compressed || file.file;
+          try {
+            const hash = await calculateFileHash(fileToHash);
+            updateFileStatus(file.id, { fileHash: hash });
+            file.fileHash = hash;
+          } catch {
+            // Skip batch for this file — will fallback to individual request
+          }
+        }
+      }));
+
+      const batchFiles = batch
+        .filter(f => f.fileHash)
+        .map(f => ({
+          filename: (f.compressed || f.file).name,
+          contentType: (f.compressed || f.file).type || 'image/jpeg',
+          fileSize: (f.compressed || f.file).size,
+          fileHash: f.fileHash!,
+        }));
+
+      if (batchFiles.length === 0) continue;
+
+      try {
+        const res = await fetch('/api/admin/upload/presigned/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            galleryId,
+            r2AccountId,
+            cloudinaryAccountId,
+            files: batchFiles,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const urls = data.data?.urls || [];
+
+          // Map URLs back to files by filename
+          for (const url of urls) {
+            const file = batch.find(f => (f.compressed || f.file).name === url.filename);
+            if (file) {
+              updateFileStatus(file.id, {
+                presignedUrl: url.presignedUrl,
+                uploadId: url.uploadId,
+              });
+              file.presignedUrl = url.presignedUrl;
+              file.uploadId = url.uploadId;
+            }
+          }
+        }
+        // If batch request fails, files will fallback to individual presigned requests
+      } catch (err) {
+        console.warn('[Upload] Batch presigned failed, will fallback to individual:', err);
+      }
+    }
+  };
+
   // Start upload semua file
   const startUpload = async () => {
     setIsUploading(true);
@@ -393,7 +588,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
     // Get fresh files from ref
     const currentFiles = filesRef.current;
     const totalFiles = currentFiles.length;
-    const pendingFiles = currentFiles.filter(f => f.status === 'pending');
+    const pendingFiles = currentFiles.filter(f => f.status === 'pending' || f.status === 'retrying');
     const isSmallBatch = pendingFiles.length < SMALL_BATCH_THRESHOLD;
     
     console.log(`[Upload] Starting upload of ${pendingFiles.length} pending files (total: ${totalFiles})`);
@@ -455,6 +650,9 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
       
       await Promise.all(compressionWorkers);
 
+      // Batch prefetch presigned URLs (50 per batch)
+      await batchPrefetchPresignedUrls(pendingFiles);
+
       // Start upload workers dengan concurrency control
       const workers: Promise<void>[] = [];
       const workerCount = Math.min(maxConcurrent, MAX_UPLOAD_WORKERS);
@@ -493,6 +691,20 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         invalidFiles.push({ 
           filename: file.name, 
           reason: typeValidation.error || 'Format file tidak didukung' 
+        });
+        continue;
+      }
+
+      // Client-side dedup: skip if same name+size+lastModified already in queue or batch
+      const isDuplicate = [...filesRef.current, ...validFiles].some(f =>
+        f.file.name === file.name &&
+        f.file.size === file.size &&
+        f.file.lastModified === file.lastModified
+      );
+      if (isDuplicate) {
+        invalidFiles.push({
+          filename: file.name,
+          reason: 'File sudah ada di antrian upload',
         });
         continue;
       }

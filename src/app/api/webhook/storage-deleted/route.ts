@@ -1,92 +1,104 @@
+import { successResponse, errorResponse, unauthorizedResponse } from '@/lib/api/response';
 import { decreaseStorageUsage } from '@/lib/storage/accounts';
-import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
+import { timingSafeEqual } from 'crypto';
 import { z } from 'zod';
-import { timingSafeEqual } from 'node:crypto';
+import { logger } from '@/lib/logger';
 
-/**
- * Webhook handler for storage deletion callback from Cloudflare Workers
- * 
- * This endpoint receives callback from Cloudflare Workers after they delete
- * files from R2 and Cloudinary. We update the database and storage usage here.
- */
-
-// Schema validation for webhook body
-const storageDeletedSchema = z.object({
-  photoId: z.string().min(1, 'photoId is required'),
-  r2Deleted: z.boolean().optional(),
-  cloudinaryDeleted: z.boolean().optional(),
+const DeletionCallbackSchema = z.object({
+  photoId: z.string(),
+  r2Deleted: z.boolean(),
+  cloudinaryDeleted: z.boolean(),
   storageAccountId: z.string().optional(),
-  fileSize: z.union([z.number(), z.string()]).optional(),
+  // CRITICAL FIX C3: Accept string to avoid Number.MAX_SAFE_INTEGER precision loss.
+  // Workers should send fileSize as a string (e.g. "12345678901234567890").
+  // Only numeric strings (\d+) are accepted to prevent BigInt parse errors.
+  // number is kept for backward compatibility during the transition.
+  fileSize: z.union([
+    z.string().regex(/^\d+$/, 'fileSize must be a numeric string'),
+    z.number(),
+  ]).optional(),
 });
 
-// Verify webhook secret using timing-safe comparison
-function verifyWebhook(request: Request): boolean {
-  const auth = request.headers.get('Authorization');
-  const secret = process.env.VPS_WEBHOOK_SECRET || process.env.WEBHOOK_SECRET;
-  if (!secret || !auth) return false;
-
-  const expected = `Bearer ${secret}`;
-  if (auth.length !== expected.length) return false;
-
-  return timingSafeEqual(
-    Buffer.from(auth),
-    Buffer.from(expected)
-  );
-}
-
-/**
- * POST /api/webhook/storage-deleted
- * 
- * Called by Cloudflare Workers after deleting photo from storage
- */
 export async function POST(request: Request) {
   try {
-    if (!verifyWebhook(request)) {
-      return errorResponse('Unauthorized', 401);
+    const authHeader = request.headers.get('authorization');
+    const expectedSecret = process.env.VPS_WEBHOOK_SECRET;
+
+    if (!authHeader || !expectedSecret) {
+      return unauthorizedResponse();
+    }
+
+    const receivedSecret = authHeader.replace('Bearer ', '');
+    if (
+      receivedSecret.length !== expectedSecret.length ||
+      !timingSafeEqual(Buffer.from(receivedSecret), Buffer.from(expectedSecret))
+    ) {
+      return unauthorizedResponse();
     }
 
     const body = await request.json();
-    
-    // Validate body schema
-    const validation = storageDeletedSchema.safeParse(body);
+    const validation = DeletionCallbackSchema.safeParse(body);
+
     if (!validation.success) {
-      console.error('[Webhook] Invalid body schema:', validation.error.flatten());
-      return errorResponse('Invalid webhook body: ' + validation.error.errors.map(e => e.message).join(', '), 400);
+      return errorResponse('Invalid payload', 400);
     }
 
-    const { 
-      photoId,
-      r2Deleted,
-      storageAccountId,
-      fileSize,
-    } = validation.data;
+    const { photoId, r2Deleted, cloudinaryDeleted, storageAccountId, fileSize } = validation.data;
 
-    console.log(`[Webhook] Storage deletion callback for photo ${photoId}:`, {
-      r2Deleted,
-      storageAccountId,
-    });
+    const success = r2Deleted && cloudinaryDeleted;
 
-    // Update storage usage (decrease)
-    if (storageAccountId && fileSize !== undefined && r2Deleted) {
-      try {
-        // BigInt() handles both string and number types
-        const size = BigInt(fileSize);
-        await decreaseStorageUsage(storageAccountId, size);
-        console.log(`[Webhook] Storage usage decreased for account ${storageAccountId}`);
-      } catch (error) {
-        console.error('[Webhook] Failed to update storage usage:', error);
-        // Don't fail the webhook - storage usage can be recalculated later
+    if (success) {
+      logger.info('webhook.deletion.confirmed', { photoId });
+
+      if (storageAccountId && fileSize !== undefined) {
+        let fileSizeBig: bigint;
+        if (typeof fileSize === 'string') {
+          try {
+            fileSizeBig = BigInt(fileSize);
+            // Validate non-negative
+            if (fileSizeBig < BigInt(0)) {
+              logger.error('webhook.deletion.negative_fileSize', { photoId, fileSize });
+              return errorResponse('fileSize must be non-negative', 400);
+            }
+          } catch {
+            logger.error('webhook.deletion.invalid_fileSize_string', { photoId, fileSize });
+            return errorResponse('Invalid fileSize format', 400);
+          }
+        } else {
+          // Validate non-negative number
+          if (fileSize < 0) {
+            logger.error('webhook.deletion.negative_fileSize', { photoId, fileSize });
+            return errorResponse('fileSize must be non-negative', 400);
+          }
+          // Guard against precision loss for files > 9 PB
+          if (fileSize > Number.MAX_SAFE_INTEGER) {
+            logger.error('webhook.deletion.fileSize_exceeds_safe_integer', {
+              photoId,
+              fileSize,
+              maxSafe: Number.MAX_SAFE_INTEGER,
+            });
+            return errorResponse('fileSize exceeds safe integer range, use string format', 400);
+          }
+          fileSizeBig = BigInt(Math.floor(fileSize));
+        }
+        await decreaseStorageUsage(storageAccountId, fileSizeBig);
+        logger.info('webhook.deletion.storage_decreased', {
+          photoId,
+          storageAccountId,
+          fileSize: fileSizeBig.toString(),
+        });
       }
+    } else {
+      logger.error('webhook.deletion.failed', {
+        photoId,
+        r2Deleted,
+        cloudinaryDeleted,
+      });
     }
 
-    return successResponse({
-      success: true,
-      message: 'Storage deletion recorded',
-      photoId,
-      storageUpdated: !!storageAccountId,
-    });
+    return successResponse({ received: true });
   } catch (error) {
-    console.error('[Webhook] Error handling storage deletion:', error);
-    return serverErrorResponse('Failed to record storage deletion');
+    logger.error('webhook.deletion.unhandled_error', { err: error });
+    return errorResponse('Internal error', 500);
   }
 }

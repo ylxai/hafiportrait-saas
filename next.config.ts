@@ -1,6 +1,19 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Prisma engine lives in the custom generator output dir
+  // (`src/generated/prisma`), which Next.js' default outputFileTracing
+  // doesn't pick up. Force-include the platform `.so.node` binaries plus
+  // the schema so Vercel's serverless bundles can load Prisma at runtime.
+  outputFileTracingIncludes: {
+    '/**/*': [
+      './src/generated/prisma/libquery_engine-*.so.node',
+      './src/generated/prisma/schema.prisma',
+    ],
+  },
+  // Avoid bundling Prisma client into the serverless function — keep it
+  // resolved from the file-system tracing include above.
+  serverExternalPackages: ['@prisma/client', '.prisma/client'],
   images: {
     remotePatterns: [
       {
@@ -19,6 +32,11 @@ const nextConfig: NextConfig = {
     dangerouslyAllowSVG: false,
   },
   async headers() {
+    // Only apply strict CSP in production
+    if (process.env.NODE_ENV !== 'production') {
+      return [];
+    }
+
     return [
       {
         source: '/:path*',
@@ -53,7 +71,9 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';"
+            // Next.js requires 'unsafe-eval' for dynamic imports and 'unsafe-inline' for React hydration
+            // For stricter CSP, implement nonce-based approach with middleware
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https: wss:; worker-src 'self' blob:; frame-ancestors 'none';"
           }
         ],
       },

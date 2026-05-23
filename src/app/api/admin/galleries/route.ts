@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { successResponse, unauthorizedResponse, handlePrismaError, validationError } from '@/lib/api/response';
+import { successResponse, unauthorizedResponse, handlePrismaError, validationError, errorResponse } from '@/lib/api/response';
+import { RATE_LIMITS } from '@/lib/rate-limit';
+import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { gallerySchema } from '@/lib/api/validation';
+import { safeClientSelect } from '@/lib/api/select';
 import { generateClientToken } from '@/lib/utils';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { parseAdminPagination, createAdminPaginationResponse } from '@/types/pagination';
+import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -20,15 +23,31 @@ export async function GET(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `galleries:get:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_READ
+    });
+    if (rateLimit) return rateLimit;
+
     const { searchParams } = new URL(request.url);
-    const { page, limit, skip } = parseAdminPagination(searchParams);
+    
+    // Validate pagination parameters
+    const paginationResult = parseAdminPaginationSafe(searchParams);
+    if (!paginationResult.success) {
+      const firstError = paginationResult.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+    }
+    
+    const { page, limit, skip } = paginationResult.data;
 
     const [galleries, total] = await Promise.all([
       prisma.gallery.findMany({
         include: {
           event: {
             include: {
-              client: true,
+              // Strip Client.password (bcrypt hash) from API response.
+              client: { select: safeClientSelect },
             },
           },
           _count: {
@@ -60,7 +79,14 @@ export async function POST(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const body = await request.json();
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `galleries:post:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_WRITE
+    });
+    if (rateLimit) return rateLimit;
+
+    const body: unknown = await request.json();
     const result = gallerySchema.safeParse(body);
     
     if (!result.success) {

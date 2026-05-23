@@ -24,22 +24,23 @@ export default function EventDetailPage() {
 
   const handleUpdate = async (field: string, value: string | number | null) => {
     if (!event) return;
-    
+
     setMessage('');
-    
+
     try {
-      const response = await fetch(`/api/admin/events?id=${eventId}`, {
+      const response = await fetch(`/api/admin/events/${eventId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [field]: value }),
       });
-      
+
       if (response.ok) {
         setMessage('Updated successfully');
         mutate();
         setTimeout(() => setMessage(''), 3000);
       } else {
-        setMessage('Failed to update');
+        const data = await response.json().catch(() => ({} as { error?: string }));
+        setMessage(data?.error || 'Failed to update');
       }
     } catch (error) {
       console.error('Error updating event:', error);
@@ -78,7 +79,7 @@ export default function EventDetailPage() {
       </div>
 
       {message && (
-        <div className={`mb-4 p-3 rounded-lg ${message.includes('success') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+        <div className={`mb-4 p-3 rounded-lg ${message.includes('success') ? 'bg-success/15 text-success' : 'bg-destructive/10 text-destructive'}`}>
           {message}
         </div>
       )}

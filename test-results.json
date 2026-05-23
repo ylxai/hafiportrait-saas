@@ -1,0 +1,646 @@
+{
+  "config": {
+    "configFile": "/home/ubuntu/hafiportrait-saas/playwright.config.ts",
+    "rootDir": "/home/ubuntu/hafiportrait-saas/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/ubuntu/hafiportrait-saas/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "setup",
+        "name": "setup",
+        "testDir": "/home/ubuntu/hafiportrait-saas/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/auth\\.setup\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/ubuntu/hafiportrait-saas/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "admin",
+        "name": "admin",
+        "testDir": "/home/ubuntu/hafiportrait-saas/tests/e2e/admin",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/home/ubuntu/hafiportrait-saas/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "client",
+        "name": "client",
+        "testDir": "/home/ubuntu/hafiportrait-saas/tests/e2e/client-portal",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/ubuntu/hafiportrait-saas/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "public",
+        "name": "public",
+        "testDir": "/home/ubuntu/hafiportrait-saas/tests/e2e/public",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/ubuntu/hafiportrait-saas/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "integration",
+        "name": "integration",
+        "testDir": "/home/ubuntu/hafiportrait-saas/tests/e2e/integration",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.59.1",
+    "workers": 4,
+    "webServer": {
+      "command": "npm run dev",
+      "url": "http://localhost:3000",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "admin/02-upload.spec.ts",
+      "file": "admin/02-upload.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Upload Flow API",
+          "file": "admin/02-upload.spec.ts",
+          "line": 14,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "Request Presigned URL",
+              "file": "admin/02-upload.spec.ts",
+              "line": 40,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should generate presigned URL for valid upload request",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-e8d6afd1280bb663b895",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 41,
+                  "column": 9
+                },
+                {
+                  "title": "should accept all supported file types",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-cc4d097257f7d8caef69",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 65,
+                  "column": 9
+                },
+                {
+                  "title": "should reject upload with invalid file extension",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-c13b4fad58965951035a",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 93,
+                  "column": 9
+                },
+                {
+                  "title": "should reject upload with invalid content type",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-9a0e2d467c284eb61b92",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 111,
+                  "column": 9
+                },
+                {
+                  "title": "should reject file exceeding maximum size",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-bda11c655406b3638933",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 128,
+                  "column": 9
+                },
+                {
+                  "title": "should reject file with non-positive size",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-af6b25cef06ca90e0f02",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 146,
+                  "column": 9
+                },
+                {
+                  "title": "should reject file with invalid filename characters",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-07cd3a66c95e07ed576a",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 162,
+                  "column": 9
+                },
+                {
+                  "title": "should reject upload to non-existent gallery",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-a6e4569575137699aef6",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 180,
+                  "column": 9
+                },
+                {
+                  "title": "should reject unauthenticated request",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-6b1a80efebaec4bf9cc0",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 197,
+                  "column": 9
+                },
+                {
+                  "title": "should reject request with missing required fields",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-8741250228a3fe61fcc2",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 211,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Complete Upload with Metadata",
+              "file": "admin/02-upload.spec.ts",
+              "line": 227,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should complete upload and create photo record",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-317a77c7a422edaa811a",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 228,
+                  "column": 9
+                },
+                {
+                  "title": "should handle complete upload without optional dimensions",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-9041c3fb765489733e3e",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 266,
+                  "column": 9
+                },
+                {
+                  "title": "should reject complete with invalid upload ID",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-8aaa3ffc7a17f1e54c7f",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 298,
+                  "column": 9
+                },
+                {
+                  "title": "should reject complete with missing upload ID",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-2c62cb22857d2c8b643e",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 314,
+                  "column": 9
+                },
+                {
+                  "title": "should reject complete with invalid dimensions",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-006450a8b3a96c7bb4ae",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 329,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Upload Validation",
+              "file": "admin/02-upload.spec.ts",
+              "line": 358,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should validate file type extension matches content type pattern",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-79b2f3c1c1f95b2dd1c8",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 359,
+                  "column": 9
+                },
+                {
+                  "title": "should reject unsupported extensions",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-607779f61337cc550df1",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 385,
+                  "column": 9
+                },
+                {
+                  "title": "should accept file at maximum size boundary",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-2225a7d5970f8b9d5a9f",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 409,
+                  "column": 9
+                },
+                {
+                  "title": "should validate filename length",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-570280dc7025955bc062",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 424,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Thumbnail Generation Trigger",
+              "file": "admin/02-upload.spec.ts",
+              "line": 443,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should return thumbnail URL after successful upload",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-b693a2aed3d4277fe69e",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 444,
+                  "column": 9
+                },
+                {
+                  "title": "should handle multiple uploads in sequence",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-0c48bc1130365c6fd263",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 480,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Upload Cleanup API",
+              "file": "admin/02-upload.spec.ts",
+              "line": 514,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should allow admin to trigger cleanup",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-4422d6626e8d5bc566f2",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 515,
+                  "column": 9
+                },
+                {
+                  "title": "should reject cleanup without authentication",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "admin",
+                      "projectName": "admin",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "c4edad4cbc4b153bf890-60c190a47effaa199dcb",
+                  "file": "admin/02-upload.spec.ts",
+                  "line": 532,
+                  "column": 9
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-05-08T19:40:39.857Z",
+    "duration": 470.6099999999997,
+    "expected": 0,
+    "skipped": 23,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

@@ -4,6 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import AdminAlertsBanner from '@/components/admin/AdminAlertsBanner';
 
 const navItems = [
   { 
@@ -123,6 +124,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           <div className="relative">
             <button
+              data-testid="user-menu"
               onClick={() => setProfileOpen(!profileOpen)}
               className="p-1.5 -mr-2 rounded-lg hover:bg-muted transition touch-target flex items-center justify-center"
             >
@@ -184,7 +186,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition ${
                       isActive 
                         ? 'bg-primary text-primary-foreground font-medium shadow-[0_0_10px_rgb(245_158_11_/_0.3)]' 
-                        : 'text-muted-foreground hover:bg-muted0 hover:text-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     }`}
                   >
                     {item.icon}
@@ -240,7 +242,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${
                   isActive 
                     ? 'bg-primary text-primary-foreground font-medium shadow-[0_0_15px_rgb(245_158_11_/_0.3)]' 
-                    : 'text-muted-foreground hover:bg-muted0 hover:text-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 } ${!sidebarOpen && 'justify-center px-0'}`}
                 title={!sidebarOpen ? item.label : undefined}
               >
@@ -253,6 +255,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-border bg-card/50 backdrop-blur-md h-16 flex items-center">
           <button
+            data-testid="user-menu"
             onClick={() => signOut({ callbackUrl: '/login' })}
             className={`flex items-center gap-3 px-4 py-2.5 w-full rounded-xl text-destructive hover:bg-destructive/10 transition ${!sidebarOpen && 'justify-center px-0'}`}
             title={!sidebarOpen ? 'Keluar' : undefined}
@@ -268,6 +271,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main Content */}
       <main className={`pt-16 lg:pt-0 ${sidebarOpen ? 'lg:pl-64' : 'lg:pl-20'} min-h-screen pb-24 lg:pb-0 transition-all duration-300`}>
         <div className="p-4 lg:p-8 max-w-7xl mx-auto">
+          {/* Realtime admin alerts (storage quota / failed jobs). Renders
+              nothing for non-admin sessions and stays out of the layout
+              flow when there are no active alerts. */}
+          <AdminAlertsBanner />
           {children}
         </div>
       </main>

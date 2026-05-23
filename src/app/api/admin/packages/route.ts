@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
-import { packageSchema } from '@/lib/api/validation';
+import { RATE_LIMITS } from '@/lib/rate-limit';
+import { enforceRateLimit } from '@/lib/rate-limit-helper';
+import { packageSchema, packageUpdateSchema, idSchema, validateRequest } from '@/lib/api/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { parseAdminPagination, createAdminPaginationResponse } from '@/types/pagination';
+import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
+
+function isPrismaError(error: unknown, code: string): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === code;
+}
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -19,8 +25,23 @@ export async function GET(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `packages:get:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_READ
+    });
+    if (rateLimit) return rateLimit;
+
     const { searchParams } = new URL(request.url);
-    const { page, limit, skip } = parseAdminPagination(searchParams);
+    
+    // Validate pagination parameters
+    const paginationResult = parseAdminPaginationSafe(searchParams);
+    if (!paginationResult.success) {
+      const firstError = paginationResult.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+    }
+    
+    const { page, limit, skip } = paginationResult.data;
 
     const [packages, total] = await Promise.all([
       prisma.package.findMany({
@@ -46,16 +67,41 @@ export async function POST(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const body = await request.json();
-    const validated = packageSchema.parse(body);
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `packages:post:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_WRITE
+    });
+    if (rateLimit) return rateLimit;
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
+    const validation = packageSchema.safeParse(body);
+
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(
+        firstError.path.length > 0
+          ? `${firstError.path.join('.')}: ${firstError.message}`
+          : firstError.message,
+        400
+      );
+    }
 
     const pkg = await prisma.package.create({
-      data: validated,
+      data: validation.data,
     });
 
     return successResponse({ package: pkg }, 201);
   } catch (error) {
     console.error('Error creating package:', error);
+    if (isPrismaError(error, 'P2002')) {
+      return errorResponse('Nama paket sudah digunakan', 409);
+    }
     return serverErrorResponse('Failed to create package');
   }
 }
@@ -65,25 +111,42 @@ export async function PATCH(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const body = await request.json();
-    const { id, ...data } = body;
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `packages:patch:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_WRITE
+    });
+    if (rateLimit) return rateLimit;
 
-    if (!id) {
-      return errorResponse('Package ID required', 400);
+    const body: unknown = await request.json();
+    
+    // Validate ID
+    const idValidation = validateRequest(idSchema, body);
+    if (!idValidation.success) {
+      return errorResponse(idValidation.error, 400);
     }
 
-    const validated = packageSchema.partial().parse(data);
+    const { id } = idValidation.data;
+
+    // Validate update data
+    const dataValidation = validateRequest(packageUpdateSchema, body);
+    if (!dataValidation.success) {
+      return errorResponse(dataValidation.error, 400);
+    }
 
     const pkg = await prisma.package.update({
       where: { id },
-      data: validated,
+      data: dataValidation.data,
     });
 
     return successResponse({ package: pkg });
   } catch (error) {
     console.error('Error updating package:', error);
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+    if (isPrismaError(error, 'P2025')) {
       return notFoundResponse('Package not found');
+    }
+    if (isPrismaError(error, 'P2002')) {
+      return errorResponse('Nama paket sudah digunakan', 409);
     }
     return serverErrorResponse('Failed to update package');
   }
@@ -94,19 +157,29 @@ export async function DELETE(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `packages:delete:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_WRITE
+    });
+    if (rateLimit) return rateLimit;
 
-    if (!id) {
-      return errorResponse('Package ID required', 400);
+    const { searchParams } = new URL(request.url);
+    
+    // Validate ID
+    const idValidation = validateRequest(idSchema, { id: searchParams.get('id') });
+    if (!idValidation.success) {
+      return errorResponse(idValidation.error, 400);
     }
+
+    const { id } = idValidation.data;
 
     await prisma.package.delete({ where: { id } });
 
     return successResponse({ success: true });
   } catch (error) {
     console.error('Error deleting package:', error);
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+    if (isPrismaError(error, 'P2025')) {
       return notFoundResponse('Package not found');
     }
     return serverErrorResponse('Failed to delete package');

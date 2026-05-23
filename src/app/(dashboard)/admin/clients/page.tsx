@@ -1,11 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
+import { toast } from 'sonner';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, User } from 'lucide-react';
+import { Plus, User, ShieldCheck, Clock } from 'lucide-react';
+import {
+  approveClient,
+  createClient,
+  deleteClient,
+  deleteClientsBulk,
+  updateClient,
+} from '@/actions/clients';
 
 type Client = {
   id: string;
@@ -14,8 +23,17 @@ type Client = {
   phone: string | null;
   instagram: string | null;
   storageQuotaGB: number;
+  // `isApproved=false` means the row was created via the public booking
+  // form and the auth provider will reject login until an admin clicks
+  // "Setujui" in the row's action column.
+  isApproved: boolean;
   createdAt: string;
   updatedAt: string;
+  _count?: {
+    events: number;
+  };
+  usedStorageBytes?: string;
+  photoCount?: number;
 };
 
 const ClientAvatar = ({ name }: { name: string }) => {
@@ -33,9 +51,13 @@ const ClientAvatar = ({ name }: { name: string }) => {
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  // `useTransition` keeps the UI responsive while the Server Action runs.
+  // We surface `isPending` to the existing "Menyimpan…" / disabled-button
+  // UX so the swap from `fetch`-based pending state is invisible.
+  const [isPending, startTransition] = useTransition();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -44,6 +66,9 @@ export default function ClientsPage() {
     phone: '',
     instagram: '',
     storageQuotaGB: 10,
+    // Stored in admin form state only — never echoed back from the API.
+    // Required at create time; left blank when editing means "keep current".
+    password: '',
   });
 
   const handleQuotaChange = (value: string) => {
@@ -74,7 +99,7 @@ export default function ClientsPage() {
   };
 
   const resetForm = () => {
-    setFormData({ nama: '', email: '', phone: '', instagram: '', storageQuotaGB: 10 });
+    setFormData({ nama: '', email: '', phone: '', instagram: '', storageQuotaGB: 10, password: '' });
     setEditingClient(null);
   };
 
@@ -86,64 +111,100 @@ export default function ClientsPage() {
       phone: client.phone || '',
       instagram: client.instagram || '',
       storageQuotaGB: client.storageQuotaGB || 10,
+      password: '',
     });
     setShowModal(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
 
-    const payload = {
+    // Build the payload the Server Action's Zod schema expects. The
+    // `password` field is only forwarded when non-empty so an edit
+    // submit doesn't clobber the existing bcrypt hash with `null`.
+    type ClientPayload = {
+      nama: string;
+      email: string;
+      phone: string | null;
+      instagram: string | null;
+      storageQuotaGB: number;
+      password?: string;
+    };
+    const payload: ClientPayload = {
       nama: formData.nama,
       email: formData.email,
       phone: formData.phone || null,
       instagram: formData.instagram || null,
       storageQuotaGB: formData.storageQuotaGB || 10,
     };
-
-    try {
-      const url = editingClient
-        ? `/api/admin/clients?id=${editingClient.id}`
-        : '/api/admin/clients';
-      const method = editingClient ? 'PATCH' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        const result = await res.json();
-        const clientData = result.data?.client || result.client;
-        if (editingClient && clientData?.id) {
-          setClients(clients.map(c => c.id === editingClient.id ? clientData : c));
-        } else if (clientData?.id) {
-          setClients([clientData, ...clients]);
-        } else {
-          // If no client data, refresh the list
-          fetchClients();
-        }
-        setShowModal(false);
-        resetForm();
-      }
-    } catch (error) {
-      console.error('Error saving client:', error);
-    } finally {
-      setSubmitting(false);
+    if (formData.password) {
+      payload.password = formData.password;
     }
+
+    // `startTransition` guarantees React batches the resulting state
+    // updates and surfaces `isPending=true` until the action resolves —
+    // so the modal's "Menyimpan…" button stays disabled without us
+    // having to track that flag manually.
+    startTransition(async () => {
+      const result = editingClient
+        ? await updateClient({ id: editingClient.id, ...payload })
+        : await createClient(payload);
+
+      if (!result.success) {
+        // Surface the specific server-side error (e.g. "Email sudah
+        // terdaftar", "Password minimal 8 karakter") instead of a
+        // generic banner. AGENTS.md prohibits `alert()`.
+        toast.error(result.error || 'Gagal menyimpan client');
+        return;
+      }
+
+      const clientData = result.data.client;
+      if (editingClient) {
+        setClients((prev) =>
+          prev.map((c) => (c.id === editingClient.id ? { ...c, ...clientData } : c)),
+        );
+      } else {
+        setClients((prev) => [clientData, ...prev]);
+      }
+      setShowModal(false);
+      resetForm();
+    });
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Hapus client ini?')) return;
+    const ok = await confirm({ description: 'Hapus client ini?', variant: 'destructive', confirmLabel: 'Hapus' });
+    if (!ok) return;
 
-    try {
-      await fetch(`/api/admin/clients?id=${id}`, { method: 'DELETE' });
-      setClients(clients.filter(c => c.id !== id));
-    } catch (error) {
-      console.error('Error deleting client:', error);
-    }
+    startTransition(async () => {
+      const result = await deleteClient(id);
+      if (!result.success) {
+        toast.error(result.error || 'Gagal menghapus client');
+        return;
+      }
+      // Functional updater avoids the stale-closure trap when multiple
+      // deletes are dispatched in flight at once (cf. PR #67 review).
+      setClients((prev) => prev.filter((c) => c.id !== id));
+    });
+  };
+
+  // Flip a booking-created client's `isApproved` flag to `true` so they
+  // can sign in to the portal. Uses the dedicated `approveClient`
+  // Server Action which is just a typed wrapper around
+  // `prisma.client.update({ data: { isApproved: true } })`.
+  const handleApprove = (id: string) => {
+    startTransition(async () => {
+      const result = await approveClient(id);
+      if (!result.success) {
+        toast.error(result.error || 'Gagal menyetujui client');
+        return;
+      }
+      // Optimistically flip the row so the badge updates and the
+      // "Setujui" button disappears without a full refetch.
+      setClients((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, isApproved: true } : c)),
+      );
+      toast.success('Client disetujui dan dapat login portal');
+    });
   };
 
   const toggleSelect = (id: string) => {
@@ -161,25 +222,28 @@ export default function ClientsPage() {
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Hapus ${selectedIds.length} client ini?`)) return;
+    const ok = await confirm({ description: `Hapus ${selectedIds.length} client ini?`, variant: 'destructive', confirmLabel: 'Hapus' });
+    if (!ok) return;
 
-    try {
-      await fetch('/api/admin/clients/bulk', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: selectedIds }),
-      });
-      setClients(clients.filter(c => !selectedIds.includes(c.id)));
+    startTransition(async () => {
+      const result = await deleteClientsBulk(selectedIds);
+      if (!result.success) {
+        toast.error(result.error || 'Gagal menghapus client');
+        return;
+      }
+      // Snapshot the IDs before clearing them so the filter below uses
+      // a stable list even if `selectedIds` is mutated mid-transition.
+      const removed = new Set(selectedIds);
+      setClients((prev) => prev.filter((c) => !removed.has(c.id)));
       setSelectedIds([]);
       setShowBulkModal(false);
-    } catch (error) {
-      console.error('Error bulk deleting:', error);
-    }
+    });
   };
 
   const openBulkModal = () => setShowBulkModal(true);
 
   return (
+    <>
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">Clients</h1>
@@ -250,7 +314,8 @@ export default function ClientsPage() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Email</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Phone</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Instagram</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Quota</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Storage</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Dibuat</th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Aksi</th>
               </tr>
@@ -275,14 +340,68 @@ export default function ClientsPage() {
                   <td className="px-4 py-4 text-muted-foreground">{client.email}</td>
                   <td className="px-4 py-4 text-muted-foreground">{client.phone || '-'}</td>
                   <td className="px-4 py-4 text-muted-foreground">{client.instagram || '-'}</td>
-                  <td className="px-4 py-4 text-muted-foreground text-sm font-medium">{client.storageQuotaGB || 10} GB</td>
+                  <td className="px-4 py-4">
+                    {client.usedStorageBytes !== undefined ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">
+                            {(Number(client.usedStorageBytes) / 1073741824).toFixed(2)} GB / {client.storageQuotaGB} GB
+                          </span>
+                          <span className="text-muted-foreground font-medium">
+                            {Math.round((Number(client.usedStorageBytes) / (client.storageQuotaGB * 1073741824)) * 100)}%
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all ${
+                              (Number(client.usedStorageBytes) / (client.storageQuotaGB * 1073741824)) >= 0.95
+                                ? 'bg-destructive'
+                                : (Number(client.usedStorageBytes) / (client.storageQuotaGB * 1073741824)) >= 0.8
+                                ? 'bg-warning'
+                                : 'bg-primary'
+                            }`}
+                            style={{
+                              width: `${Math.min(100, (Number(client.usedStorageBytes) / (client.storageQuotaGB * 1073741824)) * 100)}%`
+                            }}
+                          />
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {client.photoCount || 0} photos
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{client.storageQuotaGB} GB</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-4">
+                    {client.isApproved ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-success">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        Aktif
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs text-warning">
+                        <Clock className="w-3.5 h-3.5" />
+                        Menunggu persetujuan
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-4 text-muted-foreground text-sm">
                     {new Date(client.createdAt).toLocaleDateString('id-ID')}
                   </td>
                   <td className="px-4 py-4 text-right">
                     <div className="flex gap-2 justify-end">
+                      {!client.isApproved && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleApprove(client.id)}
+                        >
+                          Setujui
+                        </Button>
+                      )}
                       <Button variant="ghost" size="sm" onClick={() => openEdit(client)}>Edit</Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(client.id)} className="text-red-600">Hapus</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(client.id)} className="text-destructive">Hapus</Button>
                     </div>
                   </td>
                 </tr>
@@ -321,6 +440,24 @@ export default function ClientsPage() {
               />
             </div>
             <div>
+              <label className="block text-sm font-medium mb-1">
+                Password {editingClient ? '' : '*'}
+              </label>
+              <Input
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                maxLength={72}
+                required={!editingClient}
+                placeholder={editingClient ? 'Kosongkan jika tidak diubah' : 'Minimal 8 karakter'}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Dipakai client untuk login ke portal & galeri. {editingClient ? 'Kosongkan untuk mempertahankan password yang sekarang.' : 'Wajib diisi minimal 8 karakter.'}
+              </p>
+            </div>
+            <div>
               <label className="block text-sm font-medium mb-1">Phone</label>
               <Input
                 value={formData.phone}
@@ -349,8 +486,8 @@ export default function ClientsPage() {
               <Button type="button" variant="outline" onClick={() => { setShowModal(false); resetForm(); }}>
                 Batal
               </Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting ? 'Menyimpan...' : editingClient ? 'Simpan' : 'Tambah'}
+              <Button type="submit" disabled={isPending}>
+                {isPending ? 'Menyimpan...' : editingClient ? 'Simpan' : 'Tambah'}
               </Button>
             </DialogFooter>
           </form>
@@ -377,5 +514,7 @@ export default function ClientsPage() {
         </DialogContent>
       </Dialog>
     </div>
+    <ConfirmDialog />
+    </>
   );
 }

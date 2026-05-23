@@ -49,3 +49,28 @@ Penyimpanan R2 dan Cloudinary ditangani secara spesifik:
 *   **Original Files:** Disimpan di **Cloudflare R2**. Unggahan foto difasilitasi *langsung* (Direct Upload) oleh browser klien (*bypass server*) menggunakan mekanisme **Presigned URL**.
 *   **Thumbnails:** Disimpan dan dirender secara responsif di **Cloudinary**.
 *   **Kredensial Dinamis:** Kredensial tidak ditarik kaku dari `.env`. *Semua kunci akses* Cloudinary dan akun S3 R2 diambil dari *Database* (Tabel `StorageAccount`), mendukung multi-akun oleh Admin.
+
+## 6. Payment System & Status Enum
+Sistem pembayaran menggunakan status enum yang **TERBATAS** dan **KONSISTEN** di seluruh codebase:
+
+### Payment Status Enum (FINAL)
+Status pembayaran yang **DIIZINKAN** dalam sistem:
+*   `unpaid` - Belum dibayar (status awal booking)
+*   `partial` - Sebagian dibayar (DP)
+*   `paid` - Lunas (pembayaran selesai)
+*   `awaiting_confirmation` - Menunggu konfirmasi admin (setelah upload bukti)
+
+### Status yang TIDAK DIGUNAKAN
+Status berikut **TIDAK BOLEH** digunakan karena tidak didukung di finance dashboard dan reporting:
+*   ❌ `fully_paid` - Gunakan `paid` sebagai gantinya
+*   ❌ `dp_paid` - Gunakan `partial` sebagai gantinya
+
+### Payment Flow
+1. **Booking Created** → `paymentStatus: 'unpaid'`
+2. **User Upload Proof** → `paymentStatus: 'awaiting_confirmation'`
+3. **Admin Approve** → `paymentStatus: 'paid'` atau `'partial'`
+
+### Validasi
+*   Zod schema di `src/lib/api/validation.ts` HARUS match dengan enum di atas
+*   Finance dashboard di `src/app/(dashboard)/admin/finance/` hanya handle 4 status tersebut
+*   Public invoice page di `src/app/booking/invoice/` hanya render 4 status tersebut

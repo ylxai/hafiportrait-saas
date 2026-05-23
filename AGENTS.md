@@ -1,56 +1,145 @@
 # AGENTS.md — PhotoStudio SaaS
 
-## Project Overview
+> ⚠️ Read this first before making any changes.
 
-PhotoStudio SaaS — platform manajemen foto profesional untuk fotografer.
-Stack: **Next.js 15.4.11**, TypeScript (strict), Tailwind v4, Prisma + PostgreSQL, Cloudflare R2, Cloudinary, Ably.
+---
 
-> ⚠️ This is NOT standard Next.js. Read `node_modules/next/dist/docs/` before writing code.
-> Route `params` and `searchParams` MUST be awaited as Promise before destructuring.
+## TL;DR
+
+- **Stack**: Next.js 15.4.11, TypeScript strict, Tailwind v4, Prisma + TigerDB, Cloudflare R2, Cloudinary, Ably
+- **NOT standard Next.js**: Must await `params` and `searchParams` as Promise
+- **Verify before commit**: `npm run lint && npm run build && npm run test:e2e`
+- **Styling**: Tailwind v4 OKLCH semantic only — NO static colors
+- **Testing**: Playwright E2E with semantic locators only — NO CSS selectors, NO waitForTimeout
+
+---
 
 ## Dev Commands
 
 ```bash
 npm run dev          # Dev server (port 3000)
-npm run build        # Production build (lint + typecheck + build)
-npm run lint         # ESLint only
-npm run db:push      # Push Prisma schema to DB
-npm run db:generate  # Generate Prisma client
+npm run build       # Production build (lint + typecheck + build)
+npm run lint       # ESLint only
+npm run test:e2e    # Run E2E tests
+npm run db:push    # Push Prisma schema to TigerDB
+npm run db:generate # Generate Prisma client
 ```
 
-**Verify before every commit:**
+---
+
+## Testing
+
+### E2E Tests (Playwright)
 ```bash
-npm run lint && npm run build
+npm run test:e2e          # Run all E2E tests
+npm run test:e2e:ui       # Run with UI mode
+npm run test:e2e:debug    # Debug mode
 ```
+
+**Test Structure:**
+- `tests/e2e/admin/` — Admin dashboard tests
+- `tests/e2e/client-portal/` — Client portal tests
+- `tests/e2e/public/` — Public gallery tests
+- `tests/e2e/integration/` — Integration tests
+
+**Best Practices:**
+- Use semantic locators: `getByRole()`, `getByLabel()`, `getByText()`, `getByTestId()`
+- NO CSS selectors or XPath
+- NO `waitForTimeout()` — use Playwright auto-wait
+- Use Page Object Model (POM) in `tests/e2e/pages/`
+- Auth state cached in `playwright/.auth/`
+
+**Test Constants:**
+```typescript
+import { HTTP_STATUS } from '@/tests/e2e/constants/http-status'
+```
+
+---
 
 ## Architecture
 
 | Path | Purpose |
 |------|---------|
 | `src/app/(dashboard)/admin/` | Admin pages — auth required |
-| `src/app/gallery/[token]/` | Public gallery — token-based, no auth |
-| `src/app/api/admin/` | Admin API routes — auth required |
+| `src/app/gallery/[token]/` | Public gallery — token-based |
+| `src/app/api/admin/` | Admin API routes |
 | `src/app/api/public/` | Public API routes |
 | `src/app/api/webhook/` | Cloudflare Worker webhooks |
-| `src/components/ui/` | shadcn/ui components (base-ui based) |
-| `src/lib/storage/` | R2, Cloudinary, accounts, rotation, deletion |
-| `src/lib/upload/` | Presigned URLs, analytics, cleanup, hash |
-| `src/lib/cloudflare-queue.ts` | Cloudflare Queues publisher |
+| `src/components/ui/` | shadcn/ui components |
+| `src/lib/storage/` | R2, Cloudinary, accounts |
+| `src/lib/upload/` | Presigned URLs |
+| `src/lib/cloudflare-queue.ts` | Cloudflare Queues |
 | `workers/` | Cloudflare Edge Workers |
-| `prisma/schema.prisma` | Database schema |
-| `docs/` | Documentation only — excluded from build |
+| `prisma/schema.prisma` | Database schema (TigerDB) |
+
+**Database**: TigerDB (PostgreSQL-compatible) via Prisma
+
+---
+
+## Database (TigerDB)
+
+**Provider**: TigerDB (PostgreSQL-compatible)  
+**ORM**: Prisma
+
+### Database Operations
+```bash
+npm run db:push       # Push schema changes to TigerDB
+npm run db:generate   # Generate Prisma client
+```
+
+### Query Database
+Use **Tiger MCP** for direct database queries and inspection:
+- Check database schema
+- Query tables directly
+- Inspect data
+
+### Schema Changes
+1. Edit `prisma/schema.prisma`
+2. Run `npm run db:push`
+3. Run `npm run db:generate`
+4. Restart dev server
+
+---
+
+## Critical Rules
+
+### Storage
+- **Credentials from DB**: Cloudinary and R2 credentials from `StorageAccount` table — NOT `.env`
+
+### BigInt
+```typescript
+// Prisma BigInt cannot JSON.stringify:
+return successResponse({ fileSize: photo.fileSize?.toString() })
+```
+
+### Background Jobs
+- Use **Cloudflare Queues only** — NO BullMQ, NO PM2, NO Redis
+
+### API Response
+```typescript
+import { successResponse, errorResponse, paginatedResponse } from '@/lib/api/response'
+```
+
+### Pagination
+```typescript
+const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
+const limit = Math.min(100, parseInt(searchParams.get('limit') ?? '20', 10))
+```
+
+---
 
 ## Code Style
 
-- **TypeScript strict**: no `any`, use `unknown` or specific interfaces
-- **Imports**: use `@/` alias for all `src/` imports
+- **TypeScript strict**: NO `any`, use `unknown` or specific interfaces
+- **Imports**: Use `@/` alias for all `src/` imports
 - **Notifications**: `toast()` from `sonner` — NEVER `alert()`
-- **UI colors**: Tailwind v4 OKLCH semantic only (`bg-background`, `bg-card`, `text-foreground`, etc.)
-- **Dialog**: `import { Dialog } from '@/components/ui/dialog'` — uses `@base-ui/react`, NOT Radix
+- **Dialog**: Import from `@/components/ui/dialog'` — uses `@base-ui/react`, NOT Radix
+
+---
 
 ## UI Conventions — Aura Noir Theme
 
-**Aura Noir** = OLED Luxury dark theme. Always use semantic OKLCH colors:
+Use semantic OKLCH colors only:
 
 ```tsx
 // Backgrounds & text
@@ -67,129 +156,128 @@ border-border
 <input className="border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground" />
 ```
 
-**NEVER use:** static colors (`amber-500`, `gray-800`), `rgba(var(--primary))` syntax, light-mode colors.
+**NEVER use**: static colors (`amber-500`, `gray-800`), `rgba(var(--primary))` syntax
+
+---
 
 ## Storage Architecture
 
-- **Cloudflare R2** — original files (direct upload via presigned URL, bypass server)
+- **Cloudflare R2** — original files (direct upload via presigned URL)
 - **Cloudinary** — thumbnails ONLY
-- Credentials from `StorageAccount` table in PostgreSQL — NOT from `.env`
+- Credentials from `StorageAccount` table
 
 **Direct Upload Flow:**
 1. Client requests presigned URL from `/api/admin/upload/presigned`
-2. Client uploads directly to R2 (bypass server)
+2. Client uploads directly to R2
 3. Client calls `/api/admin/upload/complete` → queues thumbnail generation
 
-**Supported file types:** `.jpg`, `.jpeg`, `.png`, `.webp`, `.heic`, `.nef`, `.cr2`, `.arw`, `.dng`, `.raw`
+**Supported**: `.jpg`, `.jpeg`, `.png`, `.webp`, `.heic`, `.nef`, `.cr2`, `.arw`, `.dng`, `.raw`
+
+---
+
+## Security
+
+- All `/api/admin/*` routes MUST call `getServerSession()` at the top
+- Webhooks MUST validate `VPS_WEBHOOK_SECRET` header
+- NEVER commit secrets, tokens, credentials
+- Validate inputs with **Zod**
+- Handle Prisma `P2025` → return 404
+
+---
+
+## Explicit Prohibitions
+
+1. **NO bash for file operations** — use Filesystem MCP tools
+2. **NO custom test scripts** — use Playwright MCP
+3. **NO `alert()`** — use `sonner toast()` only
+4. **NO static Tailwind colors** — use OKLCH semantic tokens
+5. **NO unbounded queries** — always paginate
+6. **NO CSS selectors in tests** — use semantic locators only
+7. **NO `waitForTimeout()` in tests** — use Playwright auto-wait
+8. **NO magic numbers** — use named constants
+
+---
+
+## Multi-Agent System
+
+This project uses **either** Kiro CLI **or** Claude Code — not both simultaneously.
+
+### Using Kiro CLI
+
+```bash
+kiro-cli chat
+# Define agents in ./.kiro/agents/
+```
+
+### Using Claude Code
+
+```bash
+claude
+# Agents defined via CLAUDE.md
+```
+
+### Manual Agent Invocation
+
+```
+@frontend Build login page
+@backend Create auth API
+@reviewer Review code
+@devops Deploy to staging
+```
+
+---
+
+## MCP Tools
+
+| Task | MCP |
+|------|-----|
+| Browser testing | Playwright MCP |
+| DOM inspection | Chrome DevTools MCP |
+| PR/GitHub | GitHub MCP |
+| Docs lookup | Context7 MCP |
+| shadcn/ui | shadcn MCP |
+| File ops | Filesystem MCP |
+| Database queries | Tiger MCP |
+
+---
+
+## Pattern Learning
+
+After completing a task successfully:
+
+1. Note what worked in a comment
+2. For reusable patterns, create a skill in `.kiro/skills/` or `.claude/skills/`
+3. Reference past tasks in `TASK-BOARD.md`
+
+---
 
 ## Environment Variables
 
 ```env
 DATABASE_URL=postgresql://...
-CLOUDFLARE_API_TOKEN=...   # Wrangler & Queues
-ABLY_API_KEY=...           # Real-time
-NEXTAUTH_SECRET=...        # Auth
-VPS_WEBHOOK_SECRET=...     # Webhook validation
+CLOUDFLARE_API_TOKEN=...
+ABLY_API_KEY=...
+NEXTAUTH_SECRET=...
+VPS_WEBHOOK_SECRET=...
 ```
 
-## Critical Rules
+---
 
-### Storage Credentials
-Cloudinary and R2 credentials come from the `StorageAccount` table in PostgreSQL — NOT from `.env`.
+## Kiro Configuration (Optional)
 
-### BigInt Serialization
-```typescript
-// Prisma BigInt cannot JSON.stringify — always convert:
-return successResponse({ fileSize: photo.fileSize?.toString() })
-```
-
-### Background Jobs
-Use **Cloudflare Queues only** via `src/lib/cloudflare-queue.ts`.
-NO BullMQ, NO PM2, NO Redis for task queues.
-
-### API Response Pattern
-```typescript
-import { successResponse, errorResponse, unauthorizedResponse, notFoundResponse, paginatedResponse } from '@/lib/api/response'
-```
-
-### Pagination
-```typescript
-const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
-const limit = Math.min(100, parseInt(searchParams.get('limit') ?? '20', 10))
-```
-
-## Security
-
-- All `/api/admin/*` routes MUST call `getServerSession()` at the top
-- Webhooks from Cloudflare Edge MUST validate `VPS_WEBHOOK_SECRET` header
-- NEVER commit secrets, tokens, or credentials to the repository
-- Validate all inputs with **Zod** — including date fields
-- Handle Prisma `P2025` (not found) → return 404
-
-## Testing
-
-No CI test framework. Use **Playwright MCP** for interactive E2E testing — do NOT write manual test scripts.
-
-Build + lint success = ready to commit:
-```bash
-npm run lint && npm run build
-```
-
-## Explicit Prohibitions
-
-1. **NO bash for file operations** — use Filesystem MCP tools, not `cat`/`ls`/`grep`
-2. **NO custom test scripts** — use Playwright MCP or Chrome DevTools MCP directly
-3. **NO `alert()`** — use `sonner` `toast()` only
-4. **NO BullMQ / PM2 / Redis** for background jobs — Cloudflare Queues only
-5. **NO static Tailwind colors** — no `amber-500`, `gray-800`; use OKLCH semantic tokens
-6. **NO `rgba(var(--primary))`** syntax in Tailwind v4
-7. **NO unbounded queries** — always paginate, never fetch all records at once
-8. **NO secrets in code** — never commit API keys, tokens, or credentials
-
-## Kiro Configuration
-
-### Steering Files
-Project-specific rules are in `.kiro/steering/` — loaded automatically every session:
+Project-specific rules in `.kiro/steering/`:
 
 | File | Content |
 |------|---------|
-| `product.md` | Product overview, features, business rules |
-| `tech.md` | Full stack details, library choices, constraints |
-| `structure.md` | Directory layout, naming conventions, import patterns |
-| `security.md` | Auth rules, secrets policy, DoS prevention |
-| `api-standards.md` | Response format, pagination, BigInt, Zod patterns |
-| `ui-conventions.md` | Aura Noir theme, OKLCH colors, component library |
+| `product.md` | Product overview |
+| `tech.md` | Stack details |
+| `structure.md` | Directory layout |
+| `security.md` | Auth rules |
 
-### Hooks
-Defined in `~/.kiro/agents/kiro.json`, run automatically:
+---
 
-| Hook | Trigger | Action |
-|------|---------|--------|
-| `agentSpawn` | Agent starts | Inject critical project rules into context |
-| `preToolUse` (write) | Before file write | Block if secrets detected in content |
-| `stop` | After each response | Run `npm run lint` if TS files were modified |
+## Verification Before Commit
 
-### Skills Available
-Global skills in `~/.kiro/skills/` relevant to this project:
-- `nextjs-best-practices` — Next.js App Router patterns
-- `tailwind-v4-shadcn` — Tailwind v4 + shadcn/ui integration
-- `shadcn` — shadcn/ui components, theming, forms
-- `cloudinary` — Cloudinary API usage
-- `nextauth-authentication` — NextAuth.js session management
-- `prisma-database-setup` — Prisma + PostgreSQL configuration
-- `playwright-generate-test` — E2E test generation via Playwright MCP
-- `code-review-excellence` — Code review best practices
-
-## MCP Tools Available
-
-Prefer MCP tools over bash scripts for these tasks:
-
-| Task | MCP |
-|------|-----|
-| Browser testing / UI verification | Playwright MCP |
-| DOM inspection, JS evaluation, network logs | Chrome DevTools MCP |
-| PR review, issues, code browsing | GitHub MCP |
-| Next.js / Tailwind v4 docs | Context7 MCP |
-| shadcn/ui components | shadcn MCP |
-| UI component generation | 21st-dev MCP |
-| File operations | Filesystem MCP |
+```bash
+npm run lint && npm run build && npm run test:e2e
+```

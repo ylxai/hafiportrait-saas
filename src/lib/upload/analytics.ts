@@ -78,7 +78,7 @@ export async function getUploadAnalyticsDashboard(
   });
   
   // Fetch gallery names for top 10
-  const galleryIds = galleryGroups.map(g => g.galleryId);
+  const galleryIds = galleryGroups.map((g: typeof galleryGroups[number]) => g.galleryId);
   const galleries = await prisma.gallery.findMany({
     where: {
       id: {
@@ -91,9 +91,9 @@ export async function getUploadAnalyticsDashboard(
     },
   });
   
-  const galleryNameMap = new Map(galleries.map(g => [g.id, g.namaProject]));
+  const galleryNameMap = new Map(galleries.map((g: typeof galleries[number]) => [g.id, g.namaProject]));
   
-  const uploadsByGallery = galleryGroups.map(g => ({
+  const uploadsByGallery = galleryGroups.map((g: typeof galleryGroups[number]) => ({
     galleryId: g.galleryId,
     galleryName: galleryNameMap.get(g.galleryId) || 'Unknown',
     count: g._count,
@@ -114,7 +114,7 @@ export async function getUploadAnalyticsDashboard(
     count: 0,
   }));
   
-  hourlyData.forEach(({ hour, count }) => {
+  hourlyData.forEach(({ hour, count }: typeof hourlyData[number]) => {
     uploadsByHour[hour].count = Number(count);
   });
   

@@ -13,6 +13,12 @@ async function checkAuth() {
   return session;
 }
 
+/**
+ * GET /api/admin/export/clients
+ * 
+ * Exports all clients to CSV format.
+ * No input validation needed - read-only endpoint with no parameters.
+ */
 export async function GET() {
   try {
     const auth = await checkAuth();
@@ -32,7 +38,7 @@ export async function GET() {
     });
 
     // Convert to CSV format
-    const csvData = clients.map(client => ({
+    const csvData = clients.map((client: typeof clients[number]) => ({
       'Nama': client.nama,
       'Email': client.email,
       'Phone': client.phone || '',
@@ -46,7 +52,7 @@ export async function GET() {
     const headers = Object.keys(csvData[0] || {});
     const csvRows = [
       headers.join(','),
-      ...csvData.map(row => 
+      ...csvData.map((row: Record<string, unknown>) => 
         headers.map(header => {
           const value = row[header as keyof typeof row];
           const escaped = String(value).replace(/"/g, '""');

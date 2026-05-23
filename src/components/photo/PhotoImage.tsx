@@ -30,8 +30,10 @@ export function PhotoImage({
   const [hasError, setHasError] = useState(false);
   const [useFallback, setUseFallback] = useState(false);
 
-  // Generate Cloudinary thumbnail URL from R2 URL
-  const thumbnailUrl = getCloudinaryThumbnailUrl(src, {
+  // If src is already a Cloudinary URL, use it directly
+  // Otherwise, generate Cloudinary thumbnail URL from R2 URL
+  const isCloudinaryUrl = src.includes('res.cloudinary.com');
+  const thumbnailUrl = isCloudinaryUrl ? src : getCloudinaryThumbnailUrl(src, {
     width: fill ? 400 : width || 400,
     height: fill ? 400 : height,
     quality: 'auto',
@@ -41,7 +43,6 @@ export function PhotoImage({
   const finalSrc = useFallback ? src : (thumbnailUrl || src);
   // Cloudinary URLs are already optimized (f_auto, q_auto), skip Next.js optimization
   // R2 fallback URLs need Next.js optimization since R2 has no image processing
-  const isCloudinaryUrl = finalSrc.includes('res.cloudinary.com');
 
   if (hasError) {
     return (

@@ -20,7 +20,12 @@ export async function PATCH(request: Request) {
       return errorResponse('Unauthorized', 401);
     }
 
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
     const validation = updateQuotaSchema.safeParse(body);
 
     if (!validation.success) {

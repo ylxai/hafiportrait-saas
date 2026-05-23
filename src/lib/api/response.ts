@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { Prisma } from '@/generated/prisma';
+import { serializeBigInt } from '@/lib/bigint-utils';
 
 // Error codes for consistent error handling
 export const ERROR_CODES = {
@@ -23,8 +24,11 @@ interface ErrorResponse {
   timestamp?: string;
 }
 
+// Review fix #5: BigInt-safe wrapper. Prisma fields seperti `Client.usedStorage` BigInt
+// akan throw `TypeError: Do not know how to serialize a BigInt` saat NextResponse.json
+// melakukan serialisasi. Kita normalize dulu lewat `serializeBigInt`.
 export function successResponse<T>(data: T, status = 200) {
-  return NextResponse.json({ success: true, data }, { status });
+  return NextResponse.json({ success: true, data: serializeBigInt(data) }, { status });
 }
 
 export function errorResponse(
@@ -74,6 +78,26 @@ export function conflictResponse(message = 'Resource already exists') {
   return errorResponse(message, 409, ERROR_CODES.CONFLICT);
 }
 
+export function rateLimitResponse(
+  message: string,
+  retryAfterSeconds: number
+): NextResponse<ErrorResponse> {
+  return NextResponse.json(
+    {
+      success: false,
+      error: message,
+      errorCode: ERROR_CODES.BAD_REQUEST,
+      timestamp: new Date().toISOString(),
+    },
+    {
+      status: 429,
+      headers: {
+        'Retry-After': retryAfterSeconds.toString(),
+      },
+    }
+  );
+}
+
 // Handle Prisma errors with specific messages
 export function handlePrismaError(error: unknown) {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -106,9 +130,11 @@ export function handlePrismaError(error: unknown) {
 }
 
 export function paginatedResponse<T>(items: T[], total: number, page: number, limit: number) {
+  // Mirror successResponse: normalize BigInt fields (Photo.fileSize, Client.usedStorage,
+  // …) so NextResponse.json never throws "Do not know how to serialize a BigInt".
   return NextResponse.json({
     success: true,
-    data: items,
+    data: serializeBigInt(items),
     pagination: {
       total,
       page,

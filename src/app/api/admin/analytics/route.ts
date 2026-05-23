@@ -3,7 +3,16 @@ import { successResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { createAdminPaginationResponse } from '@/types/pagination';
+import { RATE_LIMITS } from '@/lib/rate-limit';
+import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { getCachedData } from '@/lib/cache';
+import { z } from 'zod';
+
+// Zod schema for query parameters
+const querySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
 
 export async function GET(request: Request) {
   try {
@@ -12,12 +21,26 @@ export async function GET(request: Request) {
       return errorResponse('Unauthorized', 401);
     }
 
-    // Parse pagination params
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `analytics:get:${session.user.email}`,
+      limit: RATE_LIMITS.ADMIN_READ
+    });
+    if (rateLimit) return rateLimit;
+
+    // Parse and validate query params
     const { searchParams } = new URL(request.url);
-    const pageRaw = parseInt(searchParams.get('page') ?? '1', 10);
-    const page = Number.isNaN(pageRaw) ? 1 : Math.max(1, pageRaw);
-    const limitRaw = parseInt(searchParams.get('limit') ?? '20', 10);
-    const limit = Number.isNaN(limitRaw) ? 20 : Math.min(50, Math.max(1, limitRaw));
+    const validation = querySchema.safeParse({
+      page: searchParams.get('page') ?? undefined,
+      limit: searchParams.get('limit') ?? undefined,
+    });
+
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+    }
+
+    const { page, limit } = validation.data;
     const skip = (page - 1) * limit;
 
     // Fetch galleries and summary (cached) concurrently
@@ -56,7 +79,7 @@ export async function GET(request: Request) {
 
     const total = summaryData.summary._count.id;
 
-    const analytics = galleries.map((g) => ({
+    const analytics = galleries.map((g: typeof galleries[number]) => ({
       id: g.id,
       namaProject: g.namaProject,
       client: g.event.client.nama,

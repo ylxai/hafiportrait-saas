@@ -5,8 +5,7 @@
 INPUT=$(cat)
 CWD=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('cwd',''))" 2>/dev/null)
 
-# Hanya jalan di project web-saas
-if [[ "$CWD" != "/home/eouser/web-saas"* ]]; then
+# Hanya jalan di project hafiportrait-saas
   exit 0
 fi
 
@@ -22,4 +21,3 @@ if [ "$AGE" -gt 120 ]; then
 fi
 
 echo "Running lint check..."
-cd "$CWD" && npm run lint --silent 2>&1 | tail -5

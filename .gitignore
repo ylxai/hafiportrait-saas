@@ -33,6 +33,7 @@ yarn-error.log*
 # env files - CRITICAL - never commit these
 .env
 .env.local
+.env.example
 .env.development.local
 .env.test.local
 .env.production.local
@@ -76,6 +77,9 @@ let
 /logs/
 *.tsbuildinfo
 
+# Playwright auth state
+playwright/.auth/
+
 # Ad-hoc test scripts
 check-photos.ts
 check-photos-detail.ts
@@ -91,7 +95,42 @@ CLAUDE.md
 # AI Agent Memory (task lists, errors - exclude from PRs)
 .junie/memory/
 
+# Parallel Agents Coordination Files (machine-specific)
+OWNERS.md
+TASK-BOARD.md
+PARALLEL-AGENTS-PLAN.md
+MCP-SETUP.md
+agent-notes/
+scripts/setup-parallel-agents.sh
+
 # Bob AI Assistant
 .bob/
 
 workers/.dev.vars
+
+# Taskplane runtime artifacts (machine-specific, do not commit)
+.pi/
+!.pi/taskplane-config.json
+!.pi/agents/
+.worktrees/
+**/dependencies.json
+.pi/batch-state.json
+.pi/batch-history.json
+.pi/lane-state-*
+.pi/merge-result-*
+.pi/merge-request-*
+.pi/worker-conversation-*
+.pi/orch-logs/
+.pi/orch-abort-signal
+.pi/settings.json
+.taskplane-tasks/
+
+# Pi project-local packages (if using pi install -l)
+.pi/npm/
+scripts/setup-vercel-env.sh
+
+# Sensitive env files
+.env.vercel
+.env.test
+.output.txt
+logs-vercel.json

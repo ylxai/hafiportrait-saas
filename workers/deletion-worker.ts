@@ -16,6 +16,10 @@ export interface Env {
   // R2 Bucket binding
   PHOTO_BUCKET: R2Bucket;
 
+  // Queue bindings
+  THUMBNAIL_QUEUE: Queue<ThumbnailJob>;
+  DELETION_QUEUE: Queue<DeletionJob>;
+
   // Vercel webhook for database update
   VPS_WEBHOOK_URL: string;
   VPS_WEBHOOK_SECRET: string;
@@ -43,7 +47,7 @@ interface DeletionJob {
 interface ThumbnailJob {
   type: 'thumbnail-generation';
   photoId: string;
-  r2Url: string;
+  r2Key: string;
   galleryId: string;
   filename: string;
   // Cloudinary credentials from database (via message)
@@ -57,6 +61,45 @@ interface ThumbnailJob {
 type QueueMessage = DeletionJob | ThumbnailJob;
 
 export default {
+  // Handle HTTP requests (for publishing to queue from Next.js)
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+
+    // POST /queue/thumbnail - Publish thumbnail generation job
+    if (url.pathname === '/queue/thumbnail' && request.method === 'POST') {
+      try {
+        const body = await request.json() as ThumbnailJob;
+        await env.THUMBNAIL_QUEUE.send(body);
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ success: false, error: String(error) }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // POST /queue/deletion - Publish deletion job
+    if (url.pathname === '/queue/deletion' && request.method === 'POST') {
+      try {
+        const body = await request.json() as DeletionJob;
+        await env.DELETION_QUEUE.send(body);
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ success: false, error: String(error) }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    return new Response('Not Found', { status: 404 });
+  },
+
   // Handle queue messages (deletion + thumbnail jobs)
   async queue(batch: MessageBatch<QueueMessage>, env: Env, ctx: ExecutionContext) {
     const deletionMessages = batch.messages.filter(m => m.body.type === 'storage-deletion');
@@ -70,7 +113,10 @@ export default {
 
       try {
         const result = await processDeletion(job, env);
-        await callbackToVercel(job, result, env);
+        // Try callback but don't fail if Vercel blocks it
+        await callbackToVercel(job, result, env).catch((err) => {
+          console.warn(`[DeletionWorker] Callback failed (non-critical): ${err.message}`);
+        });
         message.ack();
         console.log(`[DeletionWorker] ✅ Deleted: ${job.photoId}`);
       } catch (error) {
@@ -182,7 +228,7 @@ async function processThumbnail(
   job: ThumbnailJob,
   env: Env
 ): Promise<{ thumbnailUrl: string; publicId: string; mediumUrl: string; smallUrl: string } | null> {
-  const { r2Url, cloudinaryCredentials, galleryId, filename } = job;
+  const { r2Key, cloudinaryCredentials, galleryId, filename } = job;
   const { cloudName, apiKey, apiSecret } = cloudinaryCredentials;
 
   if (!cloudName || !apiKey || !apiSecret) {
@@ -190,13 +236,13 @@ async function processThumbnail(
     return null;
   }
 
-  // Fetch image from R2 public URL
-  const fetchResponse = await fetch(r2Url);
-  if (!fetchResponse.ok) {
-    throw new Error(`Failed to fetch R2 image: ${fetchResponse.status} ${fetchResponse.statusText}`);
+  // Fetch image from R2 bucket via binding (no auth needed)
+  const r2Object = await env.PHOTO_BUCKET.get(r2Key);
+  if (!r2Object) {
+    throw new Error(`R2 object not found: ${r2Key}`);
   }
 
-  const imageBuffer = await fetchResponse.arrayBuffer();
+  const imageBuffer = await r2Object.arrayBuffer();
 
   // Upload to Cloudinary with transformations
   const publicId = await uploadToCloudinaryWithTransform(
@@ -252,16 +298,12 @@ async function uploadToCloudinaryWithTransform(
 ): Promise<string | null> {
   const timestamp = Math.round(Date.now() / 1000);
   const publicIdBase = filename.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
-  const publicId = `${folder}/${publicIdBase}`;
+  const publicId = `${folder}/${publicIdBase}`; // Already includes folder
 
-  // Build upload params for signed upload
+  // Build upload params for signed upload (only params sent to API)
   const paramsToSign: Record<string, string> = {
-    timestamp: timestamp.toString(),
-    folder,
     public_id: publicId,
-    quality: 'auto',
-    fetch_format: 'auto',
-    resource_type: 'image',
+    timestamp: timestamp.toString(),
   };
 
   const signature = await generateCloudinarySignature(paramsToSign, apiSecret);
@@ -271,10 +313,7 @@ async function uploadToCloudinaryWithTransform(
   formData.append('file', new Blob([imageBuffer]), filename);
   formData.append('api_key', apiKey);
   formData.append('timestamp', paramsToSign.timestamp);
-  formData.append('folder', folder);
   formData.append('public_id', publicId);
-  formData.append('quality', 'auto');
-  formData.append('fetch_format', 'auto');
   formData.append('signature', signature);
 
   const response = await fetch(
@@ -332,21 +371,28 @@ async function callbackThumbnailToVercel(
     publicId: result.publicId,
   };
 
-  const response = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${env.VPS_WEBHOOK_SECRET}`,
-    },
-    body: JSON.stringify(payload),
-  });
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${env.VPS_WEBHOOK_SECRET}`,
+      },
+      body: JSON.stringify(payload),
+    });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Thumbnail callback failed: ${error}`);
+    if (!response.ok) {
+      const error = await response.text();
+      console.error(`[Thumbnail] Callback failed (${response.status}): ${error}`);
+      // Don't throw - thumbnail is already uploaded to Cloudinary
+      return;
+    }
+
+    console.log(`[Thumbnail] ✅ Callback to Vercel successful for ${job.photoId}`);
+  } catch (error) {
+    console.error(`[Thumbnail] Callback error (non-critical):`, error);
+    // Don't throw - thumbnail is already uploaded, DB update can be done manually
   }
-
-  console.log(`[Thumbnail] ✅ Callback to Vercel successful for ${job.photoId}`);
 }
 
 // ─── Cloudinary Helpers ─────────────────────────────────────────

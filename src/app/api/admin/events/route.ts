@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
-import { eventSchema, eventUpdateSchema } from '@/lib/api/validation';
+import { eventSchema, eventUpdateSchema, idSchema, validateRequest } from '@/lib/api/validation';
+import { safeClientSelect } from '@/lib/api/select';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { queuePhotosDeletionForEntities } from '@/lib/cloudflare-queue';
 import { generateKodeBooking } from '@/lib/utils';
-import { parseAdminPagination, createAdminPaginationResponse } from '@/types/pagination';
+import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
+import { RATE_LIMITS } from '@/lib/rate-limit';
+import { enforceRateLimit } from '@/lib/rate-limit-helper';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -21,13 +23,29 @@ export async function GET(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `events:get:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_READ
+    });
+    if (rateLimit) return rateLimit;
+
     const { searchParams } = new URL(request.url);
-    const { page, limit, skip } = parseAdminPagination(searchParams);
+    
+    // Validate pagination parameters
+    const paginationResult = parseAdminPaginationSafe(searchParams);
+    if (!paginationResult.success) {
+      const firstError = paginationResult.error.errors[0];
+      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+    }
+    
+    const { page, limit, skip } = paginationResult.data;
 
     const [events, total] = await Promise.all([
       prisma.event.findMany({
         include: {
-          client: true,
+          // Strip Client.password (bcrypt hash) before serialising to admin UI.
+          client: { select: safeClientSelect },
           package: true,
           galleries: {
             take: 1,
@@ -62,8 +80,32 @@ export async function POST(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const body = await request.json();
-    const validated = eventSchema.parse(body);
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `events:post:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_WRITE
+    });
+    if (rateLimit) return rateLimit;
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
+    const validation = eventSchema.safeParse(body);
+
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      return errorResponse(
+        firstError.path.length > 0
+          ? `${firstError.path.join('.')}: ${firstError.message}`
+          : firstError.message,
+        400
+      );
+    }
+
+    const validated = validation.data;
 
     // Atomic creation with retry on unique constraint violation
     // This eliminates race conditions by letting the database enforce uniqueness
@@ -83,7 +125,7 @@ export async function POST(request: Request) {
             paymentStatus: 'unpaid',
           },
           include: {
-            client: true,
+            client: { select: safeClientSelect },
             package: true,
           },
         });
@@ -120,20 +162,38 @@ export async function PATCH(request: Request) {
     const auth = await checkAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const body = await request.json();
-    const { id, ...data } = body;
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `events:patch:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_WRITE
+    });
+    if (rateLimit) return rateLimit;
 
-    if (!id) {
-      return errorResponse('Event ID required', 400);
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse('Invalid JSON body', 400);
+    }
+    
+    // Validate ID
+    const idValidation = validateRequest(idSchema, body);
+    if (!idValidation.success) {
+      return errorResponse(idValidation.error, 400);
     }
 
+    const { id } = idValidation.data;
+
     // Validate update data
-    const validated = eventUpdateSchema.parse(data);
+    const dataValidation = validateRequest(eventUpdateSchema, body);
+    if (!dataValidation.success) {
+      return errorResponse(dataValidation.error, 400);
+    }
 
     const event = await prisma.event.update({
       where: { id },
-      data: validated,
-      include: { client: true, package: true },
+      data: dataValidation.data,
+      include: { client: { select: safeClientSelect }, package: true },
     });
 
     return successResponse({ event });
@@ -143,31 +203,5 @@ export async function PATCH(request: Request) {
       return notFoundResponse('Event not found');
     }
     return serverErrorResponse('Failed to update event');
-  }
-}
-
-export async function DELETE(request: Request) {
-  try {
-    const auth = await checkAuth();
-    if (auth instanceof NextResponse) return auth;
-
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-      return errorResponse('Event ID required', 400);
-    }
-
-    await queuePhotosDeletionForEntities({ gallery: { eventId: id } });
-
-    await prisma.event.delete({ where: { id } });
-
-    return successResponse({ success: true });
-  } catch (error) {
-    console.error('Error deleting event:', error);
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
-      return notFoundResponse('Event not found');
-    }
-    return serverErrorResponse('Failed to delete event');
   }
 }

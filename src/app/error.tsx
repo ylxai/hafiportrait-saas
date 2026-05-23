@@ -1,35 +1,83 @@
 'use client';
 
-import Link from 'next/link';
+import { useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { AlertCircle } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 export default function Error({
-  error: _error,
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    // Structured logger so error boundaries emit the same JSON shape as
+    // the rest of the app (level/event/time/digest); upstream log
+    // pipelines can filter/group by `event` instead of regex'ing strings.
+    logger.error('error.boundary.root', {
+      error,
+      digest: error.digest,
+    });
+  }, [error]);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <div className="text-center max-w-md">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-2xl">⚠️</span>
+    // `role="alert"` + `aria-live="assertive"` ensure screen readers
+    // announce the failure as soon as the boundary mounts — without
+    // them the heading is just a heading and the user may miss it.
+    <div
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="true"
+      className="min-h-screen flex items-center justify-center bg-background p-4"
+    >
+      <div className="max-w-md w-full text-center space-y-6">
+        <div className="flex justify-center">
+          {/* Decorative — visible h1 below is the accessible name. */}
+          <div
+            aria-hidden="true"
+            className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center"
+          >
+            <AlertCircle className="w-8 h-8 text-destructive" />
+          </div>
         </div>
-        <h2 className="text-xl font-bold text-slate-900 mb-2">Gagal Memuat</h2>
-        <p className="text-slate-600 mb-6">Terjadi kesalahan saat memuat halaman.</p>
+        
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold text-foreground">
+            Terjadi Kesalahan
+          </h1>
+          <p className="text-muted-foreground">
+            Maaf, terjadi kesalahan yang tidak terduga. Tim kami telah diberitahu dan sedang menangani masalah ini.
+          </p>
+        </div>
+
+        {process.env.NODE_ENV === 'development' && (
+          <div className="p-4 bg-destructive/5 border border-destructive/20 rounded-lg text-left">
+            <p className="text-sm font-mono text-destructive break-all">
+              {error.message}
+            </p>
+            {error.digest && (
+              <p className="text-xs text-destructive/80 mt-2">
+                Error ID: {error.digest}
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="flex gap-3 justify-center">
-          <button
+          <Button
             onClick={reset}
-            className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+            className="bg-primary hover:bg-primary/90"
           >
             Coba Lagi
-          </button>
-          <Link
-            href="/"
-            className="px-4 py-2 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50"
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => window.location.href = '/'}
           >
-            Beranda
-          </Link>
+            Kembali ke Beranda
+          </Button>
         </div>
       </div>
     </div>

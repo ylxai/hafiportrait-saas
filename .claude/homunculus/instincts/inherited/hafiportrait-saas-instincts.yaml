@@ -1,0 +1,393 @@
+# Instincts generated from https://github.com/ylxai/hafiportrait-saas
+# Generated: 2026-05-10T04:31:01.813Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: hafiportrait-saas-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: fix, feat, chore
+
+## Evidence
+
+- 3 commits analyzed
+- Detected conventional commit pattern
+- Examples: fix(admin/ux): triple admin-side bug fixes (HTML entity, event-not-found, CUID select), feat(auth/security): client portal password login; lock /gallery/[token] behind ownership
+
+---
+id: hafiportrait-saas-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Commit Length
+
+## Action
+
+Write moderate-length commit messages (~80 characters)
+
+## Evidence
+
+- Average commit message length: 80 chars
+- Based on 3 commits
+
+---
+id: hafiportrait-saas-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: hafiportrait-saas-import-alias
+trigger: "when importing modules"
+confidence: 0.85
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Import Alias
+
+## Action
+
+Use path aliases (@/, ~/) instead of relative imports
+
+## Evidence
+
+- Import analysis shows alias pattern
+- Example: import { x } from '@/lib/x'
+
+---
+id: hafiportrait-saas-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Export Style
+
+## Action
+
+Prefer mixed exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: mixed
+
+---
+id: hafiportrait-saas-arch-type-based
+trigger: "when adding new code"
+confidence: 0.8
+domain: architecture
+source: repo-analysis
+source_repo: https://github.com/ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Arch Type Based
+
+## Action
+
+Place code in the appropriate type folder (components/, services/, utils/, etc.)
+
+## Evidence
+
+- Type-based module organization detected
+- Folders: app, components, lib
+
+---
+id: hafiportrait-saas-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: hafiportrait-saas-workflow-multi-layer-feature-or-bugfix-touching-api-validation-and-ui
+trigger: "when doing multi layer feature or bugfix touching api validation and ui"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Workflow Multi Layer Feature Or Bugfix Touching Api Validation And Ui
+
+## Action
+
+Follow the multi-layer-feature-or-bugfix-touching-api-validation-and-ui workflow:
+1. Update or create API route handler(s) in src/app/api/...
+2. Update validation schemas in src/lib/api/validation.ts
+3. Update or fix frontend UI components/pages in src/app/(dashboard)/admin/... or src/app/portal/...
+4. If authentication or authorization is involved, update src/lib/auth/options.ts or related files
+5. Test the integrated flow end-to-end
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: src/app/api/*/route.ts, src/lib/api/validation.ts, src/app/(dashboard)/admin/**/*.tsx
+
+---
+id: hafiportrait-saas-instinct-file-naming
+trigger: "When creating a new file in the codebase"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Instinct File Naming
+
+## Action
+
+Name the file using camelCase convention
+
+## Evidence
+
+- Pattern in namingConventions.files
+- Consistent file names in src/app, src/components
+
+---
+id: hafiportrait-saas-instinct-function-naming
+trigger: "When defining a new function"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Instinct Function Naming
+
+## Action
+
+Name the function using camelCase convention
+
+## Evidence
+
+- Pattern in namingConventions.functions
+- Functions in src/lib and src/components
+
+---
+id: hafiportrait-saas-instinct-class-naming
+trigger: "When defining a new class"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Instinct Class Naming
+
+## Action
+
+Name the class using PascalCase convention
+
+## Evidence
+
+- Pattern in namingConventions.classes
+- Classes in src/lib
+
+---
+id: hafiportrait-saas-instinct-constant-naming
+trigger: "When declaring a constant"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Instinct Constant Naming
+
+## Action
+
+Name the constant using SCREAMING_SNAKE_CASE convention
+
+## Evidence
+
+- Pattern in namingConventions.constants
+- Constants in src/lib
+
+---
+id: hafiportrait-saas-instinct-import-style
+trigger: "When importing modules"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Instinct Import Style
+
+## Action
+
+Use import aliases instead of relative paths where possible
+
+## Evidence
+
+- Pattern in importStyle: alias
+- Imports in src/app and src/lib
+
+---
+id: hafiportrait-saas-instinct-export-style
+trigger: "When exporting modules or functions"
+confidence: 0.6
+domain: code-style
+source: repo-analysis
+source_repo: ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Instinct Export Style
+
+## Action
+
+Use mixed export style (named and default exports as appropriate)
+
+## Evidence
+
+- Pattern in exportStyle: mixed
+- Exports in src/lib and src/components
+
+---
+id: hafiportrait-saas-instinct-try-catch-error-handling
+trigger: "When handling errors in code"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Instinct Try Catch Error Handling
+
+## Action
+
+Use try-catch blocks for error handling
+
+## Evidence
+
+- Pattern in errorHandling.style: try-catch
+- try-catch blocks in src/app/api/*/route.ts
+
+---
+id: hafiportrait-saas-instinct-test-location
+trigger: "When adding or updating tests"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Instinct Test Location
+
+## Action
+
+Place test files outside the main src directory, in a separate test location
+
+## Evidence
+
+- Pattern in architecture.testLocation: separate
+- Test files not in src/
+
+---
+id: hafiportrait-saas-instinct-git-commit-format
+trigger: "When writing a git commit message"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Instinct Git Commit Format
+
+## Action
+
+Use conventional commit format: <type>(<scope>): <description>
+
+## Evidence
+
+- Conventional commit prefixes: fix, feat, chore
+- Examples: 'fix(admin/ux): ...', 'feat(auth/security): ...'
+
+---
+id: hafiportrait-saas-instinct-git-commit-length
+trigger: "When composing a commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Instinct Git Commit Length
+
+## Action
+
+Keep the commit message around 80 characters on average
+
+## Evidence
+
+- Pattern in commits.averageLength: 80
+- Examples of commit messages
+
+---
+id: hafiportrait-saas-instinct-workflow-multi-layer-feature-or-bugfix
+trigger: "When a feature or bugfix requires changes across API, validation, and UI layers"
+confidence: 0.95
+domain: workflow
+source: repo-analysis
+source_repo: ylxai/hafiportrait-saas
+---
+
+# Hafiportrait Saas Instinct Workflow Multi Layer Feature Or Bugfix
+
+## Action
+
+Update API route handler(s), validation schemas, and frontend UI components/pages in a coordinated sequence; update authentication/authorization if needed; test end-to-end
+
+## Evidence
+
+- Workflow: multi-layer-feature-or-bugfix-touching-api-validation-and-ui
+- Example commits and files: src/app/api/*/route.ts, src/lib/api/validation.ts, src/app/(dashboard)/admin/**/*.tsx, src/app/portal/**/*.tsx, src/lib/auth/options.ts
+

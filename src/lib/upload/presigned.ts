@@ -2,10 +2,21 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getR2Client, R2Credentials } from '@/lib/storage/r2';
 import { prisma } from '@/lib/db';
-import { PRESIGNED_URL_EXPIRY_SECONDS, UPLOAD_SESSION_EXPIRY_MS } from './constants';
+import { PRESIGNED_URL_EXPIRY_SECONDS, UPLOAD_SESSION_EXPIRY_MS, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB, ALLOWED_EXTENSIONS } from './constants';
+import { logger } from '@/lib/logger';
+import path from 'path';
 
-// Get R2 account credentials from database
-export async function getR2Credentials(accountId?: string): Promise<{ credentials: R2Credentials; bucket: string }> {
+// MEDIUM FIX #18: ETag-based integrity sanity check.
+// S3/R2 ETag rules:
+//   - Single-part PUT (≤5GB)  → ETag = MD5 hex (32 chars, no dash).
+//   - Multipart upload        → ETag = `<md5-of-md5s>-N` (suffixed with part count).
+// We never multipart-upload here (presigned PUT only), so a missing or `-N` ETag
+// indicates a corrupted/aborted upload. We can't compare with our SHA-256 hash, but
+// we *can* assert that the object has a valid single-part ETag, ruling out partial writes.
+const SINGLE_PART_ETAG_RE = /^"?[0-9a-f]{32}"?$/i;
+
+// HIGH FIX #6: return accountId (DB id) explicitly to avoid ambiguous re-query
+export async function getR2Credentials(accountId?: string): Promise<{ credentials: R2Credentials; bucket: string; accountDbId: string }> {
   // If specific account requested
   if (accountId) {
     const account = await prisma.storageAccount.findUnique({
@@ -23,6 +34,7 @@ export async function getR2Credentials(accountId?: string): Promise<{ credential
           endpoint: account.endpoint || undefined,
         },
         bucket: account.bucketName || '',
+        accountDbId: account.id,
       };
     }
   }
@@ -43,6 +55,7 @@ export async function getR2Credentials(accountId?: string): Promise<{ credential
         endpoint: defaultAccount.endpoint || undefined,
       },
       bucket: defaultAccount.bucketName || '',
+      accountDbId: defaultAccount.id,
     };
   }
   
@@ -64,29 +77,28 @@ export async function generatePresignedUploadUrl(
   uploadId: string;
   r2AccountId: string | null;
 }> {
-  const { credentials, bucket } = await getR2Credentials(r2AccountId);
-  const client = getR2Client(credentials);
-  
-  // Generate unique key
-  const timestamp = Date.now();
-  const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-  const r2Key = `uploads/${galleryId}/${timestamp}-${sanitizedFilename}`;
-  
-  // Generate cryptographically secure upload ID
-  const uploadId = `${timestamp}-${globalThis.crypto.randomUUID()}`;
-  
-  // Get the actual account ID for storage tracking
-  let actualR2AccountId: string | null = r2AccountId || null;
-  if (!actualR2AccountId && credentials) {
-    const r2Account = await prisma.storageAccount.findFirst({
-      where: { 
-        provider: 'R2', 
-        isActive: true,
-        accountId: credentials.accountId || undefined,
-      },
-    });
-    actualR2AccountId = r2Account?.id || null;
+  // HIGH FIX #3: Validate galleryId format to prevent path traversal/injection.
+  // Allow alphanumerics, `_`, `-`, plus a single optional `payments/` prefix used by
+  // the public payment proof upload endpoint. Reject `..` and any other slashes.
+  if (galleryId.includes('..') || !/^(payments\/)?[a-zA-Z0-9_-]+$/.test(galleryId)) {
+    throw new Error('Invalid galleryId format');
   }
+
+  // HIGH FIX #3: Validate extension against whitelist
+  const ext = path.extname(filename).toLowerCase();
+  if (!ALLOWED_EXTENSIONS.includes(ext)) {
+    throw new Error(`Unsupported file extension: ${ext}`);
+  }
+
+  const { credentials, bucket, accountDbId } = await getR2Credentials(r2AccountId);
+  const client = getR2Client(credentials);
+
+  // HIGH FIX #3: UUID-based deterministic key — eliminates timestamp collisions & filename injection
+  const uploadId = globalThis.crypto.randomUUID();
+  const r2Key = `uploads/${galleryId}/${uploadId}${ext}`;
+
+  // HIGH FIX #6: Use accountDbId returned from getR2Credentials (no ambiguous re-query)
+  const actualR2AccountId: string = accountDbId;
 
   // Validate Cloudinary account if provided
   let actualCloudinaryAccountId: string | null = cloudinaryAccountId || null;
@@ -106,15 +118,18 @@ export async function generatePresignedUploadUrl(
     actualCloudinaryAccountId = defaultCloudinary?.id || null;
   }
   
-  // Generate presigned URL
+  // CRITICAL FIX #1: Sign Content-Type only; enforce size via post-upload HeadObject check
+  // (see verifyR2Upload). R2 (S3) PUT presigned URLs cannot enforce a ranged size — only
+  // exact ContentLength can be signed. Authoritative size validation happens server-side
+  // after upload using HeadObject; oversize files are deleted and session rejected.
   const command = new PutObjectCommand({
     Bucket: bucket,
     Key: r2Key,
     ContentType: contentType,
   });
-  
-  const presignedUrl = await getSignedUrl(client, command, { 
-    expiresIn: PRESIGNED_URL_EXPIRY_SECONDS
+
+  const presignedUrl = await getSignedUrl(client, command, {
+    expiresIn: PRESIGNED_URL_EXPIRY_SECONDS,
   });
   
   const publicUrl = `${credentials.publicUrl}/${r2Key}`;
@@ -142,11 +157,9 @@ export async function generatePresignedUploadUrl(
 }
 
 // Verifikasi upload ke R2 berhasil
+// HIGH FIX #8: Removed unused _fileSize/_width/_height params — server is authoritative.
 export async function verifyR2Upload(
-  uploadId: string,
-  _fileSize: number, // Now ignored - use server-side size
-  _width?: number,
-  _height?: number
+  uploadId: string
 ): Promise<{
   success: boolean;
   r2Key?: string;
@@ -162,15 +175,27 @@ export async function verifyR2Upload(
   const session = await prisma.uploadSession.findUnique({
     where: { id: uploadId },
   });
-  
+
   if (!session) {
     return { success: false, error: 'Upload session expired or not found' };
   }
-  
+
   // HIGH PRIORITY FIX #4: Check if session expired
   if (session.expiresAt < new Date()) {
     await prisma.uploadSession.delete({ where: { id: uploadId } }).catch(() => {});
     return { success: false, error: 'Upload session expired (1 hour limit)' };
+  }
+
+  // MEDIUM FIX #7: Atomically claim the session (consumedAt marker) to prevent
+  // retry races where two `/complete` calls verify the same uploadId before
+  // cleanup runs. `updateMany` returns count=0 if already consumed → reject.
+  const claim = await prisma.uploadSession.updateMany({
+    where: { id: uploadId, consumedAt: null },
+    data: { consumedAt: new Date() },
+  });
+  if (claim.count === 0) {
+    logger.warn('upload.session.already_consumed', { uploadId });
+    return { success: false, error: 'Upload session sudah diproses sebelumnya.' };
   }
   
   // Verify file exists and get server-side size from R2 using HeadObject
@@ -187,8 +212,35 @@ export async function verifyR2Upload(
     const response = await client.send(command);
     // Use R2's ContentLength as authoritative size (NOT client-provided)
     serverFileSize = response.ContentLength ? Number(response.ContentLength) : undefined;
+
+    // CRITICAL FIX #1: Enforce max file size server-side. If client uploaded > limit,
+    // delete the object and reject the session. This is the authoritative gate.
+    if (serverFileSize !== undefined && serverFileSize > MAX_FILE_SIZE_BYTES) {
+      try {
+        await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: session.r2Key }));
+      } catch (delErr) {
+        logger.error('upload.r2.delete_oversized_failed', { uploadId, r2Key: session.r2Key, err: delErr });
+      }
+      await prisma.uploadSession.delete({ where: { id: uploadId } }).catch(() => {});
+      return { success: false, error: `File terlalu besar. Maksimal ${MAX_FILE_SIZE_MB}MB.` };
+    }
+
+    // MEDIUM FIX #18: ETag integrity sanity-check. Reject objects with multipart ETag
+    // (we never multipart-upload via presigned PUT, so `-N` suffix indicates anomaly)
+    // or missing/malformed ETag (storage corruption / aborted upload).
+    const etag = response.ETag;
+    if (!etag || !SINGLE_PART_ETAG_RE.test(etag)) {
+      logger.warn('upload.r2.etag_invalid', { uploadId, r2Key: session.r2Key, etag });
+      try {
+        await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: session.r2Key }));
+      } catch (delErr) {
+        logger.error('upload.r2.delete_invalid_etag_failed', { uploadId, r2Key: session.r2Key, err: delErr });
+      }
+      await prisma.uploadSession.delete({ where: { id: uploadId } }).catch(() => {});
+      return { success: false, error: 'File integrity check gagal (ETag tidak valid). Silakan upload ulang.' };
+    }
   } catch (error) {
-    console.error('R2 verification failed - file not found:', error);
+    logger.error('upload.r2.verify_failed', { uploadId, err: error });
     // Clean up the orphaned upload session
     await prisma.uploadSession.delete({ where: { id: uploadId } }).catch(() => {});
     return { success: false, error: 'File tidak ditemukan di storage. Upload mungkin gagal.' };

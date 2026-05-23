@@ -1,6 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  // Vercel serverless runs on Amazon Linux 2023 (rhel-openssl-3.0.x).
+  // Without this target, Prisma falls back to "native" (the build-host
+  // binary) and the `.so.node` engine cannot be loaded at runtime, which
+  // surfaces as `prisma:error Invalid prisma.X.foo() invocation: Prisma
+  // Client could not locate the Query Engine for runtime "rhel-openssl-3.0.x"`.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -25,19 +31,37 @@ model Client {
   phone     String?
   instagram String?
   storageQuotaGB Int  @default(10) // Configurable storage quota per client (in GB)
+  usedStorage BigInt @default(0) // CRITICAL FIX #5: Atomic quota tracking via conditional update
+  photoCount  Int    @default(0) // Total photo count across all client events (maintained by upload/delete flows)
+  // bcrypt hash of the client's password. Required for portal login.
+  // Kept nullable at the column level so legacy rows from before the
+  // password-auth rollout don't break db:push; the API/Zod layer enforces
+  // a non-empty value at create time and the auth provider rejects null.
+  password  String?
+  // Admin approval gate for clients self-registered via the public booking
+  // form. Defaults to `true` so admin-created clients (and pre-existing
+  // rows) can sign in immediately. Public-booking creations explicitly
+  // set this to `false` and the auth provider blocks login until an admin
+  // toggles it back to `true` from the dashboard.
+  isApproved Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   events    Event[]
 
   @@index([createdAt])
   @@index([nama])
+  @@index([isApproved])
 }
 
 model Event {
   id            String    @id @default(cuid())
   kodeBooking   String    @unique
   clientId      String
-  client        Client    @relation(fields: [clientId], references: [id])
+  // Cascade so deleting a Client also deletes all its Events (and through
+  // the Event→Gallery→Photo cascade, all storage cleanup is queued by the
+  // delete handler before the row goes away). Without this, every
+  // `prisma.client.delete` failed with FK RESTRICT in production.
+  client        Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   packageId     String?
   package       Package?  @relation(fields: [packageId], references: [id])
   namaProject   String
@@ -51,6 +75,7 @@ model Event {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   galleries     Gallery[]
+  payments      Payment[]
 
   @@index([clientId])
   @@index([eventDate])
@@ -59,11 +84,12 @@ model Event {
   @@index([status])
   @@index([status, createdAt])
   @@index([clientId, eventDate]) // Composite index for client event lookups
+  @@index([paymentStatus, eventDate])
 }
 
 model Package {
   id           String   @id @default(cuid())
-  nama         String
+  nama         String   @unique
   description  String?
   price        Int
   duration     Int?
@@ -77,6 +103,26 @@ model Package {
 
   @@index([createdAt])
   @@index([isActive, createdAt])
+}
+
+model Payment {
+  id         String   @id @default(cuid())
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  amount     Int
+  uniqueCode Int      @default(0) // Random 3-digit code for auto-mutasi
+  type       String   // "dp" or "full"
+  method     String
+  proofUrl   String?
+  status     String   @default("pending") // "pending", "approved", "rejected"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([type])
+  @@index([eventId, status])
 }
 
 model Gallery {
@@ -99,6 +145,7 @@ model Gallery {
   updatedAt         DateTime @updatedAt
   photos            Photo[]
   selections        Selection[]
+  uploadAnalytics   UploadAnalytics[]
 
   @@index([eventId])
   @@index([createdAt])
@@ -138,7 +185,7 @@ model Photo {
   @@index([galleryId, order])
   @@index([galleryId, createdAt])
   @@index([fileHash])
-  @@index([galleryId, fileHash]) // For duplicate detection performance
+  @@unique([galleryId, fileHash], name: "uniq_gallery_filehash") // CRITICAL FIX #4: Prevent race condition duplicates
   @@index([filename]) // For search by filename
   @@index([url]) // For lookup by URL
 }
@@ -208,14 +255,18 @@ model StorageAccount {
   endpoint      String?
   
   // Key rotation support
-  rotationEnabled  Boolean      @default(false)
-  rotationSchedule String?
-  rotationNextDate DateTime?
-  secondaryApiKey  String?
-  secondarySecret  String?
+  rotationEnabled    Boolean   @default(false)
+  rotationSchedule   String?
+  rotationNextDate   DateTime?
+  // Secondary Cloudinary credentials (used during rotation)
+  secondaryApiKey    String?
+  secondaryApiSecret String?   // Renamed from secondarySecret to avoid collision with R2
+  // Secondary R2 credentials (used during rotation)
   secondaryAccessKey String?
-  isSecondaryActive Boolean    @default(false)
-  lastRotatedAt    DateTime?
+  secondarySecretKey String?   // Renamed from secondarySecret — separate field for R2
+  isSecondaryActive  Boolean   @default(false)
+  lastRotatedAt      DateTime?
+  rotationHistory    Json?     // Array of { rotatedAt, initiatedBy } for audit log
   
   // Usage stats
   usedStorage   BigInt         @default(0)
@@ -239,12 +290,47 @@ model UploadSession {
   fileHash        String?  // SHA-256 hash for integrity verification
   createdAt       DateTime @default(now())
   completedAt     DateTime?
+  consumedAt      DateTime? // MEDIUM FIX #7: marker that session was consumed by /complete; rejects retry races
   expiresAt       DateTime @default(dbgenerated("NOW() + INTERVAL '1 hour'")) // HIGH PRIORITY FIX #4: Add TTL (1 hour from creation)
   storageAccountId String?  // R2 account ID
   cloudinaryAccountId String? // Cloudinary account ID
   publicUrl       String?
-  
+
   @@index([createdAt])
   @@index([galleryId])
   @@index([expiresAt]) // Index for cleanup queries
+  @@index([fileHash]) // For integrity verification lookups
+}
+
+
+model UploadAnalytics {
+  id          String   @id @default(cuid())
+  galleryId   String
+  success     Boolean
+  errorReason String?
+  timestamp   DateTime @default(now())
+
+  gallery     Gallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+
+  @@index([galleryId, timestamp])
+  @@index([success])
+}
+
+model FailedJob {
+  id            String   @id @default(cuid())
+  jobType       String   // 'thumbnail-generation' or 'storage-deletion'
+  payload       Json     // Original job payload
+  errorMessage  String
+  attemptCount  Int      @default(0)
+  lastAttemptAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  // Status: 'pending' = can be retried, 'resolved' = manually resolved, 'discarded' = permanently failed
+  status        String   @default("pending")
+
+  resolvedAt    DateTime?
+  resolvedBy    String?  // User ID who resolved
+
+  @@index([jobType, status])
+  @@index([status, createdAt])
 }

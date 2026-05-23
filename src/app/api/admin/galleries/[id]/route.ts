@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
-import { updateGallerySchema } from '@/lib/api/validation';
+import { updateGallerySchema, validateRequest } from '@/lib/api/validation';
+import { safeClientSelect } from '@/lib/api/select';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { serializeBigInt } from '@/lib/bigint-utils';
+import {
+  collectDeletionDataForTransaction,
+  enqueueDeletionWithOutbox,
+} from '@/lib/cloudflare-queue';
+import { logger } from '@/lib/logger';
 
 async function checkAuth() {
   const session = await getServerSession(authOptions);
@@ -28,7 +35,8 @@ export async function GET(
       include: {
         event: {
           include: {
-            client: true,
+            // Strip Client.password (bcrypt hash) from API response.
+            client: { select: safeClientSelect },
           },
         },
         selections: {
@@ -53,13 +61,13 @@ export async function GET(
       ...gallery,
       // photos are now fetched via a separate paginated endpoint
       photos: [],
-      selections: gallery.selections.map((selection) => ({
+      selections: gallery.selections.map((selection: typeof gallery.selections[number]) => ({
         ...selection,
-        photos: selection.photos.map((p) => ({
+        photos: selection.photos.map((p: typeof selection.photos[number]) => ({
           ...p,
           photo: {
             ...p.photo,
-            fileSize: p.photo.fileSize?.toString() || null
+            fileSize: serializeBigInt(p.photo.fileSize)
           }
         }))
       }))
@@ -81,12 +89,17 @@ export async function PATCH(
     if (auth instanceof NextResponse) return auth;
 
     const { id } = await params;
-    const body = await request.json();
-    const validated = updateGallerySchema.parse(body);
+    const body: unknown = await request.json();
+    
+    // Validate update data
+    const dataValidation = validateRequest(updateGallerySchema, body);
+    if (!dataValidation.success) {
+      return errorResponse(dataValidation.error, 400);
+    }
 
     const gallery = await prisma.gallery.update({
       where: { id },
-      data: validated,
+      data: dataValidation.data,
     });
 
     return successResponse({ gallery });
@@ -96,5 +109,70 @@ export async function PATCH(
       return notFoundResponse('Gallery not found');
     }
     return serverErrorResponse('Failed to update gallery');
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const auth = await checkAuth();
+    if (auth instanceof NextResponse) return auth;
+
+    const { id } = await params;
+
+    if (!id) {
+      return errorResponse('Gallery ID is required', 400);
+    }
+
+    // Step 1 — collect dedup-aware byte deltas and storage-deletion
+    // payloads BEFORE the delete commits; the Photo→Gallery cascade
+    // is about to remove the rows.
+    // Review #96 (Gemini): use combined helper to eliminate redundant
+    // database queries.
+    const { usedByClient, photoCountByClient, payloads: deletionPayloads } =
+      await collectDeletionDataForTransaction({ galleryId: id });
+
+    // Step 2 — DB-first transaction.
+    // Collect all unique client IDs from both maps
+    const allClientIds = new Set([
+      ...usedByClient.keys(),
+      ...photoCountByClient.keys(),
+    ]);
+
+    await prisma.$transaction([
+      prisma.gallery.delete({ where: { id } }),
+      ...Array.from(allClientIds).map((clientId) => {
+        const bytes = usedByClient.get(clientId) ?? BigInt(0);
+        const count = photoCountByClient.get(clientId) ?? 0;
+        return prisma.client.update({
+          where: { id: clientId },
+          data: {
+            usedStorage: bytes > BigInt(0) ? { decrement: bytes } : undefined,
+            photoCount: count > 0 ? { decrement: count } : undefined,
+          },
+        });
+      }),
+    ]);
+
+    // Step 3 — best-effort enqueue; queue failure becomes a `FailedJob`
+    // outbox row, not an HTTP 500.
+    const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
+    if (outcome.outboxed > 0) {
+      logger.warn('gallery.delete.storage_outboxed', {
+        galleryId: id,
+        photoCount: outcome.outboxed,
+        outboxJobId: outcome.outboxJobId,
+      });
+    }
+
+    return successResponse({ success: true });
+  } catch (error) {
+    console.error('Error deleting gallery:', error);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return notFoundResponse('Gallery not found');
+    }
+    return serverErrorResponse('Failed to delete gallery');
   }
 }

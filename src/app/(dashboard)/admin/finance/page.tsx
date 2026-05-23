@@ -103,11 +103,11 @@ export default function FinancePage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-6">
           <div className="text-sm text-muted-foreground">Total Revenue</div>
-          <div className="text-2xl font-bold text-green-600">{formatCurrency(summary?.totalRevenue ?? 0)}</div>
+          <div className="text-2xl font-bold text-success">{formatCurrency(summary?.totalRevenue ?? 0)}</div>
         </div>
         <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-6">
           <div className="text-sm text-muted-foreground">Paid</div>
-          <div className="text-2xl font-bold text-blue-600">{formatCurrency(summary?.totalPaid ?? 0)}</div>
+          <div className="text-2xl font-bold text-foreground">{formatCurrency(summary?.totalPaid ?? 0)}</div>
         </div>
         <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-6">
           <div className="text-sm text-muted-foreground">Pending</div>
@@ -122,7 +122,7 @@ export default function FinancePage() {
         </div>
         <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-4">
           <div className="text-sm text-muted-foreground">Paid Events</div>
-          <div className="text-xl font-bold text-green-600">{summary?.paidEvents ?? 0}</div>
+          <div className="text-xl font-bold text-success">{summary?.paidEvents ?? 0}</div>
         </div>
         <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-4">
           <div className="text-sm text-muted-foreground">Pending Events</div>
@@ -131,7 +131,7 @@ export default function FinancePage() {
       </div>
 
       {message && (
-        <div className={`mb-4 p-3 rounded-lg ${message.includes('success') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+        <div className={`mb-4 p-3 rounded-lg ${message.includes('success') ? 'bg-success/15 text-success' : 'bg-destructive/10 text-destructive'}`}>
           {message}
         </div>
       )}
@@ -159,14 +159,14 @@ export default function FinancePage() {
                 events.map((event) => (
                   <tr key={event.id} className="hover:bg-muted">
                     <td className="px-4 py-3 text-sm text-muted-foreground">{event.kodeBooking}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900">{event.namaProject}</td>
+                    <td className="px-4 py-3 font-medium text-foreground">{event.namaProject}</td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">{event.client}</td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">{event.packageName}</td>
-                    <td className="px-4 py-3 text-sm text-slate-900">{formatCurrency(event.totalPrice)}</td>
+                    <td className="px-4 py-3 text-sm text-foreground">{formatCurrency(event.totalPrice)}</td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">{formatCurrency(event.paidAmount)}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 text-xs rounded-full ${
-                        event.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : event.paymentStatus === 'partial' ? 'bg-blue-100 text-blue-700' : 'bg-primary/20 text-amber-700'
+                        event.paymentStatus === 'paid' ? 'bg-success/15 text-success' : event.paymentStatus === 'partial' ? 'bg-primary/15 text-primary' : 'bg-warning/15 text-warning'
                       }`}>
                         {event.paymentStatus}
                       </span>
@@ -185,7 +185,7 @@ export default function FinancePage() {
                           <button
                             onClick={() => handleRecordPayment(event.id, parseInt(paymentAmount) || 0)}
                             disabled={isSaving || !paymentAmount}
-                            className="p-1 text-green-600 hover:bg-green-50 rounded disabled:opacity-50"
+                            className="p-1 text-success hover:bg-success/10 rounded disabled:opacity-50"
                           >
                             <Save className="w-4 h-4" />
                           </button>
@@ -194,7 +194,7 @@ export default function FinancePage() {
                               setRecordingEvent(null);
                               setPaymentAmount('');
                             }}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            className="p-1 text-destructive hover:bg-destructive/10 rounded"
                           >
                             <X className="w-4 h-4" />
                           </button>

@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
+import { toast } from 'sonner';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +11,13 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Package } from 'lucide-react';
+import {
+  createPackage,
+  deletePackage,
+  deletePackagesBulk,
+  toggleActivePackagesBulk,
+  updatePackage,
+} from '@/actions/packages';
 
 type Package = {
   id: string;
@@ -26,9 +35,12 @@ type Package = {
 export default function PackagesPage() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [showModal, setShowModal] = useState(false);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  // `useTransition` powers the disabled state on the dialog footer's
+  // submit button — see equivalent comment in admin/clients/page.tsx.
+  const [isPending, startTransition] = useTransition();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -54,8 +66,8 @@ export default function PackagesPage() {
         setLoading(false);
         return;
       }
-      const data = await res.json();
-      setPackages(data.packages || []);
+      const data: { success: boolean; data: { packages: Package[] } } = await res.json();
+      setPackages(data.data.packages);
     } catch (error) {
       console.error('Error fetching packages:', error);
     } finally {
@@ -92,9 +104,8 @@ export default function PackagesPage() {
     setShowModal(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
 
     const payload = {
       nama: formData.nama,
@@ -107,60 +118,66 @@ export default function PackagesPage() {
       isActive: formData.isActive,
     };
 
-    try {
-      const url = editingPackage
-        ? `/api/admin/packages?id=${editingPackage.id}`
-        : '/api/admin/packages';
-      const method = editingPackage ? 'PATCH' : 'POST';
+    startTransition(async () => {
+      const result = editingPackage
+        ? await updatePackage({ id: editingPackage.id, ...payload })
+        : await createPackage(payload);
 
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        const result = await res.json();
-        const packageData = result.data?.package || result.package;
-        if (editingPackage && packageData) {
-          setPackages(packages.map(p => p.id === editingPackage.id ? packageData : p));
-        } else if (packageData) {
-          setPackages([packageData, ...packages]);
-        }
-        setShowModal(false);
-        resetForm();
+      if (!result.success) {
+        toast.error(result.error || 'Gagal menyimpan paket');
+        return;
       }
-    } catch (error) {
-      console.error('Error saving package:', error);
-    } finally {
-      setSubmitting(false);
-    }
+
+      const pkg = result.data.package;
+      if (editingPackage) {
+        setPackages((prev) => prev.map((p) => (p.id === editingPackage.id ? pkg : p)));
+      } else {
+        setPackages((prev) => [pkg, ...prev]);
+      }
+      setShowModal(false);
+      resetForm();
+    });
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Hapus paket ini?')) return;
+    const ok = await confirm({ description: 'Hapus paket ini?', variant: 'destructive', confirmLabel: 'Hapus' });
+    if (!ok) return;
 
-    try {
-      await fetch(`/api/admin/packages?id=${id}`, { method: 'DELETE' });
-      setPackages(packages.filter(p => p.id !== id));
-    } catch (error) {
-      console.error('Error deleting package:', error);
-    }
+    startTransition(async () => {
+      const result = await deletePackage(id);
+      if (!result.success) {
+        toast.error(result.error || 'Gagal menghapus paket');
+        return;
+      }
+      setPackages((prev) => prev.filter((p) => p.id !== id));
+    });
   };
 
-  const handleToggleActive = async (pkg: Package) => {
-    try {
-      const res = await fetch('/api/admin/packages', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: pkg.id, isActive: !pkg.isActive }),
-      });
-      if (res.ok) {
-        setPackages(packages.map(p => p.id === pkg.id ? { ...p, isActive: !p.isActive } : p));
+  // Single-package toggle uses `updatePackage` rather than the bulk
+  // helper because the latter resolves "toggle" against the *current*
+  // server state — fine for multi-select, but for a single-row click
+  // the user expects the inverse of the row's currently-rendered
+  // `isActive` value, regardless of any concurrent edits.
+  //
+  // Review #74-2 (CodeAnt): the previous version mirrored the local
+  // optimistic state by negating `p.isActive` after the action
+  // resolved. That re-derives the value the client *thought* was
+  // current, not what the server actually applied — a fast double-tap
+  // (or any concurrent edit) would leave the row's UI lagging the DB.
+  // We now use the package returned by the action, which is the
+  // authoritative post-write snapshot.
+  const handleToggleActive = (pkg: Package) => {
+    startTransition(async () => {
+      const result = await updatePackage({ id: pkg.id, isActive: !pkg.isActive });
+      if (!result.success) {
+        toast.error(result.error || 'Gagal mengubah status paket');
+        return;
       }
-    } catch (error) {
-      console.error('Error toggling package:', error);
-    }
+      const updated = result.data.package;
+      setPackages((prev) =>
+        prev.map((p) => (p.id === pkg.id ? updated : p)),
+      );
+    });
   };
 
   const toggleSelect = (id: string) => {
@@ -171,42 +188,47 @@ export default function PackagesPage() {
 
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Hapus ${selectedIds.length} paket ini?`)) return;
+    const ok = await confirm({ description: `Hapus ${selectedIds.length} paket ini?`, variant: 'destructive', confirmLabel: 'Hapus' });
+    if (!ok) return;
 
-    try {
-      await fetch('/api/admin/packages/bulk', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: selectedIds }),
-      });
-      setPackages(packages.filter(p => !selectedIds.includes(p.id)));
+    startTransition(async () => {
+      const result = await deletePackagesBulk(selectedIds);
+      if (!result.success) {
+        toast.error(result.error || 'Gagal menghapus paket');
+        return;
+      }
+      const removed = new Set(selectedIds);
+      setPackages((prev) => prev.filter((p) => !removed.has(p.id)));
       setSelectedIds([]);
       setShowBulkModal(false);
-    } catch (error) {
-      console.error('Error bulk deleting:', error);
-    }
+    });
   };
 
-  const handleBulkToggle = async () => {
-    try {
-      await fetch('/api/admin/packages/bulk', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: selectedIds, toggleActive: true }),
-      });
-      setPackages(packages.map(p => 
-        selectedIds.includes(p.id) ? { ...p, isActive: !p.isActive } : p
-      ));
+  const handleBulkToggle = () => {
+    startTransition(async () => {
+      const result = await toggleActivePackagesBulk(selectedIds);
+      if (!result.success) {
+        toast.error(result.error || 'Gagal mengubah status paket');
+        return;
+      }
+      // The Server Action returns the new `isActive` it applied (so
+      // both clients agree on the outcome of "toggle" even when two
+      // admins click simultaneously). Apply that value to every
+      // selected row instead of locally negating each `p.isActive`.
+      const targetActive = result.data.isActive;
+      const targets = new Set(selectedIds);
+      setPackages((prev) =>
+        prev.map((p) => (targets.has(p.id) ? { ...p, isActive: targetActive } : p)),
+      );
       setSelectedIds([]);
       setShowBulkModal(false);
-    } catch (error) {
-      console.error('Error bulk toggling:', error);
-    }
+    });
   };
 
   const openBulkModal = () => setShowBulkModal(true);
 
   return (
+    <>
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">Packages</h1>
@@ -309,7 +331,7 @@ export default function PackagesPage() {
                 <Button variant="ghost" size="sm" onClick={() => handleToggleActive(pkg)} className="flex-1 text-muted-foreground">
                   {pkg.isActive ? 'Nonaktifkan' : 'Aktifkan'}
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(pkg.id)} className="flex-1 text-red-600">Hapus</Button>
+                <Button variant="ghost" size="sm" onClick={() => handleDelete(pkg.id)} className="flex-1 text-destructive">Hapus</Button>
               </div>
             </div>
           ))}
@@ -398,8 +420,8 @@ export default function PackagesPage() {
               <Button type="button" variant="outline" onClick={() => { setShowModal(false); resetForm(); }}>
                 Batal
               </Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting ? 'Menyimpan...' : editingPackage ? 'Simpan' : 'Tambah'}
+              <Button type="submit" disabled={isPending}>
+                {isPending ? 'Menyimpan...' : editingPackage ? 'Simpan' : 'Tambah'}
               </Button>
             </DialogFooter>
           </form>
@@ -426,5 +448,7 @@ export default function PackagesPage() {
         </DialogContent>
       </Dialog>
     </div>
+    <ConfirmDialog />
+    </>
   );
 }

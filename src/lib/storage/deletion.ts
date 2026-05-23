@@ -1,6 +1,6 @@
 import { deleteFromR2 } from '@/lib/upload/presigned';
 import { deleteFromCloudinary, getCloudinaryPublicId } from '@/lib/storage/cloudinary';
-import { decreaseStorageUsage, getDefaultAccount } from '@/lib/storage/accounts';
+import { decreaseStorageUsage, getStorageCredentials } from '@/lib/storage/accounts';
 
 interface DeletionJobData {
   photoId: string;
@@ -37,24 +37,26 @@ export async function performPhotoDeletion(data: DeletionJobData): Promise<void>
   }
 
   // 2. Hapus dari Cloudinary (Thumbnail)
-  if (thumbnailUrl) {
+  if (thumbnailUrl && storageAccountId) {
     try {
       const publicId = getCloudinaryPublicId(thumbnailUrl);
       if (publicId) {
-        const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
-        if (!cloudinaryAccount) {
-          throw new Error('No active Cloudinary storage account configured in database');
+        const creds = await getStorageCredentials(storageAccountId);
+        
+        // Skip if not Cloudinary account (e.g., R2-only setup)
+        if (creds.provider !== 'CLOUDINARY') {
+          console.log(`[DeletionWorker] Skipping Cloudinary deletion - account is ${creds.provider}`);
+        } else {
+          const cloudinaryCreds = {
+            cloudName: creds.cloudName || '',
+            apiKey: creds.apiKey || '',
+            apiSecret: creds.apiSecret || '',
+          };
+
+          await deleteFromCloudinary(publicId, cloudinaryCreds);
+          console.log(`[DeletionWorker] Cloudinary file deleted: ${publicId}`);
+          cloudinaryDeleted = true;
         }
-
-        const cloudinaryCreds = {
-          cloudName: cloudinaryAccount.cloudName || '',
-          apiKey: cloudinaryAccount.apiKey || '',
-          apiSecret: cloudinaryAccount.apiSecret || '',
-        };
-
-        await deleteFromCloudinary(publicId, cloudinaryCreds);
-        console.log(`[DeletionWorker] Cloudinary file deleted: ${publicId}`);
-        cloudinaryDeleted = true;
       }
     } catch (error) {
       console.error(`[DeletionWorker] Failed to delete Cloudinary file:`, error);

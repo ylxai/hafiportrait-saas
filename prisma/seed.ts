@@ -27,8 +27,8 @@ async function main() {
 
   for (const pkg of packages) {
     await prisma.package.upsert({
-      where: { id: pkg.nama.toLowerCase().replace(' ', '-') },
-      update: {},
+      where: { nama: pkg.nama },
+      update: pkg,
       create: pkg,
     });
   }

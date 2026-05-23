@@ -43,7 +43,7 @@ export type Event = {
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   totalPrice: number;
   paidAmount: number;
-  paymentStatus: 'unpaid' | 'partial' | 'paid';
+  paymentStatus: 'unpaid' | 'awaiting_confirmation' | 'dp_paid' | 'fully_paid' | 'partial' | 'paid';
   createdAt: Date;
   updatedAt: Date;
 };

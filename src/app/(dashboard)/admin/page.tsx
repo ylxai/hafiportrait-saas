@@ -35,7 +35,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { data, isLoading } = useSWR<{ data: { stats: Stats } }>('/api/admin/stats', fetcher);
+  const { data, isLoading } = useSWR<{ success: boolean; data: { stats: Stats } }>('/api/admin/stats', fetcher);
   const stats = data?.data?.stats;
 
   useEffect(() => {
