@@ -4,9 +4,10 @@ import { successResponse, unauthorizedResponse, handlePrismaError, validationErr
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { z } from 'zod';
-import { getOrphanedR2Keys, queueStorageDeletionBulk } from '@/lib/cloudflare-queue';
+import { collectDeletionDataForTransaction, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { Prisma } from '@/generated/prisma';
+import { logger } from '@/lib/logger';
 
 const bulkDeleteSchema = z.object({
   photoIds: z.array(z.string()).min(1).max(100),
@@ -21,15 +22,15 @@ async function checkAuth() {
 }
 
 /**
- * Bulk delete photos with atomic queue-first pattern
- * 
- * Flow:
- * 1. Fetch photos with storage credentials
- * 2. Queue storage deletion jobs (with retry)
- * 3. If queue succeeds, delete from database
- * 4. If queue fails, return error without deleting from DB
- * 
- * This prevents orphaned files in storage.
+ * Bulk delete photos with collect-then-delete-then-enqueue pattern.
+ *
+ * Flow (canonical, per docs/audit-tasks.md Task 1.1):
+ * 1. Collect deletion payloads + storage deltas (before DB delete)
+ * 2. Run atomic DB transaction (deleteMany + decrement usedStorage/photoCount)
+ * 3. Enqueue storage deletion jobs (with outbox fallback on failure)
+ *
+ * This prevents ghost photos: if DB transaction fails, no storage jobs are queued.
+ * If enqueue fails after DB commit, outbox records the failure for admin retry.
  */
 export async function POST(request: Request) {
   try {
@@ -49,167 +50,73 @@ export async function POST(request: Request) {
       return errorResponse('Invalid JSON body', 400);
     }
     const result = bulkDeleteSchema.safeParse(body);
-    
+
     if (!result.success) {
       return validationError(result.error);
     }
 
     const { photoIds } = result.data;
 
-    // Step 1: Get photos with storage credentials
-    const photos = await prisma.photo.findMany({
-      where: { id: { in: photoIds } },
-      select: {
-        id: true,
-        r2Key: true,
-        publicId: true,
-        thumbnailUrl: true,
-        fileSize: true,
-        galleryId: true,
-        storageAccountId: true,
-        cloudinaryAccountId: true,
-        // Review fix #2: butuh clientId untuk decrement Client.usedStorage
-        gallery: { select: { event: { select: { clientId: true } } } },
-        storageAccount: {
-          select: {
-            cloudName: true,
-            apiKey: true,
-            apiSecret: true,
-          },
-        },
-        cloudinaryAccount: {
-          select: {
-            cloudName: true,
-            apiKey: true,
-            apiSecret: true,
-          },
-        },
-      },
-    });
+    // Step 1: Collect deletion payloads and storage deltas BEFORE deleting
+    const { usedByClient, photoCountByClient, payloads } =
+      await collectDeletionDataForTransaction({ id: { in: photoIds } });
 
-    if (photos.length === 0) {
+    if (payloads.length === 0) {
       return errorResponse('No photos found', 404);
     }
 
-    // PR #76 / issue #10 — drop r2Key/thumbnailUrl from any payload whose
-    // file is still referenced by another Photo row (cross-gallery dedup).
-    // The set of orphan r2Keys also drives the per-client usedStorage
-    // decrement below so we only release bytes that are genuinely freed.
-    const orphanedR2Keys = await getOrphanedR2Keys(
-      photos.map((p: typeof photos[number]) => p.r2Key).filter((k: string | null): k is string => Boolean(k)),
-      photos.map((p: typeof photos[number]) => p.id),
-    );
+    // Step 2: Atomic DB transaction — delete photos + decrement client counters
+    const deletedPhotoIds = payloads.map((p) => p.photoId);
+    await prisma.$transaction(async (tx) => {
+      await tx.photo.deleteMany({ where: { id: { in: deletedPhotoIds } } });
 
-    // Step 2: Prepare deletion jobs
-    const deletionJobs = photos
-      .map((photo: typeof photos[number]) => {
-        const cloudinaryCredentials = photo.cloudinaryAccount || photo.storageAccount;
-        const isShared = photo.r2Key !== null && !orphanedR2Keys.has(photo.r2Key);
-
-        return {
-          photoId: photo.id,
-          // Strip storage refs when shared so the worker has nothing to do.
-          r2Key: isShared ? undefined : (photo.r2Key || undefined),
-          thumbnailUrl: isShared ? undefined : (photo.thumbnailUrl || undefined),
-          fileSize: photo.fileSize ? photo.fileSize.toString() : undefined,
-          storageAccountId: photo.storageAccountId || undefined,
-          cloudinaryCredentials: cloudinaryCredentials ? {
-            cloudName: cloudinaryCredentials.cloudName,
-            apiKey: cloudinaryCredentials.apiKey,
-            apiSecret: cloudinaryCredentials.apiSecret,
-          } : undefined,
-        };
-      })
-      .filter((job: { r2Key?: string; thumbnailUrl?: string }) => job.r2Key || job.thumbnailUrl);
-
-    // Step 3: Queue storage deletion FIRST (with retry logic built-in)
-    if (deletionJobs.length > 0) {
-      const queueResult = await queueStorageDeletionBulk(deletionJobs);
-      
-      if (!queueResult.success) {
-        // Queue failed - DO NOT delete from database
-        console.error('[Bulk Delete] Queue failed, aborting database deletion:', queueResult.error);
-        return errorResponse(
-          `Failed to queue storage deletion: ${queueResult.error}. Photos were NOT deleted from database to prevent orphaned files.`,
-          500
-        );
-      }
-
-      // Log partial failures
-      if (queueResult.failedCount && queueResult.failedCount > 0) {
-        console.warn(`[Bulk Delete] ${queueResult.failedCount} deletion jobs failed to queue`);
-      }
-
-      console.log(`[Bulk Delete] Successfully queued ${deletionJobs.length} storage deletion jobs`);
-    }
-
-    // Step 4: Only delete from database AFTER successful queue.
-    // Review fix #2: aggregate decrement Client.usedStorage in same transaction.
-    // PR #76 / issue #10: only decrement bytes for photos whose r2Key
-    // becomes orphan after the delete — shared r2Keys (cross-gallery
-    // dedup) keep the file alive and therefore consume no new quota.
-    const sumByClient = new Map<string, bigint>();
-    const countByClient = new Map<string, number>();
-    for (const p of photos) {
-      const cId = p.gallery?.event?.clientId;
-      if (!cId) continue;
-      
-      // Always count photos
-      countByClient.set(cId, (countByClient.get(cId) ?? 0) + 1);
-      
-      // Only count storage for orphaned files
-      // A photo with no `r2Key` (legacy / failed upload) effectively
-      // has no storage to keep alive, so it counts as orphan.
-      if (p.fileSize && (p.r2Key === null || orphanedR2Keys.has(p.r2Key))) {
-        sumByClient.set(cId, (sumByClient.get(cId) ?? BigInt(0)) + p.fileSize);
-      }
-    }
-    try {
-      await prisma.$transaction(async (tx) => {
-        await tx.photo.deleteMany({ where: { id: { in: photoIds } } });
-        // Unified loop: update storage and count for all clients
-        for (const [cId, count] of countByClient) {
-          const sum = sumByClient.get(cId) ?? BigInt(0);
-          try {
-            await tx.client.update({
-              where: { id: cId },
-              data: {
-                usedStorage: { decrement: sum },
-                photoCount: { decrement: count },
-              },
-            });
-          } catch (error) {
-            // Handle 'record not found' gracefully
-            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-              continue;
-            }
-            throw error;
+      for (const [cId, count] of photoCountByClient) {
+        const storageBytes = usedByClient.get(cId) ?? BigInt(0);
+        try {
+          await tx.client.update({
+            where: { id: cId },
+            data: {
+              usedStorage: { decrement: storageBytes },
+              photoCount: { decrement: count },
+            },
+          });
+        } catch (error) {
+          // Handle 'record not found' gracefully (client already deleted)
+          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+            continue;
           }
+          throw error;
         }
-      });
+      }
+    });
 
-      console.log(`[Bulk Delete] Successfully deleted ${photos.length} photos from database`);
+    logger.info('[API] bulk-delete.db_committed', {
+      photoCount: payloads.length,
+      photoIds: deletedPhotoIds,
+    });
 
-      return successResponse({
-        deleted: photos.length,
-        photoIds: photos.map((p: typeof photos[number]) => p.id),
-        queuedForStorageDeletion: deletionJobs.length,
+    // Step 3: Enqueue storage deletion AFTER DB commit (outbox fallback)
+    const { queued, outboxed, outboxJobId } = await enqueueDeletionWithOutbox(payloads);
+
+    if (outboxed > 0) {
+      logger.warn('[API] bulk-delete.queue_failed_outboxed', {
+        outboxed,
+        outboxJobId,
+        photoIds: deletedPhotoIds,
       });
-    } catch (dbError) {
-      // Database deletion failed AFTER queue succeeded
-      // This is a critical error - files will be deleted from storage but DB records remain
-      console.error('[Bulk Delete] CRITICAL: Database deletion failed after queue succeeded:', dbError);
-      
-      // Log this for manual intervention
-      console.error('[Bulk Delete] Manual intervention required for photo IDs:', photoIds);
-      
-      return errorResponse(
-        'Database deletion failed. Storage deletion was queued successfully. Manual intervention may be required.',
-        500
-      );
+    } else {
+      logger.info('[API] bulk-delete.queued', { queued });
     }
+
+    return successResponse({
+      deleted: payloads.length,
+      photoIds: payloads.map((p) => p.photoId),
+      queuedForStorageDeletion: queued,
+      outboxed,
+      ...(outboxJobId ? { outboxJobId } : {}),
+    });
   } catch (error) {
-    console.error('[API] Error bulk deleting photos:', error);
+    logger.error('[API] bulk-delete.unhandled_error', { err: error });
     return handlePrismaError(error);
   }
 }
