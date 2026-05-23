@@ -10,6 +10,8 @@ import {
   discardFailedJob,
   FailedJobType,
 } from '@/lib/failed-jobs';
+import { RATE_LIMITS } from '@/lib/rate-limit';
+import { enforceRateLimit } from '@/lib/rate-limit-helper';
 
 // GET /api/admin/failed-jobs - Get pending failed jobs or stats
 export async function GET(request: Request) {
@@ -17,6 +19,13 @@ export async function GET(request: Request) {
   if (!session?.user) {
     return unauthorizedResponse();
   }
+
+  // Rate limiting
+  const rateLimit = await enforceRateLimit({
+    identifier: `failed-jobs:get:${session.user.email}`,
+    limit: RATE_LIMITS.ADMIN_READ
+  });
+  if (rateLimit) return rateLimit;
 
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action') || 'list';
@@ -44,6 +53,13 @@ export async function POST(request: Request) {
   if (!session?.user) {
     return unauthorizedResponse();
   }
+
+  // Rate limiting
+  const rateLimit = await enforceRateLimit({
+    identifier: `failed-jobs:post:${session.user.email}`,
+    limit: RATE_LIMITS.ADMIN_WRITE
+  });
+  if (rateLimit) return rateLimit;
 
   let body: unknown;
   try {

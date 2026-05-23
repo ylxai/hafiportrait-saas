@@ -4,6 +4,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { Prisma } from '@/generated/prisma';
 import { z } from 'zod';
+import { RATE_LIMITS } from '@/lib/rate-limit';
+import { enforceRateLimit } from '@/lib/rate-limit-helper';
 
 // Normalize null → undefined so legacy DB rows with null JSON columns
 // don't fail validation when the client round-trips settings via POST.
@@ -40,6 +42,13 @@ export async function GET() {
       return errorResponse('Unauthorized', 401);
     }
 
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `settings:get:${session.user.email}`,
+      limit: RATE_LIMITS.ADMIN_READ
+    });
+    if (rateLimit) return rateLimit;
+
     const settings = await prisma.settings.findUnique({
       where: { id: 'studio' },
     });
@@ -73,6 +82,13 @@ export async function POST(request: Request) {
     if (!session?.user) {
       return errorResponse('Unauthorized', 401);
     }
+
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `settings:post:${session.user.email}`,
+      limit: RATE_LIMITS.ADMIN_WRITE
+    });
+    if (rateLimit) return rateLimit;
 
     let body: unknown;
     try {

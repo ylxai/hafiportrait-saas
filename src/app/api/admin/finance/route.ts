@@ -4,6 +4,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { createAdminPaginationResponse } from '@/types/pagination';
 import { z } from 'zod';
+import { RATE_LIMITS } from '@/lib/rate-limit';
+import { enforceRateLimit } from '@/lib/rate-limit-helper';
 
 // Zod schema for query parameters
 const querySchema = z.object({
@@ -17,6 +19,13 @@ export async function GET(request: Request) {
     if (!session?.user) {
       return errorResponse('Unauthorized', 401);
     }
+
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `finance:get:${session.user.email}`,
+      limit: RATE_LIMITS.ADMIN_READ
+    });
+    if (rateLimit) return rateLimit;
 
     // Parse and validate query params
     const { searchParams } = new URL(request.url);
