@@ -6,6 +6,9 @@ export interface RateLimitConfig {
   windowMs: number;
 }
 
+// In-memory flag to log DISABLE_RATE_LIMIT warning only once per process
+let disableRateLimitWarningLogged = false;
+
 /**
  * Test-only override for the rate-limit window. When `RATE_LIMIT_WINDOW_OVERRIDE_MS`
  * is set on the server (e.g. in CI for the `01-rate-limiting` E2E spec), every
@@ -54,14 +57,20 @@ export async function checkRateLimit(
 
   // 2. Emergency bypass (requires manual env var, works in any environment)
   if (process.env.DISABLE_RATE_LIMIT === 'true') {
-    // Extract route prefix without PII (e.g., "analytics:get" from "analytics:get:user@example.com")
-    const routePrefix = identifier.split(':').slice(0, 2).join(':');
+    // Log warning only once per process to avoid flooding logs during incidents
+    if (!disableRateLimitWarningLogged) {
+      // Extract route prefix without PII (e.g., "analytics:get" from "analytics:get:user@example.com")
+      const routePrefix = identifier.split(':').slice(0, 2).join(':');
+      
+      logger.warn('[API] rate_limit.bypass', {
+        reason: 'DISABLE_RATE_LIMIT=true',
+        vercel_env: process.env.VERCEL_ENV,
+        route_prefix: routePrefix,
+        message: 'Rate limiting disabled globally - this warning will only appear once per process; route_prefix is from first bypassed request',
+      });
+      disableRateLimitWarningLogged = true;
+    }
     
-    logger.warn('[API] rate_limit.bypass', {
-      reason: 'DISABLE_RATE_LIMIT=true',
-      vercel_env: process.env.VERCEL_ENV,
-      route: routePrefix, // Log route pattern only, not user email
-    });
     return {
       success: true,
       remaining: config.maxRequests,

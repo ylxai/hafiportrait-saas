@@ -1,11 +1,12 @@
 import { prisma } from '@/lib/db';
-import { successResponse, errorResponse, rateLimitResponse } from '@/lib/api/response';
+import { successResponse, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { createAdminPaginationResponse } from '@/types/pagination';
+import { RATE_LIMITS } from '@/lib/rate-limit';
+import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { getCachedData } from '@/lib/cache';
 import { z } from 'zod';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 // Zod schema for query parameters
 const querySchema = z.object({
@@ -21,14 +22,11 @@ export async function GET(request: Request) {
     }
 
     // Rate limiting
-    const rateLimitResult = await checkRateLimit(
-      `analytics:get:${session.user.email}`,
-      RATE_LIMITS.ADMIN_READ
-    );
-    if (!rateLimitResult.success) {
-      const retryAfterSeconds = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
-      return rateLimitResponse('Too many requests', retryAfterSeconds);
-    }
+    const rateLimit = await enforceRateLimit({
+      identifier: `analytics:get:${session.user.email}`,
+      limit: RATE_LIMITS.ADMIN_READ
+    });
+    if (rateLimit) return rateLimit;
 
     // Parse and validate query params
     const { searchParams } = new URL(request.url);
