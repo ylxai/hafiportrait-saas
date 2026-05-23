@@ -4,19 +4,46 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { verifyWebhookSignature } from '@/lib/webhook-validation';
 
+// Hard upper bound on the string form of `fileSize`. 32 digits is more
+// than enough for any realistic byte count (a 32-digit value is ~10^32
+// bytes, far beyond the size of all data ever produced). Capping the
+// length at the schema layer prevents a DoS where a megabyte-long
+// digit string would force `BigInt(value)` into pathological CPU /
+// memory work before the route can return a 422 validation error.
+// (CodeAnt PR #107 MAJOR security finding.)
+const MAX_FILESIZE_DIGITS = 32;
+
 const DeletionCallbackSchema = z.object({
   photoId: z.string(),
   r2Deleted: z.boolean(),
   cloudinaryDeleted: z.boolean(),
   storageAccountId: z.string().optional(),
-  // CRITICAL FIX C3: Accept string to avoid Number.MAX_SAFE_INTEGER precision loss.
-  // Workers should send fileSize as a string (e.g. "12345678901234567890").
-  // Only numeric strings (\d+) are accepted to prevent BigInt parse errors.
-  // number is kept for backward compatibility during the transition.
-  fileSize: z.union([
-    z.string().regex(/^\d+$/, 'fileSize must be a numeric string'),
-    z.number(),
-  ]).optional(),
+  // CRITICAL FIX C3: accept either a digit-only string (avoids precision
+  // loss for files > Number.MAX_SAFE_INTEGER) OR a JS number, but
+  // constrain both forms to non-negative integers AND transform inline
+  // so `schemaValidation.data.fileSize` is already a `bigint` (or
+  // undefined). Centralizing the conversion here removes the runtime
+  // helper that previously had to mirror these checks.
+  // - String form: `^\d+$` rejects signs, decimals, exponents, hex/oct/
+  //   bin prefixes. `.max(MAX_FILESIZE_DIGITS)` blocks DoS via huge
+  //   digit strings. `.transform(BigInt)` then converts safely.
+  // - Number form: must be a finite, non-negative safe integer. The
+  //   transform always yields a non-negative bigint.
+  fileSize: z
+    .union([
+      z
+        .string()
+        .max(MAX_FILESIZE_DIGITS, `fileSize string exceeds ${MAX_FILESIZE_DIGITS}-digit limit`)
+        .regex(/^\d+$/, 'fileSize must be a non-negative integer string')
+        .transform((v) => BigInt(v)),
+      z
+        .number()
+        .int('fileSize number must be an integer')
+        .nonnegative('fileSize must be non-negative')
+        .max(Number.MAX_SAFE_INTEGER, 'fileSize exceeds safe integer range — use string')
+        .transform((v) => BigInt(v)),
+    ])
+    .optional(),
 });
 
 export async function POST(request: Request) {
@@ -48,6 +75,7 @@ export async function POST(request: Request) {
       return validationError(schemaValidation.error);
     }
 
+    // After schema validation `fileSize` is `bigint | undefined`.
     const { photoId, r2Deleted, cloudinaryDeleted, storageAccountId, fileSize } = schemaValidation.data;
 
     const success = r2Deleted && cloudinaryDeleted;
@@ -56,41 +84,11 @@ export async function POST(request: Request) {
       logger.info('webhook.deletion.confirmed', { photoId });
 
       if (storageAccountId && fileSize !== undefined) {
-        let fileSizeBig: bigint;
-        if (typeof fileSize === 'string') {
-          try {
-            fileSizeBig = BigInt(fileSize);
-            // Validate non-negative
-            if (fileSizeBig < BigInt(0)) {
-              logger.error('webhook.deletion.negative_fileSize', { photoId, fileSize });
-              return errorResponse('fileSize must be non-negative', 400);
-            }
-          } catch {
-            logger.error('webhook.deletion.invalid_fileSize_string', { photoId, fileSize });
-            return errorResponse('Invalid fileSize format', 400);
-          }
-        } else {
-          // Validate non-negative number
-          if (fileSize < 0) {
-            logger.error('webhook.deletion.negative_fileSize', { photoId, fileSize });
-            return errorResponse('fileSize must be non-negative', 400);
-          }
-          // Guard against precision loss for files > 9 PB
-          if (fileSize > Number.MAX_SAFE_INTEGER) {
-            logger.error('webhook.deletion.fileSize_exceeds_safe_integer', {
-              photoId,
-              fileSize,
-              maxSafe: Number.MAX_SAFE_INTEGER,
-            });
-            return errorResponse('fileSize exceeds safe integer range, use string format', 400);
-          }
-          fileSizeBig = BigInt(Math.floor(fileSize));
-        }
-        await decreaseStorageUsage(storageAccountId, fileSizeBig);
+        await decreaseStorageUsage(storageAccountId, fileSize);
         logger.info('webhook.deletion.storage_decreased', {
           photoId,
           storageAccountId,
-          fileSize: fileSizeBig.toString(),
+          fileSize: fileSize.toString(),
         });
       }
     } else {
