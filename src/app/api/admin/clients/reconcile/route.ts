@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { successResponse, serverErrorResponse } from '@/lib/api/response';
+import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
@@ -21,11 +21,19 @@ import { Prisma } from '@/generated/prisma';
  * back. It's idempotent — running it on a healthy DB is a no-op.
  *
  * Two phases:
- *   1. SELECT — compute the correct (storage, count) per client by
- *      summing/counting `Photo` rows joined through `Gallery` →
- *      `Event` → `clientId`. Done with `$queryRaw` so we get the
- *      aggregate in a single round trip and don't load every photo
- *      into memory.
+ *   1. SELECT — compute the correct (storage, count) per client.
+ *      `photoCount` is a simple COUNT of Photo rows joined through
+ *      Gallery → Event → clientId. `usedStorage` is the sum of
+ *      `fileSize` over UNIQUE `r2Key` values per client (cross-gallery
+ *      dedup: the same client can re-upload an identical file to a
+ *      different gallery, and the upload flow rolls back the second
+ *      increment so `usedStorage` only counts each underlying R2
+ *      object once — see `src/app/api/admin/upload/complete/route.ts`
+ *      "CRITICAL FIX #10 / PR #76 — Cross-gallery dedup per-client").
+ *      A naive SUM(fileSize) over all rows would inflate the counter
+ *      for clients that hit the dedup path. Done with `$queryRaw` so
+ *      we get the aggregate in a single round trip and don't load
+ *      every photo into memory.
  *   2. UPDATE — write back via a `transaction` of `client.update`
  *      calls but ONLY for clients whose stored values diverge from the
  *      computed ones. Skipping no-op writes keeps audit logs clean and
@@ -78,45 +86,110 @@ export async function POST(request: Request) {
     if (rateLimit) return rateLimit;
 
     // Parse query params for optional client scoping. `?clientId=xxx`
-    // limits reconciliation to a single client (useful for ad-hoc fixes
-    // when an operator suspects drift on one account); omit to scan all.
+    // limits reconciliation to a single client (useful for ad-hoc
+    // fixes when an operator suspects drift on one account); omit to
+    // scan all. CodeAnt MAJOR (PR #115): treat `?clientId=` (empty
+    // string) as a malformed request rather than silently falling
+    // through to the scan-all branch — a typo or stripped param could
+    // otherwise trigger a full reconciliation unintentionally.
     const url = new URL(request.url);
-    const clientId = url.searchParams.get('clientId');
+    const clientIdRaw = url.searchParams.get('clientId');
+    const clientId = clientIdRaw?.trim();
+    if (clientIdRaw !== null && (clientId === undefined || clientId === '')) {
+      return errorResponse(
+        'clientId query param must be a non-empty string when provided',
+        400,
+      );
+    }
 
-    // Phase 1: compute canonical aggregates per client via a single
-    // grouped JOIN. LEFT JOINs so clients with zero photos still
-    // appear with computed=0 (drift correction case: stored>0 but
-    // actually 0).
+    // Phase 1: compute canonical aggregates per client.
+    //
+    // CodeAnt CRITICAL (PR #115): a naive `SUM(p."fileSize")` over all
+    // Photo rows would inflate `usedStorage` for clients that hit the
+    // cross-gallery dedup path (the same client uploaded an identical
+    // file to a different gallery, the upload flow rolled back the
+    // second quota increment, and `Client.usedStorage` is documented
+    // as "unique bytes per client"). The reconciliation must follow
+    // the same definition or it will "reconcile" already-correct
+    // counters to wrong values.
+    //
+    // We sum over a per-client DISTINCT projection of `(r2Key,
+    // fileSize)` so each underlying R2 object contributes exactly once
+    // per client, even if multiple Photo rows reference it. Photos
+    // without an r2Key (legacy / pre-R2 rows) are also deduped by id
+    // so they never contribute more than once. `photoCount` stays a
+    // straight COUNT — that field tracks Photo rows, not unique R2
+    // objects, and is incremented per row at upload time.
     const aggregates = await prisma.$queryRaw<ClientAggregate[]>(
       clientId
         ? Prisma.sql`
+            WITH client_photos AS (
+              SELECT
+                e."clientId" AS client_id,
+                p.id         AS photo_id,
+                p."r2Key"    AS r2_key,
+                p."fileSize" AS file_size
+              FROM "Photo"   p
+              JOIN "Gallery" g ON g.id = p."galleryId"
+              JOIN "Event"   e ON e.id = g."eventId"
+              WHERE e."clientId" = ${clientId}
+            ),
+            unique_objects AS (
+              -- Dedup by r2Key per client (cross-gallery dedup case).
+              -- Rows without r2Key fall back to photo_id so they
+              -- don't all collapse into a single bucket.
+              SELECT DISTINCT ON (client_id, COALESCE(r2_key, photo_id))
+                client_id,
+                file_size
+              FROM client_photos
+            )
             SELECT
               c."id",
               c."nama",
               c."usedStorage" AS "storedStorage",
               c."photoCount"  AS "storedCount",
-              COALESCE(SUM(p."fileSize"), 0)::bigint AS "computedStorage",
-              COALESCE(COUNT(p.id), 0)::int          AS "computedCount"
+              COALESCE((SELECT SUM(file_size) FROM unique_objects WHERE client_id = c.id), 0)::bigint AS "computedStorage",
+              COALESCE((SELECT COUNT(*)       FROM client_photos  WHERE client_id = c.id), 0)::int    AS "computedCount"
             FROM "Client" c
-            LEFT JOIN "Event"   e ON e."clientId"  = c.id
-            LEFT JOIN "Gallery" g ON g."eventId"   = e.id
-            LEFT JOIN "Photo"   p ON p."galleryId" = g.id
             WHERE c.id = ${clientId}
-            GROUP BY c.id, c.nama, c."usedStorage", c."photoCount"
           `
         : Prisma.sql`
+            WITH client_photos AS (
+              SELECT
+                e."clientId" AS client_id,
+                p.id         AS photo_id,
+                p."r2Key"    AS r2_key,
+                p."fileSize" AS file_size
+              FROM "Photo"   p
+              JOIN "Gallery" g ON g.id = p."galleryId"
+              JOIN "Event"   e ON e.id = g."eventId"
+            ),
+            unique_objects AS (
+              SELECT DISTINCT ON (client_id, COALESCE(r2_key, photo_id))
+                client_id,
+                file_size
+              FROM client_photos
+            ),
+            unique_storage AS (
+              SELECT client_id, COALESCE(SUM(file_size), 0)::bigint AS total
+              FROM unique_objects
+              GROUP BY client_id
+            ),
+            photo_counts AS (
+              SELECT client_id, COUNT(*)::int AS total
+              FROM client_photos
+              GROUP BY client_id
+            )
             SELECT
               c."id",
               c."nama",
               c."usedStorage" AS "storedStorage",
               c."photoCount"  AS "storedCount",
-              COALESCE(SUM(p."fileSize"), 0)::bigint AS "computedStorage",
-              COALESCE(COUNT(p.id), 0)::int          AS "computedCount"
+              COALESCE(us.total, 0)::bigint AS "computedStorage",
+              COALESCE(pc.total, 0)::int    AS "computedCount"
             FROM "Client" c
-            LEFT JOIN "Event"   e ON e."clientId"  = c.id
-            LEFT JOIN "Gallery" g ON g."eventId"   = e.id
-            LEFT JOIN "Photo"   p ON p."galleryId" = g.id
-            GROUP BY c.id, c.nama, c."usedStorage", c."photoCount"
+            LEFT JOIN unique_storage us ON us.client_id = c.id
+            LEFT JOIN photo_counts   pc ON pc.client_id = c.id
           `,
     );
 
