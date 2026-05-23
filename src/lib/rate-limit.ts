@@ -231,7 +231,15 @@ export async function checkRateLimit(
     ).rateLimitIncr(key, windowSeconds.toString())) as [number, number];
 
     const [count, ttl] = result;
-    const resetAt = ttl > 0 ? now + (ttl * 1000) : now + windowMs;
+    // TTL == 0 is a valid Redis state (last sub-second before expiry —
+    // the key still exists but EXPIRE will fire imminently). Only the
+    // negative sentinels (-1 = no expiry, -2 = key missing) should
+    // trigger the synthetic fallback. Treating 0 as an error case
+    // returned `now + windowMs` (full window) instead of an immediate
+    // reset, which inflated Retry-After and locked clients out for
+    // far longer than the actual cooldown. (CodeAnt MAJOR on commit
+    // ccb2df5.)
+    const resetAt = ttl >= 0 ? now + (ttl * 1000) : now + windowMs;
 
     if (count > config.maxRequests) {
       return {
