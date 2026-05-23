@@ -8,6 +8,7 @@ import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { Prisma } from '@/generated/prisma';
 import { logger } from '@/lib/logger';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 const bulkDeleteSchema = z.object({
   photoIds: z.array(z.string()).min(1).max(100),
@@ -28,6 +29,11 @@ export async function POST(request: Request) {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
+
+    // Reject oversized payloads before reading the body (Sprint 2 Task 2.3).
+    // Bulk delete accepts a list of IDs — 5 MB covers thousands of UUIDs.
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_BATCH);
+    if (tooLarge) return tooLarge;
 
     // Rate limiting
     const rateLimit = await enforceRateLimit({ identifier: `bulk-delete:post:${auth.user.email}`, limit: RATE_LIMITS.BULK_DELETE });

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { verifyWebhookSignature } from '@/lib/webhook-validation';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 const ThumbnailCallbackSchema = z.object({
   photoId: z.string(),
@@ -12,6 +13,10 @@ const ThumbnailCallbackSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    // Reject oversized payloads before reading the body (Sprint 2 Task 2.3).
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.WEBHOOK);
+    if (tooLarge) return tooLarge;
+
     const body = await request.text();
     const signature = request.headers.get('x-webhook-signature');
     const timestamp = request.headers.get('x-webhook-timestamp');
