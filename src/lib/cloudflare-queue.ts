@@ -423,12 +423,15 @@ export async function queueStorageDeletionBulk(dataList: Array<{
   let cursor = 0;
 
   // Each worker pulls the next index off a shared cursor. JS's single
-  // event loop makes `cursor++` and `failedCount++` atomic between
-  // awaits, so no extra locking is required.
+  // event loop makes the `cursor++` post-increment and `failedCount++`
+  // atomic between awaits — no semaphore / p-limit needed. (If this
+  // module is ever ported to a worker-threaded runtime this assumption
+  // breaks; revisit then.)
   const runWorker = async (): Promise<void> => {
     while (cursor < dataList.length) {
+      // `cursor++` returns the pre-increment value, so `index` is always
+      // a valid in-bounds index when the while-check passed.
       const index = cursor++;
-      if (index >= dataList.length) return;
       const result = await queueStorageDeletion(dataList[index]);
       if (!result.success) {
         failedCount++;
