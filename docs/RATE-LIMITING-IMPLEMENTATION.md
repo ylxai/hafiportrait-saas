@@ -44,6 +44,7 @@ Adding rate limiting to 11 admin routes to prevent DoS attacks and brute-force a
 
 ```typescript
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { rateLimitResponse } from '@/lib/api/response';
 ```
 
 ### 2. Add Rate Limiting After Auth Check
@@ -60,7 +61,8 @@ export async function GET(request: Request) {
       RATE_LIMITS.ADMIN_READ  // or ADMIN_WRITE, STATS
     );
     if (!rateLimitResult.success) {
-      return errorResponse('Too many requests', 429);
+      const retryAfterSeconds = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
+      return rateLimitResponse('Too many requests', retryAfterSeconds);
     }
 
     // ... rest of handler

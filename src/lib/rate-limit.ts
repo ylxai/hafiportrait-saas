@@ -40,6 +40,7 @@ export async function checkRateLimit(
   identifier: string,
   config: RateLimitConfig
 ): Promise<{ success: boolean; remaining: number; resetAt: number }> {
+  const now = Date.now();
   const windowMs = effectiveWindowMs(config);
   
   // 1. Bypass in Vercel preview deployments (development/testing)
@@ -47,7 +48,7 @@ export async function checkRateLimit(
     return {
       success: true,
       remaining: config.maxRequests,
-      resetAt: Date.now() + windowMs,
+      resetAt: now + windowMs,
     };
   }
 
@@ -56,7 +57,7 @@ export async function checkRateLimit(
     // Extract route prefix without PII (e.g., "analytics:get" from "analytics:get:user@example.com")
     const routePrefix = identifier.split(':').slice(0, 2).join(':');
     
-    logger.warn('rate_limit.bypass', {
+    logger.warn('[API] rate_limit.bypass', {
       reason: 'DISABLE_RATE_LIMIT=true',
       vercel_env: process.env.VERCEL_ENV,
       route: routePrefix, // Log route pattern only, not user email
@@ -64,12 +65,11 @@ export async function checkRateLimit(
     return {
       success: true,
       remaining: config.maxRequests,
-      resetAt: Date.now() + windowMs,
+      resetAt: now + windowMs,
     };
   }
 
   const key = `rate-limit:${identifier}`;
-  const now = Date.now();
   const windowSeconds = Math.ceil(windowMs / 1000);
 
   try {

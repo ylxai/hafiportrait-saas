@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { successResponse, errorResponse } from '@/lib/api/response';
+import { successResponse, errorResponse, rateLimitResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { createAdminPaginationResponse } from '@/types/pagination';
@@ -22,11 +22,12 @@ export async function GET(request: Request) {
 
     // Rate limiting
     const rateLimitResult = await checkRateLimit(
-      `analytics:${session.user.email}`,
+      `analytics:get:${session.user.email}`,
       RATE_LIMITS.ADMIN_READ
     );
     if (!rateLimitResult.success) {
-      return errorResponse('Too many requests', 429);
+      const retryAfterSeconds = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
+      return rateLimitResponse('Too many requests', retryAfterSeconds);
     }
 
     // Parse and validate query params

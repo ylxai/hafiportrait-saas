@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
+import { successResponse, serverErrorResponse, errorResponse, notFoundResponse, rateLimitResponse } from '@/lib/api/response';
 import { eventSchema, eventUpdateSchema, idSchema, validateRequest } from '@/lib/api/validation';
 import { safeClientSelect } from '@/lib/api/select';
 import { getServerSession } from 'next-auth';
@@ -28,7 +28,8 @@ export async function GET(request: Request) {
       RATE_LIMITS.ADMIN_READ
     );
     if (!rateLimitResult.success) {
-      return errorResponse('Too many requests', 429);
+      const retryAfterSeconds = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
+      return rateLimitResponse('Too many requests', retryAfterSeconds);
     }
 
     const { searchParams } = new URL(request.url);
