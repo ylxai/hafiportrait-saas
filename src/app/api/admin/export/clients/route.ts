@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { unauthorizedResponse, handlePrismaError } from '@/lib/api/response';
+import { handlePrismaError } from '@/lib/api/response';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
