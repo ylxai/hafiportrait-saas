@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import {
   getAccountsNeedingRotation,
   rotateStorageCredentials,
@@ -37,17 +36,9 @@ const postBodySchema = z.object({
     .optional(),
 });
 
-async function checkAuth() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return errorResponse('Unauthorized', 401);
-  }
-  return session;
-}
-
 export async function GET(request: Request) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(request.url);
@@ -142,7 +133,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     const body: unknown = await request.json();

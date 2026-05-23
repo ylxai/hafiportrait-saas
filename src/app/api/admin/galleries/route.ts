@@ -6,21 +6,12 @@ import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { gallerySchema } from '@/lib/api/validation';
 import { safeClientSelect } from '@/lib/api/select';
 import { generateClientToken } from '@/lib/utils';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
-
-async function checkAuth() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return unauthorizedResponse();
-  }
-  return session;
-}
 
 export async function GET(request: Request) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     // Rate limiting
@@ -76,7 +67,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const auth = await checkAuth();
+    const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
     // Rate limiting
