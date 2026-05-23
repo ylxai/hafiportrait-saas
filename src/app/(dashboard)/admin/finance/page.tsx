@@ -65,19 +65,20 @@ export default function FinancePage() {
   const events = data?.data?.events || [];
 
   const formatCurrency = (amount: string | number | undefined | null) => {
-    if (amount === undefined || amount === null) return 'Rp 0';
     // Revenue strings come from the API as BigInt-safe digits; parse
     // back to Number for `Intl.NumberFormat`. Use `Number()` rather
     // than `parseInt` so partial / non-numeric strings (e.g. "123abc")
     // surface as `NaN` instead of being silently truncated, then
-    // collapse `NaN`/non-finite results to 0 so the dashboard never
-    // renders "Rp NaN".
+    // collapse `NaN`/non-finite/null/undefined results to 0 so the
+    // dashboard never renders "Rp NaN" and zero-state formatting is
+    // consistent with non-zero values (avoids "Rp 0" vs "Rp0" mismatch
+    // between hardcoded fallback and Intl.NumberFormat output).
     //
     // Values that exceed Number.MAX_SAFE_INTEGER lose precision in the
     // formatter regardless of input type, but at the dashboard level a
     // 16-digit cap is fine — the precise value is preserved in the API
     // string for downstream analytics.
-    const numAmount = typeof amount === 'string' ? Number(amount) : amount;
+    const numAmount = typeof amount === 'string' ? Number(amount) : (amount ?? 0);
     const safeAmount = Number.isFinite(numAmount) ? numAmount : 0;
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(safeAmount);
   };
