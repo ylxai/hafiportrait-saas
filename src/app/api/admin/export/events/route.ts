@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     // Rate limiting
-    const rateLimit = await enforceRateLimit({ identifier: `export:events:${auth.user.email}`, limit: RATE_LIMITS.EXPORT });
+    const rateLimit = await enforceRateLimit({ identifier: "export:events:get", limit: RATE_LIMITS.EXPORT });
     if (rateLimit) return rateLimit;
 
     const { searchParams } = new URL(request.url);

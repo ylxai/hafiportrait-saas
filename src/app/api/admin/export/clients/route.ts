@@ -26,7 +26,7 @@ export async function GET() {
     if (auth instanceof NextResponse) return auth;
 
     // Rate limiting
-    const rateLimit = await enforceRateLimit({ identifier: `export:clients:${auth.user.email}`, limit: RATE_LIMITS.EXPORT });
+    const rateLimit = await enforceRateLimit({ identifier: "export:clients:get", limit: RATE_LIMITS.EXPORT });
     if (rateLimit) return rateLimit;
 
     const clients = await prisma.client.findMany({
