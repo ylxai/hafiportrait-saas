@@ -1,5 +1,5 @@
 import Ably from 'ably';
-import { env } from './env';
+import { env } from './env.server';
 
 let ablyClient: Ably.Realtime | null = null;
 
