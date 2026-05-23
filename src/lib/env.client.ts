@@ -1,18 +1,17 @@
-import { z } from 'zod';
+import { publicEnvSchema } from './env.shared';
 
 /**
  * Client-safe environment variables.
- * 
- * Only validates NEXT_PUBLIC_* vars that are safe for browser exposure.
- * Import this in client components instead of @/lib/env or @/lib/env.server.
+ *
+ * Re-validates `NEXT_PUBLIC_*` vars on the browser using the shared schema
+ * defined in `env.shared.ts`. This guarantees server and client agree on
+ * defaults and validation rules.
+ *
+ * Import this in client components instead of `@/lib/env` or
+ * `@/lib/env.server`.
  */
 
-const clientEnvSchema = z.object({
-  NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: z.string().optional(),
-  NEXT_PUBLIC_ABLY_CHANNEL_PREFIX: z.string().min(1).default('photostudio'),
-});
-
-const parsed = clientEnvSchema.safeParse({
+const parsed = publicEnvSchema.safeParse({
   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
   NEXT_PUBLIC_ABLY_CHANNEL_PREFIX: process.env.NEXT_PUBLIC_ABLY_CHANNEL_PREFIX,
 });
@@ -24,4 +23,4 @@ if (!parsed.success) {
 
 export const clientEnv = parsed.data;
 
-export type ClientEnv = z.infer<typeof clientEnvSchema>;
+export type { PublicEnv as ClientEnv } from './env.shared';

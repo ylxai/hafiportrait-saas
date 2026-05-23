@@ -1,5 +1,6 @@
 import 'server-only';
 import { z } from 'zod';
+import { publicEnvSchema } from './env.shared';
 
 /**
  * Server-only environment variables.
@@ -9,19 +10,16 @@ import { z } from 'zod';
  * stronger than a runtime `typeof window` check because it catches mistakes
  * before they ship.
  *
- * Use `@/lib/env.client` for browser-safe (NEXT_PUBLIC_*) variables.
+ * Public (`NEXT_PUBLIC_*`) variables are inherited from `env.shared.ts` so
+ * the browser and server validate them identically.
+ *
+ * Use `@/lib/env.client` for browser-safe variables.
  */
 
-const serverEnvSchema = z.object({
+const serverEnvSchema = publicEnvSchema.extend({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   NEXTAUTH_SECRET: z.string().min(1, 'NEXTAUTH_SECRET is required'),
   NEXTAUTH_URL: z.string().url().default('http://localhost:3000'),
-
-  // Public variables (also needed on the server, mirrored from env.client).
-  // `.min(1)` guards against empty-string overrides that would produce
-  // invalid Ably channel names like `:selections:<id>`.
-  NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: z.string().optional(),
-  NEXT_PUBLIC_ABLY_CHANNEL_PREFIX: z.string().min(1).default('photostudio'),
 
   // Cloudinary (thumbnails)
   CLOUDINARY_API_KEY: z.string().optional(),
