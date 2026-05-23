@@ -98,13 +98,27 @@ export async function GET(request: Request) {
 
     const total = totalAgg._count.id;
 
+    // BigInt-safe revenue serialization. `totalPrice` is currently a
+    // Prisma `Int`, so `_sum` returns a JS `number` directly. The
+    // `.toString()` conversion exists for two reasons:
+    //   1. JSON serialization safety — `JSON.stringify` cannot serialize
+    //      a `BigInt`, and a future schema migration to `BigInt` (for
+    //      revenue beyond ~9 quadrillion IDR) would otherwise crash this
+    //      route silently.
+    //   2. Contract alignment — `/api/admin/stats` already emits
+    //      `totalRevenue` as a string. Returning the same shape here
+    //      means the admin UI's currency formatter has one code path.
+    // Note: an `Int` aggregate that overflows `Number.MAX_SAFE_INTEGER`
+    // would lose precision *before* the toString, so the schema-side
+    // migration is the long-term fix; this is the safe-by-default
+    // serialization convention until then.
     const summary = {
       totalEvents: total,
       paidEvents: paidAgg._count.id,
       pendingEvents: pendingAgg._count.id,
-      totalRevenue: totalAgg._sum.totalPrice || 0,
-      totalPaid: paidAgg._sum.totalPrice || 0,
-      totalPending: pendingAgg._sum.totalPrice || 0,
+      totalRevenue: (totalAgg._sum.totalPrice ?? 0).toString(),
+      totalPaid: (paidAgg._sum.totalPrice ?? 0).toString(),
+      totalPending: (pendingAgg._sum.totalPrice ?? 0).toString(),
     };
 
     const eventsList = events.map((e: typeof events[number]) => ({
