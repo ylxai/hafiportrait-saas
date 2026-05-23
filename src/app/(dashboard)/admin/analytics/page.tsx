@@ -22,7 +22,11 @@ type Analytics = {
 type Summary = {
   totalGalleries: number;
   publishedGalleries: number;
-  totalViews: number;
+  // BigInt-safe: API emits totalViews as a string to avoid silent
+  // precision loss when aggregate viewCount exceeds Number.MAX_SAFE_INTEGER
+  // across all galleries combined. The page renders it as-is so no
+  // numeric coercion is needed for display.
+  totalViews: string | number;
   avgViews: number;
   totalSelections: number;
 };
