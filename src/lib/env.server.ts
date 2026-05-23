@@ -46,9 +46,10 @@ const serverEnvSchema = publicEnvSchema.extend({
   // prefix because that's the name already provisioned in Vercel.
   CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
   NEXT_SERVER_CF_QUEUE_TOKEN: z.string().optional(),
-  // No default — must be explicitly configured per environment (Vercel
-  // preview/production) to avoid baking a personal subdomain into the bundle.
-  CLOUDFLARE_WORKER_URL: z.string().url().optional(),
+  // Required: every environment that runs background jobs must point at a
+  // deletion-worker endpoint. Validating at startup surfaces missing config
+  // immediately instead of failing silently when an enqueue call fires.
+  CLOUDFLARE_WORKER_URL: z.string().url('CLOUDFLARE_WORKER_URL must be a valid URL'),
 });
 
 const parsed = serverEnvSchema.safeParse(process.env);
