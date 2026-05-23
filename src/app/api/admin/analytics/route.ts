@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     // Rate limiting
     const rateLimit = await enforceRateLimit({
       identifier: `analytics:get:${session.user.email}`,
-      limit: RATE_LIMITS.ADMIN_READ
+      limit: RATE_LIMITS.STATS
     });
     if (rateLimit) return rateLimit;
 

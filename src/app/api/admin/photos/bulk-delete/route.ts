@@ -5,7 +5,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { z } from 'zod';
 import { collectDeletionDataForTransaction, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { RATE_LIMITS } from '@/lib/rate-limit';
+import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { Prisma } from '@/generated/prisma';
 import { logger } from '@/lib/logger';
 
@@ -38,10 +39,8 @@ export async function POST(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     // Rate limiting
-    const rateLimit = await checkRateLimit(auth.user.email, RATE_LIMITS.BULK_DELETE);
-    if (!rateLimit.success) {
-      return errorResponse('Too many requests. Please try again later.', 429);
-    }
+    const rateLimit = await enforceRateLimit({ identifier: `bulk-delete:post:${auth.user.email}`, limit: RATE_LIMITS.BULK_DELETE });
+    if (rateLimit) return rateLimit;
 
     let body: unknown;
     try {
