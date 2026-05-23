@@ -3,7 +3,8 @@ import { prisma } from '@/lib/db';
 import { unauthorizedResponse, handlePrismaError, errorResponse } from '@/lib/api/response';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { RATE_LIMITS } from '@/lib/rate-limit';
+import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { z } from 'zod';
 
 // Zod schema for export query parameters
@@ -25,10 +26,8 @@ export async function GET(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     // Rate limiting
-    const rateLimit = await checkRateLimit(auth.user.email, RATE_LIMITS.EXPORT);
-    if (!rateLimit.success) {
-      return errorResponse('Too many requests. Please try again later.', 429);
-    }
+    const rateLimit = await enforceRateLimit({ identifier: "export:events:get", limit: RATE_LIMITS.EXPORT });
+    if (rateLimit) return rateLimit;
 
     const { searchParams } = new URL(request.url);
     
