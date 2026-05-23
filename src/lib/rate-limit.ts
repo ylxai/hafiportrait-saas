@@ -67,18 +67,27 @@ function effectiveWindowMs(config: RateLimitConfig): number {
  *
  * Wrapping the whole sequence in a Lua script makes it atomic from
  * Redis's perspective: either the new TTL is set together with the
- * incremented counter, or neither side effect lands. Returns
- * `[count, ttlSeconds]` so the caller can compute `resetAt` without a
- * second round trip.
+ * incremented counter, or neither side effect lands.
+ *
+ * The script is also self-healing for "poisoned" keys left behind by
+ * the previous non-atomic implementation: if `TTL == -1` (key exists
+ * but has no expiry), we re-set the expiry so the bucket eventually
+ * resets instead of remaining permanently rate-limited. Without this,
+ * any user who tripped the bug on the old code would be stuck until
+ * manual `DEL`. (Sourcery + CodeAnt CRITICAL on commit a1d74dc.)
+ *
+ * Returns `[count, ttlSeconds]` so the caller can compute `resetAt`
+ * without a second round trip.
  */
 const RATE_LIMIT_LUA = `
 local key = KEYS[1]
 local windowSeconds = tonumber(ARGV[1])
 local count = redis.call('INCR', key)
-if count == 1 then
-  redis.call('EXPIRE', key, windowSeconds)
-end
 local ttl = redis.call('TTL', key)
+if count == 1 or ttl == -1 then
+  redis.call('EXPIRE', key, windowSeconds)
+  ttl = windowSeconds
+end
 return {count, ttl}
 `;
 
