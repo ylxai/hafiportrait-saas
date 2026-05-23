@@ -1,7 +1,8 @@
-import { successResponse, errorResponse, unauthorizedResponse } from '@/lib/api/response';
+import { successResponse, errorResponse, unauthorizedResponse, validationError, handlePrismaError } from '@/lib/api/response';
 import { prisma } from '@/lib/db';
-import { timingSafeEqual } from 'crypto';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
+import { verifyWebhookSignature } from '@/lib/webhook-validation';
 
 const ThumbnailCallbackSchema = z.object({
   photoId: z.string(),
@@ -11,29 +12,34 @@ const ThumbnailCallbackSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const expectedSecret = process.env.VPS_WEBHOOK_SECRET;
+    const body = await request.text();
+    const signature = request.headers.get('x-webhook-signature');
+    const timestamp = request.headers.get('x-webhook-timestamp');
 
-    if (!authHeader || !expectedSecret) {
+    // Verify HMAC-SHA256 signature and replay protection
+    const validation = verifyWebhookSignature(body, signature, timestamp);
+    if (!validation.valid) {
+      logger.warn('webhook.thumbnail.auth_failed', {
+        errorCode: validation.errorCode,
+        error: validation.error,
+      });
       return unauthorizedResponse();
     }
 
-    const receivedSecret = authHeader.replace('Bearer ', '');
-    if (
-      receivedSecret.length !== expectedSecret.length ||
-      !timingSafeEqual(Buffer.from(receivedSecret), Buffer.from(expectedSecret))
-    ) {
-      return unauthorizedResponse();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(body);
+    } catch {
+      return errorResponse('Invalid JSON', 400);
     }
 
-    const body = await request.json();
-    const validation = ThumbnailCallbackSchema.safeParse(body);
+    const schemaValidation = ThumbnailCallbackSchema.safeParse(parsed);
 
-    if (!validation.success) {
-      return errorResponse('Invalid payload', 400);
+    if (!schemaValidation.success) {
+      return validationError(schemaValidation.error);
     }
 
-    const { photoId, thumbnailUrl, publicId } = validation.data;
+    const { photoId, thumbnailUrl, publicId } = schemaValidation.data;
 
     await prisma.photo.update({
       where: { id: photoId },
@@ -43,10 +49,10 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log(`[Webhook] ✅ Thumbnail updated for ${photoId}`);
+    logger.info('webhook.thumbnail.updated', { photoId });
     return successResponse({ updated: true });
   } catch (error) {
-    console.error('[Webhook] Thumbnail callback error:', error);
-    return errorResponse('Internal error', 500);
+    logger.error('[API] webhook.thumbnail.unhandled_error', { err: error });
+    return handlePrismaError(error);
   }
 }
