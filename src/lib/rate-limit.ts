@@ -59,10 +59,14 @@ export async function checkRateLimit(
   if (process.env.DISABLE_RATE_LIMIT === 'true') {
     // Log warning only once per process to avoid flooding logs during incidents
     if (!disableRateLimitWarningLogged) {
+      // Extract route prefix without PII (e.g., "analytics:get" from "analytics:get:user@example.com")
+      const routePrefix = identifier.split(':').slice(0, 2).join(':');
+      
       logger.warn('[API] rate_limit.bypass', {
         reason: 'DISABLE_RATE_LIMIT=true',
         vercel_env: process.env.VERCEL_ENV,
-        message: 'Rate limiting disabled globally - this warning will only appear once per process',
+        route_prefix: routePrefix,
+        message: 'Rate limiting disabled globally - this warning will only appear once per process; route_prefix is from first bypassed request',
       });
       disableRateLimitWarningLogged = true;
     }

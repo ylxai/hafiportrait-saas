@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
-import { checkRateLimit, RateLimitConfig } from './rate-limit';
-import { rateLimitResponse } from './api/response';
+import { checkRateLimit, RateLimitConfig } from '@/lib/rate-limit';
+import { rateLimitResponse } from '@/lib/api/response';
 
 /**
- * Enforce rate limiting for admin routes
+ * Enforce rate limiting for API routes
  * Returns NextResponse if rate limited, null if allowed
  * 
  * Usage:
  *   const rateLimit = await enforceRateLimit({
  *     identifier: `clients:get:${auth.user.email}`,
- *     limit: RATE_LIMITS.ADMIN_READ
+ *     limit: RATE_LIMITS.ADMIN_READ  // or ADMIN_WRITE, STATS
  *   });
  *   if (rateLimit) return rateLimit;
  */
