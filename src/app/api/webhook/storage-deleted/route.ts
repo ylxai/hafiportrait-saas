@@ -4,19 +4,50 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { verifyWebhookSignature } from '@/lib/webhook-validation';
 
+/**
+ * Coerce a fileSize input (string of digits OR safe integer number) into a
+ * non-negative `bigint`. Returns `null` for any input the schema accepts but
+ * that we cannot safely convert (negative number, fractional number, number
+ * outside safe-integer range). Schema regex `^\d+$` already excludes
+ * negative / fractional / non-numeric strings, so a string branch only
+ * needs the non-negative check after BigInt parse — which can never throw
+ * given the regex.
+ */
+function coerceFileSize(value: string | number): bigint | null {
+  if (typeof value === 'string') {
+    // Regex `^\d+$` guarantees BigInt(value) succeeds and is >= 0.
+    return BigInt(value);
+  }
+  // number branch — must be a non-negative safe integer.
+  if (!Number.isInteger(value) || value < 0 || value > Number.MAX_SAFE_INTEGER) {
+    return null;
+  }
+  return BigInt(value);
+}
+
 const DeletionCallbackSchema = z.object({
   photoId: z.string(),
   r2Deleted: z.boolean(),
   cloudinaryDeleted: z.boolean(),
   storageAccountId: z.string().optional(),
-  // CRITICAL FIX C3: Accept string to avoid Number.MAX_SAFE_INTEGER precision loss.
-  // Workers should send fileSize as a string (e.g. "12345678901234567890").
-  // Only numeric strings (\d+) are accepted to prevent BigInt parse errors.
-  // number is kept for backward compatibility during the transition.
-  fileSize: z.union([
-    z.string().regex(/^\d+$/, 'fileSize must be a numeric string'),
-    z.number(),
-  ]).optional(),
+  // CRITICAL FIX C3: accept either a numeric string (avoids precision loss
+  // for files > Number.MAX_SAFE_INTEGER) OR a JS number, but constrain both
+  // forms to non-negative integers so `BigInt()` cannot throw downstream.
+  // - String form: `^\d+$` rejects signs, decimals, exponents, and leading
+  //   `0x`/`0o`/`0b` prefixes. BigInt() is then guaranteed to succeed.
+  // - Number form: must be a finite, non-negative safe integer. Rejecting
+  //   fractional / out-of-range numbers here returns 400 (validation error)
+  //   instead of letting them crash the handler at BigInt-conversion time.
+  fileSize: z
+    .union([
+      z.string().regex(/^\d+$/, 'fileSize must be a non-negative integer string'),
+      z
+        .number()
+        .int('fileSize number must be an integer')
+        .nonnegative('fileSize must be non-negative')
+        .max(Number.MAX_SAFE_INTEGER, 'fileSize exceeds safe integer range — use string'),
+    ])
+    .optional(),
 });
 
 export async function POST(request: Request) {
@@ -56,35 +87,13 @@ export async function POST(request: Request) {
       logger.info('webhook.deletion.confirmed', { photoId });
 
       if (storageAccountId && fileSize !== undefined) {
-        let fileSizeBig: bigint;
-        if (typeof fileSize === 'string') {
-          try {
-            fileSizeBig = BigInt(fileSize);
-            // Validate non-negative
-            if (fileSizeBig < BigInt(0)) {
-              logger.error('webhook.deletion.negative_fileSize', { photoId, fileSize });
-              return errorResponse('fileSize must be non-negative', 400);
-            }
-          } catch {
-            logger.error('webhook.deletion.invalid_fileSize_string', { photoId, fileSize });
-            return errorResponse('Invalid fileSize format', 400);
-          }
-        } else {
-          // Validate non-negative number
-          if (fileSize < 0) {
-            logger.error('webhook.deletion.negative_fileSize', { photoId, fileSize });
-            return errorResponse('fileSize must be non-negative', 400);
-          }
-          // Guard against precision loss for files > 9 PB
-          if (fileSize > Number.MAX_SAFE_INTEGER) {
-            logger.error('webhook.deletion.fileSize_exceeds_safe_integer', {
-              photoId,
-              fileSize,
-              maxSafe: Number.MAX_SAFE_INTEGER,
-            });
-            return errorResponse('fileSize exceeds safe integer range, use string format', 400);
-          }
-          fileSizeBig = BigInt(Math.floor(fileSize));
+        const fileSizeBig = coerceFileSize(fileSize);
+        if (fileSizeBig === null) {
+          // Should be unreachable: schema already rejects negative / fractional
+          // / oversized numbers and non-numeric strings. Belt-and-suspenders
+          // for callers that bypass schema validation in the future.
+          logger.error('webhook.deletion.invalid_fileSize_post_schema', { photoId, fileSize });
+          return errorResponse('Invalid fileSize value', 400);
         }
         await decreaseStorageUsage(storageAccountId, fileSizeBig);
         logger.info('webhook.deletion.storage_decreased', {
