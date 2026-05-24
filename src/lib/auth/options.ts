@@ -43,6 +43,23 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Cross-table email guard: User.email and Client.email each have
+        // their own @unique index, but uniqueness is NOT enforced across
+        // the two tables. Without this check, a single email could exist
+        // in both — letting whichever provider authenticates first win and
+        // mint a token under the wrong role (role confusion). Refuse the
+        // admin login if the same email has a Client row, so the operator
+        // is forced to resolve the duplicate before either side can sign
+        // in. Match the client provider's normalized lookup (trim +
+        // lowercase) so we catch case/whitespace-only collisions too.
+        const collidingClient = await prisma.client.findUnique({
+          where: { email: credentials.email.trim().toLowerCase() },
+          select: { id: true },
+        });
+        if (collidingClient) {
+          return null;
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -97,6 +114,22 @@ export const authOptions: NextAuthOptions = {
         // approval status out-of-band (WhatsApp/email) once they click
         // approve in the dashboard.
         if (!client.isApproved) {
+          return null;
+        }
+
+        // Cross-table email guard (symmetric to the admin provider above).
+        // User.email and Client.email each have their own @unique index,
+        // but uniqueness is NOT enforced across the two tables. If the
+        // same address exists in both, returning a client session here
+        // would let an admin account silently authenticate with client
+        // role (role confusion). Refuse the client login when a User row
+        // owns the same email; the operator must remove the duplicate
+        // before either side can sign in.
+        const collidingAdmin = await prisma.user.findUnique({
+          where: { email: credentials.email.trim().toLowerCase() },
+          select: { id: true },
+        });
+        if (collidingAdmin) {
           return null;
         }
 
