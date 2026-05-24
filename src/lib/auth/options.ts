@@ -47,7 +47,12 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role,
+          // Normalize role to lowercase so middleware and route-level guards
+          // can compare case-insensitively without each call site having to
+          // repeat the toLowerCase(). DB column is free-form string today
+          // (not an enum), so mixed-case values can leak in via seeds or
+          // manual edits — collapse them at the token-issue boundary.
+          role: user.role.toLowerCase(),
         };
       },
     }),
@@ -104,7 +109,7 @@ export const authOptions: NextAuthOptions = {
           id: client.id,
           email: client.email,
           name: client.nama,
-          role: "CLIENT",
+          role: "client",
         };
       },
     }),

@@ -46,7 +46,7 @@ export async function assertGalleryOwnership(
   token: string,
 ): Promise<GalleryOwnership | { response: Failure }> {
   const session = await getServerSession(authOptions);
-  if (!session?.user || session.user.role !== 'CLIENT') {
+  if (!session?.user || (session.user.role ?? '').toLowerCase() !== 'client') {
     // Match the not-found shape so we don't leak existence to anon/admin
     // callers — the caller's UI gates on `404` regardless.
     return { response: notFoundResponse('Gallery not found') };

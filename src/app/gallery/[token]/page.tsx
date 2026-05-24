@@ -66,7 +66,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const session = await getServerSession(authOptions);
-  if (!session?.user || session.user.role !== 'CLIENT') {
+  if (!session?.user || (session.user.role ?? '').toLowerCase() !== 'client') {
     return GENERIC_NOT_FOUND_METADATA;
   }
   if (session.user.id !== gallery.event.clientId) {
@@ -123,7 +123,7 @@ export default async function GalleryPage({ params }: PageProps) {
   }
 
   const session = await getServerSession(authOptions);
-  if (!session?.user || session.user.role !== 'CLIENT') {
+  if (!session?.user || (session.user.role ?? '').toLowerCase() !== 'client') {
     redirect(`/portal/login?callbackUrl=${encodeURIComponent(`/gallery/${token}`)}`);
   }
   if (session.user.id !== head.event.clientId) {

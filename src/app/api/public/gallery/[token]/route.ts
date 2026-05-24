@@ -35,7 +35,7 @@ export async function GET(
     //  to avoid leaking the existence of someone else's gallery.
     // -------------------------------------------------------------------
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== 'CLIENT') {
+    if (!session?.user || (session.user.role ?? '').toLowerCase() !== 'client') {
       return errorResponse('Unauthorized', 401);
     }
 

@@ -22,7 +22,7 @@ export async function POST(
     // selections — see issue "siapapun yang memiliki token galeri tanpa
     // login pun bisa mengada-ada selected foto".
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== "CLIENT") {
+    if (!session?.user || (session.user.role ?? "").toLowerCase() !== "client") {
       return errorResponse("Unauthorized", 401);
     }
 

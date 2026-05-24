@@ -88,27 +88,36 @@ export async function middleware(request: NextRequest) {
     // authenticated session, and must never trigger a portal redirect.
     pathname.startsWith("/api/portal/gallery");
 
-  if (isAdminRoute && token.role !== "admin") {
+  // Normalize role for case-insensitive comparison. Tokens issued by our
+  // providers are already lowercased, but legacy sessions or DB rows can
+  // surface mixed-case values (e.g. "Admin", "ADMIN"). Comparing in lower
+  // case here keeps middleware aligned with route-level guards such as
+  // require-admin-auth.ts which already normalize the role.
+  const role = (token.role ?? "").toString().toLowerCase();
+  const isAdmin = role === "admin";
+  const isClient = role === "client";
+
+  if (isAdminRoute && !isAdmin) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
         { status: 403 },
       );
     }
-    if (token.role === "CLIENT") {
+    if (isClient) {
       return NextResponse.redirect(new URL("/portal/dashboard", request.url));
     }
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (isPortalRoute && token.role !== "CLIENT") {
+  if (isPortalRoute && !isClient) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
         { status: 403 },
       );
     }
-    if (token.role === "admin") {
+    if (isAdmin) {
       return NextResponse.redirect(new URL("/admin", request.url));
     }
     return NextResponse.redirect(new URL("/portal/login", request.url));
@@ -117,7 +126,7 @@ export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
   response.headers.set("x-user-email", token.email as string);
   response.headers.set("x-user-id", token.sub as string);
-  response.headers.set("x-user-role", token.role as string);
+  response.headers.set("x-user-role", role);
 
   return response;
 }

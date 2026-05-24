@@ -18,7 +18,7 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'CLIENT') {
+    if (!session || (session.user.role ?? '').toLowerCase() !== 'client') {
       return unauthorizedResponse();
     }
 
