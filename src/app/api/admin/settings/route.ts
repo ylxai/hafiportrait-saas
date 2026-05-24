@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { NextResponse } from 'next/server';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { Prisma } from '@/generated/prisma';
 import { z } from 'zod';
 import { RATE_LIMITS } from '@/lib/rate-limit';
@@ -37,14 +37,12 @@ const updateSettingsSchema = z.object({
 // Get studio settings (single row with id="studio")
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return errorResponse('Unauthorized', 401);
-    }
+    const auth = await requireAdminAuth();
+    if (auth instanceof NextResponse) return auth;
 
     // Rate limiting
     const rateLimit = await enforceRateLimit({
-      identifier: `settings:get:${session.user.email}`,
+      identifier: `settings:get:${auth.user.email}`,
       limit: RATE_LIMITS.ADMIN_READ
     });
     if (rateLimit) return rateLimit;
@@ -78,14 +76,12 @@ export async function GET() {
 // Update studio settings
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return errorResponse('Unauthorized', 401);
-    }
+    const auth = await requireAdminAuth();
+    if (auth instanceof NextResponse) return auth;
 
     // Rate limiting
     const rateLimit = await enforceRateLimit({
-      identifier: `settings:post:${session.user.email}`,
+      identifier: `settings:post:${auth.user.email}`,
       limit: RATE_LIMITS.ADMIN_WRITE
     });
     if (rateLimit) return rateLimit;

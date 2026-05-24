@@ -1,11 +1,10 @@
 import { prisma } from "@/lib/db";
 import {
   successResponse,
-  errorResponse,
   serverErrorResponse,
 } from "@/lib/api/response";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/options";
+import { NextResponse } from "next/server";
+import { requireAdminAuth } from "@/lib/auth/require-admin-auth";
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { getCachedData } from "@/lib/cache";
@@ -18,14 +17,12 @@ import { getCachedData } from "@/lib/cache";
  */
 export async function GET(_request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return errorResponse('Unauthorized', 401);
-    }
+    const auth = await requireAdminAuth();
+    if (auth instanceof NextResponse) return auth;
 
     // Rate limiting
     const rateLimit = await enforceRateLimit({
-      identifier: `stats:get:${session.user.email}`,
+      identifier: `stats:get:${auth.user.email}`,
       limit: RATE_LIMITS.STATS
     });
     if (rateLimit) return rateLimit;

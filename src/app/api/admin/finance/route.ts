@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import { successResponse, errorResponse } from '@/lib/api/response';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { NextResponse } from 'next/server';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { createAdminPaginationResponse } from '@/types/pagination';
 import { z } from 'zod';
 import { RATE_LIMITS } from '@/lib/rate-limit';
@@ -15,14 +15,12 @@ const querySchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return errorResponse('Unauthorized', 401);
-    }
+    const auth = await requireAdminAuth();
+    if (auth instanceof NextResponse) return auth;
 
     // Rate limiting
     const rateLimit = await enforceRateLimit({
-      identifier: `finance:get:${session.user.email}`,
+      identifier: `finance:get:${auth.user.email}`,
       limit: RATE_LIMITS.ADMIN_READ
     });
     if (rateLimit) return rateLimit;

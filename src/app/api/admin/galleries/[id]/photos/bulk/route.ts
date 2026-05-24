@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { NextResponse } from 'next/server';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { getOrphanedR2Keys, queueStorageDeletionBulk, isQueueConfigured } from '@/lib/cloudflare-queue';
 import { z } from 'zod';
 import { validateRequest } from '@/lib/api/validation';
@@ -16,10 +16,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return errorResponse('Unauthorized', 401);
-    }
+    const auth = await requireAdminAuth();
+    if (auth instanceof NextResponse) return auth;
 
     const { id: galleryId } = await params;
     const body: unknown = await request.json();

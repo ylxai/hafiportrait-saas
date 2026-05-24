@@ -1,7 +1,7 @@
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { cleanupExpiredUploadSessions } from '@/lib/upload/cleanup';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { NextResponse } from 'next/server';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 
@@ -27,12 +27,17 @@ function verifyCleanupSecret(request: Request): boolean {
 
 export async function POST(request: Request) {
   try {
-    // Check auth: either NextAuth session OR cleanup secret (for cron worker)
+    // Check auth: either NextAuth admin session OR cleanup secret (for cron worker)
     let isAuthenticated = false;
 
-    // Try NextAuth session first (admin dashboard manual cleanup)
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role === 'admin') {
+    // Try NextAuth admin session first (admin dashboard manual cleanup).
+    // requireAdminAuth() enforces role === 'admin' AND wraps the audit log
+    // path identically to every other admin route. If it returns a
+    // NextResponse, we silently fall through to the cleanup-secret path
+    // instead of surfacing it to the caller — cron worker requests would
+    // otherwise be rejected here.
+    const adminAuth = await requireAdminAuth();
+    if (!(adminAuth instanceof NextResponse)) {
       isAuthenticated = true;
     }
 
