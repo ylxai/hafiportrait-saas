@@ -91,7 +91,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error creating package:', error);
     if (isPrismaError(error, 'P2002')) {
-      return errorResponse('Nama paket sudah digunakan', 409);
+      return errorResponse('Package name already in use', 409);
     }
     return serverErrorResponse('Failed to create package');
   }
@@ -137,7 +137,7 @@ export async function PATCH(request: Request) {
       return notFoundResponse('Package not found');
     }
     if (isPrismaError(error, 'P2002')) {
-      return errorResponse('Nama paket sudah digunakan', 409);
+      return errorResponse('Package name already in use', 409);
     }
     return serverErrorResponse('Failed to update package');
   }

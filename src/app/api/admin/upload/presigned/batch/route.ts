@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     const rateLimit = await checkRateLimit(`upload-presigned-batch:${userId}`, RATE_LIMITS.UPLOAD_PRESIGNED);
     if (!rateLimit.success) {
       return rateLimitResponse(
-        'Terlalu banyak request. Silakan coba lagi nanti.',
+        'Too many requests. Please try again later.',
         Math.ceil((rateLimit.resetAt - Date.now()) / 1000)
       );
     }
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     // Validate all file extensions
     for (const file of files) {
       if (!validateFileExtension(file.filename)) {
-        return errorResponse(`Format file tidak didukung: ${file.filename}`, 400);
+        return errorResponse(`Unsupported file format: ${file.filename}`, 400);
       }
     }
 
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
     const totalAfterBatch = activeSessions + files.length;
     if (totalAfterBatch > MAX_FILES_PER_BATCH) {
       return rateLimitResponse(
-        `Batas upload aktif tercapai. Sisa slot: ${Math.max(0, MAX_FILES_PER_BATCH - activeSessions)}.`,
+        `Active upload limit reached. Remaining slots: ${Math.max(0, MAX_FILES_PER_BATCH - activeSessions)}.`,
         60
       );
     }

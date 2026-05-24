@@ -2,8 +2,53 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
+/**
+ * Header carrying the request correlation ID.
+ *
+ * Sprint 3 / Task 3.1: middleware generates an `x-request-id` UUID at
+ * the very top of every request (or echoes the inbound one), then
+ * stamps it onto both the request that flows down to the route
+ * handler AND the response that goes back to the client. The
+ * Node-runtime side (`src/lib/with-request-context.ts`) reads the
+ * header and opens an AsyncLocalStorage scope so the structured
+ * logger can auto-tag every log line.
+ *
+ * Note: this file runs in the Edge runtime, which does NOT expose
+ * `node:async_hooks`. Keep the ALS wiring out of this file — the
+ * header alone is enough to bridge Edge → Node.
+ */
+const REQUEST_ID_HEADER = "x-request-id";
+const MAX_REQUEST_ID_LENGTH = 128;
+
+function resolveRequestId(request: NextRequest): string {
+  const inbound = request.headers.get(REQUEST_ID_HEADER);
+  if (inbound && inbound.length > 0 && inbound.length <= MAX_REQUEST_ID_LENGTH) {
+    return inbound;
+  }
+  // `globalThis.crypto.randomUUID()` is available in the Edge runtime.
+  return globalThis.crypto.randomUUID();
+}
+
+/**
+ * Build a `NextResponse.next()` that forwards a mutated set of request
+ * headers to the downstream route handler AND echoes the request ID
+ * back on the response. Centralised so every early-return in the
+ * middleware tags its response identically.
+ */
+function nextWithRequestId(request: NextRequest, requestId: string) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(REQUEST_ID_HEADER, requestId);
+
+  const response = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+  response.headers.set(REQUEST_ID_HEADER, requestId);
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const requestId = resolveRequestId(request);
 
   const publicRoutes = [
     "/",
@@ -34,7 +79,7 @@ export async function middleware(request: NextRequest) {
   );
 
   if (isPublicRoute) {
-    return NextResponse.next();
+    return nextWithRequestId(request, requestId);
   }
 
   const token = await getToken({
@@ -46,7 +91,10 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 },
+        {
+          status: 401,
+          headers: { [REQUEST_ID_HEADER]: requestId },
+        },
       );
     }
 
@@ -57,16 +105,21 @@ export async function middleware(request: NextRequest) {
       request.url,
     );
     loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+    const redirect = NextResponse.redirect(loginUrl);
+    redirect.headers.set(REQUEST_ID_HEADER, requestId);
+    return redirect;
   }
 
   if (!token.email) {
-    console.error("[Middleware] Token exists but missing email");
+    console.error("[Middleware] Token exists but missing email", { requestId });
 
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
         { success: false, error: "Unauthorized - Invalid user data" },
-        { status: 401 },
+        {
+          status: 401,
+          headers: { [REQUEST_ID_HEADER]: requestId },
+        },
       );
     }
 
@@ -76,7 +129,9 @@ export async function middleware(request: NextRequest) {
         : "/portal/login",
       request.url,
     );
-    return NextResponse.redirect(loginUrl);
+    const redirect = NextResponse.redirect(loginUrl);
+    redirect.headers.set(REQUEST_ID_HEADER, requestId);
+    return redirect;
   }
 
   const isAdminRoute =
@@ -92,29 +147,45 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
-        { status: 403 },
+        {
+          status: 403,
+          headers: { [REQUEST_ID_HEADER]: requestId },
+        },
       );
     }
-    if (token.role === "CLIENT") {
-      return NextResponse.redirect(new URL("/portal/dashboard", request.url));
-    }
-    return NextResponse.redirect(new URL("/login", request.url));
+    const target =
+      token.role === "CLIENT" ? "/portal/dashboard" : "/login";
+    const redirect = NextResponse.redirect(new URL(target, request.url));
+    redirect.headers.set(REQUEST_ID_HEADER, requestId);
+    return redirect;
   }
 
   if (isPortalRoute && token.role !== "CLIENT") {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
-        { status: 403 },
+        {
+          status: 403,
+          headers: { [REQUEST_ID_HEADER]: requestId },
+        },
       );
     }
-    if (token.role === "admin") {
-      return NextResponse.redirect(new URL("/admin", request.url));
-    }
-    return NextResponse.redirect(new URL("/portal/login", request.url));
+    const target = token.role === "admin" ? "/admin" : "/portal/login";
+    const redirect = NextResponse.redirect(new URL(target, request.url));
+    redirect.headers.set(REQUEST_ID_HEADER, requestId);
+    return redirect;
   }
 
-  const response = NextResponse.next();
+  // Authenticated request: forward the request ID downstream AND keep
+  // the existing user-context headers we already exposed to the route
+  // handler.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(REQUEST_ID_HEADER, requestId);
+
+  const response = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+  response.headers.set(REQUEST_ID_HEADER, requestId);
   response.headers.set("x-user-email", token.email as string);
   response.headers.set("x-user-id", token.sub as string);
   response.headers.set("x-user-role", token.role as string);

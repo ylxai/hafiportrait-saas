@@ -7,8 +7,8 @@ import { validateRequest } from '@/lib/api/validation';
 
 const toggleLockSchema = z.object({
   isSelectionLocked: z.boolean({
-    required_error: 'Status kunci seleksi wajib diisi',
-    invalid_type_error: 'Status kunci harus berupa boolean',
+    required_error: 'Selection lock status is required',
+    invalid_type_error: 'Selection lock status must be a boolean',
   }),
 });
 

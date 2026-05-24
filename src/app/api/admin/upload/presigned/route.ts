@@ -62,7 +62,7 @@ function validateFileType(filename: string, _contentType: string): { valid: bool
   if (!ALLOWED_EXTENSIONS.includes(extension)) {
     return {
       valid: false,
-      error: `Format file tidak didukung: ${extension}. Format yang diizinkan: ${ALLOWED_EXTENSIONS.join(', ')}`,
+      error: `Unsupported file format: ${extension}. Allowed formats: ${ALLOWED_EXTENSIONS.join(', ')}`,
     };
   }
   
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
 
     if (!rateLimit.success) {
       return rateLimitResponse(
-        'Terlalu banyak request. Silakan coba lagi nanti.',
+        'Too many requests. Please try again later.',
         Math.ceil((rateLimit.resetAt - Date.now()) / 1000)
       );
     }
@@ -146,7 +146,7 @@ export async function POST(request: Request) {
     if (activeSessions >= MAX_FILES_PER_BATCH) {
       logger.warn('upload.presigned.batch_limit_reached', { galleryId, activeSessions, limit: MAX_FILES_PER_BATCH });
       return rateLimitResponse(
-        `Batas ${MAX_FILES_PER_BATCH} upload aktif per gallery tercapai. Tunggu upload sebelumnya selesai.`,
+        `Reached limit of ${MAX_FILES_PER_BATCH} active uploads per gallery. Wait for previous uploads to finish.`,
         60
       );
     }
