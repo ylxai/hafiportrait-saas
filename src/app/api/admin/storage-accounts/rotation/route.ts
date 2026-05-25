@@ -1,3 +1,4 @@
+import { formatZodError } from '@/lib/api/validation';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
@@ -52,8 +53,7 @@ export const GET = withRequestContext(async (request: Request) => {
     });
 
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const { action, accountId } = validation.data;
@@ -146,8 +146,7 @@ export const POST = withRequestContext(async (request: Request) => {
 
     const validation = postBodySchema.safeParse(body);
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const { accountId, action, schedule, credentials } = validation.data;

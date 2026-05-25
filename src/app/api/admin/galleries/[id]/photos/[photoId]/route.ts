@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { isPrismaError as isPrismaErrorShared } from '@/lib/prisma-error';
+import { formatZodError } from '@/lib/api/validation';
 
 // Helper to check Prisma error codes
 function isPrismaError(error: unknown, code: string): boolean {
@@ -32,8 +33,7 @@ export const DELETE = withRequestContext(async (
     // Validate route params
     const validation = paramsSchema.safeParse(resolvedParams);
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const { photoId } = validation.data;

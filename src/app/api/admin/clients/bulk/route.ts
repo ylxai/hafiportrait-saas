@@ -6,6 +6,7 @@ import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/c
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
+import { formatZodError } from '@/lib/api/validation';
 
 // Zod schema for bulk delete
 const bulkDeleteSchema = z.object({
@@ -29,8 +30,7 @@ export const DELETE = withRequestContext(async (request: Request) => {
     // Validate request body
     const validation = bulkDeleteSchema.safeParse(body);
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const { ids } = validation.data;

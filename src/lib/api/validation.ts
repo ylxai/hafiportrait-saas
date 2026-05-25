@@ -276,3 +276,39 @@ export function validateRequest<S extends z.ZodTypeAny>(
   }
   return { success: true, data: result.data };
 }
+
+/**
+ * Extract the first Zod error as a human-readable string.
+ * Includes the field path when present: "email: Invalid email"
+ */
+export function formatZodError(error: z.ZodError): string {
+  const firstError = error.errors[0];
+  return firstError.path.length > 0
+    ? `${firstError.path.join('.')}: ${firstError.message}`
+    : firstError.message;
+}
+
+/**
+ * Portal-safe profile update schema.
+ * Subset of clientSchema — excludes email, password, storageQuotaGB, isApproved
+ * so clients cannot escalate their own privileges via PATCH /api/portal/profile.
+ */
+export const portalProfileUpdateSchema = z.object({
+  nama: z.string()
+    .min(1, 'Name is required')
+    .max(255, 'Name is too long')
+    .optional()
+    .transform((val) => val ? sanitizeString(val) : val),
+  phone: z.string()
+    .max(20, 'Phone is too long')
+    .nullish()
+    .refine((val) => val === null || val === undefined || val === '' || phoneRegex.test(val), {
+      message: 'Invalid phone number format (use 08xx or +62)',
+    }),
+  instagram: z.string()
+    .max(100, 'Instagram is too long')
+    .nullish()
+    .refine((val) => val === null || val === undefined || val === '' || /^@?[a-zA-Z0-9._]{1,30}$/.test(val), {
+      message: 'Invalid Instagram format',
+    }),
+});

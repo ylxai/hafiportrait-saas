@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { requireClientAuth } from '@/lib/auth/require-client-auth';
 import { prisma } from '@/lib/db';
-import { successResponse, serverErrorResponse } from '@/lib/api/response';
+import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
+import { paginationSchema, formatZodError } from '@/lib/api/validation';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 
@@ -14,8 +15,14 @@ export const GET = withRequestContext(async (request: Request) => {
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
-    const limit = Math.min(50, parseInt(searchParams.get('limit') ?? String(GALLERIES_PER_PAGE), 10));
+    const paginationResult = paginationSchema.safeParse({
+      page: searchParams.get('page') ?? undefined,
+      limit: searchParams.get('limit') ?? String(GALLERIES_PER_PAGE),
+    });
+    if (!paginationResult.success) {
+      return errorResponse(formatZodError(paginationResult.error), 400);
+    }
+    const { page, limit } = paginationResult.data;
     const skip = (page - 1) * limit;
 
     const [galleries, totalGalleries, payments] = await Promise.all([

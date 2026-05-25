@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
+import { formatZodError } from '@/lib/api/validation';
 
 // Zod schema for query parameters
 const cleanupQuerySchema = z.object({
@@ -72,8 +73,7 @@ export const POST = withRequestContext(async (request: Request) => {
     });
 
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const { dryRun } = validation.data;

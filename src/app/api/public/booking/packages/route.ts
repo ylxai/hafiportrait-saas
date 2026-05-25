@@ -8,6 +8,7 @@ export const GET = withRequestContext(async () => {
   const packages = await prisma.package.findMany({
     where: { isActive: true },
     orderBy: { createdAt: 'desc' },
+    take: 100,
   });
 
     return successResponse({ packages });

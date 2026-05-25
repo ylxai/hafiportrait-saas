@@ -1,3 +1,4 @@
+import { formatZodError } from '@/lib/api/validation';
 import { successResponse, errorResponse } from '@/lib/api/response';
 import { NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
@@ -72,8 +73,7 @@ export const POST = withRequestContext(async (request: Request) => {
 
   const validation = JobActionSchema.safeParse(body);
   if (!validation.success) {
-    const firstError = validation.error.errors[0];
-    return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+    return errorResponse(formatZodError(validation.error), 400);
   }
 
   const { action, jobId } = validation.data;

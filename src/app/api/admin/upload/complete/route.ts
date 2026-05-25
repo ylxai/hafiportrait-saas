@@ -1,3 +1,4 @@
+import { formatZodError } from '@/lib/api/validation';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { verifyR2Upload, cleanupUploadSession, deleteFromR2, getR2Credentials } from '@/lib/upload/presigned';
 import { NextResponse } from 'next/server';
@@ -61,8 +62,7 @@ export const POST = withRequestContext(async (request: Request) => {
 
     const validation = CompleteUploadSchema.safeParse(body);
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const { uploadId } = validation.data;

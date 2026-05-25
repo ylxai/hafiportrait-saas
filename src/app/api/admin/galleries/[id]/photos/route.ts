@@ -13,6 +13,7 @@ import { serializeBigInt } from '@/lib/bigint-utils';
 import { logger } from '@/lib/logger';
 import { DEFAULT_STORAGE_QUOTA_GB, BYTES_PER_GB } from '@/lib/upload/constants';
 import { withRequestContext } from '@/lib/with-request-context';
+import { formatZodError } from '@/lib/api/validation';
 
 // Zod schemas
 const paramsSchema = z.object({
@@ -37,8 +38,7 @@ export const GET = withRequestContext(async (
     // Validate route params
     const paramsValidation = paramsSchema.safeParse(resolvedParams);
     if (!paramsValidation.success) {
-      const firstError = paramsValidation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(paramsValidation.error), 400);
     }
 
     const { id: galleryId } = paramsValidation.data;
@@ -51,8 +51,7 @@ export const GET = withRequestContext(async (
     });
 
     if (!queryValidation.success) {
-      const firstError = queryValidation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(queryValidation.error), 400);
     }
 
     const { page, limit } = queryValidation.data;

@@ -10,6 +10,7 @@ import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 import { isPrismaError } from '@/lib/prisma-error';
+import { formatZodError } from '@/lib/api/validation';
 
 // Normalize null → undefined so legacy DB rows with null JSON columns
 // don't fail validation when the client round-trips settings via POST.
@@ -109,8 +110,7 @@ export const POST = withRequestContext(async (request: Request) => {
     // Validate request body
     const validation = updateSettingsSchema.safeParse(body);
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const data = validation.data;

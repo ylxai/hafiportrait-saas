@@ -1,3 +1,4 @@
+import { formatZodError } from '@/lib/api/validation';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
@@ -46,8 +47,7 @@ export const PATCH = withRequestContext(async (request: Request) => {
     // Validate request body
     const validation = bulkUpdateSchema.safeParse(body);
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const { ids, status, paymentStatus } = validation.data;
@@ -83,8 +83,7 @@ export const DELETE = withRequestContext(async (request: Request) => {
     // Validate request body
     const validation = bulkDeleteSchema.safeParse(body);
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const { ids } = validation.data;
