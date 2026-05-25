@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import { compare } from "bcryptjs";
+import { normalizeEmail } from "@/lib/auth/email-helpers";
 
 // Pre-computed valid bcrypt hash used to keep `compare()` cost roughly
 // constant when the user/client isn't found. Without this, an attacker
@@ -31,8 +32,10 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        const normalizedEmail = normalizeEmail(credentials.email);
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: normalizedEmail },
         });
 
         // Always hash-compare to prevent timing attacks (use dummy if absent).
@@ -50,10 +53,9 @@ export const authOptions: NextAuthOptions = {
         // mint a token under the wrong role (role confusion). Refuse the
         // admin login if the same email has a Client row, so the operator
         // is forced to resolve the duplicate before either side can sign
-        // in. Match the client provider's normalized lookup (trim +
-        // lowercase) so we catch case/whitespace-only collisions too.
+        // in.
         const collidingClient = await prisma.client.findUnique({
-          where: { email: credentials.email.trim().toLowerCase() },
+          where: { email: normalizedEmail },
           select: { id: true },
         });
         if (collidingClient) {
@@ -80,8 +82,10 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        const normalizedEmail = normalizeEmail(credentials.email);
+
         const client = await prisma.client.findUnique({
-          where: { email: credentials.email.trim().toLowerCase() },
+          where: { email: normalizedEmail },
           select: {
             id: true,
             email: true,
@@ -117,16 +121,11 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // Cross-table email guard (symmetric to the admin provider above).
-        // User.email and Client.email each have their own @unique index,
-        // but uniqueness is NOT enforced across the two tables. If the
-        // same address exists in both, returning a client session here
-        // would let an admin account silently authenticate with client
-        // role (role confusion). Refuse the client login when a User row
-        // owns the same email; the operator must remove the duplicate
-        // before either side can sign in.
+        // Cross-table email guard (symmetric to the admin provider above):
+        // refuse the client login when a User row owns the same email so a
+        // shared address can't silently authenticate under the wrong role.
         const collidingAdmin = await prisma.user.findUnique({
-          where: { email: credentials.email.trim().toLowerCase() },
+          where: { email: normalizedEmail },
           select: { id: true },
         });
         if (collidingAdmin) {
