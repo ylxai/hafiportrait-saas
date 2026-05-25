@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import {
-  MAX_REQUEST_ID_LENGTH,
   REQUEST_ID_HEADER,
+  normalizeRequestId,
 } from "@/lib/request-id-constants";
 
 /**
@@ -27,12 +27,7 @@ import {
  */
 
 function resolveRequestId(request: NextRequest): string {
-  const inbound = request.headers.get(REQUEST_ID_HEADER);
-  if (inbound && inbound.length > 0 && inbound.length <= MAX_REQUEST_ID_LENGTH) {
-    return inbound;
-  }
-  // `globalThis.crypto.randomUUID()` is available in the Edge runtime.
-  return globalThis.crypto.randomUUID();
+  return normalizeRequestId(request.headers.get(REQUEST_ID_HEADER));
 }
 
 /**

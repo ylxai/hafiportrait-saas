@@ -110,32 +110,38 @@ function emit(level: LogLevel, event: string, ctx?: LogContext): void {
   const normalized = normalizeContext(ctx);
 
   // Auto-inject requestId from the ALS scope unless the caller
-  // already provided one. Outside a request scope (boot, scheduled
-  // jobs, scripts) the field is omitted rather than emitted as
-  // `null` so log filters stay simple.
+  // already provided a *valid string* one. Outside a request scope
+  // (boot, scheduled jobs, scripts) the field is omitted rather than
+  // emitted as `null` so log filters stay simple.
+  //
+  // We deliberately accept ONLY non-empty strings from the caller —
+  // any other type (number, null, object) is ignored and we fall
+  // back to the ALS-derived value. Without this guard a non-string
+  // `requestId` in the spread below would silently overwrite the
+  // ALS value and corrupt log indices.
   let requestId: string | undefined;
-  if (typeof normalized.requestId === 'string') {
+  if (
+    typeof normalized.requestId === 'string' &&
+    normalized.requestId.length > 0
+  ) {
     requestId = normalized.requestId;
   } else {
     const getRequestId = resolveGetRequestId();
     requestId = getRequestId?.();
   }
 
+  // Strip `requestId` from the spread so a non-string caller value
+  // cannot overwrite the resolved one. The resolved `requestId` is
+  // re-injected explicitly below.
+  const { requestId: _ignoredRequestId, ...rest } = normalized;
+
   const payload: Record<string, unknown> = {
     level,
     event,
     time: new Date().toISOString(),
     ...(requestId ? { requestId } : {}),
-    ...normalized,
+    ...rest,
   };
-
-  // The spread above lets caller-supplied `requestId` win, which is
-  // intentional: webhook handlers replay an upstream requestId by
-  // passing it explicitly. Re-assert it here in case the spread
-  // overwrote with `undefined`.
-  if (requestId && payload.requestId === undefined) {
-    payload.requestId = requestId;
-  }
 
   const line = JSON.stringify(payload);
   if (level === 'error') {

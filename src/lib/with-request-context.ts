@@ -26,25 +26,13 @@
 
 import { runWithRequestContext } from '@/lib/request-context';
 import {
-  MAX_REQUEST_ID_LENGTH,
   REQUEST_ID_HEADER,
+  normalizeRequestId,
 } from '@/lib/request-id-constants';
 
 // Re-export so existing call-sites that import the header name from
 // this module keep working without forcing a wide refactor.
 export { REQUEST_ID_HEADER };
-
-/**
- * Generate-or-reuse helper. Trims overlong header values to keep log
- * cardinality bounded — a malicious client cannot inflate our log
- * indices by sending a 64KB header.
- */
-function normalizeRequestId(raw: string | null | undefined): string {
-  if (raw && raw.length > 0 && raw.length <= MAX_REQUEST_ID_LENGTH) {
-    return raw;
-  }
-  return globalThis.crypto.randomUUID();
-}
 
 /**
  * Wrap a Next.js App Router handler so the request runs inside an
