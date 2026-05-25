@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { NextResponse } from 'next/server';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { getOrphanedR2Keys, queueStorageDeletion, isQueueConfigured } from '@/lib/cloudflare-queue';
 import { z } from 'zod';
 
@@ -21,10 +21,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; photoId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return errorResponse('Unauthorized', 401);
-    }
+    const auth = await requireAdminAuth();
+    if (auth instanceof NextResponse) return auth;
 
     const resolvedParams = await params;
     

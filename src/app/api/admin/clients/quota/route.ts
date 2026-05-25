@@ -1,7 +1,7 @@
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { prisma } from '@/lib/db';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { NextResponse } from 'next/server';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { z } from 'zod';
 import { BYTES_PER_GB } from '@/lib/upload/constants';
 
@@ -15,10 +15,8 @@ const updateQuotaSchema = z.object({
 
 export async function PATCH(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return errorResponse('Unauthorized', 401);
-    }
+    const auth = await requireAdminAuth();
+    if (auth instanceof NextResponse) return auth;
 
     let body: unknown;
     try {
@@ -60,10 +58,8 @@ export async function PATCH(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return errorResponse('Unauthorized', 401);
-    }
+    const auth = await requireAdminAuth();
+    if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(request.url);
     const clientId = searchParams.get('clientId');
