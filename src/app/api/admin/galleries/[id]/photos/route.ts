@@ -72,7 +72,13 @@ export const GET = withRequestContext(async (
 
     const uniqueStorageAccountIds = Array.from(new Set(photos.map((p: typeof photos[number]) => p.storageAccountId).filter(Boolean))) as string[];
     const storageAccounts = await prisma.storageAccount.findMany({
-      where: { id: { in: uniqueStorageAccountIds }, provider: 'CLOUDINARY' }
+      where: { id: { in: uniqueStorageAccountIds }, provider: 'CLOUDINARY' },
+      // GET only needs cloudName per account to build thumbnail URLs.
+      // Avoid pulling apiKey / apiSecret / R2 / rotation columns into memory.
+      select: {
+        id: true,
+        cloudName: true,
+      },
     });
 
     const cloudinaryAccountMap = new Map<string, typeof storageAccounts[number]>(storageAccounts.map((a: typeof storageAccounts[number]) => [a.id, a]));
@@ -186,6 +192,13 @@ export const POST = withRequestContext(async (
       if (cloudinaryAccountId) {
         cloudinaryAccount = await prisma.storageAccount.findUnique({
           where: { id: cloudinaryAccountId, provider: 'CLOUDINARY', isActive: true },
+          // Only the fields used to build cloudinaryCreds + identify the account.
+          select: {
+            id: true,
+            cloudName: true,
+            apiKey: true,
+            apiSecret: true,
+          },
         });
       }
       if (!cloudinaryAccount) {
@@ -196,6 +209,16 @@ export const POST = withRequestContext(async (
       if (r2AccountId) {
         r2Account = await prisma.storageAccount.findUnique({
           where: { id: r2AccountId, provider: 'R2', isActive: true },
+          // Only the fields used to build r2Creds + identify the account.
+          select: {
+            id: true,
+            accountId: true,
+            accessKey: true,
+            secretKey: true,
+            bucketName: true,
+            publicUrl: true,
+            endpoint: true,
+          },
         });
       }
       if (!r2Account) {

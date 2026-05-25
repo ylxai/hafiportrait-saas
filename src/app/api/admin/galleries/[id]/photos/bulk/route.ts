@@ -62,7 +62,15 @@ export const POST = withRequestContext(async (
 
     // Mengambil semua akun penyimpanan yang relevan dalam satu query
     const storageAccounts = await prisma.storageAccount.findMany({
-      where: { id: { in: uniqueStorageAccountIds } }
+      where: { id: { in: uniqueStorageAccountIds } },
+      // Only the Cloudinary creds are consumed below — avoid pulling
+      // R2 / rotation / secondary secrets into memory.
+      select: {
+        id: true,
+        cloudName: true,
+        apiKey: true,
+        apiSecret: true,
+      },
     });
 
     // Membuat map dari storageAccountId ke kredensial Cloudinary yang sesuai
@@ -80,6 +88,11 @@ export const POST = withRequestContext(async (
     const defaultCloudinaryAccount = await prisma.storageAccount.findFirst({
       where: { provider: 'CLOUDINARY', isActive: true },
       orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }],
+      select: {
+        cloudName: true,
+        apiKey: true,
+        apiSecret: true,
+      },
     });
 
     const defaultCloudinaryCredentials = defaultCloudinaryAccount ? {

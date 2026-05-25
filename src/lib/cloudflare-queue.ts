@@ -837,6 +837,15 @@ export async function collectDeletionDataForTransaction(
   const storageAccounts = uniqueStorageAccountIds.length
     ? await prisma.storageAccount.findMany({
         where: { id: { in: uniqueStorageAccountIds } },
+        // Only select fields the deletion payload actually needs.
+        // Avoids pulling rotation/secondary secrets and other sensitive
+        // columns into Node memory just to build a Cloudinary creds map.
+        select: {
+          id: true,
+          cloudName: true,
+          apiKey: true,
+          apiSecret: true,
+        },
       })
     : [];
   const cloudinaryCredentialsMap = new Map<
@@ -854,6 +863,13 @@ export async function collectDeletionDataForTransaction(
   const defaultCloudinaryAccount = await prisma.storageAccount.findFirst({
     where: { provider: 'CLOUDINARY', isActive: true },
     orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }],
+    // Only the Cloudinary credentials are consumed below; do not load
+    // R2 / secondary / rotation columns we don't need here.
+    select: {
+      cloudName: true,
+      apiKey: true,
+      apiSecret: true,
+    },
   });
   const defaultCloudinaryCredentials = defaultCloudinaryAccount
     ? {
@@ -993,6 +1009,15 @@ export async function collectPhotoDeletionPayloads(
   const storageAccounts = uniqueStorageAccountIds.length
     ? await prisma.storageAccount.findMany({
         where: { id: { in: uniqueStorageAccountIds } },
+        // Only select fields the deletion payload actually needs.
+        // Avoids pulling rotation/secondary secrets and other sensitive
+        // columns into Node memory just to build a Cloudinary creds map.
+        select: {
+          id: true,
+          cloudName: true,
+          apiKey: true,
+          apiSecret: true,
+        },
       })
     : [];
   const cloudinaryCredentialsMap = new Map<
@@ -1012,6 +1037,13 @@ export async function collectPhotoDeletionPayloads(
   const defaultCloudinaryAccount = await prisma.storageAccount.findFirst({
     where: { provider: 'CLOUDINARY', isActive: true },
     orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }],
+    // Only the Cloudinary credentials are consumed below; do not load
+    // R2 / secondary / rotation columns we don't need here.
+    select: {
+      cloudName: true,
+      apiKey: true,
+      apiSecret: true,
+    },
   });
   const defaultCloudinaryCredentials = defaultCloudinaryAccount
     ? {
