@@ -9,6 +9,8 @@ import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
+import { isPrismaError } from '@/lib/prisma-error';
 
 export const GET = withRequestContext(async (request: Request) => {
   try {
@@ -62,7 +64,7 @@ export const GET = withRequestContext(async (request: Request) => {
       pagination: createAdminPaginationResponse(page, limit, total),
     });
   } catch (error) {
-    console.error('Error fetching events:', error);
+    logger.error('admin.events.fetch_failed', { err: error });
     return serverErrorResponse('Failed to fetch events');
   }
 });
@@ -124,9 +126,14 @@ export const POST = withRequestContext(async (request: Request) => {
         break; // Success, exit retry loop
       } catch (error) {
         // Check if it's a unique constraint violation (P2002)
-        if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
-          console.warn(`Kode booking collision (attempt ${attempt + 1}/${MAX_RETRIES}), retrying...`);
+        if (isPrismaError(error, 'P2002')) {
+          logger.warn('admin.events.kode_booking_collision', {
+            attempt: attempt + 1,
+            maxRetries: MAX_RETRIES,
+          });
           lastError = error;
+          // Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1000ms (capped)
+          await new Promise(r => setTimeout(r, Math.min(100 * 2 ** attempt, 1000)));
           continue; // Retry with new kodeBooking
         }
         // For other errors, throw immediately
@@ -135,14 +142,17 @@ export const POST = withRequestContext(async (request: Request) => {
     }
 
     if (!event) {
-      console.error('Failed to generate unique kode booking after', MAX_RETRIES, 'attempts. Last error:', lastError);
+      logger.error('admin.events.kode_booking_exhausted', {
+        maxRetries: MAX_RETRIES,
+        err: lastError,
+      });
       return serverErrorResponse('Failed to generate unique booking code');
     }
 
     return successResponse({ event }, 201);
   } catch (error) {
-    console.error('Error creating event:', error);
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2003') {
+    logger.error('admin.events.create_failed', { err: error });
+    if (isPrismaError(error, 'P2003')) {
       return notFoundResponse('Client or package not found');
     }
     return serverErrorResponse('Failed to create event');
@@ -190,8 +200,8 @@ export const PATCH = withRequestContext(async (request: Request) => {
 
     return successResponse({ event });
   } catch (error) {
-    console.error('Error updating event:', error);
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+    logger.error('admin.events.update_failed', { err: error });
+    if (isPrismaError(error, 'P2025')) {
       return notFoundResponse('Event not found');
     }
     return serverErrorResponse('Failed to update event');

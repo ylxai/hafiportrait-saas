@@ -5,6 +5,8 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { bookingSchema } from '@/lib/api/validation';
 import { generateKodeBooking } from '@/lib/utils';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
+import { isPrismaError } from '@/lib/prisma-error';
 
 const MAX_RETRY = 5;
 // Match the cost factor used in `src/app/api/admin/clients/route.ts` and the
@@ -118,8 +120,13 @@ export const POST = withRequestContext(async (request: Request) => {
         });
         break;
       } catch (error: unknown) {
-        if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
-          console.warn(`Kode booking collision, retry ${attempt + 1}/${MAX_RETRY}`);
+        if (isPrismaError(error, 'P2002')) {
+          logger.warn('public.booking.kode_booking_collision', {
+            attempt: attempt + 1,
+            maxRetries: MAX_RETRY,
+          });
+          // Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1000ms (capped)
+          await new Promise(r => setTimeout(r, Math.min(100 * 2 ** attempt, 1000)));
           continue;
         }
         throw error;
@@ -132,7 +139,7 @@ export const POST = withRequestContext(async (request: Request) => {
 
     return successResponse({ event, kodeBooking }, 201);
   } catch (error) {
-    console.error('Error creating booking:', error);
+    logger.error('public.booking.create_failed', { err: error });
     return serverErrorResponse('Failed to create booking');
   }
 });
