@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 export const GET = withRequestContext(async (
   request: Request,
@@ -42,7 +43,7 @@ export const GET = withRequestContext(async (
     
     return successResponse(event);
   } catch (error) {
-    console.error('Error fetching booking:', error);
+    logger.error('public.booking.fetch_failed', { err: error });
     return serverErrorResponse('Failed to fetch booking data');
   }
 });

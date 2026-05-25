@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { selectionSubmitSchema } from '@/lib/api/validation';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 export const POST = withRequestContext(async (
   request: Request,
@@ -72,7 +73,7 @@ export const POST = withRequestContext(async (
       clientName: auth.user.name
     }, 201);
   } catch (error) {
-    console.error('Error submitting selection:', error);
+    logger.error('portal.selection.submit_failed', { err: error });
     return serverErrorResponse('Failed to submit selection');
   }
 });

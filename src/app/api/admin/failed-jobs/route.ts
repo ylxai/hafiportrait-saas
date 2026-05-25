@@ -13,6 +13,7 @@ import {
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 // GET /api/admin/failed-jobs - Get pending failed jobs or stats
 export const GET = withRequestContext(async (request: Request) => {
@@ -98,7 +99,7 @@ export const POST = withRequestContext(async (request: Request) => {
         return errorResponse('Invalid action', 400);
     }
   } catch (error) {
-    console.error('[Admin/FailedJobs] Error:', error);
+    logger.error('admin.failed_jobs.action_failed', { action, jobId, err: error });
     return errorResponse('Internal error', 500);
   }
 });

@@ -1,5 +1,6 @@
 // MEDIUM PRIORITY FIX #5: Cleanup expired upload sessions
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 export async function cleanupExpiredUploadSessions(dryRun: boolean = false): Promise<number> {
   if (dryRun) {
@@ -43,16 +44,17 @@ export async function cleanupExpiredUploadSessions(dryRun: boolean = false): Pro
  * This function only runs once on startup for backward compatibility
  */
 export async function scheduleUploadSessionCleanup(): Promise<void> {
-  console.warn('[Cleanup] scheduleUploadSessionCleanup() is deprecated.');
-  console.warn('[Cleanup] Use Cloudflare Cron Triggers or external cron service for scheduled cleanup.');
+  logger.warn('upload.cleanup.deprecated_schedule_called', {
+    message: 'Use Cloudflare Cron Triggers or external cron service for scheduled cleanup.',
+  });
   
   // Run once on startup for backward compatibility
   try {
     const deleted = await cleanupExpiredUploadSessions();
     if (deleted > 0) {
-      console.log(`[Cleanup] Initial cleanup: deleted ${deleted} expired upload sessions`);
+      logger.info('upload.cleanup.initial_cleanup_completed', { deleted });
     }
   } catch (error) {
-    console.error('[Cleanup] Initial cleanup failed:', error);
+    logger.error('upload.cleanup.initial_cleanup_failed', { err: error });
   }
 }

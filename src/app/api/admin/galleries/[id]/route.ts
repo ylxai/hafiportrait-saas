@@ -11,6 +11,7 @@ import {
 } from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
 import { withRequestContext } from '@/lib/with-request-context';
+import { isPrismaError } from '@/lib/prisma-error';
 
 export const GET = withRequestContext(async (
   request: Request,
@@ -67,7 +68,7 @@ export const GET = withRequestContext(async (
 
     return successResponse({ gallery: serializedGallery });
   } catch (error) {
-    console.error('Error fetching gallery:', error);
+    logger.error('admin.gallery.fetch_failed', { err: error });
     return serverErrorResponse('Failed to fetch gallery');
   }
 });
@@ -96,8 +97,8 @@ export const PATCH = withRequestContext(async (
 
     return successResponse({ gallery });
   } catch (error) {
-    console.error('Error updating gallery:', error);
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+    logger.error('admin.gallery.update_failed', { err: error });
+    if (isPrismaError(error, 'P2025')) {
       return notFoundResponse('Gallery not found');
     }
     return serverErrorResponse('Failed to update gallery');
@@ -161,8 +162,8 @@ export const DELETE = withRequestContext(async (
 
     return successResponse({ success: true });
   } catch (error) {
-    console.error('Error deleting gallery:', error);
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+    logger.error('admin.gallery.delete_failed', { err: error });
+    if (isPrismaError(error, 'P2025')) {
       return notFoundResponse('Gallery not found');
     }
     return serverErrorResponse('Failed to delete gallery');

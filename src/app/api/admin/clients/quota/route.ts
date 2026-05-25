@@ -5,6 +5,8 @@ import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { z } from 'zod';
 import { BYTES_PER_GB } from '@/lib/upload/constants';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
+import { isPrismaError } from '@/lib/prisma-error';
 
 const updateQuotaSchema = z.object({
   clientId: z.string().min(1, 'Client ID is required'),
@@ -41,7 +43,11 @@ export const PATCH = withRequestContext(async (request: Request) => {
       select: { nama: true, email: true },
     });
 
-    console.log(`[Quota] Updated quota for ${updatedClient.nama} (${updatedClient.email}) to ${storageQuotaGB}GB`);
+    logger.info('admin.client_quota.updated', {
+      clientId,
+      storageQuotaGB,
+      clientEmail: updatedClient.email,
+    });
 
     return successResponse({
       clientId,
@@ -49,8 +55,8 @@ export const PATCH = withRequestContext(async (request: Request) => {
       storageQuotaGB,
     });
   } catch (error) {
-    console.error('Error updating client quota:', error);
-    if (error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === 'P2025') {
+    logger.error('admin.client_quota.update_failed', { err: error });
+    if (isPrismaError(error, 'P2025')) {
       return errorResponse('Client not found', 404);
     }
     return serverErrorResponse('Failed to update client quota');
@@ -116,7 +122,7 @@ export const GET = withRequestContext(async (request: Request) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching client quota:', error);
+    logger.error('admin.client_quota.fetch_failed', { err: error });
     return serverErrorResponse('Failed to fetch client quota');
   }
 });

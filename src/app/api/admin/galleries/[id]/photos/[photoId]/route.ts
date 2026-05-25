@@ -5,10 +5,12 @@ import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { getOrphanedR2Keys, queueStorageDeletion, isQueueConfigured } from '@/lib/cloudflare-queue';
 import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
+import { isPrismaError as isPrismaErrorShared } from '@/lib/prisma-error';
 
 // Helper to check Prisma error codes
 function isPrismaError(error: unknown, code: string): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === code;
+  return isPrismaErrorShared(error, code);
 }
 
 // Zod schema for route params
@@ -120,16 +122,16 @@ export const DELETE = withRequestContext(async (
         try {
           const result = await queueStorageDeletion(deletionData);
           if (!result.success) {
-            console.error(`[Delete] Cloudflare Queue failed: ${result.error}`);
+            logger.error('admin.photo.delete.queue_failed', { photoId, error: result.error });
             return errorResponse('Failed to queue storage deletion', 500);
           }
-          console.log(`[Delete] Queued to Cloudflare for photo ${photoId}`);
+          logger.info('admin.photo.delete.queued', { photoId });
         } catch (cfError) {
-          console.error(`[Delete] Cloudflare Queue error:`, cfError);
+          logger.error('admin.photo.delete.queue_exception', { photoId, err: cfError });
           return errorResponse('Failed to queue storage deletion', 500);
         }
       } else {
-        console.warn('[Delete] Cloudflare Queue not configured. Storage will not be cleaned up.');
+        logger.warn('admin.photo.delete.queue_not_configured', { photoId });
       }
     }
 
@@ -183,7 +185,7 @@ export const DELETE = withRequestContext(async (
       message: 'Photo deleted from database. Storage cleanup queued.',
     });
   } catch (error) {
-    console.error('Error deleting photo:', error);
+    logger.error('admin.photo.delete_failed', { err: error });
     return serverErrorResponse('Failed to delete photo');
   }
 });

@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 // Zod schema for query parameters
 const querySchema = z.object({
@@ -139,7 +140,7 @@ export const GET = withRequestContext(async (request: Request) => {
       pagination: createAdminPaginationResponse(page, limit, total),
     });
   } catch (error) {
-    console.error('Error fetching finance:', error);
+    logger.error('admin.finance.fetch_failed', { err: error });
     return errorResponse('Failed to fetch finance data', 500);
   }
 });

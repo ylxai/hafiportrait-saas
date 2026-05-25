@@ -11,6 +11,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import { isClientSession } from "@/lib/auth/role-helpers";
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 export const POST = withRequestContext(async (
   request: Request,
@@ -110,7 +111,7 @@ export const POST = withRequestContext(async (
 
     return successResponse({ selectionId: selection.id }, 201);
   } catch (error) {
-    console.error("Error submitting selection:", error);
+    logger.error('public.gallery.selection.submit_failed', { err: error });
     return serverErrorResponse("Failed to submit selection");
   }
 });

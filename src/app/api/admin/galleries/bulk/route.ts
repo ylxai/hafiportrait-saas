@@ -51,7 +51,7 @@ export const PATCH = withRequestContext(async (request: Request) => {
 
     return successResponse({ updated: ids.length });
   } catch (error) {
-    console.error('Error bulk updating galleries:', error);
+    logger.error('admin.galleries.bulk_update_failed', { err: error });
     return serverErrorResponse('Failed to update galleries');
   }
 });
@@ -108,7 +108,7 @@ export const DELETE = withRequestContext(async (request: Request) => {
 
     return successResponse({ deleted: ids.length });
   } catch (error) {
-    console.error('Error bulk deleting galleries:', error);
+    logger.error('admin.galleries.bulk_delete_failed', { err: error });
     return serverErrorResponse('Failed to delete galleries');
   }
 });

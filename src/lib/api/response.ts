@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { Prisma } from '@/generated/prisma';
 import { serializeBigInt } from '@/lib/bigint-utils';
+import { logger } from '@/lib/logger';
 
 // Error codes for consistent error handling
 export const ERROR_CODES = {
@@ -120,12 +121,12 @@ export function handlePrismaError(error: unknown) {
         return errorResponse('Cannot delete record with related data', 400);
       
       default:
-        console.error('[API] Prisma error:', error);
+        logger.error('api.prisma_error', { code: error.code, err: error });
         return serverErrorResponse('Database operation failed');
     }
   }
   
-  console.error('[API] Unknown error:', error);
+  logger.error('api.unknown_error', { err: error });
   return serverErrorResponse();
 }
 

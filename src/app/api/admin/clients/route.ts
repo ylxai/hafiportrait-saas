@@ -10,6 +10,7 @@ import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { withRequestContext } from '@/lib/with-request-context';
+import { isPrismaError } from '@/lib/prisma-error';
 
 // bcrypt cost factor for client portal passwords. Matches the dummy hash
 // shape used in lib/auth/options.ts for timing-attack protection.
@@ -75,7 +76,7 @@ export const GET = withRequestContext(async (request: Request) => {
       pagination: createAdminPaginationResponse(page, limit, total),
     });
   } catch (error) {
-    console.error('Error fetching clients:', error);
+    logger.error('admin.clients.fetch_failed', { err: error });
     return serverErrorResponse('Failed to fetch clients');
   }
 });
@@ -131,8 +132,8 @@ export const POST = withRequestContext(async (request: Request) => {
 
     return successResponse({ client }, 201);
   } catch (error) {
-    console.error('Error creating client:', error);
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+    logger.error('admin.clients.create_failed', { err: error });
+    if (isPrismaError(error, 'P2002')) {
       return errorResponse('Email already registered', 409);
     }
     return serverErrorResponse('Failed to create client');
@@ -194,11 +195,11 @@ export const PATCH = withRequestContext(async (request: Request) => {
 
     return successResponse({ client });
   } catch (error) {
-    console.error('Error updating client:', error);
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+    logger.error('admin.clients.update_failed', { err: error });
+    if (isPrismaError(error, 'P2002')) {
       return errorResponse('Email already registered', 409);
     }
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+    if (isPrismaError(error, 'P2025')) {
       return notFoundResponse('Client not found');
     }
     return serverErrorResponse('Failed to update client');
@@ -243,8 +244,8 @@ export const DELETE = withRequestContext(async (request: Request) => {
 
     return successResponse({ success: true });
   } catch (error) {
-    console.error('Error deleting client:', error);
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+    logger.error('admin.clients.delete_failed', { err: error });
+    if (isPrismaError(error, 'P2025')) {
       return notFoundResponse('Client not found');
     }
     return serverErrorResponse('Failed to delete client');

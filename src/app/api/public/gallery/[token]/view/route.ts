@@ -3,6 +3,8 @@ import { successResponse, notFoundResponse } from '@/lib/api/response';
 import { assertGalleryOwnership } from '@/lib/gallery/auth';
 import { publishViewCount } from '@/lib/ably';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
+import { isPrismaError } from '@/lib/prisma-error';
 
 export const POST = withRequestContext(async (
   request: Request,
@@ -51,17 +53,17 @@ export const POST = withRequestContext(async (
       })
       .then((updated) => publishViewCount(galleryId, updated.viewCount))
       .catch((error: unknown) => {
-        if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
-          console.error('[API] Gallery record not found for analytics update');
+        if (isPrismaError(error, 'P2025')) {
+          logger.error('public.gallery.view.record_not_found', { galleryId });
         } else {
-          console.error(`[API] Failed to increment view count for gallery ${galleryId}`, error);
+          logger.error('public.gallery.view.increment_failed', { galleryId, err: error });
         }
       });
 
     // Return immediately without waiting for increment
     return successResponse({ viewCount: nextCount });
   } catch (error) {
-    console.error('[API] Error in view endpoint:', error);
+    logger.error('public.gallery.view.unhandled_error', { err: error });
     return notFoundResponse('Gallery not found');
   }
 });

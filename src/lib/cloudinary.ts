@@ -1,4 +1,5 @@
 import { getCloudinaryConfig } from './storage/accounts';
+import { logger } from './logger';
 
 /**
  * Generate Cloudinary fetch URL from R2 public URL
@@ -102,7 +103,7 @@ export async function getCloudinaryThumbnailUrlAsync(
       cloudName: config.cloudName,
     });
   } catch (error) {
-    console.error('Failed to get Cloudinary config:', error);
+    logger.error('cloudinary.config.fetch_failed', { err: error });
     return r2Url; // Fallback to original
   }
 }

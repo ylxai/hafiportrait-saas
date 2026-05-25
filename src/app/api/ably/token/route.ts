@@ -21,6 +21,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { env } from '@/lib/env.server';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -94,7 +95,7 @@ export const GET = withRequestContext(async (request: Request) => {
 
     return NextResponse.json(tokenRequest);
   } catch (error) {
-    console.error('[ably/token] Failed to mint token request:', error);
+    logger.error('ably.token.mint_failed', { err: error });
     return NextResponse.json(
       { error: 'Failed to create Ably token request' },
       { status: 500 },

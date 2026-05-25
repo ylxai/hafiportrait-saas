@@ -6,6 +6,7 @@ import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 // Zod schema for export query parameters
 const exportQuerySchema = z.object({
@@ -83,7 +84,7 @@ export const GET = withRequestContext(async (request: Request) => {
       },
     });
   } catch (error) {
-    console.error('[API] Error exporting events:', error);
+    logger.error('admin.export.events_failed', { err: error });
     return handlePrismaError(error);
   }
 });

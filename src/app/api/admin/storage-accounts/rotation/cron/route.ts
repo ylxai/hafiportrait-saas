@@ -2,6 +2,7 @@ import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/r
 import { getAccountsNeedingRotation, rotateStorageCredentials } from '@/lib/storage/rotation';
 import { timingSafeEqual } from 'crypto';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/admin/storage-accounts/rotation/cron
@@ -21,7 +22,7 @@ export const POST = withRequestContext(async (request: Request) => {
     const cronSecret = process.env.VPS_WEBHOOK_SECRET;
 
     if (!cronSecret) {
-      console.error('[rotation/cron] VPS_WEBHOOK_SECRET not configured');
+      logger.error('rotation_cron.secret_not_configured', {});
       return serverErrorResponse('Server misconfiguration');
     }
 
@@ -59,9 +60,9 @@ export const POST = withRequestContext(async (request: Request) => {
       results.push({ accountId, ...result });
 
       if (!result.success) {
-        console.error(`[rotation/cron] Failed to rotate account ${accountId}:`, result.error);
+        logger.error('rotation_cron.rotate_failed', { accountId, error: result.error });
       } else {
-        console.log(`[rotation/cron] Rotated account ${accountId} successfully`);
+        logger.info('rotation_cron.rotate_success', { accountId });
       }
     }
 
@@ -74,7 +75,7 @@ export const POST = withRequestContext(async (request: Request) => {
       results,
     });
   } catch (error) {
-    console.error('[rotation/cron] Unexpected error:', error);
+    logger.error('rotation_cron.unexpected_error', { err: error });
     return serverErrorResponse('Auto-rotation cron failed');
   }
 });

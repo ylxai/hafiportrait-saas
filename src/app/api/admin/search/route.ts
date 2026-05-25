@@ -6,6 +6,7 @@ import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 // Zod schema for search query parameters
 const searchQuerySchema = z.object({
@@ -111,7 +112,7 @@ export const GET = withRequestContext(async (request: Request) => {
       total: galleries.length + events.length + clients.length,
     });
   } catch (error) {
-    console.error('[API] Error searching:', error);
+    logger.error('admin.search.failed', { err: error });
     return handlePrismaError(error);
   }
 });

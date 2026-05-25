@@ -3,6 +3,7 @@ import { successResponse, errorResponse, serverErrorResponse, notFoundResponse }
 import { paymentProofSchema } from '@/lib/api/validation';
 import { verifyR2Upload, cleanupUploadSession } from '@/lib/upload/presigned';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 export const POST = withRequestContext(async (request: Request) => {
   try {
@@ -71,7 +72,7 @@ export const POST = withRequestContext(async (request: Request) => {
 
     return successResponse({ message: 'Transfer proof uploaded successfully' });
   } catch (error) {
-    console.error('Error submitting payment proof:', error);
+    logger.error('public.payment.submit_failed', { err: error });
     return serverErrorResponse('Failed to upload transfer proof');
   }
 });

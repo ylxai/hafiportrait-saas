@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 const BYTES_PER_MB = 1024 * 1024;
 
@@ -21,7 +22,7 @@ export async function trackUploadResult(
       },
     });
   } catch (error) {
-    console.error('[Analytics] Failed to track upload result:', error);
+    logger.error('analytics.track_upload_result.failed', { galleryId, err: error });
   }
 }
 
@@ -47,7 +48,7 @@ export async function getUploadStats(galleryId: string) {
       successRate: total > 0 ? (successCount / total) * 100 : 0,
     };
   } catch (error) {
-    console.error('[Analytics] Failed to get upload stats:', error);
+    logger.error('analytics.get_upload_stats.failed', { galleryId, err: error });
     return { total: 0, success: 0, failure: 0, successRate: 0 };
   }
 }
@@ -85,7 +86,7 @@ export async function getStorageUsageTrends(clientId: string) {
       mb: Number(bytes) / BYTES_PER_MB,
     }));
   } catch (error) {
-    console.error('[Analytics] Failed to get storage trends:', error);
+    logger.error('analytics.get_storage_trends.failed', { clientId, err: error });
     return [];
   }
 }

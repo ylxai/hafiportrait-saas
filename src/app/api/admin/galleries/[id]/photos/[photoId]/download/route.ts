@@ -4,6 +4,7 @@ import { generateDownloadUrl } from '@/lib/upload/presigned';
 import { NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 export const GET = withRequestContext(async (
   request: Request,
@@ -31,7 +32,7 @@ export const GET = withRequestContext(async (
 
     return successResponse({ downloadUrl: signedUrl });
   } catch (error) {
-    console.error('Error generating download URL:', error);
+    logger.error('admin.photo.download.generate_url_failed', { err: error });
     return serverErrorResponse('Failed to generate download URL');
   }
 });

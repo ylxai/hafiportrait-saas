@@ -12,6 +12,7 @@ import { prisma } from '@/lib/db';
 import { parseCursorSafe } from '@/types/pagination';
 import { loadPublicGallery } from '@/lib/gallery/load-public-gallery';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 // Validate token format (CUID)
 const tokenSchema = z.string().cuid().or(z.string().min(10).max(50));
@@ -69,7 +70,7 @@ export const GET = withRequestContext(async (
 
     return successResponse(payload);
   } catch (error) {
-    console.error('Error fetching gallery:', error);
+    logger.error('public.gallery.fetch_failed', { err: error });
     return serverErrorResponse('Failed to fetch gallery');
   }
 });

@@ -1,4 +1,5 @@
 import { publicEnvSchema, type PublicEnv } from './env.shared';
+import { logger } from './logger';
 
 /**
  * Client-safe environment variables.
@@ -23,7 +24,9 @@ const rawClientEnv: Record<keyof PublicEnv, string | undefined> = {
 const parsed = publicEnvSchema.safeParse(rawClientEnv);
 
 if (!parsed.success) {
-  console.error('[env.client] Invalid public environment variables:', parsed.error.flatten().fieldErrors);
+  logger.error('env.client.invalid', {
+    fieldErrors: parsed.error.flatten().fieldErrors,
+  });
   throw new Error('[env.client] Invalid public environment configuration');
 }
 

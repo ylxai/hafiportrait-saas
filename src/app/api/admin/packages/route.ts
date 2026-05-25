@@ -7,9 +7,11 @@ import { packageSchema, packageUpdateSchema, idSchema, validateRequest } from '@
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
+import { isPrismaError as isPrismaErrorShared } from '@/lib/prisma-error';
 
 function isPrismaError(error: unknown, code: string): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === code;
+  return isPrismaErrorShared(error, code);
 }
 
 export const GET = withRequestContext(async (request: Request) => {
@@ -49,7 +51,7 @@ export const GET = withRequestContext(async (request: Request) => {
       pagination: createAdminPaginationResponse(page, limit, total),
     });
   } catch (error) {
-    console.error('Error fetching packages:', error);
+    logger.error('admin.packages.fetch_failed', { err: error });
     return serverErrorResponse('Failed to fetch packages');
   }
 });
@@ -90,7 +92,7 @@ export const POST = withRequestContext(async (request: Request) => {
 
     return successResponse({ package: pkg }, 201);
   } catch (error) {
-    console.error('Error creating package:', error);
+    logger.error('admin.packages.create_failed', { err: error });
     if (isPrismaError(error, 'P2002')) {
       return errorResponse('Package name already in use', 409);
     }
@@ -133,7 +135,7 @@ export const PATCH = withRequestContext(async (request: Request) => {
 
     return successResponse({ package: pkg });
   } catch (error) {
-    console.error('Error updating package:', error);
+    logger.error('admin.packages.update_failed', { err: error });
     if (isPrismaError(error, 'P2025')) {
       return notFoundResponse('Package not found');
     }
@@ -170,7 +172,7 @@ export const DELETE = withRequestContext(async (request: Request) => {
 
     return successResponse({ success: true });
   } catch (error) {
-    console.error('Error deleting package:', error);
+    logger.error('admin.packages.delete_failed', { err: error });
     if (isPrismaError(error, 'P2025')) {
       return notFoundResponse('Package not found');
     }

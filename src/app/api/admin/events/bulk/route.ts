@@ -59,7 +59,7 @@ export const PATCH = withRequestContext(async (request: Request) => {
 
     return successResponse({ updated: ids.length });
   } catch (error) {
-    console.error('Error bulk updating events:', error);
+    logger.error('admin.events.bulk_update_failed', { err: error });
     return serverErrorResponse('Failed to update events');
   }
 });
@@ -131,7 +131,7 @@ export const DELETE = withRequestContext(async (request: Request) => {
 
     return successResponse({ deleted: ids.length });
   } catch (error) {
-    console.error('Error bulk deleting events:', error);
+    logger.error('admin.events.bulk_delete_failed', { err: error });
     return serverErrorResponse('Failed to delete events');
   }
 });

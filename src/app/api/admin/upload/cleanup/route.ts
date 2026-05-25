@@ -7,6 +7,7 @@ import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 // Zod schema for query parameters
 const cleanupQuerySchema = z.object({
@@ -84,7 +85,7 @@ export const POST = withRequestContext(async (request: Request) => {
       dryRun,
     });
   } catch (error) {
-    console.error('Error cleaning up upload sessions:', error);
+    logger.error('admin.upload.cleanup_failed', { err: error });
     return serverErrorResponse('Failed to cleanup upload sessions');
   }
 });

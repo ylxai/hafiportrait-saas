@@ -7,6 +7,7 @@
 
 import { prisma } from '@/lib/db';
 import { publishFailedJobAlert } from '@/lib/ably';
+import { logger } from '@/lib/logger';
 
 export type FailedJobType = 'thumbnail-generation' | 'storage-deletion';
 export type FailedJobStatus = 'pending' | 'resolved' | 'discarded';
@@ -32,7 +33,11 @@ export async function recordFailedJob(params: CreateFailedJobParams): Promise<st
     },
   });
 
-  console.warn(`[FailedJob] Recorded ${params.jobType} failure: ${params.errorMessage}`);
+  logger.warn('failed_job.recorded', {
+    jobId: job.id,
+    jobType: params.jobType,
+    errorMessage: params.errorMessage,
+  });
 
   // Send alert to admin via Ably
   await publishFailedJobAlert({
@@ -42,7 +47,7 @@ export async function recordFailedJob(params: CreateFailedJobParams): Promise<st
     errorMessage: params.errorMessage,
     attemptCount: 1,
   }).catch((err) => {
-    console.error('[FailedJob] Failed to send Ably alert:', err);
+    logger.error('failed_job.ably_alert_failed', { jobId: job.id, err });
   });
 
   return job.id;

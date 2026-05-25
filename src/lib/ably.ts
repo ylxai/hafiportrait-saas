@@ -1,5 +1,6 @@
 import Ably from 'ably';
 import { env } from './env.server';
+import { logger } from './logger';
 
 let ablyClient: Ably.Realtime | null = null;
 let ablyRestClient: Ably.Rest | null = null;
@@ -54,7 +55,7 @@ export async function publishSelectionUpdate(galleryId: string, data: {
     const client = getAblyRestClient();
     await client.channels.get(CHANNELS.SELECTIONS(galleryId)).publish('selection-update', data);
   } catch (error) {
-    console.error('Failed to publish selection update:', error);
+    logger.error('ably.selection_update.publish_failed', { galleryId, err: error });
   }
 }
 
@@ -63,7 +64,7 @@ export async function publishViewCount(galleryId: string, count: number) {
     const client = getAblyRestClient();
     await client.channels.get(CHANNELS.VIEW_COUNT(galleryId)).publish('view-count', { count, galleryId });
   } catch (error) {
-    console.error('Failed to publish view count:', error);
+    logger.error('ably.view_count.publish_failed', { galleryId, err: error });
   }
 }
 
@@ -77,7 +78,7 @@ export async function publishNotification(userId: string, data: {
     const client = getAblyRestClient();
     await client.channels.get(CHANNELS.NOTIFICATIONS(userId)).publish('notification', data);
   } catch (error) {
-    console.error('Failed to publish notification:', error);
+    logger.error('ably.notification.publish_failed', { userId, err: error });
   }
 }
 
@@ -90,7 +91,7 @@ export async function publishBookingUpdate(data: {
     const client = getAblyRestClient();
     await client.channels.get(CHANNELS.BOOKINGS).publish('booking-update', data);
   } catch (error) {
-    console.error('Failed to publish booking update:', error);
+    logger.error('ably.booking_update.publish_failed', { eventId: data.eventId, err: error });
   }
 }
 
@@ -103,7 +104,7 @@ export async function publishPaymentUpdate(data: {
     const client = getAblyRestClient();
     await client.channels.get(CHANNELS.PAYMENTS).publish('payment-update', data);
   } catch (error) {
-    console.error('Failed to publish payment update:', error);
+    logger.error('ably.payment_update.publish_failed', { eventId: data.eventId, err: error });
   }
 }
 
@@ -116,7 +117,7 @@ export async function publishPhotoUploaded(galleryId: string, data: {
     const client = getAblyRestClient();
     await client.channels.get(CHANNELS.UPLOADS(galleryId)).publish('photo-uploaded', data);
   } catch (error) {
-    console.error('Failed to publish photo upload:', error);
+    logger.error('ably.photo_uploaded.publish_failed', { galleryId, err: error });
   }
 }
 
@@ -132,7 +133,7 @@ export async function publishPhotoThumbnailGenerated(galleryId: string, data: {
     const client = getAblyRestClient();
     await client.channels.get(CHANNELS.UPLOADS(galleryId)).publish('photo-thumbnail-generated', data);
   } catch (error) {
-    console.error('Failed to publish photo thumbnail generated:', error);
+    logger.error('ably.photo_thumbnail_generated.publish_failed', { galleryId, err: error });
   }
 }
 
@@ -159,7 +160,10 @@ export async function publishStorageQuotaAlert(data: {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Failed to publish storage quota alert:', error);
+    logger.error('ably.storage_quota_alert.publish_failed', {
+      clientId: data.clientId,
+      err: error,
+    });
   }
 }
 
@@ -184,6 +188,6 @@ export async function publishFailedJobAlert(data: {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Failed to publish failed job alert:', error);
+    logger.error('ably.failed_job_alert.publish_failed', { jobId: data.jobId, err: error });
   }
 }

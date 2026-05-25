@@ -9,6 +9,7 @@ import { generateClientToken } from '@/lib/utils';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 export const GET = withRequestContext(async (request: Request) => {
   try {
@@ -61,7 +62,7 @@ export const GET = withRequestContext(async (request: Request) => {
       pagination: createAdminPaginationResponse(page, limit, total),
     });
   } catch (error) {
-    console.error('[API] Error fetching galleries:', error);
+    logger.error('admin.galleries.fetch_failed', { err: error });
     return handlePrismaError(error);
   }
 });
@@ -94,7 +95,7 @@ export const POST = withRequestContext(async (request: Request) => {
 
     return successResponse({ gallery }, 201);
   } catch (error) {
-    console.error('[API] Error creating gallery:', error);
+    logger.error('admin.galleries.create_failed', { err: error });
     return handlePrismaError(error);
   }
 });

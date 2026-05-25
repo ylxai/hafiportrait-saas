@@ -20,6 +20,7 @@ import { recordFailedJob } from '@/lib/failed-jobs';
 import { env } from '@/lib/env.server';
 import { getRequestId } from '@/lib/request-context';
 import { REQUEST_ID_HEADER } from '@/lib/request-id-constants';
+import { logger } from '@/lib/logger';
 
 const ACCOUNT_ID = env.CLOUDFLARE_ACCOUNT_ID;
 const API_TOKEN = env.NEXT_SERVER_CF_QUEUE_TOKEN;
@@ -60,13 +61,9 @@ function getRetryDelay(attempt: number): number {
  * Enhanced error logging with context
  */
 function logQueueError(context: string, error: unknown, metadata?: Record<string, unknown>): void {
-  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-  const errorStack = error instanceof Error ? error.stack : undefined;
-  
-  console.error(`[Queue Error] ${context}`, {
-    error: errorMessage,
-    stack: errorStack,
-    timestamp: new Date().toISOString(),
+  logger.error('queue.error', {
+    context,
+    err: error,
     ...metadata,
   });
 }
@@ -150,7 +147,7 @@ export async function publishToQueue(
         // Retry on server errors (5xx) or network issues
         if (attempt < MAX_RETRIES) {
           const delay = getRetryDelay(attempt);
-          console.log(`[Queue] Retrying in ${delay}ms...`);
+          logger.info('queue.retry', { queueName, attempt: attempt + 1, delayMs: delay });
           await sleep(delay);
           continue;
         }
@@ -160,7 +157,7 @@ export async function publishToQueue(
 
       // Success
       if (attempt > 0) {
-        console.log(`[Queue] Successfully published after ${attempt + 1} attempts`);
+        logger.info('queue.publish.success_after_retry', { queueName, attempts: attempt + 1 });
       }
 
       return {
@@ -177,7 +174,7 @@ export async function publishToQueue(
       // Retry on network errors
       if (attempt < MAX_RETRIES) {
         const delay = getRetryDelay(attempt);
-        console.log(`[Queue] Retrying in ${delay}ms...`);
+        logger.info('queue.retry', { queueName, attempt: attempt + 1, delayMs: delay });
         await sleep(delay);
         continue;
       }
@@ -283,7 +280,13 @@ export async function publishToQueueBulk(
             // Retry on server errors (5xx)
             if (attempt < MAX_RETRIES) {
               const delay = getRetryDelay(attempt);
-              console.log(`[Queue] Retrying batch ${batchNumber}/${totalBatches} in ${delay}ms...`);
+              logger.info('queue.bulk.retry', {
+                queueName,
+                batchNumber,
+                totalBatches,
+                attempt: attempt + 1,
+                delayMs: delay,
+              });
               await sleep(delay);
               continue;
             }
@@ -296,7 +299,12 @@ export async function publishToQueueBulk(
           // Success
           batchSuccess = true;
           if (attempt > 0) {
-            console.log(`[Queue] Batch ${batchNumber}/${totalBatches} succeeded after ${attempt + 1} attempts`);
+            logger.info('queue.bulk.batch_success_after_retry', {
+              queueName,
+              batchNumber,
+              totalBatches,
+              attempts: attempt + 1,
+            });
           }
           break;
         } catch (error) {
@@ -310,7 +318,13 @@ export async function publishToQueueBulk(
           // Retry on network errors
           if (attempt < MAX_RETRIES) {
             const delay = getRetryDelay(attempt);
-            console.log(`[Queue] Retrying batch ${batchNumber}/${totalBatches} in ${delay}ms...`);
+            logger.info('queue.bulk.retry', {
+              queueName,
+              batchNumber,
+              totalBatches,
+              attempt: attempt + 1,
+              delayMs: delay,
+            });
             await sleep(delay);
             continue;
           }
@@ -322,7 +336,11 @@ export async function publishToQueueBulk(
       }
 
       if (!batchSuccess) {
-        console.error(`[Queue] Batch ${batchNumber}/${totalBatches} failed after all retries`);
+        logger.error('queue.bulk.batch_failed_after_retries', {
+          queueName,
+          batchNumber,
+          totalBatches,
+        });
       }
     }
 
@@ -403,13 +421,13 @@ export async function queueStorageDeletion(data: {
         },
         errorMessage: result.error || 'Worker returned failure',
       }).catch((err) => {
-        console.error('[Queue/Deletion] Failed to record failed job:', err);
+        logger.error('queue.deletion.record_failed_job_failed', { photoId: data.photoId, err });
       });
       return { success: false, error: result.error || 'Failed to queue' };
     }
     return { success: true };
   } catch (error) {
-    console.error('[Queue/Deletion] Failed to publish:', error);
+    logger.error('queue.deletion.publish_failed', { photoId: data.photoId, err: error });
     // Record failed job on exception
     await recordFailedJob({
       jobType: 'storage-deletion',
@@ -427,7 +445,7 @@ export async function queueStorageDeletion(data: {
       },
       errorMessage: String(error),
     }).catch((err) => {
-      console.error('[Queue/Deletion] Failed to record failed job:', err);
+      logger.error('queue.deletion.record_failed_job_failed', { photoId: data.photoId, err });
     });
     return { success: false, error: String(error) };
   }
@@ -525,7 +543,7 @@ export async function queueThumbnailGeneration(data: {
   };
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   if (!data.cloudinaryCredentials.cloudName || !data.cloudinaryCredentials.apiKey || !data.cloudinaryCredentials.apiSecret) {
-    console.warn('[Queue/Thumbnail] Missing Cloudinary credentials, skipping thumbnail generation');
+    logger.warn('queue.thumbnail.missing_credentials', { photoId: data.photoId });
     return { success: false, error: 'Missing Cloudinary credentials' };
   }
 
@@ -571,13 +589,13 @@ export async function queueThumbnailGeneration(data: {
         },
         errorMessage: result.error || 'Worker returned failure',
       }).catch((err) => {
-        console.error('[Queue/Thumbnail] Failed to record failed job:', err);
+        logger.error('queue.thumbnail.record_failed_job_failed', { photoId: data.photoId, err });
       });
       return { success: false, error: result.error || 'Failed to queue' };
     }
     return { success: true };
   } catch (error) {
-    console.error('[Queue/Thumbnail] Failed to publish:', error);
+    logger.error('queue.thumbnail.publish_failed', { photoId: data.photoId, err: error });
     // Record failed job on exception
     await recordFailedJob({
       jobType: 'thumbnail-generation',
@@ -594,7 +612,7 @@ export async function queueThumbnailGeneration(data: {
       },
       errorMessage: String(error),
     }).catch((err) => {
-      console.error('[Queue/Thumbnail] Failed to record failed job:', err);
+      logger.error('queue.thumbnail.record_failed_job_failed', { photoId: data.photoId, err });
     });
     return { success: false, error: String(error) };
   }

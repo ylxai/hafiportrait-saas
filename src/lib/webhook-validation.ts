@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto';
+import { logger } from '@/lib/logger';
 
 /**
  * Webhook Validation Utilities
@@ -44,7 +45,7 @@ export function verifyWebhookSignature(
 ): WebhookValidationResult {
   // Check if secret is configured
   if (!secret) {
-    console.error('[Webhook] VPS_WEBHOOK_SECRET not configured');
+    logger.error('webhook.secret_not_configured', {});
     return {
       valid: false,
       error: 'Webhook secret not configured',
@@ -89,7 +90,7 @@ export function verifyWebhookSignature(
   const age = now - timestampMs;
   
   if (age > REPLAY_ATTACK_WINDOW_MS) {
-    console.warn(`[Webhook] Replay attack detected: timestamp ${age}ms old`);
+    logger.warn('webhook.replay_attack_detected', { ageMs: age });
     return {
       valid: false,
       error: 'Webhook timestamp too old (possible replay attack)',
@@ -128,7 +129,7 @@ export function verifyWebhookSignature(
     const isValid = timingSafeEqual(signatureBuffer, expectedBuffer);
     
     if (!isValid) {
-      console.warn('[Webhook] Invalid signature detected');
+      logger.warn('webhook.invalid_signature', {});
       return {
         valid: false,
         error: 'Invalid webhook signature',
@@ -138,7 +139,7 @@ export function verifyWebhookSignature(
     
     return { valid: true };
   } catch (error) {
-    console.error('[Webhook] Signature verification error:', error);
+    logger.error('webhook.signature_verification_error', { err: error });
     return {
       valid: false,
       error: 'Signature verification failed',
@@ -198,7 +199,7 @@ export function verifyWebhookIP(
   });
 
   if (!isWhitelisted) {
-    console.warn(`[Webhook] IP not whitelisted: ${ip}`);
+    logger.warn('webhook.ip_not_whitelisted', { ip });
     return {
       valid: false,
       error: 'IP address not whitelisted',

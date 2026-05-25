@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 // Normalize null → undefined so legacy DB rows with null JSON columns
 // don't fail validation when the client round-trips settings via POST.
@@ -69,7 +70,7 @@ export const GET = withRequestContext(async () => {
       settings: settings || defaultSettings 
     });
   } catch (error) {
-    console.error('Error fetching settings:', error);
+    logger.error('admin.settings.fetch_failed', { err: error });
     return serverErrorResponse('Failed to fetch settings');
   }
 });
@@ -131,7 +132,7 @@ export const POST = withRequestContext(async (request: Request) => {
 
     return successResponse({ settings });
   } catch (error) {
-    console.error('Error saving settings:', error);
+    logger.error('admin.settings.save_failed', { err: error });
     return serverErrorResponse('Failed to save settings');
   }
 });

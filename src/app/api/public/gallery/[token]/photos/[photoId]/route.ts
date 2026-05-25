@@ -9,6 +9,7 @@ import { getDefaultAccount } from '@/lib/storage/accounts';
 import { stringifyWithBigInt } from '@/lib/bigint-utils';
 import { serializeGalleryPhoto } from '@/lib/gallery/load-public-gallery';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 /**
  * Returns a single photo row for the owning client in the same wire-shape
@@ -62,7 +63,7 @@ export const GET = withRequestContext(async (
 
     return successResponse(payload);
   } catch (error) {
-    console.error('[API] Error in single-photo lookup:', error);
+    logger.error('public.gallery.photo.lookup_failed', { err: error });
     return serverErrorResponse('Failed to load photo');
   }
 });

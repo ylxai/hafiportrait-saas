@@ -5,6 +5,7 @@ import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/admin/export/clients
@@ -61,7 +62,7 @@ export const GET = withRequestContext(async () => {
       },
     });
   } catch (error) {
-    console.error('[API] Error exporting clients:', error);
+    logger.error('admin.export.clients_failed', { err: error });
     return handlePrismaError(error);
   }
 });

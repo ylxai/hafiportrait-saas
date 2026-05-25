@@ -10,6 +10,7 @@ import {
   ALLOWED_EXTENSIONS,
 } from '@/lib/upload/constants';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 // Zod validation schema for public presigned upload request
 const PublicPresignedRequestSchema = z.object({
@@ -105,7 +106,7 @@ export const POST = withRequestContext(async (request: Request) => {
       expiresIn: PRESIGNED_URL_EXPIRY_SECONDS,
     });
   } catch (error) {
-    console.error('Error generating public presigned URL:', error);
+    logger.error('public.payment.presigned_url_failed', { err: error });
     return serverErrorResponse('Failed to generate upload URL');
   }
 });

@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import { logger } from '@/lib/logger';
 
 const REDIS_URL = process.env.NEXT_SERVER_REDIS_URL || process.env.REDIS_URL || '';
 
@@ -11,7 +12,7 @@ export const redisCache = globalForRedis.redis ?? (REDIS_URL ? new Redis(REDIS_U
   maxRetriesPerRequest: 3,
   retryStrategy(times) {
     if (times > 3) {
-      console.warn('Redis retry stopped.');
+      logger.warn('redis.retry_stopped', { attempts: times });
       return null;
     }
     return Math.min(times * 50, 2000);
@@ -41,7 +42,7 @@ export async function getCachedData<T>(
       }
     }
   } catch (error) {
-    console.error(`Redis cache error on GET ${key}:`, error);
+    logger.error('redis.cache.get_failed', { key, err: error });
     // Fallback to fetcher if cache read fails
   }
 
@@ -60,7 +61,7 @@ export async function getCachedData<T>(
       await redisCache.setex(key, ttlSeconds, serialized);
     }
   } catch (error) {
-    console.error(`Redis cache error on SET ${key}:`, error);
+    logger.error('redis.cache.set_failed', { key, err: error });
   }
 
   return JSON.parse(serialized) as T;
@@ -91,7 +92,7 @@ export async function invalidateCache(prefix: string) {
       stream.on('error', (err: Error) => reject(err));
     });
   } catch (error) {
-    console.error(`Redis cache error on INVALIDATE ${prefix}:`, error);
+    logger.error('redis.cache.invalidate_failed', { prefix, err: error });
   }
 }
 
@@ -103,9 +104,9 @@ export async function closeRedisConnection() {
   if (redisCache) {
     try {
       await redisCache.quit();
-      console.log('[Redis] Connection closed gracefully');
+      logger.info('redis.connection.closed', {});
     } catch (error) {
-      console.error('[Redis] Error closing connection:', error);
+      logger.error('redis.connection.close_failed', { err: error });
     }
   }
 }

@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { validateRequest } from '@/lib/api/validation';
 import { Prisma } from '@/generated/prisma';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 const bulkDeleteSchema = z.object({
   photoIds: z.array(z.string().trim().min(1, 'Invalid photo ID')).min(1, 'Select at least 1 photo').max(100, 'Maximum 100 photos per batch'),
@@ -122,16 +123,28 @@ export const POST = withRequestContext(async (
         try {
           const result = await queueStorageDeletionBulk(deletionJobs);
           if (!result.success) {
-            console.error(`[Delete] Cloudflare Queue bulk error:`, result.error);
+            logger.error('admin.photos.bulk_delete.queue_failed', {
+              galleryId,
+              error: result.error,
+            });
             return errorResponse('Failed to queue storage deletion', 500);
           }
-          console.log(`[Delete] Queued ${deletionJobs.length} deletions to Cloudflare Queue`);
+          logger.info('admin.photos.bulk_delete.queued', {
+            galleryId,
+            count: deletionJobs.length,
+          });
         } catch (cfError) {
-          console.error(`[Delete] Cloudflare Queue bulk error:`, cfError);
+          logger.error('admin.photos.bulk_delete.queue_exception', {
+            galleryId,
+            err: cfError,
+          });
           return errorResponse('Failed to queue storage deletion', 500);
         }
       } else {
-        console.warn(`[Delete] Cloudflare Queue not configured. Storage cleanup skipped for ${deletionJobs.length} photos`);
+        logger.warn('admin.photos.bulk_delete.queue_not_configured', {
+          galleryId,
+          count: deletionJobs.length,
+        });
       }
     }
 
@@ -187,7 +200,7 @@ export const POST = withRequestContext(async (
       message: `${photos.length} photos deleted from database. Storage cleanup queued.`,
     });
   } catch (error) {
-    console.error('Error bulk deleting photos:', error);
+    logger.error('admin.photos.bulk_delete_failed', { err: error });
     return serverErrorResponse('Failed to bulk delete photos');
   }
 });

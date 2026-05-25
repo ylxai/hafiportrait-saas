@@ -3,6 +3,7 @@ import { successResponse, notFoundResponse, serverErrorResponse } from '@/lib/ap
 import { generateDownloadUrl } from '@/lib/upload/presigned';
 import { assertGalleryOwnership } from '@/lib/gallery/auth';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 export const GET = withRequestContext(async (
   request: Request,
@@ -45,7 +46,7 @@ export const GET = withRequestContext(async (
     // Fallback to public URL
     return successResponse({ downloadUrl: photo.url });
   } catch (error) {
-    console.error('Error generating download URL:', error);
+    logger.error('public.gallery.photo.download_url_failed', { err: error });
     return serverErrorResponse('Failed to generate download URL');
   }
 });

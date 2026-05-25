@@ -100,7 +100,7 @@ export const GET = withRequestContext(async (
       pagination: createAdminPaginationResponse(page, limit, total),
     });
   } catch (error) {
-    console.error('Error fetching photos:', error);
+    logger.error('admin.gallery.photos.fetch_failed', { err: error });
     return serverErrorResponse('Failed to fetch photos');
   }
 });
@@ -325,7 +325,7 @@ export const POST = withRequestContext(async (
       throw createError;
     }
   } catch (error) {
-    logger.error('[API] gallery.photos.upload.unhandled_error', { err: error });
+    logger.error('gallery.photos.upload.unhandled_error', { err: error });
     return serverErrorResponse('Failed to upload photo');
   }
 });

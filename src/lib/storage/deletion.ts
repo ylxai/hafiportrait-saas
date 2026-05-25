@@ -1,6 +1,7 @@
 import { deleteFromR2 } from '@/lib/upload/presigned';
 import { deleteFromCloudinary, getCloudinaryPublicId } from '@/lib/storage/cloudinary';
 import { decreaseStorageUsage, getStorageCredentials } from '@/lib/storage/accounts';
+import { logger } from '@/lib/logger';
 
 interface DeletionJobData {
   photoId: string;
@@ -17,7 +18,7 @@ interface DeletionJobData {
 export async function performPhotoDeletion(data: DeletionJobData): Promise<void> {
   const { photoId, r2Key, thumbnailUrl, storageAccountId, fileSize } = data;
 
-  console.log(`[DeletionWorker] Processing deletion for photo ${photoId}`);
+  logger.info('deletion_worker.start', { photoId });
 
   let r2Deleted = false;
   let cloudinaryDeleted = false;
@@ -27,10 +28,10 @@ export async function performPhotoDeletion(data: DeletionJobData): Promise<void>
   if (r2Key) {
     try {
       await deleteFromR2(r2Key);
-      console.log(`[DeletionWorker] R2 file deleted: ${r2Key}`);
+      logger.info('deletion_worker.r2.deleted', { photoId, r2Key });
       r2Deleted = true;
     } catch (error) {
-      console.error(`[DeletionWorker] Failed to delete R2 file ${r2Key}:`, error);
+      logger.error('deletion_worker.r2.delete_failed', { photoId, r2Key, err: error });
       // Will retry via Cloudflare Queue
       throw new Error(`R2 deletion failed: ${error}`);
     }
@@ -45,7 +46,10 @@ export async function performPhotoDeletion(data: DeletionJobData): Promise<void>
         
         // Skip if not Cloudinary account (e.g., R2-only setup)
         if (creds.provider !== 'CLOUDINARY') {
-          console.log(`[DeletionWorker] Skipping Cloudinary deletion - account is ${creds.provider}`);
+          logger.info('deletion_worker.cloudinary.skipped_non_cloudinary', {
+            photoId,
+            provider: creds.provider,
+          });
         } else {
           const cloudinaryCreds = {
             cloudName: creds.cloudName || '',
@@ -54,12 +58,12 @@ export async function performPhotoDeletion(data: DeletionJobData): Promise<void>
           };
 
           await deleteFromCloudinary(publicId, cloudinaryCreds);
-          console.log(`[DeletionWorker] Cloudinary file deleted: ${publicId}`);
+          logger.info('deletion_worker.cloudinary.deleted', { photoId, publicId });
           cloudinaryDeleted = true;
         }
       }
     } catch (error) {
-      console.error(`[DeletionWorker] Failed to delete Cloudinary file:`, error);
+      logger.error('deletion_worker.cloudinary.delete_failed', { photoId, err: error });
       // Will retry via Cloudflare Queue
       throw new Error(`Cloudinary deletion failed: ${error}`);
     }
@@ -69,15 +73,20 @@ export async function performPhotoDeletion(data: DeletionJobData): Promise<void>
   if (storageAccountId && fileSize) {
     try {
       await decreaseStorageUsage(storageAccountId, fileSize);
-      console.log(`[DeletionWorker] Storage usage updated for account ${storageAccountId}`);
+      logger.info('deletion_worker.storage_usage.updated', { photoId, storageAccountId });
       storageUpdated = true;
     } catch (error) {
-      console.error(`[DeletionWorker] Failed to update storage usage:`, error);
+      logger.error('deletion_worker.storage_usage.update_failed', {
+        photoId,
+        storageAccountId,
+        err: error,
+      });
       // Don't throw here - storage update failure shouldn't block deletion
     }
   }
 
-  console.log(`[DeletionWorker] Photo ${photoId} deletion completed:`, {
+  logger.info('deletion_worker.completed', {
+    photoId,
     r2Deleted,
     cloudinaryDeleted,
     storageUpdated,

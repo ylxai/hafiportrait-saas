@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { validateRequest } from '@/lib/api/validation';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 const toggleLockSchema = z.object({
   isSelectionLocked: z.boolean({
@@ -49,7 +50,7 @@ export const PATCH = withRequestContext(async (
       gallery: updatedGallery,
     });
   } catch (error) {
-    console.error('Error toggling gallery lock:', error);
+    logger.error('admin.gallery.toggle_lock_failed', { err: error });
     return serverErrorResponse('Failed to toggle lock');
   }
 });

@@ -1,6 +1,7 @@
 import 'server-only';
 import { z } from 'zod';
 import { publicEnvSchema } from './env.shared';
+import { logger } from './logger';
 
 /**
  * Server-only environment variables.
@@ -55,7 +56,9 @@ const serverEnvSchema = publicEnvSchema.extend({
 const parsed = serverEnvSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error('[env.server] Invalid environment variables:', parsed.error.flatten().fieldErrors);
+  logger.error('env.server.invalid', {
+    fieldErrors: parsed.error.flatten().fieldErrors,
+  });
   throw new Error('[env.server] Invalid environment configuration');
 }
 

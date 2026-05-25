@@ -9,6 +9,7 @@ import {
   enqueueDeletionWithOutbox,
 } from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
+import { isPrismaError } from '@/lib/prisma-error';
 import { withRequestContext } from '@/lib/with-request-context';
 
 export const GET = withRequestContext(async (
@@ -63,7 +64,7 @@ export const GET = withRequestContext(async (
 
     return successResponse({ event });
   } catch (error) {
-    console.error('Error fetching event:', error);
+    logger.error('admin.event.fetch_failed', { err: error });
     return serverErrorResponse('Failed to fetch event');
   }
 });
@@ -101,8 +102,8 @@ export const PATCH = withRequestContext(async (
 
     return successResponse({ event });
   } catch (error) {
-    console.error('Error updating event:', error);
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+    logger.error('admin.event.update_failed', { err: error });
+    if (isPrismaError(error, 'P2025')) {
       return notFoundResponse('Event not found');
     }
     return serverErrorResponse('Failed to update event');
@@ -172,8 +173,8 @@ export const DELETE = withRequestContext(async (
 
     return successResponse({ success: true });
   } catch (error) {
-    console.error('Error deleting event:', error);
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+    logger.error('admin.event.delete_failed', { err: error });
+    if (isPrismaError(error, 'P2025')) {
       return notFoundResponse('Event not found');
     }
     return serverErrorResponse('Failed to delete event');

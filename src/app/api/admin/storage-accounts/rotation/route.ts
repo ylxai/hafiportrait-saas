@@ -12,6 +12,7 @@ import {
 } from '@/lib/storage/rotation';
 import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 // Zod schemas
 const getQuerySchema = z.object({
@@ -127,7 +128,7 @@ export const GET = withRequestContext(async (request: Request) => {
 
     return successResponse({ accounts });
   } catch (error) {
-    console.error('Error fetching rotation status:', error);
+    logger.error('admin.rotation.fetch_status_failed', { err: error });
     return serverErrorResponse('Failed to fetch rotation status');
   }
 });
@@ -190,7 +191,7 @@ export const POST = withRequestContext(async (request: Request) => {
         return errorResponse('Invalid action', 400);
     }
   } catch (error) {
-    console.error('Error managing rotation:', error);
+    logger.error('admin.rotation.manage_failed', { err: error });
     return serverErrorResponse('Failed to manage rotation');
   }
 });

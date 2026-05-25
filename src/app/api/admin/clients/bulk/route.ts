@@ -59,7 +59,7 @@ export const DELETE = withRequestContext(async (request: Request) => {
 
     return successResponse({ deleted: ids.length });
   } catch (error) {
-    console.error('Error bulk deleting clients:', error);
+    logger.error('admin.clients.bulk_delete_failed', { err: error });
     return serverErrorResponse('Failed to delete clients');
   }
 });

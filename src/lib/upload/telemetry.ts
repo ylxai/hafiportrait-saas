@@ -1,5 +1,6 @@
 // MEDIUM PRIORITY FIX #7: Upload telemetry and analytics
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 export interface UploadMetrics {
   totalUploads: number;
@@ -29,8 +30,8 @@ export async function trackUploadAttempt(
     retryCount: retryCount || 0,
     timestamp: new Date().toISOString(),
   };
-  
-  console.log('[Upload Telemetry]', telemetryData);
+
+  logger.info('upload.telemetry.attempt', telemetryData);
   
   // TODO: Implement persistent storage for telemetry data
   // Options:

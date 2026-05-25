@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { parseCursorSafe, createPublicPaginationResponse } from '@/types/pagination';
 import { serializeBigInt } from '@/lib/bigint-utils';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 const PHOTOS_PER_PAGE = 20;
 const tokenSchema = z.string().cuid().or(z.string().min(10).max(50));
@@ -115,7 +116,7 @@ export const GET = withRequestContext(async (
       },
     });
   } catch (error) {
-    console.error('Error fetching gallery:', error);
+    logger.error('portal.gallery.fetch_failed', { err: error });
     return serverErrorResponse('Failed to fetch gallery');
   }
 });

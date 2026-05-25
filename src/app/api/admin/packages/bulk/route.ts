@@ -4,6 +4,7 @@ import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/r
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 // Zod schemas for bulk operations
 const bulkUpdateSchema = z.object({
@@ -57,7 +58,7 @@ export const PATCH = withRequestContext(async (request: Request) => {
 
     return successResponse({ updated: ids.length });
   } catch (error) {
-    console.error('Error bulk updating packages:', error);
+    logger.error('admin.packages.bulk_update_failed', { err: error });
     return serverErrorResponse('Failed to update packages');
   }
 });
@@ -89,7 +90,7 @@ export const DELETE = withRequestContext(async (request: Request) => {
 
     return successResponse({ deleted: ids.length });
   } catch (error) {
-    console.error('Error bulk deleting packages:', error);
+    logger.error('admin.packages.bulk_delete_failed', { err: error });
     return serverErrorResponse('Failed to delete packages');
   }
 });
