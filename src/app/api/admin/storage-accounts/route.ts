@@ -5,7 +5,42 @@ import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { serializeBigInt } from '@/lib/bigint-utils';
+import { logger } from '@/lib/logger';
 import { z } from 'zod';
+
+/**
+ * Safe fields to return in API responses — excludes plaintext secrets.
+ * secretKey (R2), apiSecret (Cloudinary), secondaryApiKey (rotation) are
+ * NEVER returned to the browser. Use boolean masks (hasSecondaryKey) instead.
+ */
+const SAFE_ACCOUNT_SELECT = {
+  id: true,
+  name: true,
+  provider: true,
+  isActive: true,
+  isDefault: true,
+  priority: true,
+  // R2 non-secret fields
+  accountId: true,
+  accessKey: true,
+  bucketName: true,
+  publicUrl: true,
+  endpoint: true,
+  // Cloudinary non-secret fields
+  cloudName: true,
+  apiKey: true,
+  uploadPreset: true,
+  // Rotation settings (no secrets)
+  rotationEnabled: true,
+  rotationSchedule: true,
+  // Metadata
+  usedStorage: true,
+  createdAt: true,
+  updatedAt: true,
+  // secretKey: EXCLUDED (R2 secret)
+  // apiSecret: EXCLUDED (Cloudinary secret)
+  // secondaryApiKey: EXCLUDED (rotation secret)
+} as const;
 
 // Zod schemas for storage account operations
 const createStorageAccountSchema = z.object({
@@ -103,18 +138,19 @@ export async function GET() {
     if (rateLimit) return rateLimit;
 
     const accounts = await prisma.storageAccount.findMany({
+      select: SAFE_ACCOUNT_SELECT,
       orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }],
     });
 
     // Convert BigInt to string for JSON serialization
-    const serializedAccounts = accounts.map((account: typeof accounts[number]) => ({
+    const serializedAccounts = accounts.map((account) => ({
       ...account,
       usedStorage: serializeBigInt(account.usedStorage),
     }));
 
     return successResponse({ accounts: serializedAccounts });
   } catch (error) {
-    console.error('Error fetching storage accounts:', error);
+    logger.error('storage_accounts.get_failed', { err: error });
     return serverErrorResponse('Failed to fetch storage accounts');
   }
 }
@@ -164,6 +200,7 @@ export async function POST(request: Request) {
         priority,
         ...credentials,
       },
+      select: SAFE_ACCOUNT_SELECT,
     });
 
     // Convert BigInt to string for JSON serialization
@@ -174,7 +211,7 @@ export async function POST(request: Request) {
 
     return successResponse({ account: serializedAccount }, 201);
   } catch (error) {
-    console.error('Error creating storage account:', error);
+    logger.error('storage_accounts.create_failed', { err: error });
     return serverErrorResponse('Failed to create storage account');
   }
 }
@@ -221,6 +258,7 @@ export async function PATCH(request: Request) {
     const account = await prisma.storageAccount.update({
       where: { id },
       data,
+      select: SAFE_ACCOUNT_SELECT,
     });
 
     // Convert BigInt to string for JSON serialization
@@ -231,7 +269,7 @@ export async function PATCH(request: Request) {
 
     return successResponse({ account: serializedAccount });
   } catch (error) {
-    console.error('Error updating storage account:', error);
+    logger.error('storage_accounts.update_failed', { err: error });
     return serverErrorResponse('Failed to update storage account');
   }
 }
@@ -262,7 +300,7 @@ export async function DELETE(request: Request) {
 
     return successResponse({ success: true });
   } catch (error) {
-    console.error('Error deleting storage account:', error);
+    logger.error('storage_accounts.delete_failed', { err: error });
     return serverErrorResponse('Failed to delete storage account');
   }
 }
