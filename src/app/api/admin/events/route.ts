@@ -12,6 +12,7 @@ import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { isPrismaError } from '@/lib/prisma-error';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
+import { MAX_RETRIES } from '@/lib/api/constants';
 
 export const GET = withRequestContext(async (request: Request) => {
   try {
@@ -107,7 +108,6 @@ export const POST = withRequestContext(async (request: Request) => {
 
     // Atomic creation with retry on unique constraint violation
     // This eliminates race conditions by letting the database enforce uniqueness
-    const MAX_RETRIES = 5;
     let event = null;
     let lastError = null;
     

@@ -8,12 +8,12 @@ import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { isPrismaError } from '@/lib/prisma-error';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
+import { MAX_RETRIES, BCRYPT_ROUNDS } from '@/lib/api/constants';
 
-const MAX_RETRY = 5;
 // Match the cost factor used in `src/app/api/admin/clients/route.ts` and the
 // auth provider's dummy hash so the bcrypt compare path takes ~the same
 // time regardless of whether the row was created by admin or via booking.
-const BCRYPT_ROUNDS = 10;
+// (See BCRYPT_ROUNDS in @/lib/api/constants.)
 
 export const POST = withRequestContext(async (request: Request) => {
   try {
@@ -90,7 +90,7 @@ export const POST = withRequestContext(async (request: Request) => {
     let event = null;
     let kodeBooking = '';
     
-    for (let attempt = 0; attempt < MAX_RETRY; attempt++) {
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       kodeBooking = generateKodeBooking();
       
       try {
@@ -127,7 +127,7 @@ export const POST = withRequestContext(async (request: Request) => {
         if (isPrismaError(error, 'P2002')) {
           logger.warn('public.booking.kode_booking_collision', {
             attempt: attempt + 1,
-            maxRetries: MAX_RETRY,
+            maxRetries: MAX_RETRIES,
           });
           // Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1000ms (capped)
           await new Promise(r => setTimeout(r, Math.min(100 * 2 ** attempt, 1000)));
