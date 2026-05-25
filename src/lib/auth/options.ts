@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { compare } from "bcryptjs";
 import { ROLE_ADMIN, ROLE_CLIENT } from "@/lib/auth/role-constants";
 import { normalizeRawRole } from "@/lib/auth/role-helpers";
+import { normalizeEmail } from "@/lib/auth/email-helpers";
 
 // Pre-computed valid bcrypt hash used to keep `compare()` cost roughly
 // constant when the user/client isn't found. Without this, an attacker
@@ -33,8 +34,10 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        const normalizedEmail = normalizeEmail(credentials.email);
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: normalizedEmail },
         });
 
         // Always hash-compare to prevent timing attacks (use dummy if absent).
@@ -42,6 +45,31 @@ export const authOptions: NextAuthOptions = {
         const isValid = await compare(credentials.password, passwordToCompare);
 
         if (!user || !user.password || !isValid) {
+          return null;
+        }
+
+        // Cross-table email guard: User.email and Client.email each have
+        // their own @unique index, but uniqueness is NOT enforced across
+        // the two tables. Without this check, a single email could exist
+        // in both — letting whichever provider authenticates first win and
+        // mint a token under the wrong role (role confusion). Refuse the
+        // admin login only when an *approved* Client row owns the same
+        // email, so the operator is forced to resolve a real duplicate
+        // before either side can sign in.
+        //
+        // We deliberately ignore unapproved Client rows here: the booking
+        // flow lets anyone self-register as a client with an arbitrary
+        // email, so blocking on the mere existence of such a row would
+        // let an attacker DoS an admin out of their own account by
+        // registering as a client under the admin's email. Unapproved
+        // clients can't authenticate via the client provider either
+        // (see `!client.isApproved` check below), so they pose no role-
+        // confusion risk until/unless an admin approves them.
+        const collidingClient = await prisma.client.findUnique({
+          where: { email: normalizedEmail },
+          select: { id: true, isApproved: true },
+        });
+        if (collidingClient?.isApproved) {
           return null;
         }
 
@@ -74,8 +102,10 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        const normalizedEmail = normalizeEmail(credentials.email);
+
         const client = await prisma.client.findUnique({
-          where: { email: credentials.email.trim().toLowerCase() },
+          where: { email: normalizedEmail },
           select: {
             id: true,
             email: true,
@@ -108,6 +138,17 @@ export const authOptions: NextAuthOptions = {
         // approval status out-of-band (WhatsApp/email) once they click
         // approve in the dashboard.
         if (!client.isApproved) {
+          return null;
+        }
+
+        // Cross-table email guard (symmetric to the admin provider above):
+        // refuse the client login when a User row owns the same email so a
+        // shared address can't silently authenticate under the wrong role.
+        const collidingAdmin = await prisma.user.findUnique({
+          where: { email: normalizedEmail },
+          select: { id: true },
+        });
+        if (collidingAdmin) {
           return null;
         }
 
