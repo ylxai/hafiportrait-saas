@@ -94,7 +94,7 @@ export const POST = withRequestContext(async (request: Request) => {
       data: validation.data,
     });
 
-    return successResponse({ package: pkg }, 201);
+    return successResponse({ data: pkg }, 201);
   } catch (error) {
     logger.error('admin.packages.create_failed', { err: error });
     if (isPrismaError(error, 'P2002')) {
@@ -140,7 +140,7 @@ export const PATCH = withRequestContext(async (request: Request) => {
       data: dataValidation.data,
     });
 
-    return successResponse({ package: pkg });
+    return successResponse({ data: pkg });
   } catch (error) {
     logger.error('admin.packages.update_failed', { err: error });
     if (isPrismaError(error, 'P2025')) {
