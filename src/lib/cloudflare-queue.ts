@@ -19,6 +19,7 @@ import { Prisma } from '@/generated/prisma';
 import { recordFailedJob } from '@/lib/failed-jobs';
 import { env } from '@/lib/env.server';
 import { getRequestId } from '@/lib/request-context';
+import { REQUEST_ID_HEADER } from '@/lib/request-id-constants';
 
 const ACCOUNT_ID = env.CLOUDFLARE_ACCOUNT_ID;
 const API_TOKEN = env.NEXT_SERVER_CF_QUEUE_TOKEN;
@@ -368,7 +369,7 @@ export async function queueStorageDeletion(data: {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(requestId ? { 'x-request-id': requestId } : {}),
+        ...(requestId ? { [REQUEST_ID_HEADER]: requestId } : {}),
       },
       body: JSON.stringify({
         type: 'storage-deletion',
@@ -534,7 +535,7 @@ export async function queueThumbnailGeneration(data: {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(requestId ? { 'x-request-id': requestId } : {}),
+        ...(requestId ? { [REQUEST_ID_HEADER]: requestId } : {}),
       },
       body: JSON.stringify({
         type: 'thumbnail-generation',
