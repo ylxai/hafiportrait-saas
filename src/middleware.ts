@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { ROLE_ADMIN, ROLE_CLIENT } from "@/lib/auth/role-constants";
+import { normalizeTokenRole } from "@/lib/auth/role-helpers";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -89,12 +90,14 @@ export async function middleware(request: NextRequest) {
     // authenticated session, and must never trigger a portal redirect.
     pathname.startsWith("/api/portal/gallery");
 
-  // Normalize role for case-insensitive comparison. Tokens issued by our
-  // providers are already lowercased, but legacy sessions or DB rows can
-  // surface mixed-case values (e.g. "Admin", "ADMIN"). Comparing in lower
-  // case here keeps middleware aligned with route-level guards such as
-  // require-admin-auth.ts which already normalize the role.
-  const role = (token.role ?? "").toString().toLowerCase();
+  // Normalize role for case-insensitive comparison via the shared helper
+  // so middleware, route-level guards (require-admin-auth.ts), and the
+  // session-side checks (isAdminSession/isClientSession) all apply the
+  // exact same trim + lowercase logic. Tokens minted by our providers in
+  // authOptions are already normalized at issue time, but legacy tokens
+  // and mixed-case DB rows can still surface here, hence the defensive
+  // pass through normalizeTokenRole.
+  const role = normalizeTokenRole(token);
   const isAdmin = role === ROLE_ADMIN;
   const isClient = role === ROLE_CLIENT;
 

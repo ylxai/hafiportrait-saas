@@ -57,7 +57,11 @@ export const authOptions: NextAuthOptions = {
           // today but legacy/seed rows have surfaced with empty strings, and
           // calling .toLowerCase() on null/undefined would throw inside the
           // authorize callback (turning a routine bad-login into a 500).
-          role: (user.role ?? '').toLowerCase(),
+          // Also trim() so accidental leading/trailing whitespace in seeds
+          // or manual DB edits can't bypass the role check — matches the
+          // shared normalizeRole() helper used by middleware and route
+          // guards so the issue-time and read-time normalization agree.
+          role: (user.role ?? '').trim().toLowerCase(),
         };
       },
     }),

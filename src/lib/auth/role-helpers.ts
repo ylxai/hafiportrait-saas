@@ -20,6 +20,7 @@
  * passing check also informs the compiler that `session` is non-null.
  */
 import type { Session } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
 import { ROLE_ADMIN, ROLE_CLIENT } from './role-constants';
 
 /**
@@ -27,8 +28,26 @@ import { ROLE_ADMIN, ROLE_CLIENT } from './role-constants';
  * when the session, user, or role is absent so downstream comparisons
  * never have to repeat the null guard.
  */
-function normalizeRole(session: Session | null | undefined): string {
+export function normalizeRole(session: Session | null | undefined): string {
   return (session?.user?.role ?? '').trim().toLowerCase();
+}
+
+/**
+ * Normalize the role string off a NextAuth JWT (as returned by `getToken()`
+ * inside middleware/edge runtime). Mirrors `normalizeRole` for sessions so
+ * middleware and route-level guards apply identical trim + case-fold logic
+ * to whatever was issued by the providers in `authOptions`. Returns `''`
+ * when the token or its role is absent.
+ *
+ * `getToken()` is typed loosely (`JWT | null`) and our augmentation declares
+ * `role: string`, but legacy tokens minted before the augmentation may carry
+ * non-string values — coerce defensively via String() before normalizing so
+ * a stray number/boolean can't blow up middleware.
+ */
+export function normalizeTokenRole(token: JWT | null | undefined): string {
+  const raw = token?.role;
+  if (raw === undefined || raw === null) return '';
+  return String(raw).trim().toLowerCase();
 }
 
 /**
