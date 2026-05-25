@@ -28,7 +28,7 @@ import { ROLE_ADMIN, ROLE_CLIENT } from './role-constants';
  * never have to repeat the null guard.
  */
 function normalizeRole(session: Session | null | undefined): string {
-  return (session?.user?.role ?? '').toLowerCase();
+  return (session?.user?.role ?? '').trim().toLowerCase();
 }
 
 /**
