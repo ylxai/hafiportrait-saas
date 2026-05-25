@@ -9,6 +9,7 @@ import {
   ALLOWED_MIME_TYPES,
   ALLOWED_EXTENSIONS,
 } from '@/lib/upload/constants';
+import { withRequestContext } from '@/lib/with-request-context';
 
 // Zod validation schema for public presigned upload request
 const PublicPresignedRequestSchema = z.object({
@@ -42,7 +43,7 @@ function validateFileType(filename: string): { valid: boolean; error?: string } 
   return { valid: true };
 }
 
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     const body: unknown = await request.json();
     const validation = PublicPresignedRequestSchema.safeParse(body);
@@ -107,4 +108,4 @@ export async function POST(request: Request) {
     console.error('Error generating public presigned URL:', error);
     return serverErrorResponse('Failed to generate upload URL');
   }
-}
+});

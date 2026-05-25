@@ -9,14 +9,15 @@ import { safeClientSelect } from '@/lib/api/select';
 import { z } from 'zod';
 import { parseCursorSafe, createPublicPaginationResponse } from '@/types/pagination';
 import { serializeBigInt } from '@/lib/bigint-utils';
+import { withRequestContext } from '@/lib/with-request-context';
 
 const PHOTOS_PER_PAGE = 20;
 const tokenSchema = z.string().cuid().or(z.string().min(10).max(50));
 
-export async function GET(
+export const GET = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ token: string }> }
-) {
+) => {
   try {
     const session = await getServerSession(authOptions);
     if (!isClientSession(session)) {
@@ -120,4 +121,4 @@ export async function GET(
     console.error('Error fetching gallery:', error);
     return serverErrorResponse('Failed to fetch gallery');
   }
-}
+});

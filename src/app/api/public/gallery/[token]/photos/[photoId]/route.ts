@@ -8,6 +8,7 @@ import { assertGalleryOwnership } from '@/lib/gallery/auth';
 import { getDefaultAccount } from '@/lib/storage/accounts';
 import { stringifyWithBigInt } from '@/lib/bigint-utils';
 import { serializeGalleryPhoto } from '@/lib/gallery/load-public-gallery';
+import { withRequestContext } from '@/lib/with-request-context';
 
 /**
  * Returns a single photo row for the owning client in the same wire-shape
@@ -22,10 +23,10 @@ import { serializeGalleryPhoto } from '@/lib/gallery/load-public-gallery';
  * subroute: anonymous / wrong-role / cross-client requests return the same
  * generic 404 to avoid leaking gallery existence.
  */
-export async function GET(
+export const GET = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ token: string; photoId: string }> },
-) {
+) => {
   try {
     const { token, photoId } = await params;
 
@@ -64,4 +65,4 @@ export async function GET(
     console.error('[API] Error in single-photo lookup:', error);
     return serverErrorResponse('Failed to load photo');
   }
-}
+});

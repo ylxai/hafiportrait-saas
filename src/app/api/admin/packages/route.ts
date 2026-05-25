@@ -6,12 +6,13 @@ import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { packageSchema, packageUpdateSchema, idSchema, validateRequest } from '@/lib/api/validation';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
+import { withRequestContext } from '@/lib/with-request-context';
 
 function isPrismaError(error: unknown, code: string): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === code;
 }
 
-export async function GET(request: Request) {
+export const GET = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -51,9 +52,9 @@ export async function GET(request: Request) {
     console.error('Error fetching packages:', error);
     return serverErrorResponse('Failed to fetch packages');
   }
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -95,9 +96,9 @@ export async function POST(request: Request) {
     }
     return serverErrorResponse('Failed to create package');
   }
-}
+});
 
-export async function PATCH(request: Request) {
+export const PATCH = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -141,9 +142,9 @@ export async function PATCH(request: Request) {
     }
     return serverErrorResponse('Failed to update package');
   }
-}
+});
 
-export async function DELETE(request: Request) {
+export const DELETE = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -175,4 +176,4 @@ export async function DELETE(request: Request) {
     }
     return serverErrorResponse('Failed to delete package');
   }
-}
+});

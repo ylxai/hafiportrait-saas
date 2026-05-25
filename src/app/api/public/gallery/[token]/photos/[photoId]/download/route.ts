@@ -2,11 +2,12 @@ import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { generateDownloadUrl } from '@/lib/upload/presigned';
 import { assertGalleryOwnership } from '@/lib/gallery/auth';
+import { withRequestContext } from '@/lib/with-request-context';
 
-export async function GET(
+export const GET = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ token: string; photoId: string }> }
-) {
+) => {
   try {
     const { token, photoId } = await params;
 
@@ -47,4 +48,4 @@ export async function GET(
     console.error('Error generating download URL:', error);
     return serverErrorResponse('Failed to generate download URL');
   }
-}
+});

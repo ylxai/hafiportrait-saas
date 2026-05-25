@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { z } from 'zod';
 import { BYTES_PER_GB } from '@/lib/upload/constants';
+import { withRequestContext } from '@/lib/with-request-context';
 
 const updateQuotaSchema = z.object({
   clientId: z.string().min(1, 'Client ID is required'),
@@ -13,7 +14,7 @@ const updateQuotaSchema = z.object({
     .max(1000, 'Maximum quota is 1000 GB'),
 });
 
-export async function PATCH(request: Request) {
+export const PATCH = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -54,9 +55,9 @@ export async function PATCH(request: Request) {
     }
     return serverErrorResponse('Failed to update client quota');
   }
-}
+});
 
-export async function GET(request: Request) {
+export const GET = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -118,4 +119,4 @@ export async function GET(request: Request) {
     console.error('Error fetching client quota:', error);
     return serverErrorResponse('Failed to fetch client quota');
   }
-}
+});

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { verifyWebhookSignature } from '@/lib/webhook-validation';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
+import { withRequestContext } from '@/lib/with-request-context';
 
 // Hard upper bound on the string form of `fileSize`. 32 digits is more
 // than enough for any realistic byte count (a 32-digit value is ~10^32
@@ -47,7 +48,7 @@ const DeletionCallbackSchema = z.object({
     .optional(),
 });
 
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     // Reject oversized payloads before reading the body (Sprint 2 Task 2.3).
     const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.WEBHOOK);
@@ -109,4 +110,4 @@ export async function POST(request: Request) {
     logger.error('[API] webhook.deletion.unhandled_error', { err: error });
     return handlePrismaError(error);
   }
-}
+});

@@ -5,13 +5,14 @@ import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { z } from 'zod';
+import { withRequestContext } from '@/lib/with-request-context';
 
 // Zod schema for export query parameters
 const exportQuerySchema = z.object({
   status: z.enum(['pending', 'confirmed', 'completed', 'cancelled']).optional(),
 });
 
-export async function GET(request: Request) {
+export const GET = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -85,4 +86,4 @@ export async function GET(request: Request) {
     console.error('[API] Error exporting events:', error);
     return handlePrismaError(error);
   }
-}
+});

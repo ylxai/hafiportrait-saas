@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { z } from 'zod';
+import { withRequestContext } from '@/lib/with-request-context';
 
 // Zod schemas for bulk operations
 const bulkUpdateSchema = z.object({
@@ -18,7 +19,7 @@ const bulkDeleteSchema = z.object({
     .max(100, 'Maximum 100 IDs allowed per request'),
 });
 
-export async function PATCH(request: Request) {
+export const PATCH = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -59,9 +60,9 @@ export async function PATCH(request: Request) {
     console.error('Error bulk updating packages:', error);
     return serverErrorResponse('Failed to update packages');
   }
-}
+});
 
-export async function DELETE(request: Request) {
+export const DELETE = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -91,4 +92,4 @@ export async function DELETE(request: Request) {
     console.error('Error bulk deleting packages:', error);
     return serverErrorResponse('Failed to delete packages');
   }
-}
+});

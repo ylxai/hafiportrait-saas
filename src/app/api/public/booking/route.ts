@@ -4,6 +4,7 @@ import { successResponse, serverErrorResponse, errorResponse, rateLimitResponse 
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { bookingSchema } from '@/lib/api/validation';
 import { generateKodeBooking } from '@/lib/utils';
+import { withRequestContext } from '@/lib/with-request-context';
 
 const MAX_RETRY = 5;
 // Match the cost factor used in `src/app/api/admin/clients/route.ts` and the
@@ -11,7 +12,7 @@ const MAX_RETRY = 5;
 // time regardless of whether the row was created by admin or via booking.
 const BCRYPT_ROUNDS = 10;
 
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     let body: unknown;
     try {
@@ -134,4 +135,4 @@ export async function POST(request: Request) {
     console.error('Error creating booking:', error);
     return serverErrorResponse('Failed to create booking');
   }
-}
+});

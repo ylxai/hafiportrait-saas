@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse } from '@/lib/api/response';
+import { withRequestContext } from '@/lib/with-request-context';
 
-export async function GET() {
+export const GET = withRequestContext(async () => {
   try {
   const packages = await prisma.package.findMany({
     where: { isActive: true },
@@ -13,4 +14,4 @@ export async function GET() {
     console.error('Error fetching packages:', error);
     return serverErrorResponse('Failed to fetch packages');
   }
-}
+});

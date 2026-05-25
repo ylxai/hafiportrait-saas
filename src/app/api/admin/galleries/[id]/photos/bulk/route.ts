@@ -6,15 +6,16 @@ import { getOrphanedR2Keys, queueStorageDeletionBulk, isQueueConfigured } from '
 import { z } from 'zod';
 import { validateRequest } from '@/lib/api/validation';
 import { Prisma } from '@/generated/prisma';
+import { withRequestContext } from '@/lib/with-request-context';
 
 const bulkDeleteSchema = z.object({
   photoIds: z.array(z.string().trim().min(1, 'Invalid photo ID')).min(1, 'Select at least 1 photo').max(100, 'Maximum 100 photos per batch'),
 });
 
-export async function POST(
+export const POST = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -189,4 +190,4 @@ export async function POST(
     console.error('Error bulk deleting photos:', error);
     return serverErrorResponse('Failed to bulk delete photos');
   }
-}
+});

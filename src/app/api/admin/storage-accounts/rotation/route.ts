@@ -11,6 +11,7 @@ import {
   type RotationHistoryEntry,
 } from '@/lib/storage/rotation';
 import { z } from 'zod';
+import { withRequestContext } from '@/lib/with-request-context';
 
 // Zod schemas
 const getQuerySchema = z.object({
@@ -36,7 +37,7 @@ const postBodySchema = z.object({
     .optional(),
 });
 
-export async function GET(request: Request) {
+export const GET = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -129,9 +130,9 @@ export async function GET(request: Request) {
     console.error('Error fetching rotation status:', error);
     return serverErrorResponse('Failed to fetch rotation status');
   }
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -192,4 +193,4 @@ export async function POST(request: Request) {
     console.error('Error managing rotation:', error);
     return serverErrorResponse('Failed to manage rotation');
   }
-}
+});

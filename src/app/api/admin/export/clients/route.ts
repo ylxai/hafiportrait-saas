@@ -4,6 +4,7 @@ import { handlePrismaError } from '@/lib/api/response';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
+import { withRequestContext } from '@/lib/with-request-context';
 
 /**
  * GET /api/admin/export/clients
@@ -11,7 +12,7 @@ import { enforceRateLimit } from '@/lib/rate-limit-helper';
  * Exports all clients to CSV format.
  * No input validation needed - read-only endpoint with no parameters.
  */
-export async function GET() {
+export const GET = withRequestContext(async () => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -63,4 +64,4 @@ export async function GET() {
     console.error('[API] Error exporting clients:', error);
     return handlePrismaError(error);
   }
-}
+});

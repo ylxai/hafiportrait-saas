@@ -3,8 +3,9 @@ import { authOptions } from '@/lib/auth/options';
 import { isClientSession } from '@/lib/auth/role-helpers';
 import { prisma } from '@/lib/db';
 import { successResponse, unauthorizedResponse, serverErrorResponse } from '@/lib/api/response';
+import { withRequestContext } from '@/lib/with-request-context';
 
-export async function GET() {
+export const GET = withRequestContext(async () => {
   try {
     const session = await getServerSession(authOptions);
     if (!isClientSession(session)) {
@@ -36,4 +37,4 @@ export async function GET() {
     console.error('Invoices API error:', error);
     return serverErrorResponse('Failed to fetch invoices');
   }
-}
+});

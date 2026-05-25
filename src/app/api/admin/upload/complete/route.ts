@@ -16,6 +16,7 @@ import { trackUploadResult } from '@/lib/analytics';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { rateLimitResponse } from '@/lib/api/response';
 import { logger } from '@/lib/logger';
+import { withRequestContext } from '@/lib/with-request-context';
 
 
 // Zod validation schema for upload complete request
@@ -25,7 +26,7 @@ const CompleteUploadSchema = z.object({
   uploadId: z.string().min(1, 'Upload ID is required'),
 });
 
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   let galleryId: string | undefined;
   let r2Key: string | undefined;
   // HIGH FIX #9: track storageAccountId at outer scope so the outer catch can clean up orphan R2 file
@@ -566,4 +567,4 @@ export async function POST(request: Request) {
 
     return serverErrorResponse('Failed to complete upload');
   }
-}
+});

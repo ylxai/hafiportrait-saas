@@ -19,6 +19,7 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { rateLimitResponse } from '@/lib/api/response';
 import { publishStorageQuotaAlert } from '@/lib/ably';
 import { logger } from '@/lib/logger';
+import { withRequestContext } from '@/lib/with-request-context';
 
 
 // Zod validation schema for presigned upload request
@@ -70,7 +71,7 @@ function validateFileType(filename: string, _contentType: string): { valid: bool
 }
 
 // Generate presigned URL untuk direct upload ke R2
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -256,4 +257,4 @@ export async function POST(request: Request) {
     logger.error('upload.presigned.unhandled', { err: error });
     return serverErrorResponse('Failed to generate upload URL');
   }
-}
+});

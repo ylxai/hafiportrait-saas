@@ -1,6 +1,7 @@
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { getAccountsNeedingRotation, rotateStorageCredentials } from '@/lib/storage/rotation';
 import { timingSafeEqual } from 'crypto';
+import { withRequestContext } from '@/lib/with-request-context';
 
 /**
  * POST /api/admin/storage-accounts/rotation/cron
@@ -13,7 +14,7 @@ import { timingSafeEqual } from 'crypto';
  *
  * Setup in DEPLOYMENT.md — call this endpoint daily at 00:05 UTC.
  */
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     // Validate cron secret (reuse VPS_WEBHOOK_SECRET)
     const authHeader = request.headers.get('authorization');
@@ -76,4 +77,4 @@ export async function POST(request: Request) {
     console.error('[rotation/cron] Unexpected error:', error);
     return serverErrorResponse('Auto-rotation cron failed');
   }
-}
+});

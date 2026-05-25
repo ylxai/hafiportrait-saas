@@ -9,12 +9,13 @@ import { logger } from '@/lib/logger';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
+import { withRequestContext } from '@/lib/with-request-context';
 
 // bcrypt cost factor for client portal passwords. Matches the dummy hash
 // shape used in lib/auth/options.ts for timing-attack protection.
 const BCRYPT_ROUNDS = 10;
 
-export async function GET(request: Request) {
+export const GET = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -77,9 +78,9 @@ export async function GET(request: Request) {
     console.error('Error fetching clients:', error);
     return serverErrorResponse('Failed to fetch clients');
   }
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -136,9 +137,9 @@ export async function POST(request: Request) {
     }
     return serverErrorResponse('Failed to create client');
   }
-}
+});
 
-export async function PATCH(request: Request) {
+export const PATCH = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -202,9 +203,9 @@ export async function PATCH(request: Request) {
     }
     return serverErrorResponse('Failed to update client');
   }
-}
+});
 
-export async function DELETE(request: Request) {
+export const DELETE = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -248,4 +249,4 @@ export async function DELETE(request: Request) {
     }
     return serverErrorResponse('Failed to delete client');
   }
-}
+});

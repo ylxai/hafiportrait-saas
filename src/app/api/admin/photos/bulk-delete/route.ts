@@ -9,6 +9,7 @@ import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { Prisma } from '@/generated/prisma';
 import { logger } from '@/lib/logger';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
+import { withRequestContext } from '@/lib/with-request-context';
 
 const bulkDeleteSchema = z.object({
   photoIds: z.array(z.string()).min(1).max(100),
@@ -25,7 +26,7 @@ const bulkDeleteSchema = z.object({
  * This prevents ghost photos: if DB transaction fails, no storage jobs are queued.
  * If enqueue fails after DB commit, outbox records the failure for admin retry.
  */
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -115,4 +116,4 @@ export async function POST(request: Request) {
     logger.error('[API] bulk-delete.unhandled_error', { err: error });
     return handlePrismaError(error);
   }
-}
+});

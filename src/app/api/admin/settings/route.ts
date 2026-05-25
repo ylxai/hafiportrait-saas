@@ -6,6 +6,7 @@ import { Prisma } from '@/generated/prisma';
 import { z } from 'zod';
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
+import { withRequestContext } from '@/lib/with-request-context';
 
 // Normalize null → undefined so legacy DB rows with null JSON columns
 // don't fail validation when the client round-trips settings via POST.
@@ -35,7 +36,7 @@ const updateSettingsSchema = z.object({
 });
 
 // Get studio settings (single row with id="studio")
-export async function GET() {
+export const GET = withRequestContext(async () => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -71,10 +72,10 @@ export async function GET() {
     console.error('Error fetching settings:', error);
     return serverErrorResponse('Failed to fetch settings');
   }
-}
+});
 
 // Update studio settings
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -133,4 +134,4 @@ export async function POST(request: Request) {
     console.error('Error saving settings:', error);
     return serverErrorResponse('Failed to save settings');
   }
-}
+});

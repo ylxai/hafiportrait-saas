@@ -8,8 +8,9 @@ import { safeClientSelect } from '@/lib/api/select';
 import { generateClientToken } from '@/lib/utils';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
+import { withRequestContext } from '@/lib/with-request-context';
 
-export async function GET(request: Request) {
+export const GET = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -63,9 +64,9 @@ export async function GET(request: Request) {
     console.error('[API] Error fetching galleries:', error);
     return handlePrismaError(error);
   }
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -96,4 +97,4 @@ export async function POST(request: Request) {
     console.error('[API] Error creating gallery:', error);
     return handlePrismaError(error);
   }
-}
+});

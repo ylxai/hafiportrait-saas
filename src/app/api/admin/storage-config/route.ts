@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
+import { withRequestContext } from '@/lib/with-request-context';
 
 /**
  * GET /api/admin/storage-config
@@ -11,7 +12,7 @@ import { enforceRateLimit } from '@/lib/rate-limit-helper';
  * Returns storage configuration from default accounts.
  * No input validation needed - read-only endpoint with no parameters.
  */
-export async function GET() {
+export const GET = withRequestContext(async () => {
   const auth = await requireAdminAuth();
   if (auth instanceof NextResponse) return auth;
 
@@ -38,4 +39,4 @@ export async function GET() {
   };
 
   return successResponse(config);
-}
+});

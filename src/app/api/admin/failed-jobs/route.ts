@@ -12,9 +12,10 @@ import {
 } from '@/lib/failed-jobs';
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
+import { withRequestContext } from '@/lib/with-request-context';
 
 // GET /api/admin/failed-jobs - Get pending failed jobs or stats
-export async function GET(request: Request) {
+export const GET = withRequestContext(async (request: Request) => {
   const auth = await requireAdminAuth();
   if (auth instanceof NextResponse) return auth;
 
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
   // Default: list pending jobs
   const jobs = await getPendingFailedJobs(jobType || undefined, limit);
   return successResponse({ jobs });
-}
+});
 
 // POST /api/admin/failed-jobs - Retry or resolve a failed job
 const JobActionSchema = z.object({
@@ -46,7 +47,7 @@ const JobActionSchema = z.object({
   jobId: z.string().min(1),
 });
 
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   const auth = await requireAdminAuth();
   if (auth instanceof NextResponse) return auth;
 
@@ -100,4 +101,4 @@ export async function POST(request: Request) {
     console.error('[Admin/FailedJobs] Error:', error);
     return errorResponse('Internal error', 500);
   }
-}
+});

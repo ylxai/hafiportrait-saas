@@ -4,11 +4,12 @@ import { isClientSession } from '@/lib/auth/role-helpers';
 import { prisma } from '@/lib/db';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse, unauthorizedResponse } from '@/lib/api/response';
 import { selectionSubmitSchema } from '@/lib/api/validation';
+import { withRequestContext } from '@/lib/with-request-context';
 
-export async function POST(
+export const POST = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ token: string }> }
-) {
+) => {
   try {
     const session = await getServerSession(authOptions);
     if (!isClientSession(session)) {
@@ -77,4 +78,4 @@ export async function POST(
     console.error('Error submitting selection:', error);
     return serverErrorResponse('Failed to submit selection');
   }
-}
+});

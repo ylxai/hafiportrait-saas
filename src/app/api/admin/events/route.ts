@@ -8,8 +8,9 @@ import { generateKodeBooking } from '@/lib/utils';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
+import { withRequestContext } from '@/lib/with-request-context';
 
-export async function GET(request: Request) {
+export const GET = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -64,9 +65,9 @@ export async function GET(request: Request) {
     console.error('Error fetching events:', error);
     return serverErrorResponse('Failed to fetch events');
   }
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -146,9 +147,9 @@ export async function POST(request: Request) {
     }
     return serverErrorResponse('Failed to create event');
   }
-}
+});
 
-export async function PATCH(request: Request) {
+export const PATCH = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -195,4 +196,4 @@ export async function PATCH(request: Request) {
     }
     return serverErrorResponse('Failed to update event');
   }
-}
+});

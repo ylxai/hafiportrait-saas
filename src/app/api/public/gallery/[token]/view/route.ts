@@ -2,11 +2,12 @@ import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse } from '@/lib/api/response';
 import { assertGalleryOwnership } from '@/lib/gallery/auth';
 import { publishViewCount } from '@/lib/ably';
+import { withRequestContext } from '@/lib/with-request-context';
 
-export async function POST(
+export const POST = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ token: string }> }
-) {
+) => {
   try {
     const { token } = await params;
 
@@ -63,4 +64,4 @@ export async function POST(
     console.error('[API] Error in view endpoint:', error);
     return notFoundResponse('Gallery not found');
   }
-}
+});

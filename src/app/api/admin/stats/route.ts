@@ -8,6 +8,7 @@ import { requireAdminAuth } from "@/lib/auth/require-admin-auth";
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { getCachedData } from "@/lib/cache";
+import { withRequestContext } from '@/lib/with-request-context';
 
 /**
  * GET /api/admin/stats
@@ -15,7 +16,7 @@ import { getCachedData } from "@/lib/cache";
  * Returns dashboard statistics with caching (5 minutes TTL).
  * No input validation needed - read-only endpoint with no parameters.
  */
-export async function GET(_request: Request) {
+export const GET = withRequestContext(async (_request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -102,4 +103,4 @@ export async function GET(_request: Request) {
     console.error("Error fetching dashboard stats:", error);
     return serverErrorResponse("Failed to fetch stats");
   }
-}
+});

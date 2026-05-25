@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/auth/options';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
+import { withRequestContext } from '@/lib/with-request-context';
 
 // Zod schema for query parameters
 const cleanupQuerySchema = z.object({
@@ -27,7 +28,7 @@ function verifyCleanupSecret(request: Request): boolean {
   );
 }
 
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     // Dual-auth: NextAuth admin session OR cleanup secret (for cron worker).
     //
@@ -86,4 +87,4 @@ export async function POST(request: Request) {
     console.error('Error cleaning up upload sessions:', error);
     return serverErrorResponse('Failed to cleanup upload sessions');
   }
-}
+});

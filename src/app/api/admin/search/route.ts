@@ -5,6 +5,7 @@ import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { z } from 'zod';
+import { withRequestContext } from '@/lib/with-request-context';
 
 // Zod schema for search query parameters
 const searchQuerySchema = z.object({
@@ -12,7 +13,7 @@ const searchQuerySchema = z.object({
   type: z.enum(['all', 'galleries', 'events', 'clients']).default('all'),
 });
 
-export async function GET(request: Request) {
+export const GET = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -113,4 +114,4 @@ export async function GET(request: Request) {
     console.error('[API] Error searching:', error);
     return handlePrismaError(error);
   }
-}
+});

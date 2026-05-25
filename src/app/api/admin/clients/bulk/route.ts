@@ -5,6 +5,7 @@ import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { withRequestContext } from '@/lib/with-request-context';
 
 // Zod schema for bulk delete
 const bulkDeleteSchema = z.object({
@@ -13,7 +14,7 @@ const bulkDeleteSchema = z.object({
     .max(100, 'Maximum 100 IDs allowed per request'),
 });
 
-export async function DELETE(request: Request) {
+export const DELETE = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -61,4 +62,4 @@ export async function DELETE(request: Request) {
     console.error('Error bulk deleting clients:', error);
     return serverErrorResponse('Failed to delete clients');
   }
-}
+});

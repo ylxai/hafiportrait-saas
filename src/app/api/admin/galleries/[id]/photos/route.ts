@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { serializeBigInt } from '@/lib/bigint-utils';
 import { logger } from '@/lib/logger';
 import { DEFAULT_STORAGE_QUOTA_GB, BYTES_PER_GB } from '@/lib/upload/constants';
+import { withRequestContext } from '@/lib/with-request-context';
 
 // Zod schemas
 const paramsSchema = z.object({
@@ -23,10 +24,10 @@ const querySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
-export async function GET(
+export const GET = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -102,12 +103,12 @@ export async function GET(
     console.error('Error fetching photos:', error);
     return serverErrorResponse('Failed to fetch photos');
   }
-}
+});
 
-export async function POST(
+export const POST = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -327,4 +328,4 @@ export async function POST(
     logger.error('[API] gallery.photos.upload.unhandled_error', { err: error });
     return serverErrorResponse('Failed to upload photo');
   }
-}
+});

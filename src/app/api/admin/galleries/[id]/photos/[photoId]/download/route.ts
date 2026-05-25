@@ -3,11 +3,12 @@ import { successResponse, notFoundResponse, serverErrorResponse } from '@/lib/ap
 import { generateDownloadUrl } from '@/lib/upload/presigned';
 import { NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
+import { withRequestContext } from '@/lib/with-request-context';
 
-export async function GET(
+export const GET = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ id: string; photoId: string }> }
-) {
+) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -33,4 +34,4 @@ export async function GET(
     console.error('Error generating download URL:', error);
     return serverErrorResponse('Failed to generate download URL');
   }
-}
+});

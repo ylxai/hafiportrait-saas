@@ -1,10 +1,11 @@
 import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
+import { withRequestContext } from '@/lib/with-request-context';
 
-export async function GET(
+export const GET = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ kodeBooking: string }> }
-) {
+) => {
   try {
     const { kodeBooking } = await params;
 
@@ -44,4 +45,4 @@ export async function GET(
     console.error('Error fetching booking:', error);
     return serverErrorResponse('Failed to fetch booking data');
   }
-}
+});

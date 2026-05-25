@@ -4,6 +4,7 @@ import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { validateRequest } from '@/lib/api/validation';
+import { withRequestContext } from '@/lib/with-request-context';
 
 const toggleLockSchema = z.object({
   isSelectionLocked: z.boolean({
@@ -12,10 +13,10 @@ const toggleLockSchema = z.object({
   }),
 });
 
-export async function PATCH(
+export const PATCH = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -51,4 +52,4 @@ export async function PATCH(
     console.error('Error toggling gallery lock:', error);
     return serverErrorResponse('Failed to toggle lock');
   }
-}
+});

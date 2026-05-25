@@ -6,6 +6,7 @@ import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { logger } from '@/lib/logger';
 import { Prisma } from '@/generated/prisma';
+import { withRequestContext } from '@/lib/with-request-context';
 
 /**
  * Counter reconciliation endpoint.
@@ -73,7 +74,7 @@ interface ReconcileEntry {
   drift: { usedStorage: string; photoCount: number };
 }
 
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -254,4 +255,4 @@ export async function POST(request: Request) {
     logger.error('[API] clients.reconcile.unhandled_error', { err: error });
     return serverErrorResponse('Failed to reconcile client counters');
   }
-}
+});

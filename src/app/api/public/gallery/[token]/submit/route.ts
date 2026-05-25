@@ -10,11 +10,12 @@ import { publishSelectionUpdate } from "@/lib/ably";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import { isClientSession } from "@/lib/auth/role-helpers";
+import { withRequestContext } from '@/lib/with-request-context';
 
-export async function POST(
+export const POST = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ token: string }> },
-) {
+) => {
   try {
     const { token } = await params;
 
@@ -112,4 +113,4 @@ export async function POST(
     console.error("Error submitting selection:", error);
     return serverErrorResponse("Failed to submit selection");
   }
-}
+});

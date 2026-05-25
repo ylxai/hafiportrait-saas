@@ -2,8 +2,9 @@ import { prisma } from '@/lib/db';
 import { successResponse, errorResponse, serverErrorResponse, notFoundResponse } from '@/lib/api/response';
 import { paymentProofSchema } from '@/lib/api/validation';
 import { verifyR2Upload, cleanupUploadSession } from '@/lib/upload/presigned';
+import { withRequestContext } from '@/lib/with-request-context';
 
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     const body: unknown = await request.json();
     const validation = paymentProofSchema.safeParse(body);
@@ -73,4 +74,4 @@ export async function POST(request: Request) {
     console.error('Error submitting payment proof:', error);
     return serverErrorResponse('Failed to upload transfer proof');
   }
-}
+});

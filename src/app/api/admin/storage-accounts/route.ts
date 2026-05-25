@@ -7,6 +7,7 @@ import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { serializeBigInt } from '@/lib/bigint-utils';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { withRequestContext } from '@/lib/with-request-context';
 
 /**
  * Safe fields to return in API responses — excludes plaintext secrets.
@@ -125,7 +126,7 @@ const deleteStorageAccountSchema = z.object({
   id: z.string().min(1, 'Account ID is required'),
 });
 
-export async function GET() {
+export const GET = withRequestContext(async () => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -153,9 +154,9 @@ export async function GET() {
     logger.error('storage_accounts.get_failed', { err: error });
     return serverErrorResponse('Failed to fetch storage accounts');
   }
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -214,9 +215,9 @@ export async function POST(request: Request) {
     logger.error('storage_accounts.create_failed', { err: error });
     return serverErrorResponse('Failed to create storage account');
   }
-}
+});
 
-export async function PATCH(request: Request) {
+export const PATCH = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -272,9 +273,9 @@ export async function PATCH(request: Request) {
     logger.error('storage_accounts.update_failed', { err: error });
     return serverErrorResponse('Failed to update storage account');
   }
-}
+});
 
-export async function DELETE(request: Request) {
+export const DELETE = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -303,4 +304,4 @@ export async function DELETE(request: Request) {
     logger.error('storage_accounts.delete_failed', { err: error });
     return serverErrorResponse('Failed to delete storage account');
   }
-}
+});

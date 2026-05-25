@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { getOrphanedR2Keys, queueStorageDeletion, isQueueConfigured } from '@/lib/cloudflare-queue';
 import { z } from 'zod';
+import { withRequestContext } from '@/lib/with-request-context';
 
 // Helper to check Prisma error codes
 function isPrismaError(error: unknown, code: string): boolean {
@@ -16,10 +17,10 @@ const paramsSchema = z.object({
   photoId: z.string().min(1, 'Photo ID is required'),
 });
 
-export async function DELETE(
+export const DELETE = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ id: string; photoId: string }> }
-) {
+) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -185,4 +186,4 @@ export async function DELETE(
     console.error('Error deleting photo:', error);
     return serverErrorResponse('Failed to delete photo');
   }
-}
+});

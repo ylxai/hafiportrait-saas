@@ -9,6 +9,7 @@ import {
   validationError,
 } from "@/lib/api/response";
 import { z } from "zod";
+import { withRequestContext } from '@/lib/with-request-context';
 
 const schema = z.object({
   nama: z.string().min(1).max(255).optional(),
@@ -16,7 +17,7 @@ const schema = z.object({
   instagram: z.string().max(100).optional().nullable(),
 });
 
-export async function GET() {
+export const GET = withRequestContext(async () => {
   try {
     const session = await getServerSession(authOptions);
     if (!isClientSession(session)) {
@@ -39,9 +40,9 @@ export async function GET() {
     console.error("Profile GET error:", error);
     return serverErrorResponse("Failed to fetch profile");
   }
-}
+});
 
-export async function PATCH(request: Request) {
+export const PATCH = withRequestContext(async (request: Request) => {
   try {
     const session = await getServerSession(authOptions);
     if (!isClientSession(session)) {
@@ -80,4 +81,4 @@ export async function PATCH(request: Request) {
     }
     return serverErrorResponse("Failed to update profile");
   }
-}
+});

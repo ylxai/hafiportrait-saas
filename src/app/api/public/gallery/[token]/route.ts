@@ -11,14 +11,15 @@ import { isClientSession } from '@/lib/auth/role-helpers';
 import { prisma } from '@/lib/db';
 import { parseCursorSafe } from '@/types/pagination';
 import { loadPublicGallery } from '@/lib/gallery/load-public-gallery';
+import { withRequestContext } from '@/lib/with-request-context';
 
 // Validate token format (CUID)
 const tokenSchema = z.string().cuid().or(z.string().min(10).max(50));
 
-export async function GET(
+export const GET = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ token: string }> }
-) {
+) => {
   try {
     const { token } = await params;
 
@@ -71,4 +72,4 @@ export async function GET(
     console.error('Error fetching gallery:', error);
     return serverErrorResponse('Failed to fetch gallery');
   }
-}
+});

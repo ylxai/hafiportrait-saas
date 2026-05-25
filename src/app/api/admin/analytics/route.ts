@@ -7,6 +7,7 @@ import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { getCachedData } from '@/lib/cache';
 import { z } from 'zod';
+import { withRequestContext } from '@/lib/with-request-context';
 
 // Zod schema for query parameters
 const querySchema = z.object({
@@ -14,7 +15,7 @@ const querySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
-export async function GET(request: Request) {
+export const GET = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -107,4 +108,4 @@ export async function GET(request: Request) {
     console.error('Error fetching analytics:', error);
     return errorResponse('Failed to fetch analytics', 500);
   }
-}
+});

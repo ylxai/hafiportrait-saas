@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { verifyWebhookSignature } from '@/lib/webhook-validation';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
+import { withRequestContext } from '@/lib/with-request-context';
 
 const ThumbnailCallbackSchema = z.object({
   photoId: z.string(),
@@ -11,7 +12,7 @@ const ThumbnailCallbackSchema = z.object({
   publicId: z.string(),
 });
 
-export async function POST(request: Request) {
+export const POST = withRequestContext(async (request: Request) => {
   try {
     // Reject oversized payloads before reading the body (Sprint 2 Task 2.3).
     const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.WEBHOOK);
@@ -60,4 +61,4 @@ export async function POST(request: Request) {
     logger.error('[API] webhook.thumbnail.unhandled_error', { err: error });
     return handlePrismaError(error);
   }
-}
+});

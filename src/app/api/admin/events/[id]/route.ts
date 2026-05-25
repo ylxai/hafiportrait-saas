@@ -9,11 +9,12 @@ import {
   enqueueDeletionWithOutbox,
 } from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
+import { withRequestContext } from '@/lib/with-request-context';
 
-export async function GET(
+export const GET = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -65,12 +66,12 @@ export async function GET(
     console.error('Error fetching event:', error);
     return serverErrorResponse('Failed to fetch event');
   }
-}
+});
 
-export async function PATCH(
+export const PATCH = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -106,12 +107,12 @@ export async function PATCH(
     }
     return serverErrorResponse('Failed to update event');
   }
-}
+});
 
-export async function DELETE(
+export const DELETE = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -177,4 +178,4 @@ export async function DELETE(
     }
     return serverErrorResponse('Failed to delete event');
   }
-}
+});

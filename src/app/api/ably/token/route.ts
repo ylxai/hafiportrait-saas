@@ -20,6 +20,7 @@ import Ably from 'ably';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { env } from '@/lib/env.server';
+import { withRequestContext } from '@/lib/with-request-context';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -55,7 +56,7 @@ function buildCapability(opts: {
   return cap;
 }
 
-export async function GET(request: Request) {
+export const GET = withRequestContext(async (request: Request) => {
   if (!env.ABLY_API_KEY) {
     return NextResponse.json(
       { error: 'Ably is not configured on this deployment' },
@@ -99,4 +100,4 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
-}
+});
