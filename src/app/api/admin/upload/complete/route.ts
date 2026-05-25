@@ -1,7 +1,7 @@
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { verifyR2Upload, cleanupUploadSession, deleteFromR2, getR2Credentials } from '@/lib/upload/presigned';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { NextResponse } from 'next/server';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { prisma } from '@/lib/db';
 import { getStorageAccountById } from '@/lib/storage/accounts';
 import { publishPhotoUploaded } from '@/lib/ably';
@@ -33,13 +33,11 @@ export async function POST(request: Request) {
   let outerStorageAccountId: string | null | undefined;
 
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return errorResponse('Unauthorized', 401);
-    }
+    const auth = await requireAdminAuth();
+    if (auth instanceof NextResponse) return auth;
 
     // Rate limiting - prevent abuse of upload completion
-    const userId = session.user.id || session.user.email || 'anonymous';
+    const userId = auth.user.id || auth.user.email || 'anonymous';
     const rateLimit = await checkRateLimit(`upload-complete:${userId}`, RATE_LIMITS.UPLOAD_COMPLETE);
 
     if (!rateLimit.success) {

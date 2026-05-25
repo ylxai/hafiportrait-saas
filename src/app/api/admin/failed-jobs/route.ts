@@ -1,6 +1,6 @@
-import { successResponse, errorResponse, unauthorizedResponse } from '@/lib/api/response';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { successResponse, errorResponse } from '@/lib/api/response';
+import { NextResponse } from 'next/server';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { z } from 'zod';
 import {
   getPendingFailedJobs,
@@ -15,14 +15,12 @@ import { enforceRateLimit } from '@/lib/rate-limit-helper';
 
 // GET /api/admin/failed-jobs - Get pending failed jobs or stats
 export async function GET(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return unauthorizedResponse();
-  }
+  const auth = await requireAdminAuth();
+  if (auth instanceof NextResponse) return auth;
 
   // Rate limiting
   const rateLimit = await enforceRateLimit({
-    identifier: `failed-jobs:get:${session.user.email}`,
+    identifier: `failed-jobs:get:${auth.user.email}`,
     limit: RATE_LIMITS.ADMIN_READ
   });
   if (rateLimit) return rateLimit;
@@ -49,14 +47,12 @@ const JobActionSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return unauthorizedResponse();
-  }
+  const auth = await requireAdminAuth();
+  if (auth instanceof NextResponse) return auth;
 
   // Rate limiting
   const rateLimit = await enforceRateLimit({
-    identifier: `failed-jobs:post:${session.user.email}`,
+    identifier: `failed-jobs:post:${auth.user.email}`,
     limit: RATE_LIMITS.ADMIN_WRITE
   });
   if (rateLimit) return rateLimit;
@@ -75,7 +71,7 @@ export async function POST(request: Request) {
   }
 
   const { action, jobId } = validation.data;
-  const userId = session.user.id || 'unknown';
+  const userId = auth.user.id || 'unknown';
 
   try {
     switch (action) {

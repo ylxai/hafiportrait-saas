@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/db';
 import { authOptions } from '@/lib/auth/options';
+import { isClientSession } from '@/lib/auth/role-helpers';
 import { loadPublicGallery } from '@/lib/gallery/load-public-gallery';
 import GalleryClient from './GalleryClient';
 
@@ -66,7 +67,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const session = await getServerSession(authOptions);
-  if (!session?.user || session.user.role !== 'CLIENT') {
+  if (!isClientSession(session)) {
     return GENERIC_NOT_FOUND_METADATA;
   }
   if (session.user.id !== gallery.event.clientId) {
@@ -123,7 +124,7 @@ export default async function GalleryPage({ params }: PageProps) {
   }
 
   const session = await getServerSession(authOptions);
-  if (!session?.user || session.user.role !== 'CLIENT') {
+  if (!isClientSession(session)) {
     redirect(`/portal/login?callbackUrl=${encodeURIComponent(`/gallery/${token}`)}`);
   }
   if (session.user.id !== head.event.clientId) {

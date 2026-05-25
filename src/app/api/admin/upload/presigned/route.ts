@@ -1,7 +1,7 @@
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { generatePresignedUploadUrl } from '@/lib/upload/presigned';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { NextResponse } from 'next/server';
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
 import {
@@ -72,13 +72,11 @@ function validateFileType(filename: string, _contentType: string): { valid: bool
 // Generate presigned URL untuk direct upload ke R2
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return errorResponse('Unauthorized', 401);
-    }
+    const auth = await requireAdminAuth();
+    if (auth instanceof NextResponse) return auth;
 
     // Rate limiting - prevent abuse of presigned URL generation
-    const userId = session.user.id || session.user.email || 'anonymous';
+    const userId = auth.user.id || auth.user.email || 'anonymous';
     const rateLimitKey = `upload-presigned:${userId}`;
     const rateLimit = await checkRateLimit(rateLimitKey, RATE_LIMITS.UPLOAD_PRESIGNED);
 

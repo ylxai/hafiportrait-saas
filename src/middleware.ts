@@ -5,6 +5,8 @@ import {
   REQUEST_ID_HEADER,
   normalizeRequestId,
 } from "@/lib/request-id-constants";
+import { ROLE_ADMIN, ROLE_CLIENT } from "@/lib/auth/role-constants";
+import { normalizeTokenRole } from "@/lib/auth/role-helpers";
 
 /**
  * Request correlation ID wiring (Sprint 3 / Task 3.1).
@@ -166,7 +168,18 @@ export async function middleware(request: NextRequest) {
     // authenticated session, and must never trigger a portal redirect.
     pathname.startsWith("/api/portal/gallery");
 
-  if (isAdminRoute && token.role !== "admin") {
+  // Normalize role for case-insensitive comparison via the shared helper
+  // so middleware, route-level guards (require-admin-auth.ts), and the
+  // session-side checks (isAdminSession/isClientSession) all apply the
+  // exact same trim + lowercase logic. Tokens minted by our providers in
+  // authOptions are already normalized at issue time, but legacy tokens
+  // and mixed-case DB rows can still surface here, hence the defensive
+  // pass through normalizeTokenRole.
+  const role = normalizeTokenRole(token);
+  const isAdmin = role === ROLE_ADMIN;
+  const isClient = role === ROLE_CLIENT;
+
+  if (isAdminRoute && !isAdmin) {
     if (pathname.startsWith("/api/")) {
       return jsonWithRequestId(
         { success: false, error: "Forbidden" },
@@ -174,12 +187,11 @@ export async function middleware(request: NextRequest) {
         requestId,
       );
     }
-    const target =
-      token.role === "CLIENT" ? "/portal/dashboard" : "/login";
+    const target = isClient ? "/portal/dashboard" : "/login";
     return redirectWithRequestId(new URL(target, request.url), requestId);
   }
 
-  if (isPortalRoute && token.role !== "CLIENT") {
+  if (isPortalRoute && !isClient) {
     if (pathname.startsWith("/api/")) {
       return jsonWithRequestId(
         { success: false, error: "Forbidden" },
@@ -187,7 +199,7 @@ export async function middleware(request: NextRequest) {
         requestId,
       );
     }
-    const target = token.role === "admin" ? "/admin" : "/portal/login";
+    const target = isAdmin ? "/admin" : "/portal/login";
     return redirectWithRequestId(new URL(target, request.url), requestId);
   }
 
@@ -202,7 +214,13 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set(REQUEST_ID_HEADER, requestId);
   requestHeaders.set("x-user-email", token.email as string);
   requestHeaders.set("x-user-id", token.sub as string);
-  requestHeaders.set("x-user-role", token.role as string);
+  // Only set the role header when we actually have a non-empty role.
+  // Setting `x-user-role: ""` would surface a misleading blank header to
+  // downstream handlers that test for header presence rather than value
+  // equality, and would also waste a few bytes per response.
+  if (role) {
+    requestHeaders.set("x-user-role", role);
+  }
 
   const response = NextResponse.next({
     request: { headers: requestHeaders },
@@ -214,6 +232,12 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };

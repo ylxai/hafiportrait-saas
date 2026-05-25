@@ -3,10 +3,25 @@ import { getCloudinaryConfig } from './storage/accounts';
 /**
  * Generate Cloudinary fetch URL from R2 public URL
  * Cloudinary will auto-fetch from R2, resize, and cache the result
- * 
+ *
+ * Sprint 3 Task 3.3: removed `process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`
+ * fallback. Per the architecture rule (`AGENTS.md` → "Storage /
+ * Credentials from DB"), Cloudinary credentials must come from the
+ * `StorageAccount` table, not from `process.env`. The previous
+ * fallback silently picked the wrong account if the DB and env
+ * diverged.
+ *
+ * If `cloudName` is not provided, this function falls back to the
+ * original R2 URL — callers in client components (where the DB-backed
+ * config can't be fetched synchronously) must accept that the image
+ * will load directly from R2 without Cloudinary's resize/cache layer.
+ * Server-side callers should pass `cloudName` from the relevant
+ * `StorageAccount` row (or use `getCloudinaryThumbnailUrlAsync()` to
+ * fetch it).
+ *
  * @param r2Url - R2 public URL (original image)
  * @param options - Resize options
- * @returns Cloudinary fetch URL
+ * @returns Cloudinary fetch URL, or `r2Url` if `cloudName` is missing
  */
 export function getCloudinaryThumbnailUrl(
   r2Url: string,
@@ -18,19 +33,21 @@ export function getCloudinaryThumbnailUrl(
     cloudName?: string;
   } = {}
 ): string {
-  const { 
-    width = 400, 
-    height, 
+  const {
+    width = 400,
+    height,
     quality = 'auto:good',
     format = 'auto',
-    cloudName: explicitCloudName
+    cloudName,
   } = options;
 
-  const cloudName = explicitCloudName || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  
   if (!cloudName) {
-    console.error('Cloudinary cloud name not configured');
-    return r2Url; // Fallback to original
+    // Fall back to the original R2 URL. The previous version pulled
+    // `process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` here, but that
+    // bypassed the DB source-of-truth and could route through a
+    // different Cloudinary account than the one the photo's
+    // `StorageAccount` row points to.
+    return r2Url;
   }
 
   // Build transformation string
