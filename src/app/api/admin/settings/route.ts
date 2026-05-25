@@ -9,6 +9,7 @@ import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
+import { isPrismaError } from '@/lib/prisma-error';
 
 // Normalize null → undefined so legacy DB rows with null JSON columns
 // don't fail validation when the client round-trips settings via POST.
@@ -108,31 +109,47 @@ export const POST = withRequestContext(async (request: Request) => {
 
     const data = validation.data;
 
-    // Upsert settings (create if not exists, update if exists)
-    const settings = await prisma.settings.upsert({
-      where: { id: 'studio' },
-      update: {
-        namaStudio: data.namaStudio,
-        logoUrl: data.logoUrl,
-        phone: data.phone,
-        email: data.email,
-        address: data.address,
-        socialMedia: data.socialMedia as Prisma.InputJsonValue,
-        bookingFields: data.bookingFields as Prisma.InputJsonValue,
-        notifications: data.notifications as Prisma.InputJsonValue,
-      },
-      create: {
-        id: 'studio',
-        namaStudio: data.namaStudio || '',
-        logoUrl: data.logoUrl || '',
-        phone: data.phone || '',
-        email: data.email || '',
-        address: data.address || '',
-        socialMedia: (data.socialMedia ?? {}) as Prisma.InputJsonValue,
-        bookingFields: (data.bookingFields ?? {}) as Prisma.InputJsonValue,
-        notifications: (data.notifications ?? {}) as Prisma.InputJsonValue,
-      },
-    });
+    // Build update + create payloads up front so both branches stay in sync.
+    const updatePayload = {
+      namaStudio: data.namaStudio,
+      logoUrl: data.logoUrl,
+      phone: data.phone,
+      email: data.email,
+      address: data.address,
+      socialMedia: data.socialMedia as Prisma.InputJsonValue,
+      bookingFields: data.bookingFields as Prisma.InputJsonValue,
+      notifications: data.notifications as Prisma.InputJsonValue,
+    };
+    const createPayload = {
+      id: 'studio',
+      namaStudio: data.namaStudio || '',
+      logoUrl: data.logoUrl || '',
+      phone: data.phone || '',
+      email: data.email || '',
+      address: data.address || '',
+      socialMedia: (data.socialMedia ?? {}) as Prisma.InputJsonValue,
+      bookingFields: (data.bookingFields ?? {}) as Prisma.InputJsonValue,
+      notifications: (data.notifications ?? {}) as Prisma.InputJsonValue,
+    };
+
+    // Settings is a singleton row (id="studio"). Prisma's upsert is not
+    // atomic across concurrent requests, so under contention two callers can
+    // both miss the row and race to INSERT — one wins, the other gets P2002.
+    // Try create first; on P2002 fall back to a pure update so the loser of
+    // the race still applies its payload.
+    let settings;
+    try {
+      settings = await prisma.settings.create({ data: createPayload });
+    } catch (error) {
+      if (isPrismaError(error, 'P2002')) {
+        settings = await prisma.settings.update({
+          where: { id: 'studio' },
+          data: updatePayload,
+        });
+      } else {
+        throw error;
+      }
+    }
 
     return successResponse({ settings });
   } catch (error) {
