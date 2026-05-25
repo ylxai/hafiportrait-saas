@@ -2,7 +2,12 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import { compare } from "bcryptjs";
-import { ROLE_ADMIN, ROLE_CLIENT } from "@/lib/auth/role-constants";
+import {
+  ROLE_ADMIN,
+  ROLE_CLIENT,
+  PROVIDER_ID_ADMIN,
+  PROVIDER_ID_CLIENT,
+} from "@/lib/auth/role-constants";
 import { normalizeRawRole } from "@/lib/auth/role-helpers";
 import { normalizeEmail } from "@/lib/auth/email-helpers";
 
@@ -23,7 +28,7 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       // WARNING: Changing this ID will invalidate all existing admin sessions
       // and require all admins to log in again. Coordinate changes with team.
-      id: ROLE_ADMIN,
+      id: PROVIDER_ID_ADMIN,
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
@@ -91,7 +96,7 @@ export const authOptions: NextAuthOptions = {
       },
     }),
     CredentialsProvider({
-      id: ROLE_CLIENT,
+      id: PROVIDER_ID_CLIENT,
       name: "Client",
       credentials: {
         email: { label: "Email", type: "email" },
