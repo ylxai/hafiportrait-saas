@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db';
-import { logger } from '@/lib/logger';
+// Note: logger is NOT imported here because storage/accounts.ts is imported
+// by cloudinary.ts which is used in client components (PhotoImage.tsx).
+// Using logger would pull in node:async_hooks which is unavailable in browser.
 import { getActiveCredentials } from './rotation';
 
 type StorageAccount = {
@@ -72,7 +74,7 @@ export async function decreaseStorageUsage(accountId: string, fileSize: bigint) 
 
   if (result === 0) {
     // Account not found — log and return silently
-    logger.warn('storage.decrease.account_not_found', { accountId });
+    console.warn('storage.decrease.account_not_found', { accountId });
     return;
   }
 
@@ -83,7 +85,7 @@ export async function decreaseStorageUsage(accountId: string, fileSize: bigint) 
   });
 
   if (account?.usedStorage === BigInt(0)) {
-    logger.warn('storage.decrease.clamped_to_zero', {
+    console.warn('storage.decrease.clamped_to_zero', {
       accountId,
       attempted: fileSize.toString(),
     });
