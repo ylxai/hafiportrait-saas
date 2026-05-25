@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db';
-import { logger } from '@/lib/logger';
+// Note: logger is NOT imported here because storage/accounts.ts is imported
+// by cloudinary.ts which is used in client components (PhotoImage.tsx).
+// Using logger would pull in node:async_hooks which is unavailable in browser.
 import { getActiveCredentials } from './rotation';
 
 type StorageAccount = {
@@ -72,7 +74,7 @@ export async function decreaseStorageUsage(accountId: string, fileSize: bigint) 
 
   if (result === 0) {
     // Account not found — log and return silently
-    logger.warn('storage.decrease.account_not_found', { accountId });
+    console.warn('storage.decrease.account_not_found', { accountId });
     return;
   }
 
@@ -83,7 +85,7 @@ export async function decreaseStorageUsage(accountId: string, fileSize: bigint) 
   });
 
   if (account?.usedStorage === BigInt(0)) {
-    logger.warn('storage.decrease.clamped_to_zero', {
+    console.warn('storage.decrease.clamped_to_zero', {
       accountId,
       attempted: fileSize.toString(),
     });
@@ -178,11 +180,8 @@ export async function getCloudinaryConfig(): Promise<{ cloudName: string }> {
     return { cloudName: account.cloudName };
   }
 
-  // Fallback to environment variable
-  const envCloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  if (envCloudName) {
-    return { cloudName: envCloudName };
-  }
-
-  throw new Error('Cloudinary cloud name not configured in database or environment');
+  // Sprint 3 Task 3.3: env fallback removed — cloudName must come from DB.
+  // If no active Cloudinary account is configured, throw so callers surface
+  // a clear configuration error rather than silently using a stale env var.
+  throw new Error('Cloudinary cloud name not configured. Add a Cloudinary storage account in admin settings.');
 }

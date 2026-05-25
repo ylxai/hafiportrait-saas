@@ -1,5 +1,7 @@
 import { getCloudinaryConfig } from './storage/accounts';
-import { logger } from './logger';
+// Note: logger is NOT imported here because cloudinary.ts is used in both
+// server and client contexts (via PhotoImage.tsx). Using logger would pull
+// in node:async_hooks which is not available in the browser bundle.
 
 /**
  * Generate Cloudinary fetch URL from R2 public URL
@@ -103,7 +105,7 @@ export async function getCloudinaryThumbnailUrlAsync(
       cloudName: config.cloudName,
     });
   } catch (error) {
-    logger.error('cloudinary.config.fetch_failed', { err: error });
+    console.error('cloudinary.config.fetch_failed', { error, r2Url });
     return r2Url; // Fallback to original
   }
 }

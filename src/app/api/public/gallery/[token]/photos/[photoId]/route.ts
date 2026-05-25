@@ -47,9 +47,9 @@ export const GET = withRequestContext(async (
     }
 
     const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
-    const cloudName =
-      cloudinaryAccount?.cloudName ||
-      process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    // cloudName is String? in Prisma (string | null); explicitly coerce null → undefined
+    const rawCloudName = cloudinaryAccount?.cloudName;
+    const cloudName = rawCloudName !== null ? rawCloudName : undefined;
 
     const serialized = serializeGalleryPhoto(photo, cloudName);
 
