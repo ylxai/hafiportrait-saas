@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
-import { logger } from '@/lib/logger';
 
 export default function Error({
   error,
@@ -13,10 +12,10 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Structured logger so error boundaries emit the same JSON shape as
-    // the rest of the app (level/event/time/digest); upstream log
-    // pipelines can filter/group by `event` instead of regex'ing strings.
-    logger.error('error.boundary.root', {
+    // Log to console for client-side error tracking. Using console.error
+    // instead of the structured logger because logger depends on
+    // node:async_hooks which cannot be imported in client components.
+    console.error('error.boundary.root', {
       error,
       digest: error.digest,
     });

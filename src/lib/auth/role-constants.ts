@@ -19,3 +19,18 @@ export const ROLE_ADMIN = 'admin' as const;
 export const ROLE_CLIENT = 'client' as const;
 
 export type UserRole = typeof ROLE_ADMIN | typeof ROLE_CLIENT;
+
+/**
+ * NextAuth CredentialsProvider IDs, decoupled from the role constants.
+ *
+ * These IDs are part of the session token structure and changing them
+ * would invalidate all existing sessions, forcing every user to log in
+ * again. By using distinct values (with '-credentials' suffix) instead
+ * of reusing the role strings, we ensure provider IDs can never be
+ * accidentally coupled to role semantics or confused with DB role values.
+ *
+ * WARNING: Changing these values will invalidate all existing sessions.
+ * Coordinate with the team before modifying.
+ */
+export const PROVIDER_ID_ADMIN = 'admin-credentials' as const;
+export const PROVIDER_ID_CLIENT = 'client-credentials' as const;

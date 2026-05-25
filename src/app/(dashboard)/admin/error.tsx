@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Home } from 'lucide-react';
-import { logger } from '@/lib/logger';
 
 export default function AdminError({
   error,
@@ -13,7 +12,10 @@ export default function AdminError({
   reset: () => void;
 }) {
   useEffect(() => {
-    logger.error('error.boundary.admin', {
+    // Log to console for client-side error tracking. Using console.error
+    // instead of the structured logger because logger depends on
+    // node:async_hooks which cannot be imported in client components.
+    console.error('error.boundary.admin', {
       error,
       digest: error.digest,
     });
