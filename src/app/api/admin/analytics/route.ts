@@ -8,6 +8,7 @@ import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { getCachedData } from '@/lib/cache';
 import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 // Zod schema for query parameters
 const querySchema = z.object({
@@ -94,7 +95,7 @@ export const GET = withRequestContext(async (request: Request) => {
     const summaryResult = {
       totalGalleries: total,
       publishedGalleries: summaryData.publishedCount,
-      totalViews: (summaryData.summary._sum.viewCount || 0).toString(),
+      totalViews: summaryData.summary._sum.viewCount || 0,
       avgViews: total > 0 ? Math.round(Number(summaryData.summary._sum.viewCount || 0) / total) : 0,
       totalSelections: summaryData.totalSelections,
     };
@@ -105,7 +106,7 @@ export const GET = withRequestContext(async (request: Request) => {
       pagination: createAdminPaginationResponse(page, limit, total),
     });
   } catch (error) {
-    console.error('Error fetching analytics:', error);
+    logger.error('admin.analytics.fetch_failed', { err: error });
     return errorResponse('Failed to fetch analytics', 500);
   }
 });

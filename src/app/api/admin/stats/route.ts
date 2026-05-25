@@ -9,6 +9,7 @@ import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { getCachedData } from "@/lib/cache";
 import { withRequestContext } from '@/lib/with-request-context';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/admin/stats
@@ -73,7 +74,7 @@ export const GET = withRequestContext(async (_request: Request) => {
           totalClients,
           totalGalleries,
           totalPhotos,
-          totalRevenue: revenueResult._sum.totalPrice?.toString() ?? "0",
+          totalRevenue: revenueResult._sum.totalPrice ?? 0,
           recentEvents: recentEvents.map(
             (e: (typeof recentEvents)[number]) => ({
               id: e.id,
@@ -100,7 +101,7 @@ export const GET = withRequestContext(async (_request: Request) => {
 
     return successResponse({ stats });
   } catch (error) {
-    console.error("Error fetching dashboard stats:", error);
+    logger.error('admin.stats.fetch_failed', { err: error });
     return serverErrorResponse("Failed to fetch stats");
   }
 });
