@@ -1,21 +1,18 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
-import { isClientSession } from '@/lib/auth/role-helpers';
+import { NextResponse } from 'next/server';
+import { requireClientAuth } from '@/lib/auth/require-client-auth';
 import { prisma } from '@/lib/db';
-import { successResponse, unauthorizedResponse, serverErrorResponse } from '@/lib/api/response';
+import { successResponse, serverErrorResponse } from '@/lib/api/response';
 import { withRequestContext } from '@/lib/with-request-context';
 
 export const GET = withRequestContext(async () => {
   try {
-    const session = await getServerSession(authOptions);
-    if (!isClientSession(session)) {
-      return unauthorizedResponse();
-    }
+    const auth = await requireClientAuth();
+    if (auth instanceof NextResponse) return auth;
 
     const galleries = await prisma.gallery.findMany({
       where: {
         event: {
-          clientId: session.user.id
+          clientId: auth.user.id
         }
       },
       include: {
@@ -40,7 +37,7 @@ export const GET = withRequestContext(async () => {
     const payments = await prisma.payment.findMany({
       where: {
         event: {
-          clientId: session.user.id
+          clientId: auth.user.id
         }
       },
       include: {

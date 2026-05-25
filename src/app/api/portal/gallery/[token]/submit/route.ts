@@ -1,8 +1,7 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
-import { isClientSession } from '@/lib/auth/role-helpers';
+import { NextResponse } from 'next/server';
+import { requireClientAuth } from '@/lib/auth/require-client-auth';
 import { prisma } from '@/lib/db';
-import { successResponse, errorResponse, notFoundResponse, serverErrorResponse, unauthorizedResponse } from '@/lib/api/response';
+import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { selectionSubmitSchema } from '@/lib/api/validation';
 import { withRequestContext } from '@/lib/with-request-context';
 
@@ -11,10 +10,8 @@ export const POST = withRequestContext(async (
   { params }: { params: Promise<{ token: string }> }
 ) => {
   try {
-    const session = await getServerSession(authOptions);
-    if (!isClientSession(session)) {
-      return unauthorizedResponse();
-    }
+    const auth = await requireClientAuth();
+    if (auth instanceof NextResponse) return auth;
 
     const { token } = await params;
     const body: unknown = await request.json();
@@ -47,7 +44,7 @@ export const POST = withRequestContext(async (
       return notFoundResponse('Gallery not found');
     }
 
-    if (gallery.event.clientId !== session.user.id) {
+    if (gallery.event.clientId !== auth.user.id) {
       return errorResponse('Forbidden', 403);
     }
 
@@ -71,8 +68,8 @@ export const POST = withRequestContext(async (
 
     return successResponse({ 
       selectionId: selection.id,
-      clientId: session.user.id,
-      clientName: session.user.name
+      clientId: auth.user.id,
+      clientName: auth.user.name
     }, 201);
   } catch (error) {
     console.error('Error submitting selection:', error);

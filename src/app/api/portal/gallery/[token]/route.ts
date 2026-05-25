@@ -1,8 +1,7 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
-import { isClientSession } from '@/lib/auth/role-helpers';
+import { NextResponse } from 'next/server';
+import { requireClientAuth } from '@/lib/auth/require-client-auth';
 import { prisma } from '@/lib/db';
-import { successResponse, notFoundResponse, serverErrorResponse, errorResponse, unauthorizedResponse } from '@/lib/api/response';
+import { successResponse, notFoundResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { getDefaultAccount } from '@/lib/storage/accounts';
 import { getCloudinaryThumbnailUrl, getCloudinaryLightboxUrl } from '@/lib/cloudinary';
 import { safeClientSelect } from '@/lib/api/select';
@@ -19,10 +18,8 @@ export const GET = withRequestContext(async (
   { params }: { params: Promise<{ token: string }> }
 ) => {
   try {
-    const session = await getServerSession(authOptions);
-    if (!isClientSession(session)) {
-      return unauthorizedResponse();
-    }
+    const auth = await requireClientAuth();
+    if (auth instanceof NextResponse) return auth;
 
     const { token } = await params;
     
@@ -59,7 +56,7 @@ export const GET = withRequestContext(async (
       return notFoundResponse('Gallery not found');
     }
 
-    if (gallery.event.clientId !== session.user.id) {
+    if (gallery.event.clientId !== auth.user.id) {
       return errorResponse('Forbidden', 403);
     }
 

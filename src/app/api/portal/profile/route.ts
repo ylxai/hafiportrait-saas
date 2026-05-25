@@ -1,10 +1,8 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/options";
-import { isClientSession } from "@/lib/auth/role-helpers";
+import { NextResponse } from "next/server";
+import { requireClientAuth } from "@/lib/auth/require-client-auth";
 import { prisma } from "@/lib/db";
 import {
   successResponse,
-  unauthorizedResponse,
   serverErrorResponse,
   validationError,
 } from "@/lib/api/response";
@@ -19,13 +17,11 @@ const schema = z.object({
 
 export const GET = withRequestContext(async () => {
   try {
-    const session = await getServerSession(authOptions);
-    if (!isClientSession(session)) {
-      return unauthorizedResponse();
-    }
+    const auth = await requireClientAuth();
+    if (auth instanceof NextResponse) return auth;
 
     const client = await prisma.client.findUnique({
-      where: { id: session.user.id },
+      where: { id: auth.user.id },
       select: {
         id: true,
         nama: true,
@@ -44,10 +40,8 @@ export const GET = withRequestContext(async () => {
 
 export const PATCH = withRequestContext(async (request: Request) => {
   try {
-    const session = await getServerSession(authOptions);
-    if (!isClientSession(session)) {
-      return unauthorizedResponse();
-    }
+    const auth = await requireClientAuth();
+    if (auth instanceof NextResponse) return auth;
 
     const body = await request.json();
     const result = schema.safeParse(body);
@@ -57,7 +51,7 @@ export const PATCH = withRequestContext(async (request: Request) => {
     }
 
     const client = await prisma.client.update({
-      where: { id: session.user.id },
+      where: { id: auth.user.id },
       data: result.data,
       select: {
         id: true,
@@ -77,7 +71,7 @@ export const PATCH = withRequestContext(async (request: Request) => {
       "code" in error &&
       error.code === "P2025"
     ) {
-      return unauthorizedResponse();
+      return serverErrorResponse("Profile not found");
     }
     return serverErrorResponse("Failed to update profile");
   }
