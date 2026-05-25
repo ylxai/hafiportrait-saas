@@ -11,6 +11,7 @@ import {
 } from '@/lib/upload/constants';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 // Zod validation schema for public presigned upload request
 const PublicPresignedRequestSchema = z.object({
@@ -46,6 +47,9 @@ function validateFileType(filename: string): { valid: boolean; error?: string } 
 
 export const POST = withRequestContext(async (request: Request) => {
   try {
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
+
     const body: unknown = await request.json();
     const validation = PublicPresignedRequestSchema.safeParse(body);
     

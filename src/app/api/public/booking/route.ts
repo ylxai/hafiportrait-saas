@@ -7,6 +7,7 @@ import { generateKodeBooking } from '@/lib/utils';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { isPrismaError } from '@/lib/prisma-error';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 const MAX_RETRY = 5;
 // Match the cost factor used in `src/app/api/admin/clients/route.ts` and the
@@ -16,6 +17,9 @@ const BCRYPT_ROUNDS = 10;
 
 export const POST = withRequestContext(async (request: Request) => {
   try {
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
+
     let body: unknown;
     try {
       body = await request.json();

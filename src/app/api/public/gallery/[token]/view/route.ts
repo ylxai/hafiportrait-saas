@@ -5,12 +5,16 @@ import { publishViewCount } from '@/lib/ably';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { isPrismaError } from '@/lib/prisma-error';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 export const POST = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ token: string }> }
 ) => {
   try {
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
+
     const { token } = await params;
 
     // Auth gate: only the owning client may bump the view count. Without

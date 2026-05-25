@@ -17,6 +17,7 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { rateLimitResponse } from '@/lib/api/response';
 import { logger } from '@/lib/logger';
 import { withRequestContext } from '@/lib/with-request-context';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 
 // Zod validation schema for upload complete request
@@ -47,6 +48,9 @@ export const POST = withRequestContext(async (request: Request) => {
         Math.ceil((rateLimit.resetAt - Date.now()) / 1000)
       );
     }
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     let body: unknown;
     try {

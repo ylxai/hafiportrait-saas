@@ -8,6 +8,7 @@ import { validateRequest } from '@/lib/api/validation';
 import { Prisma } from '@/generated/prisma';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 const bulkDeleteSchema = z.object({
   photoIds: z.array(z.string().trim().min(1, 'Invalid photo ID')).min(1, 'Select at least 1 photo').max(100, 'Maximum 100 photos per batch'),
@@ -20,6 +21,9 @@ export const POST = withRequestContext(async (
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_BATCH);
+    if (tooLarge) return tooLarge;
 
     const { id: galleryId } = await params;
     const body: unknown = await request.json();

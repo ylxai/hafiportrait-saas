@@ -18,6 +18,7 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { rateLimitResponse } from '@/lib/api/response';
 import { logger } from '@/lib/logger';
 import { withRequestContext } from '@/lib/with-request-context';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 const MAX_BATCH_SIZE = 50;
 
@@ -61,6 +62,9 @@ export const POST = withRequestContext(async (request: Request) => {
         Math.ceil((rateLimit.resetAt - Date.now()) / 1000)
       );
     }
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_BATCH);
+    if (tooLarge) return tooLarge;
 
     let body: unknown;
     try {

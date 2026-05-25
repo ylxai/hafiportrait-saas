@@ -8,6 +8,7 @@ import { serializeBigInt } from '@/lib/bigint-utils';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 /**
  * Safe fields to return in API responses — excludes plaintext secrets.
@@ -168,6 +169,9 @@ export const POST = withRequestContext(async (request: Request) => {
     });
     if (rateLimit) return rateLimit;
 
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
+
     let body: unknown;
     try {
       body = await request.json();
@@ -228,6 +232,9 @@ export const PATCH = withRequestContext(async (request: Request) => {
       limit: RATE_LIMITS.ADMIN_WRITE
     });
     if (rateLimit) return rateLimit;
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     let body: unknown;
     try {

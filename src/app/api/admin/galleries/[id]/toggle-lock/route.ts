@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { validateRequest } from '@/lib/api/validation';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 const toggleLockSchema = z.object({
   isSelectionLocked: z.boolean({
@@ -21,6 +22,9 @@ export const PATCH = withRequestContext(async (
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     const { id } = await params;
     const body: unknown = await request.json();

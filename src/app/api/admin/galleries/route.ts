@@ -10,6 +10,7 @@ import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 export const GET = withRequestContext(async (request: Request) => {
   try {
@@ -78,6 +79,9 @@ export const POST = withRequestContext(async (request: Request) => {
       limit: RATE_LIMITS.ADMIN_WRITE
     });
     if (rateLimit) return rateLimit;
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     const body: unknown = await request.json();
     const result = gallerySchema.safeParse(body);

@@ -7,6 +7,7 @@ import { BYTES_PER_GB } from '@/lib/upload/constants';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { isPrismaError } from '@/lib/prisma-error';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 const updateQuotaSchema = z.object({
   clientId: z.string().min(1, 'Client ID is required'),
@@ -20,6 +21,9 @@ export const PATCH = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     let body: unknown;
     try {

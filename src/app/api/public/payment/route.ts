@@ -4,9 +4,13 @@ import { paymentProofSchema } from '@/lib/api/validation';
 import { verifyR2Upload, cleanupUploadSession } from '@/lib/upload/presigned';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 export const POST = withRequestContext(async (request: Request) => {
   try {
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
+
     const body: unknown = await request.json();
     const validation = paymentProofSchema.safeParse(body);
     if (!validation.success) {

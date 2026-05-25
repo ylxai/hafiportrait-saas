@@ -5,6 +5,7 @@ import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 // Zod schemas for bulk operations
 const bulkUpdateSchema = z.object({
@@ -24,6 +25,9 @@ export const PATCH = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_BATCH);
+    if (tooLarge) return tooLarge;
 
     let body: unknown;
     try {

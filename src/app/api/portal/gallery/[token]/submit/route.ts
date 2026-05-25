@@ -5,6 +5,7 @@ import { successResponse, errorResponse, notFoundResponse, serverErrorResponse }
 import { selectionSubmitSchema } from '@/lib/api/validation';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 export const POST = withRequestContext(async (
   request: Request,
@@ -13,6 +14,9 @@ export const POST = withRequestContext(async (
   try {
     const auth = await requireClientAuth();
     if (auth instanceof NextResponse) return auth;
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     const { token } = await params;
     const body: unknown = await request.json();

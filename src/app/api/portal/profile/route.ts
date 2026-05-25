@@ -10,6 +10,7 @@ import { z } from "zod";
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { isPrismaError } from '@/lib/prisma-error';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 const schema = z.object({
   nama: z.string().min(1).max(255).optional(),
@@ -44,6 +45,9 @@ export const PATCH = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireClientAuth();
     if (auth instanceof NextResponse) return auth;
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     const body = await request.json();
     const result = schema.safeParse(body);

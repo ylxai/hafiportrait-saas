@@ -11,6 +11,7 @@ import {
 import { logger } from '@/lib/logger';
 import { isPrismaError } from '@/lib/prisma-error';
 import { withRequestContext } from '@/lib/with-request-context';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 export const GET = withRequestContext(async (
   request: Request,
@@ -81,6 +82,9 @@ export const PATCH = withRequestContext(async (
     if (!id) {
       return errorResponse('Event ID is required', 400);
     }
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     let body: unknown;
     try {

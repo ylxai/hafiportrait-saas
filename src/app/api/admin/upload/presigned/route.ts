@@ -20,6 +20,7 @@ import { rateLimitResponse } from '@/lib/api/response';
 import { publishStorageQuotaAlert } from '@/lib/ably';
 import { logger } from '@/lib/logger';
 import { withRequestContext } from '@/lib/with-request-context';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 
 // Zod validation schema for presigned upload request
@@ -87,6 +88,9 @@ export const POST = withRequestContext(async (request: Request) => {
         Math.ceil((rateLimit.resetAt - Date.now()) / 1000)
       );
     }
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     // Parse and validate request body with Zod
     let body: unknown;

@@ -11,6 +11,7 @@ import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { isPrismaError } from '@/lib/prisma-error';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 export const GET = withRequestContext(async (request: Request) => {
   try {
@@ -80,6 +81,9 @@ export const POST = withRequestContext(async (request: Request) => {
       limit: RATE_LIMITS.ADMIN_WRITE
     });
     if (rateLimit) return rateLimit;
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     let body: unknown;
     try {
@@ -170,6 +174,9 @@ export const PATCH = withRequestContext(async (request: Request) => {
       limit: RATE_LIMITS.ADMIN_WRITE
     });
     if (rateLimit) return rateLimit;
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     let body: unknown;
     try {

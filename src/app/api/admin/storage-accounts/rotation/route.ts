@@ -13,6 +13,7 @@ import {
 import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 // Zod schemas
 const getQuerySchema = z.object({
@@ -137,6 +138,9 @@ export const POST = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     const body: unknown = await request.json();
 

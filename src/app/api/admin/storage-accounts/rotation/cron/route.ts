@@ -3,6 +3,7 @@ import { getAccountsNeedingRotation, rotateStorageCredentials } from '@/lib/stor
 import { timingSafeEqual } from 'crypto';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 /**
  * POST /api/admin/storage-accounts/rotation/cron
@@ -17,6 +18,9 @@ import { logger } from '@/lib/logger';
  */
 export const POST = withRequestContext(async (request: Request) => {
   try {
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
+
     // Validate cron secret (reuse VPS_WEBHOOK_SECRET)
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.VPS_WEBHOOK_SECRET;

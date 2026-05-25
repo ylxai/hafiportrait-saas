@@ -8,6 +8,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 // Zod schema for query parameters
 const cleanupQuerySchema = z.object({
@@ -59,6 +60,9 @@ export const POST = withRequestContext(async (request: Request) => {
       // No session and no valid cleanup secret.
       return errorResponse('Unauthorized', 401);
     }
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     const { searchParams } = new URL(request.url);
     

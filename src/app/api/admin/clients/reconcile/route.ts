@@ -7,6 +7,7 @@ import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { logger } from '@/lib/logger';
 import { Prisma } from '@/generated/prisma';
 import { withRequestContext } from '@/lib/with-request-context';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 /**
  * Counter reconciliation endpoint.
@@ -85,6 +86,9 @@ export const POST = withRequestContext(async (request: Request) => {
       limit: RATE_LIMITS.ADMIN_WRITE,
     });
     if (rateLimit) return rateLimit;
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     // Parse query params for optional client scoping. `?clientId=xxx`
     // limits reconciliation to a single client (useful for ad-hoc

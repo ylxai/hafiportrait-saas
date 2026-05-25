@@ -11,6 +11,7 @@ import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { withRequestContext } from '@/lib/with-request-context';
 import { isPrismaError } from '@/lib/prisma-error';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 // bcrypt cost factor for client portal passwords. Matches the dummy hash
 // shape used in lib/auth/options.ts for timing-attack protection.
@@ -93,6 +94,9 @@ export const POST = withRequestContext(async (request: Request) => {
     });
     if (rateLimit) return rateLimit;
 
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
+
     let body: unknown;
     try {
       body = await request.json();
@@ -144,6 +148,9 @@ export const PATCH = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     let body: unknown;
     try {

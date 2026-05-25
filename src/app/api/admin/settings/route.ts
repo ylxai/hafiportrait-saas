@@ -8,6 +8,7 @@ import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 // Normalize null → undefined so legacy DB rows with null JSON columns
 // don't fail validation when the client round-trips settings via POST.
@@ -87,6 +88,9 @@ export const POST = withRequestContext(async (request: Request) => {
       limit: RATE_LIMITS.ADMIN_WRITE
     });
     if (rateLimit) return rateLimit;
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     let body: unknown;
     try {

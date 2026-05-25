@@ -12,6 +12,7 @@ import {
 import { logger } from '@/lib/logger';
 import { withRequestContext } from '@/lib/with-request-context';
 import { isPrismaError } from '@/lib/prisma-error';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 export const GET = withRequestContext(async (
   request: Request,
@@ -80,6 +81,9 @@ export const PATCH = withRequestContext(async (
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     const { id } = await params;
     const body: unknown = await request.json();

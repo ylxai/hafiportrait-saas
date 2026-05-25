@@ -12,6 +12,7 @@ import { authOptions } from "@/lib/auth/options";
 import { isClientSession } from "@/lib/auth/role-helpers";
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 export const POST = withRequestContext(async (
   request: Request,
@@ -28,6 +29,9 @@ export const POST = withRequestContext(async (
     if (!isClientSession(session)) {
       return errorResponse("Unauthorized", 401);
     }
+
+    const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
+    if (tooLarge) return tooLarge;
 
     const body: unknown = await request.json();
     const validation = selectionSubmitSchema.safeParse(body);
