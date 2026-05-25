@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import { compare } from "bcryptjs";
 import { ROLE_ADMIN, ROLE_CLIENT } from "@/lib/auth/role-constants";
+import { normalizeRawRole } from "@/lib/auth/role-helpers";
 
 // Pre-computed valid bcrypt hash used to keep `compare()` cost roughly
 // constant when the user/client isn't found. Without this, an attacker
@@ -52,16 +53,12 @@ export const authOptions: NextAuthOptions = {
           // can compare case-insensitively without each call site having to
           // repeat the toLowerCase(). DB column is free-form string today
           // (not an enum), so mixed-case values can leak in via seeds or
-          // manual edits — collapse them at the token-issue boundary.
-          // Null-coalesce before the cast: the column is non-null in Prisma
-          // today but legacy/seed rows have surfaced with empty strings, and
-          // calling .toLowerCase() on null/undefined would throw inside the
-          // authorize callback (turning a routine bad-login into a 500).
-          // Also trim() so accidental leading/trailing whitespace in seeds
-          // or manual DB edits can't bypass the role check — matches the
-          // shared normalizeRole() helper used by middleware and route
-          // guards so the issue-time and read-time normalization agree.
-          role: (user.role ?? '').trim().toLowerCase(),
+          // manual edits — collapse them at the token-issue boundary via
+          // the shared `normalizeRawRole` helper so the issue-time and
+          // read-time normalization (used by middleware + route guards)
+          // stay in lock-step. Handles null/undefined/non-string defensively
+          // so a routine bad-login can't surface as a 500.
+          role: normalizeRawRole(user.role),
         };
       },
     }),

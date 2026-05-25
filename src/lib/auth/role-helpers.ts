@@ -24,12 +24,30 @@ import type { JWT } from 'next-auth/jwt';
 import { ROLE_ADMIN, ROLE_CLIENT } from './role-constants';
 
 /**
+ * Normalize an arbitrary raw role value into the canonical trimmed +
+ * lower-cased string used for comparisons everywhere else. Accepts
+ * `unknown` so callers can pass DB columns, JWT claims, or any other
+ * loosely-typed source without first proving it's a string. Returns `''`
+ * for null/undefined and coerces other primitives via `String()` so a
+ * stray number/boolean from a legacy row can't blow up the call site.
+ *
+ * This is the single source of truth for role normalization — the
+ * session/token helpers below all delegate here so the issue-time
+ * normalization in `authOptions` and the read-time normalization in
+ * middleware/route guards stay in lock-step.
+ */
+export function normalizeRawRole(value: unknown): string {
+  if (value === undefined || value === null) return '';
+  return String(value).trim().toLowerCase();
+}
+
+/**
  * Normalize the role string off a possibly-missing session. Returns `''`
  * when the session, user, or role is absent so downstream comparisons
  * never have to repeat the null guard.
  */
 export function normalizeRole(session: Session | null | undefined): string {
-  return (session?.user?.role ?? '').trim().toLowerCase();
+  return normalizeRawRole(session?.user?.role);
 }
 
 /**
@@ -41,13 +59,11 @@ export function normalizeRole(session: Session | null | undefined): string {
  *
  * `getToken()` is typed loosely (`JWT | null`) and our augmentation declares
  * `role: string`, but legacy tokens minted before the augmentation may carry
- * non-string values — coerce defensively via String() before normalizing so
- * a stray number/boolean can't blow up middleware.
+ * non-string values — `normalizeRawRole` handles the defensive String()
+ * coercion so a stray number/boolean can't blow up middleware.
  */
 export function normalizeTokenRole(token: JWT | null | undefined): string {
-  const raw = token?.role;
-  if (raw === undefined || raw === null) return '';
-  return String(raw).trim().toLowerCase();
+  return normalizeRawRole(token?.role);
 }
 
 /**
