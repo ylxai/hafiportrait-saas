@@ -1,341 +1,209 @@
 # Audit Fix Tasks — PhotoStudio SaaS
 
-> Generated: 2026-05-23
-> Base audit: full expert codebase review (skip .md files)
+> Updated: 2026-05-25
+> Base audit: Full expert codebase review (2026-05-25)
+> Full report: `docs/AUDIT-REPORT-2026-05-25.md`
 
 ---
 
-## Sprint Planning Overview
+## Sprint Status Overview
 
-| Sprint | Scope | Effort Est. |
-|--------|-------|-------------|
-| **Sprint 1** | Kritis + High (Security, Reliability) | 2–3 hari |
-| **Sprint 2** | Medium (Performance, Consistency) | 2 hari |
-| **Sprint 3** | Low (Observability, Polish) | 1 hari |
-
----
-
-## Sprint 1 — Kritis & High Priority
-
-### Task 1.1: Fix Bulk Delete Flow (Queue-First → Collect-Then-Delete-Then-Enqueue)
-
-- **Severity**: Kritis
-- **File**: `src/app/api/admin/photos/bulk-delete/route.ts`
-- **Line**: 125–210
-- **Problem**: Endpoint queues storage deletion jobs **before** deleting DB rows. If queue succeeds but DB transaction fails, files are deleted from storage but DB records remain — users see ghost photos in UI that 404 on click.
-- **Fix Direction**: Reverse the flow to match the canonical pattern already documented in `src/lib/cloudflare-queue.ts` (lines 999–1003):
-  1. `const payloads = await collectPhotoDeletionPayloads(where)`
-  2. `await prisma.$transaction([...DB delete...])`
-  3. `await enqueueDeletionWithOutbox(payloads)`
-- **Use**: `collectDeletionDataForTransaction()` to get both `usedByClient` map and `payloads` in one query, then run atomic Prisma transaction, then enqueue.
-- **Acceptance Criteria**:
-  - [ ] Bulk delete flow is: collect payloads → DB transaction delete → enqueue cleanup
-  - [ ] If DB transaction fails, no storage deletion jobs are queued
-  - [ ] If enqueue fails, outbox records the failure for admin retry
-  - [ ] E2E test covers ghost-photo scenario (queue mock success + DB failure)
+| Sprint | Scope | Status |
+|--------|-------|--------|
+| **Sprint 1** | Critical + High (Security, Reliability) | ✅ Done (PRs #97–#120) |
+| **Sprint 2** | Medium (Performance, Consistency) | ✅ Done (PRs #97–#121) |
+| **Sprint 3** | Low (Observability, Polish) | ⚠️ 60% done |
+| **Sprint 4** | Security & Observability (new findings) | ⏳ Queued |
+| **Sprint 5** | Code Quality (new findings) | ⏳ Queued |
+| **Sprint 6** | Polish (new findings) | ⏳ Queued |
 
 ---
 
-### Task 1.2: Split `env.ts` to Prevent Server-Only Env Leak to Browser
+## Sprint 3 — Remaining Tasks
 
-- **Severity**: Kritis
-- **File**: `src/lib/env.ts`
-- **Line**: 28
-- **Problem**: On browser `typeof window !== 'undefined'` branch, the code casts `process.env` (empty or contains only `NEXT_PUBLIC_*`) to the full schema type. If any client component accidentally imports `env.ts`, it receives a type-safe object with all fields `undefined`, which can cause runtime crashes or silent misconfigurations.
-- **Fix Direction**:
-  - Create `src/lib/env.server.ts` — validates full schema, throws if `typeof window !== 'undefined'`
-  - Create `src/lib/env.client.ts` — only validates `NEXT_PUBLIC_*` vars, safe for client import
-  - Update all server imports from `env.ts` → `env.server.ts`
-  - Update client imports (if any) to `env.client.ts`
-  - Delete or deprecate `src/lib/env.ts` after migration
-- **Acceptance Criteria**:
-  - [ ] `env.server.ts` throws runtime error if imported in client bundle
-  - [ ] `env.client.ts` only exposes `NEXT_PUBLIC_*` variables
-  - [ ] No remaining imports of old `env.ts` in server code
-  - [ ] Build passes (`npm run build`)
+### Task 3.1: Wire `withRequestContext` to All Route Handlers
 
----
-
-### Task 1.3: Add Replay Protection to Webhook Endpoints
-
-- **Severity**: High
-- **Files**:
-  - `src/app/api/webhook/storage-deleted/route.ts` (line 23–37)
-  - `src/app/api/webhook/thumbnail-generated/route.ts` (line 12–27)
-- **Problem**: Both endpoints use simple Bearer token comparison (`timingSafeEqual` on raw secret). No timestamp, no HMAC signature, no replay window. An attacker who sniffs the token can replay the request indefinitely.
-- **Fix Direction**:
-  - Refactor both endpoints to use `verifyWebhookSignature()` from `src/lib/webhook-validation.ts`
-  - Update Cloudflare Worker (`workers/deletion-worker.ts`) to send:
-    - `x-webhook-signature`: HMAC-SHA256(timestamp + payload)
-    - `x-webhook-timestamp`: ISO 8601 timestamp
-  - Reject requests older than 5 minutes (replay window already defined in `webhook-validation.ts`)
-- **Acceptance Criteria**:
-  - [ ] Both webhook endpoints validate `x-webhook-signature` and `x-webhook-timestamp`
-  - [ ] Missing/invalid signature returns 401
-  - [ ] Timestamp older than 5 minutes returns 401 (`REPLAY_ATTACK`)
-  - [ ] Worker sends correct headers (update worker code + `wrangler.toml` if needed)
-  - [ ] Existing tests updated; new E2E test for replay rejection
-
----
-
-### Task 1.4: Replace In-Memory Rate Limit Fallback
-
-- **Severity**: High
-- **File**: `src/lib/rate-limit.ts` (line 85–132)
-- **Problem**: In-memory `Map` fallback is local to a single serverless instance. On Vercel, requests may hit different instances — attacker can bypass rate limits by distributing requests. Also `setInterval` runs forever in every instance.
-- **Fix Direction**:
-  - Remove `setInterval` entirely (not compatible with serverless)
-  - Replace in-memory fallback with **Prisma-based** rate limit table, or use existing Redis/Valkey consistently
-  - If Redis unavailable, degrade gracefully (allow request) rather than using isolated in-memory store
-  - Optionally: implement a lightweight Prisma-backed counter:
-    ```prisma
-    model RateLimitBucket {
-      id        String   @id // identifier
-      count     Int      @default(0)
-      resetAt   DateTime
-      @@index([resetAt])
-    }
-    ```
-- **Acceptance Criteria**:
-  - [ ] `setInterval` removed from codebase
-  - [ ] Rate limit works correctly across multiple serverless instances
-  - [ ] If Redis unavailable, fallback behavior is safe (either allow or use shared store, never isolated-memory enforcement)
-  - [ ] E2E rate limit test still passes without `waitForTimeout`
-
----
-
-### Task 1.5: Parallelize Bulk Deletion Queue Calls
-
-- **Severity**: High
-- **File**: `src/lib/cloudflare-queue.ts` (line 373–406)
-- **Problem**: `queueStorageDeletionBulk` iterates sequentially (`for...await`), making one HTTP POST per item. For 100 items at ~200ms each, total ~20s — dangerously close to Vercel function timeout (30s for `/api/admin/*`).
-- **Fix Direction**:
-  - Use `publishToQueueBulk()` (already implemented in the same file, lines 163–288) instead of calling worker per item
-  - If worker endpoint is still needed for individual deletion tracking, batch with `Promise.all()` and concurrency limit (e.g., `p-limit` or manual semaphore with `MAX_CONCURRENT = 10`)
-- **Acceptance Criteria**:
-  - [ ] 100 deletion jobs complete in < 5 seconds (or use Cloudflare Queue batch API)
-  - [ ] No sequential `await` inside a loop for network I/O
-  - [ ] Partial failures are still tracked per item
-
----
-
-### Task 1.6: Remove Hardcoded Cloudflare Worker URL
-
-- **Severity**: High
-- **File**: `src/lib/cloudflare-queue.ts` (line 22)
-- **Problem**: Production worker URL is hardcoded as fallback:
-  ```ts
-  const WORKER_URL = process.env.CLOUDFLARE_WORKER_URL || 'https://photostudio-deletion-worker.masipah1973.workers.dev';
+- **Severity**: Critical (C2)
+- **Status**: ⚠️ 40% done — infrastructure exists, not wired
+- **Problem**: `with-request-context.ts` exists but zero route handlers use it. `getRequestId()` always returns `undefined`. Queue messages don't carry `requestId`.
+- **Fix**: Mass-wrap all route exports:
+  ```typescript
+  import { withRequestContext } from '@/lib/with-request-context';
+  export const POST = withRequestContext(async (request) => { ... });
   ```
-  If codebase is public, attacker knows the worker endpoint.
-- **Fix Direction**:
-  - Remove fallback string; throw explicit error if `CLOUDFLARE_WORKER_URL` is unset
-  - Add `CLOUDFLARE_WORKER_URL` to `env.server.ts` validation (required in production)
-- **Acceptance Criteria**:
-  - [ ] No hardcoded URL in source
-  - [ ] Missing env var throws clear error at startup
-  - [ ] Production deploy uses env var exclusively
+- **Acceptance**:
+  - [ ] All route handlers wrapped with `withRequestContext`
+  - [ ] Sample admin route logs include `requestId` matching `x-request-id` header
+  - [ ] Queue messages carry `requestId`
+
+### Task 3.3: Remove `process.env` Fallback — Remaining Callers
+
+- **Severity**: Medium (M1)
+- **Status**: ⚠️ Partial — `cloudinary.ts` fixed, 5 callers remain
+- **Files**:
+  - `src/lib/gallery/load-public-gallery.ts:98`
+  - `src/lib/storage/accounts.ts:166`
+  - `src/app/api/admin/galleries/[id]/photos/route.ts:79`
+  - `src/app/api/portal/gallery/[token]/route.ts:89`
+  - `src/app/api/public/gallery/[token]/photos/[photoId]/route.ts:50`
+- **Fix**: Replace `?? process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` with `getCloudinaryConfig()` async helper
+- **Acceptance**:
+  - [ ] Zero `process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` references in codebase
+  - [ ] All callers use DB-backed config
 
 ---
 
-## Sprint 2 — Medium Priority
+## Sprint 4 — Security & Observability
 
-### Task 2.1: Standardize Auth Pattern Across Admin API Routes
+### Task 4.1: Fix Storage Credentials Secret Leak
 
-- **Severity**: Medium
-- **Files**: `src/app/api/admin/*/route.ts` (multiple)
-- **Problem**: Inconsistent auth implementation:
-  - Some use `checkAuth()` returning `NextResponse | Session`
-  - Some use inline `getServerSession(authOptions)`
-  - Some return `unauthorizedResponse()`, others `errorResponse('Unauthorized', 401)`
-- **Fix Direction**:
-  - Create `src/lib/auth/require-server-auth.ts` with a single helper that **throws** `ApiError` on failure
-  - Update all admin routes to use `try/catch` with `instanceof ApiError` pattern
-  - Remove per-file `checkAuth()` duplicates
-- **Acceptance Criteria**:
-  - [ ] All admin API routes use the same auth helper
-  - [ ] No duplicate `checkAuth()` functions in route files
-  - [ ] Auth failure returns consistent JSON shape: `{ success: false, error: "Unauthorized", errorCode: "UNAUTHORIZED" }`
-  - [ ] Build & lint pass
+- **Severity**: Critical (C1)
+- **File**: `src/app/api/admin/storage-accounts/route.ts`
+- **Problem**: GET/POST/PATCH returns full row including `apiSecret`, `secretKey`, `secondaryApiSecret`, `secondarySecretKey` to admin browser. No `select` clause.
+- **Fix**:
+  1. Add explicit `select` excluding secret fields to all 3 endpoints
+  2. Mirror masking pattern from `rotation/route.ts`
+  3. Add unit test asserting response excludes secret fields
+- **Acceptance**:
+  - [ ] GET response excludes `apiSecret`, `secretKey`, `secondaryApiSecret`, `secondarySecretKey`
+  - [ ] POST/PATCH responses same
+  - [ ] Unit test passes
 
----
+### Task 4.2: Add `require-client-auth.ts` + Migrate Portal Routes
 
-### Task 2.2: Add Prisma Connection Pool Limit
+- **Severity**: High (H2)
+- **Files**: 5 portal route handlers
+- **Problem**: All 5 portal routes duplicate inline auth pattern with inconsistent error responses
+- **Fix**: Create `src/lib/auth/require-client-auth.ts` mirroring `requireAdminAuth`. Migrate all 5 files.
+- **Acceptance**:
+  - [ ] `require-client-auth.ts` created
+  - [ ] All 5 portal routes use it
+  - [ ] Consistent error responses
 
-- **Severity**: Medium
-- **File**: `prisma/schema.prisma` (datasource)
-- **Problem**: No `connection_limit` parameter in `DATABASE_URL`. Under high concurrent load on Vercel serverless, Prisma can exhaust PostgreSQL max connections.
-- **Fix Direction**:
-  - Append `?connection_limit=5&pool_timeout=10` to `DATABASE_URL` documentation / example `.env`
-  - Or better: enable Prisma Accelerate (package `@prisma/extension-accelerate` already in `package.json`) and configure connection pooling via Accelerate
-  - If using Accelerate, update `src/lib/db.ts` to instantiate Prisma with the extension
-- **Acceptance Criteria**:
-  - [ ] Connection limit documented in `.env.example` or README
-  - [ ] If Accelerate is used, `src/lib/db.ts` imports and applies the extension
-  - [ ] Build passes; no runtime connection exhaustion under load
+### Task 4.3: Fix `decreaseStorageUsage` Race Condition
 
----
+- **Severity**: High (H7)
+- **File**: `src/lib/storage/accounts.ts:56-75`
+- **Problem**: Read-then-write pattern allows concurrent decrements to double-count bytes
+- **Fix**: Use atomic `updateMany` with `WHERE usedStorage >= fileSize` guard
+- **Acceptance**:
+  - [ ] No read-then-write pattern
+  - [ ] Concurrent decrements handled correctly
+  - [ ] Clamp emits `logger.warn` when triggered
 
-### Task 2.3: Add API Body Size Limit
+### Task 4.4: Add Portal Route Pagination
 
-- **Severity**: Medium
-- **File**: `next.config.ts` + specific route configs
-- **Problem**: No body parser size limit on API routes. Malformed/large JSON payloads can cause memory exhaustion.
-- **Fix Direction**:
-  - Add `api.bodyParser.sizeLimit` config in `next.config.ts` (or per-route export)
-  - Set reasonable limits per endpoint type:
-    - Admin upload/complete: 1mb (small JSON)
-    - Webhooks: 1mb
-    - Batch operations: 5mb
-- **Acceptance Criteria**:
-  - [ ] Body size limit enforced on all `/api/*` routes
-  - [ ] Oversized request returns 413 Payload Too Large
-  - [ ] Existing functionality preserved for legitimate requests
+- **Severity**: High (H1)
+- **Files**: `portal/dashboard/route.ts`, `portal/invoices/route.ts`
+- **Problem**: Unbounded `findMany` queries
+- **Fix**: Add `take: PAGE_SIZE`, cursor-based pagination, surface `pagination` in response
+- **Acceptance**:
+  - [ ] Both routes paginated
+  - [ ] Response includes `pagination` object
+  - [ ] Default page size documented
 
 ---
 
-### Task 2.4: Implement Counter Reconciliation Job
+## Sprint 5 — Code Quality
 
-- **Severity**: Medium
-- **Files**: `prisma/schema.prisma` (model `Client`), upload/delete flows
-- **Problem**: `Client.usedStorage` and `Client.photoCount` are denormalized counters maintained by application code. Race conditions, partial rollbacks, or manual DB edits can cause drift from actual values.
-- **Fix Direction**:
-  - Create a reconciliation query that recalculates per-client aggregates from `Photo` rows:
-    ```sql
-    UPDATE "Client" c
-    SET 
-      "usedStorage" = COALESCE((
-        SELECT SUM(p."fileSize") 
-        FROM "Photo" p
-        JOIN "Gallery" g ON p."galleryId" = g.id
-        JOIN "Event" e ON g."eventId" = e.id
-        WHERE e."clientId" = c.id
-      ), 0),
-      "photoCount" = COALESCE((
-        SELECT COUNT(*) 
-        FROM "Photo" p
-        JOIN "Gallery" g ON p."galleryId" = g.id
-        JOIN "Event" e ON g."eventId" = e.id
-        WHERE e."clientId" = c.id
-      ), 0)
-    ```
-  - Expose as admin API endpoint (e.g., `POST /api/admin/clients/reconcile`)
-  - Optionally schedule via Cloudflare Cron Trigger (monthly or weekly)
-- **Acceptance Criteria**:
-  - [ ] Reconcile endpoint recalculates and fixes drifted counters
-  - [ ] Endpoint is admin-only
-  - [ ] Results returned: `{ reconciled: number, clients: [...] }`
-  - [ ] E2E test simulates drift and verifies reconciliation
+### Task 5.1: Mass Codemod `console.*` → `logger.*`
 
----
+- **Severity**: High (H3)
+- **Count**: 147 sites (63 in `src/lib/`, 84 in `src/app/api/`)
+- **Fix**: Replace `console.{log,warn,error}` with `logger.{info,warn,error}` + snake_case event name + `{ err: error }`
+- **Acceptance**:
+  - [ ] Zero `console.log/warn/error` in `src/lib/` and `src/app/api/`
+  - [ ] All errors use `{ err: error }` pattern
 
-### Task 2.5: Fix `process.on` SIGTERM/SIGINT in Serverless
+### Task 5.2: Add Body Size Limit to All Routes
 
-- **Severity**: Medium
-- **File**: `src/lib/cache.ts` (line 114–122)
-- **Problem**: `process.on('SIGTERM', ...)` and `process.on('SIGINT', ...)` are unreliable in Vercel serverless and may crash in Edge runtime if `process` is undefined.
-- **Fix Direction**:
-  - Wrap with `if (typeof process !== 'undefined' && process.on)` guard
-  - Or move graceful shutdown to a Next.js custom server / instrumentation hook (`instrumentation.ts`)
-  - Ensure Redis `quit()` is also called in `error.tsx` / global-error boundaries if feasible
-- **Acceptance Criteria**:
-  - [ ] No unconditional `process.on` calls in library code
-  - [ ] Build passes for both Node.js and Edge targets
-  - [ ] Redis connection does not leak on function cold-start cycles
+- **Severity**: High (H4)
+- **Problem**: `enforceBodySizeLimit` on only 3/53 routes
+- **Fix**: Add to every POST/PATCH handler
+- **Acceptance**:
+  - [ ] All POST/PATCH routes have body size limit
+  - [ ] Oversized request returns 413
 
----
+### Task 5.3: Add Retry Backoff to Events/Booking
 
-### Task 2.6: Singleton Ably Rest Client
+- **Severity**: High (H5)
+- **Files**: `events/route.ts`, `public/booking/route.ts`
+- **Fix**: Add exponential backoff between retry attempts
+- **Acceptance**:
+  - [ ] Retry loop has backoff: `Math.min(100 * 2**attempt, 1000)ms`
 
-- **Severity**: Medium
-- **File**: `src/lib/ably.ts` (line 16–21)
-- **Problem**: `getAblyRestClient()` creates a new `Ably.Rest` instance on every call, causing repeated HTTP connection overhead.
-- **Fix Direction**:
-  - Apply singleton pattern identical to `getAblyClient()` (lines 4–14)
-- **Acceptance Criteria**:
-  - [ ] `getAblyRestClient()` returns cached instance after first call
-  - [ ] No behavioral change for consumers
-  - [ ] Build passes
+### Task 5.4: Fix StorageAccount Select in Queue Helpers
+
+- **Severity**: High (H6)
+- **Files**: `cloudflare-queue.ts`, gallery photo routes
+- **Fix**: Add explicit `select` or use `getStorageCredentials(accountId)`
+- **Acceptance**:
+  - [ ] No full-row StorageAccount fetches in queue/deletion paths
+
+### Task 5.5: Fix Rate Limiting on 6 Missing Routes
+
+- **Severity**: Medium (M2)
+- **Fix**: Apply `RATE_LIMITS.ADMIN_READ/WRITE` to missing routes, add `RATE_LIMITS.PORTAL_READ`
+- **Acceptance**:
+  - [ ] All 6 routes have rate limiting
+  - [ ] Portal routes have appropriate limits
+
+### Task 5.6: Fix `settings.upsert` P2002 Race
+
+- **Severity**: Medium (M3)
+- **File**: `src/app/api/admin/settings/route.ts`
+- **Fix**: Wrap in try/catch; on P2002, fall back to pure update
+
+### Task 5.7: Fix Int Type Consistency (totalRevenue, totalViews)
+
+- **Severity**: Medium (M4/M5)
+- **Fix**: `Int` aggregates → number; `BigInt` aggregates → string
 
 ---
 
-## Sprint 3 — Low Priority (Observability & Polish)
+## Sprint 6 — Polish
 
-### Task 3.1: Add Request Correlation ID Tracing
+### Task 6.1: Introduce `withApiRoute` HOC
 
-- **Severity**: Low
-- **Scope**: Global (API routes, queue messages, webhooks)
-- **Problem**: No `requestId` propagates across `presigned → complete → thumbnail worker → thumbnail-generated webhook`. Debugging production issues requires grepping logs by `photoId` or `uploadId` which is indirect.
-- **Fix Direction**:
-  - Generate `x-request-id` (UUID) at API entry (presigned route)
-  - Pass through:
-    - Queue messages (`publishToQueue`, `queueThumbnailGeneration`)
-    - Webhook callbacks
-    - Logger context (`logger.info('upload.presigned', { requestId, ... })`)
-  - Optionally use `AsyncLocalStorage` from `node:async_hooks` to auto-inject requestId into all logs within a request
-- **Acceptance Criteria**:
-  - [ ] Every upload flow has a traceable `requestId`
-  - [ ] Logs include `requestId` field
-  - [ ] No manual passing needed in every function (AsyncLocalStorage or middleware)
+- **Severity**: Medium (M8)
+- **Fix**: Combine `withRequestContext` + error mapping + body size guard into one wrapper
 
----
+### Task 6.2: Add `parseJsonBody` Helper
 
-### Task 3.2: Standardize Language in Error Messages
+- **Severity**: Medium (M9)
+- **Fix**: Eliminate duplicated try-catch around `request.json()` in 30+ routes
 
-- **Severity**: Low
-- **Scope**: All API routes and validation messages
-- **Problem**: Error messages mix Indonesian and English inconsistently. Examples:
-  - `"Gagal menyimpan foto (dedup path)"`
-  - `"Upload session tidak memiliki fileHash"`
-  - `"Failed to create client"`
-- **Fix Direction**:
-  - Standardize API error messages to **English** (machine-parseable, universal)
-  - UI-facing text in frontend components can remain Indonesian
-  - Create a constant map for common errors if reuse is frequent
-- **Acceptance Criteria**:
-  - [ ] All API route error responses use English
-  - [ ] Validation messages (`zod`) use English
-  - [ ] Logger events remain English (already mostly correct)
-  - [ ] Frontend components may keep Indonesian for user-facing copy
+### Task 6.3: Fix Magic Numbers
+
+- **Severity**: Low (L1)
+- **Fix**: Centralize in `lib/api/constants.ts`
+
+### Task 6.4: Fix `logQueueError` → `logger`
+
+- **Severity**: Low (L4)
+- **File**: `src/lib/cloudflare-queue.ts:62-72`
+
+### Task 6.5: Fix Reserved Word `package`
+
+- **Severity**: Low (L5)
+- **File**: `src/app/api/admin/packages/route.ts:83`
+- **Fix**: Rename to `data` or `packageData`
 
 ---
 
-### Task 3.3: Remove `process.env` Fallback in `getCloudinaryThumbnailUrl`
-
-- **Severity**: Low
-- **File**: `src/lib/cloudinary.ts` (line 29)
-- **Problem**: Sync version of `getCloudinaryThumbnailUrl` falls back to `process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, violating the architecture rule that credentials come from DB (`StorageAccount`).
-- **Fix Direction**:
-  - Remove `process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` fallback from sync version
-  - Force callers to pass `cloudName` explicitly or use `getCloudinaryThumbnailUrlAsync()`
-  - Audit all callers to ensure they pass `cloudName` from DB
-- **Acceptance Criteria**:
-  - [ ] No `process.env` access in `cloudinary.ts`
-  - [ ] All call sites provide `cloudName` or use async version
-  - [ ] Build passes
-
----
-
-## Pre-Flight Checklist (Run Before & After Each Sprint)
+## Pre-Flight Checklist
 
 ```bash
-# Before committing any sprint
 npm run lint
 npm run build
 npm run test:e2e
 ```
 
-- [ ] No new `any` types introduced
-- [ ] No `waitForTimeout()` added to E2E tests
+- [ ] No new `any` types
+- [ ] No `waitForTimeout()` in E2E tests
 - [ ] No static Tailwind colors (OKLCH semantic only)
 - [ ] No `alert()` calls (use `sonner toast()`)
 - [ ] BigInt values serialized via `serializeBigInt()` before `JSON.stringify`
-
----
-
-## Notes
-
-- **Skip `.md` files policy**: This file itself is documentation and does not affect runtime.
-- **Next.js 15 Async Patterns**: Any new route handler that reads `params` or `searchParams` must treat them as `Promise` (await before destructuring).
-- **AGENTS.md Rules**: All fixes must comply with Explicit Prohibitions listed in project steering.
-
+- [ ] No `console.*` in server code (use `logger.*`)
+- [ ] No unbounded queries (always paginate)
+- [ ] Delete branch after PR merge (remote + local)
