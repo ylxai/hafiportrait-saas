@@ -1,6 +1,8 @@
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { cleanupExpiredUploadSessions } from '@/lib/upload/cleanup';
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/options';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
@@ -27,29 +29,32 @@ function verifyCleanupSecret(request: Request): boolean {
 
 export async function POST(request: Request) {
   try {
-    // Check auth: either NextAuth admin session OR cleanup secret (for cron worker)
-    let isAuthenticated = false;
+    // Dual-auth: NextAuth admin session OR cleanup secret (for cron worker).
+    //
+    // Sourcery PR #118 feedback: the previous implementation treated ANY
+    // NextResponse from requireAdminAuth() as "fall through to cron secret".
+    // That collapsed the 401 (no session) and 403 (authenticated-but-not-admin)
+    // branches together, so a CLIENT-role user could bypass the admin role
+    // check by sending a valid cron Authorization header. Sessions and cron
+    // secrets are independent credentials and must not be allowed to
+    // compensate for each other.
+    //
+    // Resolution: probe the session first. If a session exists, enforce admin
+    // role via requireAdminAuth() and surface its 403 response directly.
+    // Only when there is NO session do we fall back to the cleanup-secret
+    // path used by the Cloudflare cron worker / external cron.
+    const session = await getServerSession(authOptions);
 
-    // Try NextAuth admin session first (admin dashboard manual cleanup).
-    // requireAdminAuth() enforces role === 'admin' AND wraps the audit log
-    // path identically to every other admin route. If it returns a
-    // NextResponse, we silently fall through to the cleanup-secret path
-    // instead of surfacing it to the caller — cron worker requests would
-    // otherwise be rejected here.
-    const adminAuth = await requireAdminAuth();
-    if (!(adminAuth instanceof NextResponse)) {
-      isAuthenticated = true;
-    }
-
-    // Fall back to cleanup secret (for Cloudflare cron worker or external cron)
-    if (!isAuthenticated) {
-      if (!verifyCleanupSecret(request)) {
-        return errorResponse('Unauthorized', 401);
+    if (session?.user) {
+      const adminAuth = await requireAdminAuth();
+      if (adminAuth instanceof NextResponse) {
+        // Authenticated but not admin (403) — do NOT fall through to the
+        // cron-secret path. Return the forbidden response as-is.
+        return adminAuth;
       }
-      isAuthenticated = true;
-    }
-
-    if (!isAuthenticated) {
+      // Authenticated admin session: proceed.
+    } else if (!verifyCleanupSecret(request)) {
+      // No session and no valid cleanup secret.
       return errorResponse('Unauthorized', 401);
     }
 
