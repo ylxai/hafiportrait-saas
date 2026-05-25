@@ -51,14 +51,23 @@ export const authOptions: NextAuthOptions = {
         // the two tables. Without this check, a single email could exist
         // in both — letting whichever provider authenticates first win and
         // mint a token under the wrong role (role confusion). Refuse the
-        // admin login if the same email has a Client row, so the operator
-        // is forced to resolve the duplicate before either side can sign
-        // in.
+        // admin login only when an *approved* Client row owns the same
+        // email, so the operator is forced to resolve a real duplicate
+        // before either side can sign in.
+        //
+        // We deliberately ignore unapproved Client rows here: the booking
+        // flow lets anyone self-register as a client with an arbitrary
+        // email, so blocking on the mere existence of such a row would
+        // let an attacker DoS an admin out of their own account by
+        // registering as a client under the admin's email. Unapproved
+        // clients can't authenticate via the client provider either
+        // (see `!client.isApproved` check below), so they pose no role-
+        // confusion risk until/unless an admin approves them.
         const collidingClient = await prisma.client.findUnique({
           where: { email: normalizedEmail },
-          select: { id: true },
+          select: { id: true, isApproved: true },
         });
-        if (collidingClient) {
+        if (collidingClient?.isApproved) {
           return null;
         }
 
