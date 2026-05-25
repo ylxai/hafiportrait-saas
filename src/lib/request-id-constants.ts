@@ -24,11 +24,29 @@ export const REQUEST_ID_HEADER = "x-request-id";
 export const MAX_REQUEST_ID_LENGTH = 128;
 
 /**
+ * Allowed characters for an inbound `x-request-id` value.
+ *
+ * Restricted to the typical UUID/hex alphabet plus hyphens so a malicious
+ * or misconfigured client cannot smuggle whitespace, control characters,
+ * newlines, or non-printable bytes into log lines (which would break
+ * structured logs, log-shipping pipelines, or dashboards that parse the
+ * field). Anything outside this set is rejected and replaced with a
+ * freshly minted UUID — see {@link normalizeRequestId}.
+ */
+const REQUEST_ID_ALLOWED_PATTERN = /^[a-zA-Z0-9-]+$/;
+
+/**
  * Generate-or-reuse helper for the `x-request-id` value.
  *
- * Rejects overlong values and generates a new UUID — overlong inputs
- * are NOT truncated, they are discarded and replaced with a freshly
- * minted UUID. Empty / nullish inputs are likewise replaced.
+ * Validation rules — failures fall through to a freshly minted UUID:
+ *   - must be a non-empty string
+ *   - must not exceed {@link MAX_REQUEST_ID_LENGTH}
+ *   - must only contain alphanumerics and hyphens (the typical UUID
+ *     alphabet); whitespace, control characters, and other punctuation
+ *     are rejected so they cannot leak into log lines
+ *
+ * Overlong or malformed inputs are NOT truncated or sanitised — they
+ * are discarded and replaced with a freshly minted UUID.
  *
  * Shared between the Edge-runtime middleware and the Node-runtime
  * `withRequestContext` wrapper so the validation rules cannot drift.
@@ -39,7 +57,8 @@ export function normalizeRequestId(raw: string | null | undefined): string {
   if (
     typeof raw === "string" &&
     raw.length > 0 &&
-    raw.length <= MAX_REQUEST_ID_LENGTH
+    raw.length <= MAX_REQUEST_ID_LENGTH &&
+    REQUEST_ID_ALLOWED_PATTERN.test(raw)
   ) {
     return raw;
   }

@@ -31,6 +31,36 @@ function resolveRequestId(request: NextRequest): string {
 }
 
 /**
+ * Build a JSON `NextResponse` that carries the request correlation ID
+ * back to the client. Centralised so every early-return in the
+ * middleware tags its response identically and the header name only
+ * appears in one place.
+ */
+function jsonWithRequestId(
+  data: unknown,
+  status: number,
+  requestId: string,
+): NextResponse {
+  const response = NextResponse.json(data, { status });
+  response.headers.set(REQUEST_ID_HEADER, requestId);
+  return response;
+}
+
+/**
+ * Build a redirect `NextResponse` that carries the request correlation
+ * ID back to the client. Mirrors {@link jsonWithRequestId} so all
+ * middleware-emitted responses share the same tagging logic.
+ */
+function redirectWithRequestId(
+  url: URL | string,
+  requestId: string,
+): NextResponse {
+  const response = NextResponse.redirect(url);
+  response.headers.set(REQUEST_ID_HEADER, requestId);
+  return response;
+}
+
+/**
  * Build a `NextResponse.next()` that forwards a mutated set of request
  * headers to the downstream route handler AND echoes the request ID
  * back on the response. Centralised so every early-return in the
@@ -90,12 +120,10 @@ export async function middleware(request: NextRequest) {
 
   if (!token) {
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json(
+      return jsonWithRequestId(
         { success: false, error: "Unauthorized" },
-        {
-          status: 401,
-          headers: { [REQUEST_ID_HEADER]: requestId },
-        },
+        401,
+        requestId,
       );
     }
 
@@ -106,21 +134,17 @@ export async function middleware(request: NextRequest) {
       request.url,
     );
     loginUrl.searchParams.set("callbackUrl", pathname);
-    const redirect = NextResponse.redirect(loginUrl);
-    redirect.headers.set(REQUEST_ID_HEADER, requestId);
-    return redirect;
+    return redirectWithRequestId(loginUrl, requestId);
   }
 
   if (!token.email) {
     console.error("[Middleware] Token exists but missing email", { requestId });
 
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json(
+      return jsonWithRequestId(
         { success: false, error: "Unauthorized - Invalid user data" },
-        {
-          status: 401,
-          headers: { [REQUEST_ID_HEADER]: requestId },
-        },
+        401,
+        requestId,
       );
     }
 
@@ -130,9 +154,7 @@ export async function middleware(request: NextRequest) {
         : "/portal/login",
       request.url,
     );
-    const redirect = NextResponse.redirect(loginUrl);
-    redirect.headers.set(REQUEST_ID_HEADER, requestId);
-    return redirect;
+    return redirectWithRequestId(loginUrl, requestId);
   }
 
   const isAdminRoute =
@@ -146,35 +168,27 @@ export async function middleware(request: NextRequest) {
 
   if (isAdminRoute && token.role !== "admin") {
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json(
+      return jsonWithRequestId(
         { success: false, error: "Forbidden" },
-        {
-          status: 403,
-          headers: { [REQUEST_ID_HEADER]: requestId },
-        },
+        403,
+        requestId,
       );
     }
     const target =
       token.role === "CLIENT" ? "/portal/dashboard" : "/login";
-    const redirect = NextResponse.redirect(new URL(target, request.url));
-    redirect.headers.set(REQUEST_ID_HEADER, requestId);
-    return redirect;
+    return redirectWithRequestId(new URL(target, request.url), requestId);
   }
 
   if (isPortalRoute && token.role !== "CLIENT") {
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json(
+      return jsonWithRequestId(
         { success: false, error: "Forbidden" },
-        {
-          status: 403,
-          headers: { [REQUEST_ID_HEADER]: requestId },
-        },
+        403,
+        requestId,
       );
     }
     const target = token.role === "admin" ? "/admin" : "/portal/login";
-    const redirect = NextResponse.redirect(new URL(target, request.url));
-    redirect.headers.set(REQUEST_ID_HEADER, requestId);
-    return redirect;
+    return redirectWithRequestId(new URL(target, request.url), requestId);
   }
 
   // Authenticated request: forward the request ID AND user-context
