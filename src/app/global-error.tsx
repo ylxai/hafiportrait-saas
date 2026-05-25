@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import { logger } from '@/lib/logger';
 
 /**
  * Global error boundary.
@@ -24,15 +23,12 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Structured logger replaces ad-hoc `console.error` so production
-    // observability gets the same shape (level/event/time/digest) as the
-    // rest of the app. The handler runs once per render thanks to
-    // `error` reference identity in the dep array.
-    //
-    // Review #72-3 (Gemini): match the `error.boundary.{root,admin,gallery}`
-    // naming used by the sibling error boundaries so log filters can
-    // pivot on a single common prefix.
-    logger.error('error.boundary.global', {
+    // Log to console for client-side error tracking. Using console.error
+    // instead of the structured logger because logger depends on
+    // node:async_hooks which cannot be imported in client components.
+    // The error boundary naming convention (error.boundary.global) is
+    // preserved in the message for consistency with other boundaries.
+    console.error('error.boundary.global', {
       error,
       digest: error.digest,
     });
