@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
 import { getActiveCredentials } from './rotation';
 
 type StorageAccount = {
@@ -54,24 +55,39 @@ export async function updateStorageUsage(accountId: string, fileSize: bigint) {
 }
 
 export async function decreaseStorageUsage(accountId: string, fileSize: bigint) {
-  // Use transaction to ensure consistency
-  await prisma.$transaction(async (tx) => {
-    const account = await tx.storageAccount.findUnique({ where: { id: accountId } });
-    if (!account) return;
-    
-    // Only decrement if we have enough storage
-    const newUsedStorage = account.usedStorage - fileSize;
-    const newTotalPhotos = account.totalPhotos - 1;
-    
-    await tx.storageAccount.update({
-      where: { id: accountId },
-      data: {
-        // Note: BigInt(0) used for ES2017 compatibility (0n requires ES2020+)
-        usedStorage: newUsedStorage > BigInt(0) ? newUsedStorage : BigInt(0),
-        totalPhotos: newTotalPhotos > 0 ? newTotalPhotos : 0,
-      },
-    });
+  // Atomic decrement using GREATEST to clamp at 0 — no read-then-write race.
+  // Two concurrent decrements cannot double-count bytes back because the
+  // subtraction and clamp happen in a single SQL statement.
+  //
+  // H7 fix: replaced the previous $transaction(findUnique + update) pattern
+  // which was vulnerable to READ COMMITTED isolation allowing concurrent
+  // decrements to both read the same value and write the same smaller result.
+  const result = await prisma.$executeRaw`
+    UPDATE "StorageAccount"
+    SET
+      "usedStorage" = GREATEST("usedStorage" - ${fileSize}::bigint, 0::bigint),
+      "totalPhotos" = GREATEST("totalPhotos" - 1, 0)
+    WHERE id = ${accountId}
+  `;
+
+  if (result === 0) {
+    // Account not found — log and return silently
+    logger.warn('storage.decrease.account_not_found', { accountId });
+    return;
+  }
+
+  // Detect if clamp triggered by checking current value
+  const account = await prisma.storageAccount.findUnique({
+    where: { id: accountId },
+    select: { usedStorage: true },
   });
+
+  if (account?.usedStorage === BigInt(0)) {
+    logger.warn('storage.decrease.clamped_to_zero', {
+      accountId,
+      attempted: fileSize.toString(),
+    });
+  }
 }
 
 export async function findWorkingAccount(
