@@ -12,7 +12,7 @@
 |--------|-------|--------|
 | **Sprint 1** | Critical + High (Security, Reliability) | ✅ Done (PRs #97–#120) |
 | **Sprint 2** | Medium (Performance, Consistency) | ✅ Done (PRs #97–#121) |
-| **Sprint 3** | Low (Observability, Polish) | ⚠️ 60% done |
+| **Sprint 3** | Low (Observability, Polish) | ✅ Done (2026-05-25) |
 | **Sprint 4** | Security & Observability (new findings) | ✅ Done (2026-05-25) |
 | **Sprint 5** | Code Quality (new findings) | ✅ Done (2026-05-25) |
 | **Sprint 6** | Polish (new findings) | ✅ Done (2026-05-25) |
