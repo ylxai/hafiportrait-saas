@@ -85,7 +85,7 @@ export const GET = withRequestContext(async (
     const selections = selectedPhotoIds.map((s: { photoId: string }) => s.photoId);
 
     const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
-    const cloudName = cloudinaryAccount?.cloudName ?? null;
+    const cloudName = cloudinaryAccount?.cloudName;
 
     const serializedPhotos = photoList.map((photo: typeof photoList[number]) => {
       let thumbnailUrl = photo.thumbnailUrl;

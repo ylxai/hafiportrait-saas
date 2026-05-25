@@ -83,7 +83,7 @@ export const GET = withRequestContext(async (
 
     const cloudinaryAccountMap = new Map<string, typeof storageAccounts[number]>(storageAccounts.map((a: typeof storageAccounts[number]) => [a.id, a]));
     const defaultCloudinaryAccount = await getDefaultAccount('CLOUDINARY');
-    const defaultCloudName = defaultCloudinaryAccount?.cloudName ?? null;
+    const defaultCloudName = defaultCloudinaryAccount?.cloudName;
 
     const serializedPhotos = photos.map((photo: typeof photos[number]) => {
       let thumbnailUrl = photo.thumbnailUrl;

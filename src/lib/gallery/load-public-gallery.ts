@@ -94,6 +94,8 @@ export async function loadPublicGallery(token: string, cursor?: string | null) {
   const selections = selectedPhotoIds.map((s) => s.photoId);
 
   const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
+  // cloudName is String? in Prisma (string | null); coerce null → undefined
+  // so serializeGalleryPhoto receives string | undefined as expected.
   const cloudName = cloudinaryAccount?.cloudName ?? undefined;
 
   const serializedPhotos = photoList.map((photo) => serializeGalleryPhoto(photo, cloudName));
