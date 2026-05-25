@@ -16,7 +16,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const result = await signIn("admin", {
+      const result = await signIn("admin-credentials", {
         email,
         password,
         redirect: false,

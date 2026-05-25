@@ -56,7 +56,7 @@ function LoginForm() {
     setLoading(true)
 
     try {
-      const result = await signIn('client', {
+      const result = await signIn('client-credentials', {
         email,
         password,
         redirect: false,
