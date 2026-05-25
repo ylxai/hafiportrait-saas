@@ -36,12 +36,12 @@ export async function GET(
     });
 
     if (!event) {
-      return notFoundResponse('Booking tidak ditemukan');
+      return notFoundResponse('Booking not found');
     }
     
     return successResponse(event);
   } catch (error) {
     console.error('Error fetching booking:', error);
-    return serverErrorResponse('Gagal mengambil data booking');
+    return serverErrorResponse('Failed to fetch booking data');
   }
 }

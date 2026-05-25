@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
     if (!rateLimit.success) {
       return rateLimitResponse(
-        'Terlalu banyak request. Silakan coba lagi nanti.',
+        'Too many requests. Please try again later.',
         Math.ceil((rateLimit.resetAt - Date.now()) / 1000)
       );
     }
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     // doesn't protect rows with NULL hash, leaving a race window.
     if (!sessionFileHash) {
       logger.warn('upload.complete.missing_hash', { uploadId, galleryId });
-      return errorResponse('Upload session tidak memiliki fileHash; silakan upload ulang.', 400);
+      return errorResponse('Upload session does not have fileHash; please upload again.', 400);
     }
     const photoFileHash = sessionFileHash;
 
@@ -368,7 +368,7 @@ export async function POST(request: Request) {
         // Anything else: rollback decrement was already applied for the
         // dedup path; surface a 500 so the user retries.
         logger.error('upload.complete.dedup.create_failed', { uploadId, galleryId, err });
-        return errorResponse('Gagal menyimpan foto (dedup path)', 500);
+        return errorResponse('Failed to save photo (dedup path)', 500);
       }
 
       logger.info('upload.complete.dedup.cross_gallery', {

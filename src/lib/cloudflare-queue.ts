@@ -18,6 +18,8 @@ import { prisma } from '@/lib/db';
 import { Prisma } from '@/generated/prisma';
 import { recordFailedJob } from '@/lib/failed-jobs';
 import { env } from '@/lib/env.server';
+import { getRequestId } from '@/lib/request-context';
+import { REQUEST_ID_HEADER } from '@/lib/request-id-constants';
 
 const ACCOUNT_ID = env.CLOUDFLARE_ACCOUNT_ID;
 const API_TOKEN = env.NEXT_SERVER_CF_QUEUE_TOKEN;
@@ -70,7 +72,14 @@ function logQueueError(context: string, error: unknown, metadata?: Record<string
 }
 
 /**
- * Publish message to Cloudflare Queue via REST API with retry logic
+ * Publish message to Cloudflare Queue via REST API with retry logic.
+ *
+ * Sprint 3 / Task 3.1: when called from inside a request scope, the
+ * current `requestId` is auto-merged into the message body under
+ * `requestId` so downstream queue consumers (and any webhook
+ * callbacks they emit back) can echo the same correlation ID.
+ * Callers can override by setting `requestId` on the message
+ * themselves.
  */
 export async function publishToQueue(
   queueName: string,
@@ -80,6 +89,23 @@ export async function publishToQueue(
   if (!ACCOUNT_ID || !API_TOKEN) {
     logQueueError('Missing credentials', new Error('CLOUDFLARE_ACCOUNT_ID or NEXT_SERVER_CF_QUEUE_TOKEN not set'));
     return { success: false, error: 'Missing credentials' };
+  }
+
+  // Auto-attach the current request's correlation ID to the message
+  // body so the consumer (Cloudflare Worker) can include it on any
+  // webhook callback it sends back. We only inject when the message
+  // is a plain object AND doesn't already carry an explicit
+  // `requestId`.
+  const requestId = getRequestId();
+  let enrichedMessage: unknown = message;
+  if (
+    requestId &&
+    typeof message === 'object' &&
+    message !== null &&
+    !Array.isArray(message) &&
+    !('requestId' in (message as Record<string, unknown>))
+  ) {
+    enrichedMessage = { ...(message as Record<string, unknown>), requestId };
   }
 
   let lastError: Error | undefined;
@@ -96,7 +122,7 @@ export async function publishToQueue(
           },
           body: JSON.stringify({
             messages: [{
-              body: message,
+              body: enrichedMessage,
               delay_seconds: options?.delaySeconds,
             }],
           }),
@@ -171,7 +197,12 @@ export async function publishToQueue(
 }
 
 /**
- * Publish multiple messages to Cloudflare Queue via REST API with retry logic
+ * Publish multiple messages to Cloudflare Queue via REST API with retry logic.
+ *
+ * Sprint 3 / Task 3.1: same auto-injection of `requestId` as
+ * {@link publishToQueue} — every plain-object message in the batch
+ * picks up the current request's correlation ID unless the caller
+ * already set one explicitly.
  */
 export async function publishToQueueBulk(
   queueName: string,
@@ -182,16 +213,33 @@ export async function publishToQueueBulk(
     return { success: false, error: 'Missing credentials' };
   }
 
+  // Auto-stamp `requestId` onto every plain-object message in the
+  // batch. Mirrors the single-message path above.
+  const requestId = getRequestId();
+  const enrichedMessages: unknown[] = requestId
+    ? messages.map((msg) => {
+        if (
+          typeof msg === 'object' &&
+          msg !== null &&
+          !Array.isArray(msg) &&
+          !('requestId' in (msg as Record<string, unknown>))
+        ) {
+          return { ...(msg as Record<string, unknown>), requestId };
+        }
+        return msg;
+      })
+    : messages;
+
   // Cloudflare API accepts up to 100 messages per request
   const BATCH_SIZE = 100;
   let failedBatches = 0;
   let lastError: string | undefined;
 
   try {
-    for (let i = 0; i < messages.length; i += BATCH_SIZE) {
-      const batch = messages.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < enrichedMessages.length; i += BATCH_SIZE) {
+      const batch = enrichedMessages.slice(i, i + BATCH_SIZE);
       const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-      const totalBatches = Math.ceil(messages.length / BATCH_SIZE);
+      const totalBatches = Math.ceil(enrichedMessages.length / BATCH_SIZE);
 
       let batchSuccess = false;
       let batchLastError: Error | undefined;
@@ -316,12 +364,17 @@ export async function queueStorageDeletion(data: {
   } | null;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
+    const requestId = getRequestId();
     const response = await fetch(`${WORKER_URL}/queue/deletion`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(requestId ? { [REQUEST_ID_HEADER]: requestId } : {}),
+      },
       body: JSON.stringify({
         type: 'storage-deletion',
         timestamp: Date.now(),
+        ...(requestId ? { requestId } : {}),
         photoId: data.photoId,
         r2Key: data.r2Key || undefined,
         thumbnailUrl: data.thumbnailUrl || undefined,
@@ -477,12 +530,17 @@ export async function queueThumbnailGeneration(data: {
   }
 
   try {
+    const requestId = getRequestId();
     const response = await fetch(`${WORKER_URL}/queue/thumbnail`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(requestId ? { [REQUEST_ID_HEADER]: requestId } : {}),
+      },
       body: JSON.stringify({
         type: 'thumbnail-generation',
         timestamp: Date.now(),
+        ...(requestId ? { requestId } : {}),
         photoId: data.photoId,
         r2Key: data.r2Key,
         galleryId: data.galleryId,

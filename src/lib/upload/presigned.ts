@@ -195,7 +195,7 @@ export async function verifyR2Upload(
   });
   if (claim.count === 0) {
     logger.warn('upload.session.already_consumed', { uploadId });
-    return { success: false, error: 'Upload session sudah diproses sebelumnya.' };
+    return { success: false, error: 'Upload session already processed.' };
   }
   
   // Verify file exists and get server-side size from R2 using HeadObject
@@ -222,7 +222,7 @@ export async function verifyR2Upload(
         logger.error('upload.r2.delete_oversized_failed', { uploadId, r2Key: session.r2Key, err: delErr });
       }
       await prisma.uploadSession.delete({ where: { id: uploadId } }).catch(() => {});
-      return { success: false, error: `File terlalu besar. Maksimal ${MAX_FILE_SIZE_MB}MB.` };
+      return { success: false, error: `File too large. Maximum ${MAX_FILE_SIZE_MB}MB.` };
     }
 
     // MEDIUM FIX #18: ETag integrity sanity-check. Reject objects with multipart ETag
@@ -237,13 +237,13 @@ export async function verifyR2Upload(
         logger.error('upload.r2.delete_invalid_etag_failed', { uploadId, r2Key: session.r2Key, err: delErr });
       }
       await prisma.uploadSession.delete({ where: { id: uploadId } }).catch(() => {});
-      return { success: false, error: 'File integrity check gagal (ETag tidak valid). Silakan upload ulang.' };
+      return { success: false, error: 'File integrity check failed (invalid ETag). Please upload again.' };
     }
   } catch (error) {
     logger.error('upload.r2.verify_failed', { uploadId, err: error });
     // Clean up the orphaned upload session
     await prisma.uploadSession.delete({ where: { id: uploadId } }).catch(() => {});
-    return { success: false, error: 'File tidak ditemukan di storage. Upload mungkin gagal.' };
+    return { success: false, error: 'File not found in storage. Upload may have failed.' };
   }
   
   // Update session with server-side size, not client-provided

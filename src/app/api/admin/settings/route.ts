@@ -19,16 +19,16 @@ const phoneSchema = z
   .transform((val) => val.replace(/[\s\-().]/g, ''))
   .refine(
     (val) => val === '' || /^(\+62|62|0)[0-9]{9,12}$/.test(val),
-    { message: 'Format nomor telepon tidak valid (contoh: 08123456789 / +628123456789)' }
+    { message: 'Invalid phone number format (example: 08123456789 / +628****6789)' }
   );
 
 // Zod schema for settings update
 const updateSettingsSchema = z.object({
-  namaStudio: z.string().max(100, 'Nama studio terlalu panjang').optional(),
-  logoUrl: z.string().url('URL logo tidak valid').max(500).or(z.literal('')).optional(),
+  namaStudio: z.string().max(100, 'Studio name is too long').optional(),
+  logoUrl: z.string().url('Invalid logo URL').max(500).or(z.literal('')).optional(),
   phone: phoneSchema.optional(),
-  email: z.string().email('Email tidak valid').max(100).or(z.literal('')).optional(),
-  address: z.string().max(500, 'Alamat terlalu panjang').optional(),
+  email: z.string().email('Invalid email').max(100).or(z.literal('')).optional(),
+  address: z.string().max(500, 'Address is too long').optional(),
   socialMedia: nullToUndefined(z.record(z.string(), z.string())),
   bookingFields: nullToUndefined(z.record(z.string(), z.unknown())),
   notifications: nullToUndefined(z.record(z.string(), z.unknown())),

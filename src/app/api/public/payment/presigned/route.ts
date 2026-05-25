@@ -36,7 +36,7 @@ function validateFileType(filename: string): { valid: boolean; error?: string } 
   if (!ALLOWED_EXTENSIONS.includes(extension)) {
     return {
       valid: false,
-      error: `Format file tidak didukung: ${extension}. Format yang diizinkan: ${ALLOWED_EXTENSIONS.join(', ')}`,
+      error: `Unsupported file format: ${extension}. Allowed formats: ${ALLOWED_EXTENSIONS.join(', ')}`,
     };
   }
   return { valid: true };
@@ -78,11 +78,11 @@ export async function POST(request: Request) {
     }
 
     if (event.paymentStatus === 'paid') {
-      return errorResponse('Pembayaran sudah lunas', 400);
+      return errorResponse('Payment already settled', 400);
     }
 
     if (event.payments.length === 0) {
-      return errorResponse('Tidak ada pembayaran aktif untuk diunggah', 400);
+      return errorResponse('No active payment to upload for', 400);
     }
 
     // Note: Payment proof upload uses a special dummy galleryId or eventId-based path

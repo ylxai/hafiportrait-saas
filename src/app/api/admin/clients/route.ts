@@ -132,7 +132,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error creating client:', error);
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
-      return errorResponse('Email sudah terdaftar', 409);
+      return errorResponse('Email already registered', 409);
     }
     return serverErrorResponse('Failed to create client');
   }
@@ -195,7 +195,7 @@ export async function PATCH(request: Request) {
   } catch (error) {
     console.error('Error updating client:', error);
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
-      return errorResponse('Email sudah terdaftar', 409);
+      return errorResponse('Email already registered', 409);
     }
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
       return notFoundResponse('Client not found');

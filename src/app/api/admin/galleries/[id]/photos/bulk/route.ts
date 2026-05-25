@@ -8,7 +8,7 @@ import { validateRequest } from '@/lib/api/validation';
 import { Prisma } from '@/generated/prisma';
 
 const bulkDeleteSchema = z.object({
-  photoIds: z.array(z.string().trim().min(1, 'ID foto tidak valid')).min(1, 'Pilih minimal 1 foto').max(100, 'Maksimal 100 foto per batch'),
+  photoIds: z.array(z.string().trim().min(1, 'Invalid photo ID')).min(1, 'Select at least 1 photo').max(100, 'Maximum 100 photos per batch'),
 });
 
 export async function POST(

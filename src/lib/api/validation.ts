@@ -60,34 +60,34 @@ const phoneRegex = /^(\+62|62|0)[0-9]{9,12}$/;
 
 export const clientSchema = z.object({
   nama: z.string()
-    .min(1, 'Nama wajib diisi')
-    .max(100, 'Nama terlalu panjang')
+    .min(1, 'Name is required')
+    .max(100, 'Name is too long')
     .transform(sanitizeString),
   email: z.string()
-    .email('Email tidak valid')
-    .regex(emailRegex, 'Format email tidak valid')
-    .max(100, 'Email terlalu panjang')
+    .email('Invalid email')
+    .regex(emailRegex, 'Invalid email format')
+    .max(100, 'Email is too long')
     .transform((str) => str.trim().toLowerCase()),
   // Password is mandatory at create time so the client can sign in to the
   // portal and view their (now private) gallery. The API layer hashes it
   // with bcrypt before persisting.
   password: z.string()
-    .min(8, 'Password minimal 8 karakter')
-    .max(72, 'Password maksimal 72 karakter (bcrypt limit)'),
+    .min(8, 'Password must be at least 8 characters')
+    .max(72, 'Password must be at most 72 characters (bcrypt limit)'),
   phone: z.string()
     .nullish()
     .refine((val) => val === null || val === undefined || phoneRegex.test(val), {
-      message: 'Format nomor telepon tidak valid (gunakan 08xx atau +62)',
+      message: 'Invalid phone number format (use 08xx or +62)',
     }),
   instagram: z.string()
     .nullish()
     .refine((val) => val === null || val === undefined || /^@?[a-zA-Z0-9._]{1,30}$/.test(val), {
-      message: 'Format Instagram tidak valid',
+      message: 'Invalid Instagram format',
     }),
   storageQuotaGB: z.number()
-    .int('Kuota harus berupa bilangan bulat')
-    .min(1, 'Kuota minimal 1 GB')
-    .max(1000, 'Kuota maksimal 1000 GB')
+    .int('Quota must be an integer')
+    .min(1, 'Quota must be at least 1 GB')
+    .max(1000, 'Quota must be at most 1000 GB')
     .optional(),
   // Admin can flip the approval gate via PATCH; not required at create time
   // (defaults to `true` for admin-created rows via the schema default).
@@ -96,14 +96,14 @@ export const clientSchema = z.object({
 
 export const packageSchema = z.object({
   nama: z.string()
-    .min(1, 'Nama paket wajib diisi')
-    .max(100, 'Nama terlalu panjang')
+    .min(1, 'Package name is required')
+    .max(100, 'Package name is too long')
     .transform(sanitizeString),
   description: z.string()
-    .max(500, 'Deskripsi terlalu panjang')
+    .max(500, 'Description is too long')
     .nullish()
     .transform((val) => val ? sanitizeString(val) : val),
-  price: z.number().min(0, 'Harga tidak boleh negatif'),
+  price: z.number().min(0, 'Price cannot be negative'),
   duration: z.number().int().positive().nullish(),
   fitur: z.array(z.string()).optional().transform((val) => val === null ? undefined : val),
   maxSelection: z.number().int().min(0).default(20),
@@ -112,21 +112,21 @@ export const packageSchema = z.object({
 });
 
 export const eventSchema = z.object({
-  clientId: z.string().min(1, 'Client wajib dipilih'),
+  clientId: z.string().min(1, 'Client is required'),
   packageId: z.string().nullish(),
   namaProject: z.string()
-    .min(1, 'Nama project wajib diisi')
-    .max(100, 'Nama project terlalu panjang')
+    .min(1, 'Project name is required')
+    .max(100, 'Project name is too long')
     .transform(sanitizeString),
   eventDate: z.string()
-    .refine((str) => !isNaN(Date.parse(str)), { message: 'Format tanggal tidak valid' })
+    .refine((str) => !isNaN(Date.parse(str)), { message: 'Invalid date format' })
     .transform((str) => new Date(str)),
   location: z.string()
-    .max(200, 'Lokasi terlalu panjang')
+    .max(200, 'Location is too long')
     .nullish()
     .transform((val) => val ? sanitizeString(val) : val),
   notes: z.string()
-    .max(500, 'Catatan terlalu panjang')
+    .max(500, 'Notes are too long')
     .nullish()
     .transform((val) => val ? sanitizeString(val) : val),
   totalPrice: z.number().int().min(0).default(0),
@@ -135,114 +135,114 @@ export const eventSchema = z.object({
 });
 
 export const gallerySchema = z.object({
-  eventId: z.string().min(1, 'Event wajib dipilih'),
+  eventId: z.string().min(1, 'Event is required'),
   namaProject: z.string()
-    .min(1, 'Nama project wajib diisi')
-    .max(100, 'Nama project terlalu panjang')
+    .min(1, 'Project name is required')
+    .max(100, 'Project name is too long')
     .transform(sanitizeString),
   maxSelection: z.number().int().min(0).default(20),
   status: z.enum(['draft', 'published', 'archived']).default('draft'),
   enableDownload: z.boolean().default(false),
   welcomeMessage: z.string()
-    .max(500, 'Pesan terlalu panjang')
+    .max(500, 'Message is too long')
     .optional()
     .transform((val) => val ? sanitizeString(val) : val),
   thankYouMessage: z.string()
-    .max(500, 'Pesan terlalu panjang')
+    .max(500, 'Message is too long')
     .optional()
     .transform((val) => val ? sanitizeString(val) : val),
   bannerClientName: z.string()
-    .max(100, 'Nama terlalu panjang')
+    .max(100, 'Name is too long')
     .optional()
     .transform((val) => val ? sanitizeString(val) : val),
   bannerEventDate: z.string()
-    .max(100, 'Tanggal terlalu panjang')
+    .max(100, 'Date is too long')
     .optional()
     .transform((val) => val ? sanitizeString(val) : val),
 });
 
 export const bookingSchema = z.object({
   nama: z.string()
-    .min(1, 'Nama wajib diisi')
-    .max(100, 'Nama terlalu panjang')
+    .min(1, 'Name is required')
+    .max(100, 'Name is too long')
     .transform(sanitizeString),
   email: z.string()
-    .email('Email tidak valid')
-    .regex(emailRegex, 'Format email tidak valid')
-    .max(100, 'Email terlalu panjang')
+    .email('Invalid email')
+    .regex(emailRegex, 'Invalid email format')
+    .max(100, 'Email is too long')
     .transform((str) => str.trim().toLowerCase()),
   // Required for the portal login flow that activates *after* an admin
   // approves the booking. Same min/max constraints as `clientSchema` so the
   // hashed value is interchangeable with admin-created clients.
   password: z.string()
-    .min(8, 'Password minimal 8 karakter')
-    .max(72, 'Password maksimal 72 karakter (bcrypt limit)'),
+    .min(8, 'Password must be at least 8 characters')
+    .max(72, 'Password must be at most 72 characters (bcrypt limit)'),
   phone: z.string()
-    .min(1, 'Nomor WhatsApp wajib diisi')
-    .regex(phoneRegex, 'Format nomor telepon tidak valid (gunakan 08xx atau +62)'),
+    .min(1, 'WhatsApp number is required')
+    .regex(phoneRegex, 'Invalid phone number format (use 08xx or +62)'),
   instagram: z.string()
     .optional()
     .refine((val) => val === undefined || val === '' || /^[a-zA-Z0-9._]{1,30}$/.test(val), {
-      message: 'Format Instagram tidak valid',
+      message: 'Invalid Instagram format',
     }),
   packageId: z.string().optional(),
   eventDate: z.string()
-    .refine((str) => !isNaN(Date.parse(str)), { message: 'Format tanggal tidak valid' })
+    .refine((str) => !isNaN(Date.parse(str)), { message: 'Invalid date format' })
     .transform((str) => new Date(str)),
   location: z.preprocess(
     (val) => (val === '' ? undefined : val),
-    z.string().max(200, 'Lokasi terlalu panjang').optional().transform((val) => val ? sanitizeString(val) : val)
+    z.string().max(200, 'Location is too long').optional().transform((val) => val ? sanitizeString(val) : val)
   ),
   notes: z.preprocess(
     (val) => (val === '' ? undefined : val),
-    z.string().max(500, 'Catatan terlalu panjang').optional().transform((val) => val ? sanitizeString(val) : val)
+    z.string().max(500, 'Notes are too long').optional().transform((val) => val ? sanitizeString(val) : val)
   ),
 });
 
 export const selectionSubmitSchema = z.object({
-  photoIds: z.array(z.string()).min(1, 'Pilih minimal 1 foto'),
+  photoIds: z.array(z.string()).min(1, 'Select at least 1 photo'),
 });
 
 export const paymentProofSchema = z.object({
-  eventId: z.string().min(1, 'Event ID wajib diisi'),
-  paymentId: z.string().min(1, 'Payment ID wajib diisi'),
-  uploadId: z.string().min(1, 'Upload ID wajib diisi'),
+  eventId: z.string().min(1, 'Event ID is required'),
+  paymentId: z.string().min(1, 'Payment ID is required'),
+  uploadId: z.string().min(1, 'Upload ID is required'),
 });
 
 export const updateGallerySchema = z.object({
   namaProject: z.string()
-    .min(1, 'Nama project tidak boleh kosong')
-    .max(100, 'Nama project terlalu panjang')
+    .min(1, 'Project name cannot be empty')
+    .max(100, 'Project name is too long')
     .optional()
     .transform((val) => val ? sanitizeString(val) : val),
   maxSelection: z.number().int().min(0).optional(),
   status: z.enum(['draft', 'published', 'archived']).optional(),
   enableDownload: z.boolean().optional(),
   welcomeMessage: z.string()
-    .max(500, 'Pesan terlalu panjang')
+    .max(500, 'Message is too long')
     .nullable()
     .optional()
     .transform((val) => val ? sanitizeString(val) : val),
   thankYouMessage: z.string()
-    .max(500, 'Pesan terlalu panjang')
+    .max(500, 'Message is too long')
     .nullable()
     .optional()
     .transform((val) => val ? sanitizeString(val) : val),
   bannerClientName: z.string()
-    .max(100, 'Nama terlalu panjang')
+    .max(100, 'Name is too long')
     .nullable()
     .optional()
     .transform((val) => val ? sanitizeString(val) : val),
   bannerEventDate: z.string()
-    .max(100, 'Tanggal terlalu panjang')
+    .max(100, 'Date is too long')
     .nullable()
     .optional()
     .transform((val) => val ? sanitizeString(val) : val),
 });
 
 export const loginSchema = z.object({
-  email: z.string().email('Email tidak valid'),
-  password: z.string().min(1, 'Password wajib diisi'),
+  email: z.string().email('Invalid email'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 // Partial schemas for PATCH endpoints (all fields optional)

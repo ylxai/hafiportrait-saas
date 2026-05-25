@@ -16,18 +16,18 @@ export async function POST(request: Request) {
     // 1. Verify upload session and R2 file
     const verification = await verifyR2Upload(validated.uploadId);
     if (!verification.success) {
-      return errorResponse(verification.error || 'Verifikasi upload gagal', 400);
+      return errorResponse(verification.error || 'Upload verification failed', 400);
     }
 
     const { publicUrl, galleryId } = verification;
     if (!publicUrl) {
-      return errorResponse('Public URL tidak ditemukan', 400);
+      return errorResponse('Public URL not found', 400);
     }
 
     // 2. Verify upload belongs to this event (security check)
     const expectedGalleryId = `payments/${validated.eventId}`;
     if (galleryId !== expectedGalleryId) {
-      return errorResponse('Upload tidak sesuai dengan event pembayaran', 400);
+      return errorResponse('Upload does not match the payment event', 400);
     }
 
     // 2. Find payment and event
@@ -37,15 +37,15 @@ export async function POST(request: Request) {
     });
 
     if (!payment) {
-      return notFoundResponse('Data pembayaran tidak ditemukan');
+      return notFoundResponse('Payment data not found');
     }
 
     if (payment.eventId !== validated.eventId) {
-      return errorResponse('Data tidak valid', 400);
+      return errorResponse('Invalid data', 400);
     }
 
     if (payment.status === 'approved' || payment.event.paymentStatus === 'paid') {
-      return errorResponse('Pembayaran sudah dikonfirmasi', 400);
+      return errorResponse('Payment already confirmed', 400);
     }
 
     // 3. Update payment with proof URL and update event status
@@ -68,9 +68,9 @@ export async function POST(request: Request) {
     // 4. Cleanup session
     await cleanupUploadSession(validated.uploadId);
 
-    return successResponse({ message: 'Bukti transfer berhasil diunggah' });
+    return successResponse({ message: 'Transfer proof uploaded successfully' });
   } catch (error) {
     console.error('Error submitting payment proof:', error);
-    return serverErrorResponse('Gagal mengunggah bukti transfer');
+    return serverErrorResponse('Failed to upload transfer proof');
   }
 }
