@@ -1,5 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { isClientSession } from '@/lib/auth/role-helpers';
 import { prisma } from '@/lib/db';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse, unauthorizedResponse } from '@/lib/api/response';
 import { selectionSubmitSchema } from '@/lib/api/validation';
@@ -10,7 +11,7 @@ export async function POST(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || (session.user.role ?? '').toLowerCase() !== 'client') {
+    if (!isClientSession(session)) {
       return unauthorizedResponse();
     }
 

@@ -1,12 +1,13 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { isClientSession } from '@/lib/auth/role-helpers';
 import { prisma } from '@/lib/db';
 import { successResponse, unauthorizedResponse, serverErrorResponse } from '@/lib/api/response';
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || (session.user.role ?? '').toLowerCase() !== 'client') {
+    if (!isClientSession(session)) {
       return unauthorizedResponse();
     }
 

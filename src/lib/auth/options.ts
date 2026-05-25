@@ -52,7 +52,11 @@ export const authOptions: NextAuthOptions = {
           // repeat the toLowerCase(). DB column is free-form string today
           // (not an enum), so mixed-case values can leak in via seeds or
           // manual edits — collapse them at the token-issue boundary.
-          role: user.role.toLowerCase(),
+          // Null-coalesce before the cast: the column is non-null in Prisma
+          // today but legacy/seed rows have surfaced with empty strings, and
+          // calling .toLowerCase() on null/undefined would throw inside the
+          // authorize callback (turning a routine bad-login into a 500).
+          role: (user.role ?? '').toLowerCase(),
         };
       },
     }),

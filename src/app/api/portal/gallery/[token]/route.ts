@@ -1,5 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { isClientSession } from '@/lib/auth/role-helpers';
 import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse, errorResponse, unauthorizedResponse } from '@/lib/api/response';
 import { getDefaultAccount } from '@/lib/storage/accounts';
@@ -18,7 +19,7 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || (session.user.role ?? '').toLowerCase() !== 'client') {
+    if (!isClientSession(session)) {
       return unauthorizedResponse();
     }
 

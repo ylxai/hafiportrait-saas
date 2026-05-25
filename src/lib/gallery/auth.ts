@@ -18,6 +18,7 @@
  */
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
+import { isClientSession } from '@/lib/auth/role-helpers';
 import { prisma } from '@/lib/db';
 import { errorResponse, notFoundResponse } from '@/lib/api/response';
 
@@ -46,9 +47,11 @@ export async function assertGalleryOwnership(
   token: string,
 ): Promise<GalleryOwnership | { response: Failure }> {
   const session = await getServerSession(authOptions);
-  if (!session?.user || (session.user.role ?? '').toLowerCase() !== 'client') {
+  if (!isClientSession(session)) {
     // Match the not-found shape so we don't leak existence to anon/admin
-    // callers — the caller's UI gates on `404` regardless.
+    // callers — the caller's UI gates on `404` regardless. The helper
+    // collapses the null/undefined session and the case-fold check that
+    // every route-level guard previously re-implemented.
     return { response: notFoundResponse('Gallery not found') };
   }
 

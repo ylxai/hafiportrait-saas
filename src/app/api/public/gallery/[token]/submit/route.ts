@@ -9,6 +9,7 @@ import { selectionSubmitSchema } from "@/lib/api/validation";
 import { publishSelectionUpdate } from "@/lib/ably";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
+import { isClientSession } from "@/lib/auth/role-helpers";
 
 export async function POST(
   request: Request,
@@ -22,7 +23,7 @@ export async function POST(
     // selections — see issue "siapapun yang memiliki token galeri tanpa
     // login pun bisa mengada-ada selected foto".
     const session = await getServerSession(authOptions);
-    if (!session?.user || (session.user.role ?? "").toLowerCase() !== "client") {
+    if (!isClientSession(session)) {
       return errorResponse("Unauthorized", 401);
     }
 
