@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { ROLE_ADMIN, ROLE_CLIENT } from "@/lib/auth/role-constants";
+import { normalizeTokenRole } from "@/lib/auth/role-helpers";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -88,27 +90,38 @@ export async function middleware(request: NextRequest) {
     // authenticated session, and must never trigger a portal redirect.
     pathname.startsWith("/api/portal/gallery");
 
-  if (isAdminRoute && token.role !== "admin") {
+  // Normalize role for case-insensitive comparison via the shared helper
+  // so middleware, route-level guards (require-admin-auth.ts), and the
+  // session-side checks (isAdminSession/isClientSession) all apply the
+  // exact same trim + lowercase logic. Tokens minted by our providers in
+  // authOptions are already normalized at issue time, but legacy tokens
+  // and mixed-case DB rows can still surface here, hence the defensive
+  // pass through normalizeTokenRole.
+  const role = normalizeTokenRole(token);
+  const isAdmin = role === ROLE_ADMIN;
+  const isClient = role === ROLE_CLIENT;
+
+  if (isAdminRoute && !isAdmin) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
         { status: 403 },
       );
     }
-    if (token.role === "CLIENT") {
+    if (isClient) {
       return NextResponse.redirect(new URL("/portal/dashboard", request.url));
     }
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (isPortalRoute && token.role !== "CLIENT") {
+  if (isPortalRoute && !isClient) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
         { status: 403 },
       );
     }
-    if (token.role === "admin") {
+    if (isAdmin) {
       return NextResponse.redirect(new URL("/admin", request.url));
     }
     return NextResponse.redirect(new URL("/portal/login", request.url));
@@ -117,7 +130,13 @@ export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
   response.headers.set("x-user-email", token.email as string);
   response.headers.set("x-user-id", token.sub as string);
-  response.headers.set("x-user-role", token.role as string);
+  // Only set the role header when we actually have a non-empty role.
+  // Setting `x-user-role: ""` would surface a misleading blank header to
+  // downstream handlers that test for header presence rather than value
+  // equality, and would also waste a few bytes per response.
+  if (role) {
+    response.headers.set("x-user-role", role);
+  }
 
   return response;
 }

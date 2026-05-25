@@ -2,6 +2,8 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import { compare } from "bcryptjs";
+import { ROLE_ADMIN, ROLE_CLIENT } from "@/lib/auth/role-constants";
+import { normalizeRawRole } from "@/lib/auth/role-helpers";
 import { normalizeEmail } from "@/lib/auth/email-helpers";
 
 // Pre-computed valid bcrypt hash used to keep `compare()` cost roughly
@@ -21,7 +23,7 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       // WARNING: Changing this ID will invalidate all existing admin sessions
       // and require all admins to log in again. Coordinate changes with team.
-      id: "admin",
+      id: ROLE_ADMIN,
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
@@ -75,12 +77,21 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role,
+          // Normalize role to lowercase so middleware and route-level guards
+          // can compare case-insensitively without each call site having to
+          // repeat the toLowerCase(). DB column is free-form string today
+          // (not an enum), so mixed-case values can leak in via seeds or
+          // manual edits — collapse them at the token-issue boundary via
+          // the shared `normalizeRawRole` helper so the issue-time and
+          // read-time normalization (used by middleware + route guards)
+          // stay in lock-step. Handles null/undefined/non-string defensively
+          // so a routine bad-login can't surface as a 500.
+          role: normalizeRawRole(user.role),
         };
       },
     }),
     CredentialsProvider({
-      id: "client",
+      id: ROLE_CLIENT,
       name: "Client",
       credentials: {
         email: { label: "Email", type: "email" },
@@ -145,7 +156,7 @@ export const authOptions: NextAuthOptions = {
           id: client.id,
           email: client.email,
           name: client.nama,
-          role: "CLIENT",
+          role: ROLE_CLIENT,
         };
       },
     }),

@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
+import { isClientSession } from "@/lib/auth/role-helpers";
 import { prisma } from "@/lib/db";
 import {
   successResponse,
@@ -18,7 +19,7 @@ const schema = z.object({
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "CLIENT") {
+    if (!isClientSession(session)) {
       return unauthorizedResponse();
     }
 
@@ -43,7 +44,7 @@ export async function GET() {
 export async function PATCH(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "CLIENT") {
+    if (!isClientSession(session)) {
       return unauthorizedResponse();
     }
 

@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
  * Allowed admin role values. The User table stores roles as
  * lowercase strings (`role String @default("admin")` in the Prisma
  * schema), so the comparison is case-insensitive but the canonical
- * stored value is lowercase. Client sessions emit `role: "CLIENT"`,
+ * stored value is lowercase. Client sessions emit `role: "client"`,
  * which must NOT be granted admin access.
  *
  * Kept as a Set so future role additions ("super_admin", "support",
