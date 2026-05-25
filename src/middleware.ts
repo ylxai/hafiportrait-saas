@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { ROLE_ADMIN, ROLE_CLIENT } from "@/lib/auth/role-constants";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -94,8 +95,8 @@ export async function middleware(request: NextRequest) {
   // case here keeps middleware aligned with route-level guards such as
   // require-admin-auth.ts which already normalize the role.
   const role = (token.role ?? "").toString().toLowerCase();
-  const isAdmin = role === "admin";
-  const isClient = role === "client";
+  const isAdmin = role === ROLE_ADMIN;
+  const isClient = role === ROLE_CLIENT;
 
   if (isAdminRoute && !isAdmin) {
     if (pathname.startsWith("/api/")) {
@@ -126,7 +127,13 @@ export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
   response.headers.set("x-user-email", token.email as string);
   response.headers.set("x-user-id", token.sub as string);
-  response.headers.set("x-user-role", role);
+  // Only set the role header when we actually have a non-empty role.
+  // Setting `x-user-role: ""` would surface a misleading blank header to
+  // downstream handlers that test for header presence rather than value
+  // equality, and would also waste a few bytes per response.
+  if (role) {
+    response.headers.set("x-user-role", role);
+  }
 
   return response;
 }

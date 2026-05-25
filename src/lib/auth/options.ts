@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import { compare } from "bcryptjs";
+import { ROLE_ADMIN, ROLE_CLIENT } from "@/lib/auth/role-constants";
 
 // Pre-computed valid bcrypt hash used to keep `compare()` cost roughly
 // constant when the user/client isn't found. Without this, an attacker
@@ -20,7 +21,7 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       // WARNING: Changing this ID will invalidate all existing admin sessions
       // and require all admins to log in again. Coordinate changes with team.
-      id: "admin",
+      id: ROLE_ADMIN,
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
@@ -61,7 +62,7 @@ export const authOptions: NextAuthOptions = {
       },
     }),
     CredentialsProvider({
-      id: "client",
+      id: ROLE_CLIENT,
       name: "Client",
       credentials: {
         email: { label: "Email", type: "email" },
@@ -113,7 +114,7 @@ export const authOptions: NextAuthOptions = {
           id: client.id,
           email: client.email,
           name: client.nama,
-          role: "client",
+          role: ROLE_CLIENT,
         };
       },
     }),

@@ -20,6 +20,7 @@
  * passing check also informs the compiler that `session` is non-null.
  */
 import type { Session } from 'next-auth';
+import { ROLE_ADMIN, ROLE_CLIENT } from './role-constants';
 
 /**
  * Normalize the role string off a possibly-missing session. Returns `''`
@@ -40,7 +41,7 @@ function normalizeRole(session: Session | null | undefined): string {
 export function isClientSession(
   session: Session | null | undefined,
 ): session is Session {
-  return normalizeRole(session) === 'client';
+  return normalizeRole(session) === ROLE_CLIENT;
 }
 
 /**
@@ -52,5 +53,5 @@ export function isClientSession(
 export function isAdminSession(
   session: Session | null | undefined,
 ): session is Session {
-  return normalizeRole(session) === 'admin';
+  return normalizeRole(session) === ROLE_ADMIN;
 }
