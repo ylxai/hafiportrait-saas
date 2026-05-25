@@ -17,6 +17,9 @@ type Settings = {
   socialMedia: Record<string, string>;
   bookingFields: Record<string, unknown>;
   notifications: Record<string, unknown>;
+  namaRekening: string;
+  nomorRekening: string;
+  namaBank: string;
 };
 
 const defaultSettings: Settings = {
@@ -28,6 +31,9 @@ const defaultSettings: Settings = {
   socialMedia: {},
   bookingFields: {},
   notifications: {},
+  namaRekening: '',
+  nomorRekening: '',
+  namaBank: '',
 };
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -191,6 +197,51 @@ export default function SettingsPage() {
                 rows={4}
                 className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 font-mono text-sm"
                 placeholder='{"instagram": "@yourstudio", "facebook": "..."}'
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-card text-card-foreground rounded-xl p-6 border border-border shadow-sm">
+          <h2 className="font-semibold text-foreground mb-1">Payment Information</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Informasi rekening yang ditampilkan kepada client setelah booking.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
+                Nama Bank
+              </label>
+              <input
+                type="text"
+                value={formData.namaBank}
+                onChange={(e) => handleChange('namaBank', e.target.value)}
+                placeholder="Contoh: BCA, Mandiri, BNI..."
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
+                Nama Rekening
+              </label>
+              <input
+                type="text"
+                value={formData.namaRekening}
+                onChange={(e) => handleChange('namaRekening', e.target.value)}
+                placeholder="Nama pemilik rekening"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
+                Nomor Rekening
+              </label>
+              <input
+                type="text"
+                value={formData.nomorRekening}
+                onChange={(e) => handleChange('nomorRekening', e.target.value)}
+                placeholder="Contoh: 1234567890"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
               />
             </div>
           </div>

@@ -223,6 +223,9 @@ model Settings {
   socialMedia     Json?
   bookingFields   Json?
   notifications   Json?
+  namaRekening    String?
+  nomorRekening   String?
+  namaBank        String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

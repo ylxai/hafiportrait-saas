@@ -36,6 +36,9 @@ const updateSettingsSchema = z.object({
   socialMedia: nullToUndefined(z.record(z.string(), z.string())),
   bookingFields: nullToUndefined(z.record(z.string(), z.unknown())),
   notifications: nullToUndefined(z.record(z.string(), z.unknown())),
+  namaRekening: z.string().max(100, 'Account name is too long').optional(),
+  nomorRekening: z.string().max(50, 'Account number is too long').optional(),
+  namaBank: z.string().max(100, 'Bank name is too long').optional(),
 });
 
 // Get studio settings (single row with id="studio")
@@ -66,6 +69,9 @@ export const GET = withRequestContext(async () => {
       socialMedia: {},
       bookingFields: {},
       notifications: {},
+      namaRekening: '',
+      nomorRekening: '',
+      namaBank: '',
     };
 
     return successResponse({ 
@@ -119,6 +125,9 @@ export const POST = withRequestContext(async (request: Request) => {
       socialMedia: data.socialMedia as Prisma.InputJsonValue,
       bookingFields: data.bookingFields as Prisma.InputJsonValue,
       notifications: data.notifications as Prisma.InputJsonValue,
+      namaRekening: data.namaRekening,
+      nomorRekening: data.nomorRekening,
+      namaBank: data.namaBank,
     };
     const createPayload = {
       id: 'studio',
@@ -130,6 +139,9 @@ export const POST = withRequestContext(async (request: Request) => {
       socialMedia: (data.socialMedia ?? {}) as Prisma.InputJsonValue,
       bookingFields: (data.bookingFields ?? {}) as Prisma.InputJsonValue,
       notifications: (data.notifications ?? {}) as Prisma.InputJsonValue,
+      namaRekening: data.namaRekening || '',
+      nomorRekening: data.nomorRekening || '',
+      namaBank: data.namaBank || '',
     };
 
     // Settings is a singleton row (id="studio"). Prisma's upsert is not
