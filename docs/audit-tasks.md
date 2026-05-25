@@ -15,7 +15,7 @@
 | **Sprint 3** | Low (Observability, Polish) | ⚠️ 60% done |
 | **Sprint 4** | Security & Observability (new findings) | ✅ Done (2026-05-25) |
 | **Sprint 5** | Code Quality (new findings) | ✅ Done (2026-05-25) |
-| **Sprint 6** | Polish (new findings) | ⏳ Queued |
+| **Sprint 6** | Polish (new findings) | ✅ Done (2026-05-25) |
 
 ---
 
