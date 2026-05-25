@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import Link from "next/link";
+import { PROVIDER_ID_ADMIN } from "@/lib/auth/role-constants";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -16,7 +17,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const result = await signIn("admin-credentials", {
+      const result = await signIn(PROVIDER_ID_ADMIN, {
         email,
         password,
         redirect: false,

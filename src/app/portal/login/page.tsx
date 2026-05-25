@@ -5,6 +5,7 @@ import { signIn } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
 import { Loader2, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
+import { PROVIDER_ID_CLIENT } from '@/lib/auth/role-constants'
 
 /**
  * Validate a `callbackUrl` query parameter against open-redirect attacks.
@@ -56,7 +57,7 @@ function LoginForm() {
     setLoading(true)
 
     try {
-      const result = await signIn('client-credentials', {
+      const result = await signIn(PROVIDER_ID_CLIENT, {
         email,
         password,
         redirect: false,
