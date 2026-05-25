@@ -25,17 +25,20 @@
  */
 
 import { runWithRequestContext } from '@/lib/request-context';
+import {
+  MAX_REQUEST_ID_LENGTH,
+  REQUEST_ID_HEADER,
+} from '@/lib/request-id-constants';
 
-/** Header name we propagate the correlation ID under. */
-export const REQUEST_ID_HEADER = 'x-request-id';
+// Re-export so existing call-sites that import the header name from
+// this module keep working without forcing a wide refactor.
+export { REQUEST_ID_HEADER };
 
 /**
  * Generate-or-reuse helper. Trims overlong header values to keep log
  * cardinality bounded — a malicious client cannot inflate our log
  * indices by sending a 64KB header.
  */
-const MAX_REQUEST_ID_LENGTH = 128;
-
 function normalizeRequestId(raw: string | null | undefined): string {
   if (raw && raw.length > 0 && raw.length <= MAX_REQUEST_ID_LENGTH) {
     return raw;
@@ -49,11 +52,13 @@ function normalizeRequestId(raw: string | null | undefined): string {
  * (or a freshly minted UUID).
  *
  * The wrapper preserves the handler's `(request, context?)` shape so
- * dynamic route segments like `[id]` keep working.
+ * dynamic route segments like `[id]` keep working. The trailing
+ * arguments are typed as `unknown[]` (rather than `any[]`) to comply
+ * with the project's strict no-`any` policy; handlers narrow the
+ * context arg locally via their own parameter types.
  */
 export function withRequestContext<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  TArgs extends [Request, ...any[]],
+  TArgs extends [Request, ...unknown[]],
   TResult,
 >(handler: (...args: TArgs) => Promise<TResult> | TResult) {
   return (...args: TArgs): Promise<TResult> | TResult => {

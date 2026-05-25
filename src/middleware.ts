@@ -1,24 +1,30 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import {
+  MAX_REQUEST_ID_LENGTH,
+  REQUEST_ID_HEADER,
+} from "@/lib/request-id-constants";
 
 /**
- * Header carrying the request correlation ID.
+ * Request correlation ID wiring (Sprint 3 / Task 3.1).
  *
- * Sprint 3 / Task 3.1: middleware generates an `x-request-id` UUID at
- * the very top of every request (or echoes the inbound one), then
- * stamps it onto both the request that flows down to the route
- * handler AND the response that goes back to the client. The
- * Node-runtime side (`src/lib/with-request-context.ts`) reads the
- * header and opens an AsyncLocalStorage scope so the structured
- * logger can auto-tag every log line.
+ * Middleware generates an `x-request-id` UUID at the very top of every
+ * request (or echoes the inbound one), then stamps it onto both the
+ * request that flows down to the route handler AND the response that
+ * goes back to the client. The Node-runtime side
+ * (`src/lib/with-request-context.ts`) reads the header and opens an
+ * AsyncLocalStorage scope so the structured logger can auto-tag every
+ * log line.
+ *
+ * The header name and length cap live in
+ * `src/lib/request-id-constants.ts` so the Edge bundle here and the
+ * Node-runtime wrapper share a single source of truth.
  *
  * Note: this file runs in the Edge runtime, which does NOT expose
  * `node:async_hooks`. Keep the ALS wiring out of this file — the
  * header alone is enough to bridge Edge → Node.
  */
-const REQUEST_ID_HEADER = "x-request-id";
-const MAX_REQUEST_ID_LENGTH = 128;
 
 function resolveRequestId(request: NextRequest): string {
   const inbound = request.headers.get(REQUEST_ID_HEADER);
