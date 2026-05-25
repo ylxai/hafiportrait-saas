@@ -177,19 +177,23 @@ export async function middleware(request: NextRequest) {
     return redirect;
   }
 
-  // Authenticated request: forward the request ID downstream AND keep
-  // the existing user-context headers we already exposed to the route
-  // handler.
+  // Authenticated request: forward the request ID AND user-context
+  // headers downstream to the route handler via REQUEST headers only.
+  //
+  // SECURITY: User context (x-user-id, x-user-email, x-user-role) MUST
+  // be set on the forwarded REQUEST headers — never on the response —
+  // otherwise they leak back to the client browser. Only the request ID
+  // is echoed on the response (it's a non-sensitive correlation token).
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(REQUEST_ID_HEADER, requestId);
+  requestHeaders.set("x-user-email", token.email as string);
+  requestHeaders.set("x-user-id", token.sub as string);
+  requestHeaders.set("x-user-role", token.role as string);
 
   const response = NextResponse.next({
     request: { headers: requestHeaders },
   });
   response.headers.set(REQUEST_ID_HEADER, requestId);
-  response.headers.set("x-user-email", token.email as string);
-  response.headers.set("x-user-id", token.sub as string);
-  response.headers.set("x-user-role", token.role as string);
 
   return response;
 }

@@ -43,5 +43,21 @@ export function normalizeRequestId(raw: string | null | undefined): string {
   ) {
     return raw;
   }
-  return globalThis.crypto.randomUUID();
+
+  // Preferred path: Web Crypto on globalThis. Available in:
+  //   - Edge runtime (always)
+  //   - Node.js >= 19 (where `globalThis.crypto` is the Web Crypto API)
+  //   - Modern browsers
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+
+  // Fallback for Node.js < 19, where Web Crypto isn't on globalThis yet.
+  // This branch is unreachable from the Edge runtime (globalThis.crypto
+  // is always present there), so the `require("crypto")` call only ever
+  // executes in a Node.js process. We use `require` (not `import`) to
+  // keep this module free of static `node:*` dependencies, which would
+  // break the Edge bundle.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return (require("crypto") as typeof import("crypto")).randomUUID();
 }
