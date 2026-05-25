@@ -3,7 +3,6 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import { compare } from "bcryptjs";
 import {
-  ROLE_ADMIN,
   ROLE_CLIENT,
   PROVIDER_ID_ADMIN,
   PROVIDER_ID_CLIENT,
@@ -26,8 +25,8 @@ const DUMMY_HASH =
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      // WARNING: Changing this ID will invalidate all existing admin sessions
-      // and require all admins to log in again. Coordinate changes with team.
+      // Provider ID is stable and decoupled from role semantics.
+      // See PROVIDER_ID_ADMIN in role-constants.ts for session invalidation warning.
       id: PROVIDER_ID_ADMIN,
       name: "Credentials",
       credentials: {
