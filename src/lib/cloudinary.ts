@@ -105,7 +105,7 @@ export async function getCloudinaryThumbnailUrlAsync(
       cloudName: config.cloudName,
     });
   } catch (error) {
-    console.error('cloudinary.config.fetch_failed', error);
+    console.error('cloudinary.config.fetch_failed', { error, r2Url });
     return r2Url; // Fallback to original
   }
 }
