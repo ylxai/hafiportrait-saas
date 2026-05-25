@@ -178,11 +178,8 @@ export async function getCloudinaryConfig(): Promise<{ cloudName: string }> {
     return { cloudName: account.cloudName };
   }
 
-  // Fallback to environment variable
-  const envCloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  if (envCloudName) {
-    return { cloudName: envCloudName };
-  }
-
-  throw new Error('Cloudinary cloud name not configured in database or environment');
+  // Sprint 3 Task 3.3: env fallback removed — cloudName must come from DB.
+  // If no active Cloudinary account is configured, throw so callers surface
+  // a clear configuration error rather than silently using a stale env var.
+  throw new Error('Cloudinary cloud name not configured. Add a Cloudinary storage account in admin settings.');
 }

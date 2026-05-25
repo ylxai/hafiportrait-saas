@@ -94,8 +94,7 @@ export async function loadPublicGallery(token: string, cursor?: string | null) {
   const selections = selectedPhotoIds.map((s) => s.photoId);
 
   const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
-  const cloudName =
-    cloudinaryAccount?.cloudName || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const cloudName = cloudinaryAccount?.cloudName ?? undefined;
 
   const serializedPhotos = photoList.map((photo) => serializeGalleryPhoto(photo, cloudName));
 

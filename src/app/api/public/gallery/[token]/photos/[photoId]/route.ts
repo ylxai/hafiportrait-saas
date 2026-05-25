@@ -47,9 +47,7 @@ export const GET = withRequestContext(async (
     }
 
     const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
-    const cloudName =
-      cloudinaryAccount?.cloudName ||
-      process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const cloudName = cloudinaryAccount?.cloudName ?? undefined;
 
     const serialized = serializeGalleryPhoto(photo, cloudName);
 
