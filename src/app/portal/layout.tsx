@@ -24,7 +24,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           <div className="flex items-center gap-4">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-card-hover transition-colors"
+              className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-card-hover transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
               aria-expanded={mobileMenuOpen}
               aria-label={mobileMenuOpen ? 'Tutup menu' : 'Buka menu'}
             >
@@ -38,7 +38,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             </span>
             <button
               onClick={() => signOut({ callbackUrl: '/portal/login' })}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors p-2 -mr-2 rounded-lg hover:bg-card-hover"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors p-2 -mr-2 rounded-lg hover:bg-card-hover min-h-[44px] min-w-[44px] justify-center sm:justify-start"
               aria-label="Keluar"
             >
               <LogOut className="w-4 h-4" />
