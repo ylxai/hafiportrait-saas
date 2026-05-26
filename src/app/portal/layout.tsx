@@ -24,7 +24,9 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           <div className="flex items-center gap-4">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden"
+              className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-card-hover transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-expanded={mobileMenuOpen}
+              aria-label={mobileMenuOpen ? 'Tutup menu' : 'Buka menu'}
             >
               <Menu className="w-6 h-6" />
             </button>
@@ -36,7 +38,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             </span>
             <button
               onClick={() => signOut({ callbackUrl: '/portal/login' })}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors p-2 -mr-2 rounded-lg hover:bg-card-hover min-h-[44px] min-w-[44px] justify-center sm:justify-start"
+              aria-label="Keluar"
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Keluar</span>
@@ -45,7 +48,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 lg:flex lg:gap-8">
+      <div className="max-w-7xl mx-auto px-4 py-6 lg:flex lg:gap-8 pb-20 lg:pb-6">
         <aside className={`lg:w-64 ${mobileMenuOpen ? 'block' : 'hidden'} lg:block mb-6 lg:mb-0`}>
           <nav className="space-y-1">
             {navItems.map((item) => {

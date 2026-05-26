@@ -578,7 +578,7 @@ export default function GalleryClient({
                         onClick={(e) => { e.stopPropagation(); toggleSelect(photo.id); }}
                         disabled={isLocked || !canSelect}
                         aria-label={isSelected ? 'Batal pilih' : 'Pilih foto'}
-                        className={`absolute top-3 right-3 w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm transition-all shadow-md ${isSelected ? 'bg-primary border-primary text-primary-foreground shadow-[0_0_10px_rgb(224_155_61_/_0.5)] scale-110' : canSelect ? 'bg-black/40 border-white/50 text-transparent hover:border-white hover:text-white hover:bg-black/60 backdrop-blur-sm' : 'bg-muted/80 border-muted-foreground/30 text-transparent cursor-not-allowed'}`}
+                        className={`absolute top-2 right-2 w-11 h-11 rounded-full border-2 flex items-center justify-center text-sm transition-all shadow-md ${isSelected ? 'bg-primary border-primary text-primary-foreground shadow-[0_0_10px_rgb(224_155_61_/_0.5)] scale-110' : canSelect ? 'bg-background/40 border-foreground/50 text-transparent hover:border-foreground hover:text-foreground hover:bg-background/60 backdrop-blur-sm' : 'bg-muted/80 border-muted-foreground/30 text-transparent cursor-not-allowed'}`}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
                       </button>

@@ -21,7 +21,7 @@ export default function Home() {
             <Link href="/booking" className="glass-btn text-sm hidden sm:flex">
               Booking
             </Link>
-            <Link href="/login" className="glass-btn-primary text-sm">
+            <Link href="/login" className="glass-btn-primary text-sm px-4 py-3 min-h-[44px] flex items-center">
               Masuk
             </Link>
           </div>
