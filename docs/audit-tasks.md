@@ -24,7 +24,7 @@
 ### Task 3.1: Wire `withRequestContext` to All Route Handlers
 
 - **Severity**: Critical (C2)
-- **Status**: ⚠️ 40% done — infrastructure exists, not wired
+- **Status**: ✅ Done — all 52 route handlers wrapped, logger auto-injects requestId, queue propagates requestId
 - **Problem**: `with-request-context.ts` exists but zero route handlers use it. `getRequestId()` always returns `undefined`. Queue messages don't carry `requestId`.
 - **Fix**: Mass-wrap all route exports:
   ```typescript
@@ -39,7 +39,7 @@
 ### Task 3.3: Remove `process.env` Fallback — Remaining Callers
 
 - **Severity**: Medium (M1)
-- **Status**: ⚠️ Partial — `cloudinary.ts` fixed, 5 callers remain
+- **Status**: ✅ Done — all 5 callers verified clean, all use DB-backed `getCloudinaryConfig()` / `cloudinaryAccount?.cloudName`
 - **Files**:
   - `src/lib/gallery/load-public-gallery.ts:98`
   - `src/lib/storage/accounts.ts:166`
