@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Loader2, Receipt, Upload, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -62,22 +62,30 @@ export default function InvoicesPage() {
     fileInputRef.current?.click()
   }
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !activePaymentId) return
 
     const payment = payments.find(p => p.id === activePaymentId)
     if (!payment) return
 
+    // Cleanup helper — reset input + activePaymentId
+    function cleanup() {
+      setActivePaymentId(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+
     // Validate file type
     const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
     if (!allowed.includes(file.type)) {
       toast.error('Format file tidak didukung. Gunakan JPG, PNG, atau WebP.')
+      cleanup()
       return
     }
 
     if (file.size > 5 * 1024 * 1024) {
       toast.error('Ukuran file maksimal 5MB')
+      cleanup()
       return
     }
 

@@ -29,7 +29,7 @@ export const GET = withRequestContext(async (request: Request) => {
         where: { event: { clientId: auth.user.id } },
         include: {
           event: {
-            select: { namaProject: true, eventDate: true }
+            select: { id: true, namaProject: true, eventDate: true, paymentStatus: true }
           }
         },
         orderBy: { createdAt: 'desc' },

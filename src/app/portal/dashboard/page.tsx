@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Loader2, Image, Calendar, Receipt, CheckCircle, Clock, ExternalLink } from 'lucide-react'
+import { useEffect, useState, Suspense } from 'react'
+import { Loader2, Image, Calendar, Receipt, CheckCircle, Clock, ExternalLink, XCircle, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 
 interface Payment {
@@ -55,18 +56,29 @@ const statusConfig = {
 const paymentStatusConfig = {
   pending: { label: 'Menunggu', className: 'bg-muted text-muted-foreground', icon: Clock },
   approved: { label: 'Disetujui', className: 'bg-primary/10 text-primary', icon: CheckCircle },
-  rejected: { label: 'Ditolak', className: 'bg-destructive/10 text-destructive', icon: Clock },
-  awaiting_confirmation: { label: 'Dikonfirmasi', className: 'bg-primary/10 text-primary', icon: Clock },
+  rejected: { label: 'Ditolak', className: 'bg-destructive/10 text-destructive', icon: XCircle },
+  awaiting_confirmation: { label: 'Menunggu Konfirmasi', className: 'bg-primary/10 text-primary', icon: AlertCircle },
 }
 
 export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+      <DashboardContent />
+    </Suspense>
+  )
+}
+
+function DashboardContent() {
+  const searchParams = useSearchParams()
+  const showAll = searchParams.get('all') === '1'
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch('/api/portal/dashboard?limit=6')
+        const limit = showAll ? 100 : 6
+        const res = await fetch(`/api/portal/dashboard?limit=${limit}`)
         const json = await res.json()
         if (!res.ok) {
           toast.error(json.error || 'Gagal memuat data')
@@ -80,7 +92,7 @@ export default function DashboardPage() {
       }
     }
     fetchData()
-  }, [])
+  }, [showAll])
 
   if (loading) {
     return (
