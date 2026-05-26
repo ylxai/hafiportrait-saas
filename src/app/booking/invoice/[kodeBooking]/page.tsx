@@ -182,11 +182,11 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header Actions */}
         <div className="flex justify-between items-center print:hidden">
-          <Button variant="ghost" size="default" onClick={() => window.history.back()} className="text-muted-foreground">
+          <Button variant="ghost" size="lg" onClick={() => window.history.back()} className="text-muted-foreground">
             <ArrowLeft className="w-4 h-4 mr-2" /> Kembali
           </Button>
           <div className="flex gap-2">
-            <Button variant="outline" size="default" onClick={() => window.print()}>
+            <Button variant="outline" size="lg" onClick={() => window.print()}>
               <Printer className="w-4 h-4 mr-2" /> Cetak
             </Button>
           </div>
