@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { successResponse, notFoundResponse, serverErrorResponse, rateLimitResponse } from '@/lib/api/response';
+import { successResponse, notFoundResponse, serverErrorResponse, rateLimitResponse, getClientIp } from '@/lib/api/response';
 import { generateDownloadUrl } from '@/lib/upload/presigned';
 import { assertGalleryOwnership } from '@/lib/gallery/auth';
 import { withRequestContext } from '@/lib/with-request-context';
@@ -14,7 +14,7 @@ export const GET = withRequestContext(async (
     const { token, photoId } = await params;
 
     // Rate limit (IP-based, stricter for downloads)
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown';
+    const ip = getClientIp(request);
     const rl = await checkRateLimit(`public:gallery:download:${ip}`, RATE_LIMITS.PUBLIC_GALLERY_DOWNLOAD);
     if (!rl.success) {
       return rateLimitResponse('Too many requests', Math.ceil((rl.resetAt - Date.now()) / 1000));

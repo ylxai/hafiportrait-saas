@@ -4,6 +4,7 @@ import {
   serverErrorResponse,
   errorResponse,
   rateLimitResponse,
+  getClientIp,
 } from '@/lib/api/response';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth';
@@ -27,7 +28,7 @@ export const GET = withRequestContext(async (
     const { token } = await params;
 
     // Rate limit (IP-based) — protects token enumeration
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown';
+    const ip = getClientIp(request);
     const rl = await checkRateLimit(`public:gallery:${ip}`, RATE_LIMITS.PUBLIC_READ);
     if (!rl.success) {
       return rateLimitResponse('Too many requests', Math.ceil((rl.resetAt - Date.now()) / 1000));

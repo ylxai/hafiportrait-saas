@@ -6,8 +6,7 @@ import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
-
-const MAX_EXPORT_ROWS = 10000; // Prevent memory DoS on large datasets
+import { MAX_EXPORT_ROWS } from '@/lib/api/constants';
 
 /**
  * GET /api/admin/export/clients

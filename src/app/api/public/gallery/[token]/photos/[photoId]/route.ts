@@ -4,6 +4,7 @@ import {
   notFoundResponse,
   serverErrorResponse,
   rateLimitResponse,
+  getClientIp,
 } from '@/lib/api/response';
 import { assertGalleryOwnership } from '@/lib/gallery/auth';
 import { getDefaultAccount } from '@/lib/storage/accounts';
@@ -34,7 +35,7 @@ export const GET = withRequestContext(async (
     const { token, photoId } = await params;
 
     // Rate limit (IP-based)
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown';
+    const ip = getClientIp(request);
     const rl = await checkRateLimit(`public:gallery:photo:${ip}`, RATE_LIMITS.PUBLIC_READ);
     if (!rl.success) {
       return rateLimitResponse('Too many requests', Math.ceil((rl.resetAt - Date.now()) / 1000));

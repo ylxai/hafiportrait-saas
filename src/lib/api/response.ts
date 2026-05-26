@@ -5,6 +5,20 @@ import { serializeBigInt } from '@/lib/bigint-utils';
 import { logger } from '@/lib/logger';
 
 // Error codes for consistent error handling
+/**
+ * Extract client IP from request headers.
+ * On Vercel, x-forwarded-for is set by the trusted edge and cannot be spoofed.
+ * Falls back to x-real-ip, then 'unknown'.
+ */
+export function getClientIp(request: Request): string {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
+  );
+}
+
+// Error codes for consistent error handling
 export const ERROR_CODES = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   NOT_FOUND: 'NOT_FOUND',

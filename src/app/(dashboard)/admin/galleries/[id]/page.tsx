@@ -754,7 +754,6 @@ export default function GalleryDetailPage() {
             backdropFilter: "blur(10px)",
           },
         }}
-        on={{}}
       />
 
       {/* Settings */}

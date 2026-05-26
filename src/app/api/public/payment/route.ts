@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { successResponse, errorResponse, serverErrorResponse, notFoundResponse, rateLimitResponse } from '@/lib/api/response';
+import { successResponse, errorResponse, serverErrorResponse, notFoundResponse, rateLimitResponse, getClientIp } from '@/lib/api/response';
 import { paymentProofSchema, formatZodError } from '@/lib/api/validation';
 import { verifyR2Upload, cleanupUploadSession } from '@/lib/upload/presigned';
 import { withRequestContext } from '@/lib/with-request-context';
@@ -13,7 +13,7 @@ export const POST = withRequestContext(async (request: Request) => {
     if (tooLarge) return tooLarge;
 
     // Rate limit (IP-based, strict for payment submissions)
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown';
+    const ip = getClientIp(request);
     const rl = await checkRateLimit(`public:payment:${ip}`, RATE_LIMITS.PUBLIC_PAYMENT_SUBMIT);
     if (!rl.success) {
       return rateLimitResponse('Too many requests', Math.ceil((rl.resetAt - Date.now()) / 1000));
