@@ -57,6 +57,13 @@ function LoginForm() {
     setLoading(true)
 
     try {
+      // BUG FIX #6: Sign out any existing session (e.g. admin) before signing
+      // in as a client. Without this, a logged-in admin who somehow reaches
+      // this form could end up with a confused dual-session state where both
+      // the old admin cookie and the new client token coexist, granting
+      // unintended access to /admin routes.
+      await signOut({ redirect: false })
+
       const result = await signIn(PROVIDER_ID_CLIENT, {
         email,
         password,

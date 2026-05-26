@@ -83,6 +83,34 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const requestId = resolveRequestId(request);
 
+  // Special case: /portal/login must redirect already-authenticated users
+  // BEFORE the publicRoutes early-return so a logged-in admin visiting
+  // /portal/login?callbackUrl=... cannot see the client login form, submit
+  // it, and end up with a confused dual-session state that lets them access
+  // both /admin (old token still in cookie) and /portal/* (new token).
+  if (pathname === '/portal/login' || pathname.startsWith('/portal/login/')) {
+    const existingToken = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
+    if (existingToken) {
+      const existingRole = normalizeTokenRole(existingToken);
+      if (existingRole === ROLE_ADMIN) {
+        // Admin has no business on the client login page — send them home.
+        return redirectWithRequestId(new URL('/admin', request.url), requestId);
+      }
+      if (existingRole === ROLE_CLIENT) {
+        // Client is already logged in — honour callbackUrl or fall back to dashboard.
+        const cb = request.nextUrl.searchParams.get('callbackUrl');
+        const safe =
+          cb && cb.startsWith('/') && !cb.startsWith('//') && !cb.startsWith('/\\')
+            ? cb
+            : '/portal/dashboard';
+        return redirectWithRequestId(new URL(safe, request.url), requestId);
+      }
+    }
+  }
+
   const publicRoutes = [
     "/",
     "/login",
