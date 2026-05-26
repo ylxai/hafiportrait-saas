@@ -199,20 +199,25 @@ export default function InvoicesPage() {
             const cfg = statusConfig[payment.status as keyof typeof statusConfig] ?? statusConfig.pending
             const Icon = cfg.icon
             const canUpload = payment.status === 'pending' && !payment.proofUrl
+            const isExpanded = expandedId === payment.id
+            const detailId = `invoice-detail-${payment.id}`
+            const eventDate = new Date(payment.event.eventDate)
             const isUploading = uploading === payment.id
 
             return (
               <div key={payment.id} className="bg-card border border-border rounded-xl overflow-hidden">
                 {/* Clickable header */}
                 <button
-                  onClick={() => setExpandedId(expandedId === payment.id ? null : payment.id)}
+                  onClick={() => setExpandedId(isExpanded ? null : payment.id)}
+                  aria-expanded={isExpanded}
+                  aria-controls={detailId}
                   className="w-full text-left p-5 space-y-4 hover:bg-card-hover transition-colors"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="font-semibold text-foreground">{payment.event.namaProject}</h3>
                       <p className="text-sm text-muted-foreground mt-0.5">
-                        {new Date(payment.event.eventDate).toLocaleDateString('id-ID', {
+                        {eventDate.toLocaleDateString('id-ID', {
                           day: 'numeric', month: 'long', year: 'numeric'
                         })}
                       </p>
@@ -222,7 +227,7 @@ export default function InvoicesPage() {
                         <Icon className="w-3.5 h-3.5" />
                         {cfg.label}
                       </span>
-                      {expandedId === payment.id
+                      {isExpanded
                         ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
                         : <ChevronDown className="w-4 h-4 text-muted-foreground" />
                       }
@@ -243,15 +248,15 @@ export default function InvoicesPage() {
                 </button>
 
                 {/* Expandable detail */}
-                {expandedId === payment.id && (
-                  <div className="px-5 pb-5 space-y-4 border-t border-border">
+                {isExpanded && (
+                  <div id={detailId} className="px-5 pb-5 space-y-4 border-t border-border">
                     {/* Event info */}
                     <div className="pt-4 space-y-2">
                       <h4 className="text-sm font-medium text-foreground">Detail Event</h4>
                       <div className="space-y-1.5 text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 shrink-0" />
-                          {new Date(payment.event.eventDate).toLocaleDateString('id-ID', {
+                          {eventDate.toLocaleDateString('id-ID', {
                             weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
                           })}
                         </div>
@@ -279,7 +284,7 @@ export default function InvoicesPage() {
                             <p className="text-muted-foreground text-xs mb-1">Harga Paket</p>
                             <p className="font-semibold text-foreground">Rp {payment.event.package.price.toLocaleString('id-ID')}</p>
                           </div>
-                          {payment.event.package.duration && (
+                          {payment.event.package.duration != null && (
                             <div className="bg-background rounded-lg p-3">
                               <p className="text-muted-foreground text-xs mb-1">Durasi</p>
                               <p className="font-semibold text-foreground">{payment.event.package.duration} menit</p>
@@ -300,8 +305,8 @@ export default function InvoicesPage() {
                           <div className="space-y-1">
                             <p className="text-xs text-muted-foreground font-medium">Termasuk:</p>
                             <ul className="space-y-1">
-                              {payment.event.package.fitur.map((f, i) => (
-                                <li key={i} className="flex items-center gap-2 text-sm text-foreground">
+                              {payment.event.package.fitur.map((f) => (
+                                <li key={f} className="flex items-center gap-2 text-sm text-foreground">
                                   <CheckCircle className="w-3.5 h-3.5 text-primary shrink-0" />
                                   {f}
                                 </li>
@@ -323,7 +328,7 @@ export default function InvoicesPage() {
                     {/* Upload button */}
                     {canUpload && (
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleUploadClick(payment.id) }}
+                        onClick={() => handleUploadClick(payment.id)}
                         disabled={isUploading}
                         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-primary text-primary hover:bg-primary/5 transition-colors disabled:opacity-50 text-sm font-medium"
                       >
