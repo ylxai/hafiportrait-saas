@@ -1,6 +1,6 @@
 import { hash } from 'bcryptjs';
 import { prisma } from '@/lib/db';
-import { successResponse, serverErrorResponse, errorResponse, rateLimitResponse } from '@/lib/api/response';
+import { successResponse, serverErrorResponse, errorResponse, rateLimitResponse, getClientIp } from '@/lib/api/response';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { bookingSchema, formatZodError } from '@/lib/api/validation';
 import { generateKodeBooking } from '@/lib/utils';
@@ -20,17 +20,14 @@ export const POST = withRequestContext(async (request: Request) => {
     // On Vercel, x-forwarded-for is set by Vercel's trusted edge and cannot
     // be spoofed by clients (Vercel strips client-supplied headers).
     // We still validate the extracted value to guard against unexpected formats.
-    const rawIp =
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') ||
-      null;
+    const rawIp = getClientIp(request);
     // Only use IP rate limiting when we have a valid-looking IP address.
     // Skip (don't block) when IP is unavailable rather than grouping all
     // unknown-IP traffic under a single 'unknown' key which would
     // over-throttle legitimate users behind shared proxies.
     const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
     const ipv6Regex = /^[0-9a-fA-F:]+$/;
-    const validIp = rawIp && (ipv4Regex.test(rawIp) || ipv6Regex.test(rawIp)) ? rawIp : null;
+    const validIp = rawIp !== 'unknown' && (ipv4Regex.test(rawIp) || ipv6Regex.test(rawIp)) ? rawIp : null;
     if (validIp) {
       const ipRateLimit = await checkRateLimit(`booking:ip:${validIp}`, RATE_LIMITS.BOOKING_IP);
       if (!ipRateLimit.success) {

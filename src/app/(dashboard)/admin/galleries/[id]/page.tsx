@@ -754,10 +754,6 @@ export default function GalleryDetailPage() {
             backdropFilter: "blur(10px)",
           },
         }}
-        on={{
-          click: () => console.log("[Lightbox] Clicked"),
-          view: (index) => console.log("[Lightbox] Viewing index:", index),
-        }}
       />
 
       {/* Settings */}

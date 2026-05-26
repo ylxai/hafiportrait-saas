@@ -1,11 +1,12 @@
 import { prisma } from '@/lib/db';
-import { successResponse, notFoundResponse } from '@/lib/api/response';
+import { successResponse, notFoundResponse, rateLimitResponse, getClientIp } from '@/lib/api/response';
 import { assertGalleryOwnership } from '@/lib/gallery/auth';
 import { publishViewCount } from '@/lib/ably';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { isPrismaError } from '@/lib/prisma-error';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 export const POST = withRequestContext(async (
   request: Request,
@@ -16,6 +17,13 @@ export const POST = withRequestContext(async (
     if (tooLarge) return tooLarge;
 
     const { token } = await params;
+
+    // Rate limit (IP-based)
+    const ip = getClientIp(request);
+    const rl = await checkRateLimit(`public:gallery:view:${ip}`, RATE_LIMITS.PUBLIC_READ);
+    if (!rl.success) {
+      return rateLimitResponse('Too many requests', Math.ceil((rl.resetAt - Date.now()) / 1000));
+    }
 
     // Auth gate: only the owning client may bump the view count. Without
     // this anyone with a leaked token could pollute analytics, and worse,

@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { formatZodError } from '@/lib/api/validation';
+import { MAX_EXPORT_ROWS } from '@/lib/api/constants';
 
 // Zod schema for export query parameters
 const exportQuerySchema = z.object({
@@ -43,6 +44,7 @@ export const GET = withRequestContext(async (request: Request) => {
         package: { select: { nama: true, price: true } },
       },
       orderBy: { eventDate: 'desc' },
+      take: MAX_EXPORT_ROWS,
     });
 
     // Convert to CSV format

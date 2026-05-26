@@ -33,3 +33,6 @@ export const BCRYPT_ROUNDS = 10;
  * Used by: src/app/api/portal/gallery/[token]/route.ts
  */
 export const PHOTOS_PER_PAGE = 20;
+
+/** Maximum rows returned by admin export endpoints to prevent memory DoS */
+export const MAX_EXPORT_ROWS = 10_000;

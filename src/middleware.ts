@@ -168,6 +168,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!token.email) {
+    // Cannot use logger here — middleware runs in Edge runtime (no node:async_hooks)
     console.error("[Middleware] Token exists but missing email", { requestId });
 
     if (pathname.startsWith("/api/")) {

@@ -1,15 +1,23 @@
 import { prisma } from '@/lib/db';
-import { successResponse, errorResponse, serverErrorResponse, notFoundResponse } from '@/lib/api/response';
+import { successResponse, errorResponse, serverErrorResponse, notFoundResponse, rateLimitResponse, getClientIp } from '@/lib/api/response';
 import { paymentProofSchema, formatZodError } from '@/lib/api/validation';
 import { verifyR2Upload, cleanupUploadSession } from '@/lib/upload/presigned';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 export const POST = withRequestContext(async (request: Request) => {
   try {
     const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
     if (tooLarge) return tooLarge;
+
+    // Rate limit (IP-based, strict for payment submissions)
+    const ip = getClientIp(request);
+    const rl = await checkRateLimit(`public:payment:${ip}`, RATE_LIMITS.PUBLIC_PAYMENT_SUBMIT);
+    if (!rl.success) {
+      return rateLimitResponse('Too many requests', Math.ceil((rl.resetAt - Date.now()) / 1000));
+    }
 
     const body: unknown = await request.json();
     const validation = paymentProofSchema.safeParse(body);

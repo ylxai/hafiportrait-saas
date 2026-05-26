@@ -3,6 +3,8 @@ import {
   notFoundResponse,
   serverErrorResponse,
   errorResponse,
+  rateLimitResponse,
+  getClientIp,
 } from '@/lib/api/response';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth';
@@ -13,6 +15,7 @@ import { parseCursorSafe } from '@/types/pagination';
 import { loadPublicGallery } from '@/lib/gallery/load-public-gallery';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 // Validate token format (CUID)
 const tokenSchema = z.string().cuid().or(z.string().min(10).max(50));
@@ -23,6 +26,13 @@ export const GET = withRequestContext(async (
 ) => {
   try {
     const { token } = await params;
+
+    // Rate limit (IP-based) — protects token enumeration
+    const ip = getClientIp(request);
+    const rl = await checkRateLimit(`public:gallery:${ip}`, RATE_LIMITS.PUBLIC_READ);
+    if (!rl.success) {
+      return rateLimitResponse('Too many requests', Math.ceil((rl.resetAt - Date.now()) / 1000));
+    }
 
     // Validate token format
     const tokenValidation = tokenSchema.safeParse(token);
