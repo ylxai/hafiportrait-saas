@@ -48,7 +48,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 lg:flex lg:gap-8">
+      <div className="max-w-7xl mx-auto px-4 py-6 lg:flex lg:gap-8 pb-20 lg:pb-6">
         <aside className={`lg:w-64 ${mobileMenuOpen ? 'block' : 'hidden'} lg:block mb-6 lg:mb-0`}>
           <nav className="space-y-1">
             {navItems.map((item) => {
