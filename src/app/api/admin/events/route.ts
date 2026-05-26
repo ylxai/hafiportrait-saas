@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
-import { eventSchema, eventUpdateSchema, idSchema, validateRequest } from '@/lib/api/validation';
+import { eventSchema, eventUpdateSchema, idSchema, validateRequest, formatZodError } from '@/lib/api/validation';
 import { safeClientSelect } from '@/lib/api/select';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { generateKodeBooking } from '@/lib/utils';
@@ -31,8 +31,7 @@ export const GET = withRequestContext(async (request: Request) => {
     // Validate pagination parameters
     const paginationResult = parseAdminPaginationSafe(searchParams);
     if (!paginationResult.success) {
-      const firstError = paginationResult.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(paginationResult.error), 400);
     }
     
     const { page, limit, skip } = paginationResult.data;
@@ -95,13 +94,7 @@ export const POST = withRequestContext(async (request: Request) => {
     const validation = eventSchema.safeParse(body);
 
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(
-        firstError.path.length > 0
-          ? `${firstError.path.join('.')}: ${firstError.message}`
-          : firstError.message,
-        400
-      );
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const validated = validation.data;

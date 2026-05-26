@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
+import { formatZodError } from '@/lib/api/validation';
 
 // Zod schemas for bulk operations
 const bulkUpdateSchema = z.object({
@@ -39,8 +40,7 @@ export const PATCH = withRequestContext(async (request: Request) => {
     // Validate request body
     const validation = bulkUpdateSchema.safeParse(body);
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const { ids, toggleActive } = validation.data;
@@ -82,8 +82,7 @@ export const DELETE = withRequestContext(async (request: Request) => {
     // Validate request body
     const validation = bulkDeleteSchema.safeParse(body);
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const { ids } = validation.data;

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { hash } from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
-import { clientSchema, clientUpdateSchema, idSchema, validateRequest } from '@/lib/api/validation';
+import { clientSchema, clientUpdateSchema, idSchema, validateRequest, formatZodError } from '@/lib/api/validation';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
 import { logger } from '@/lib/logger';
@@ -34,8 +34,7 @@ export const GET = withRequestContext(async (request: Request) => {
     // Validate pagination parameters
     const paginationResult = parseAdminPaginationSafe(searchParams);
     if (!paginationResult.success) {
-      const firstError = paginationResult.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(paginationResult.error), 400);
     }
     
     const { page, limit, skip } = paginationResult.data;
@@ -106,13 +105,7 @@ export const POST = withRequestContext(async (request: Request) => {
     const validation = clientSchema.safeParse(body);
 
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(
-        firstError.path.length > 0
-          ? `${firstError.path.join('.')}: ${firstError.message}`
-          : firstError.message,
-        400
-      );
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const { password, ...rest } = validation.data;

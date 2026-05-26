@@ -6,17 +6,11 @@ import {
   serverErrorResponse,
   validationError,
 } from "@/lib/api/response";
-import { z } from "zod";
+import { portalProfileUpdateSchema } from "@/lib/api/validation";
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { isPrismaError } from '@/lib/prisma-error';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
-
-const schema = z.object({
-  nama: z.string().min(1).max(255).optional(),
-  phone: z.string().max(20).optional().nullable(),
-  instagram: z.string().max(100).optional().nullable(),
-});
 
 export const GET = withRequestContext(async () => {
   try {
@@ -50,7 +44,7 @@ export const PATCH = withRequestContext(async (request: Request) => {
     if (tooLarge) return tooLarge;
 
     const body = await request.json();
-    const result = schema.safeParse(body);
+    const result = portalProfileUpdateSchema.safeParse(body);
 
     if (!result.success) {
       return validationError(result.error);

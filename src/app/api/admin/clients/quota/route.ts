@@ -8,6 +8,7 @@ import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { isPrismaError } from '@/lib/prisma-error';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
+import { formatZodError } from '@/lib/api/validation';
 
 const updateQuotaSchema = z.object({
   clientId: z.string().min(1, 'Client ID is required'),
@@ -34,8 +35,7 @@ export const PATCH = withRequestContext(async (request: Request) => {
     const validation = updateQuotaSchema.safeParse(body);
 
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const { clientId, storageQuotaGB } = validation.data;

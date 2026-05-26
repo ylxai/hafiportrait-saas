@@ -2,7 +2,7 @@ import { hash } from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse, rateLimitResponse } from '@/lib/api/response';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { bookingSchema } from '@/lib/api/validation';
+import { bookingSchema, formatZodError } from '@/lib/api/validation';
 import { generateKodeBooking } from '@/lib/utils';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
@@ -29,13 +29,7 @@ export const POST = withRequestContext(async (request: Request) => {
     const validation = bookingSchema.safeParse(body);
 
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(
-        firstError.path.length > 0
-          ? `${firstError.path.join('.')}: ${firstError.message}`
-          : firstError.message,
-        400
-      );
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const validated = validation.data;

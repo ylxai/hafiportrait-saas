@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { successResponse, handlePrismaError, validationError, errorResponse } from '@/lib/api/response';
 import { RATE_LIMITS } from '@/lib/rate-limit';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
-import { gallerySchema } from '@/lib/api/validation';
+import { gallerySchema, formatZodError } from '@/lib/api/validation';
 import { safeClientSelect } from '@/lib/api/select';
 import { generateClientToken } from '@/lib/utils';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
@@ -29,8 +29,7 @@ export const GET = withRequestContext(async (request: Request) => {
     // Validate pagination parameters
     const paginationResult = parseAdminPaginationSafe(searchParams);
     if (!paginationResult.success) {
-      const firstError = paginationResult.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(paginationResult.error), 400);
     }
     
     const { page, limit, skip } = paginationResult.data;

@@ -7,6 +7,7 @@ import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { formatZodError } from '@/lib/api/validation';
 
 // Zod schema for export query parameters
 const exportQuerySchema = z.object({
@@ -30,8 +31,7 @@ export const GET = withRequestContext(async (request: Request) => {
     });
 
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const { status } = validation.data;

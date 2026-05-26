@@ -9,6 +9,7 @@ import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
+import { formatZodError } from '@/lib/api/validation';
 
 /**
  * Safe fields to return in API responses — excludes plaintext secrets.
@@ -182,8 +183,7 @@ export const POST = withRequestContext(async (request: Request) => {
     // Validate request body
     const validation = createStorageAccountSchema.safeParse(body);
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const { name, provider, isActive, isDefault, priority, ...credentials } = validation.data;
@@ -246,8 +246,7 @@ export const PATCH = withRequestContext(async (request: Request) => {
     // Validate request body
     const validation = updateStorageAccountSchema.safeParse(body);
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const { id, isDefault, ...restData } = validation.data;
@@ -300,8 +299,7 @@ export const DELETE = withRequestContext(async (request: Request) => {
     // Validate query parameter
     const validation = deleteStorageAccountSchema.safeParse({ id });
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     await prisma.storageAccount.delete({ where: { id: validation.data.id } });

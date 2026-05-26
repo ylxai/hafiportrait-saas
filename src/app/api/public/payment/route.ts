@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db';
 import { successResponse, errorResponse, serverErrorResponse, notFoundResponse } from '@/lib/api/response';
-import { paymentProofSchema } from '@/lib/api/validation';
+import { paymentProofSchema, formatZodError } from '@/lib/api/validation';
 import { verifyR2Upload, cleanupUploadSession } from '@/lib/upload/presigned';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
@@ -14,8 +14,7 @@ export const POST = withRequestContext(async (request: Request) => {
     const body: unknown = await request.json();
     const validation = paymentProofSchema.safeParse(body);
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(`${firstError.path.join('.')}: ${firstError.message}`, 400);
+      return errorResponse(formatZodError(validation.error), 400);
     }
     const validated = validation.data;
 

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireClientAuth } from '@/lib/auth/require-client-auth';
 import { prisma } from '@/lib/db';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
-import { selectionSubmitSchema } from '@/lib/api/validation';
+import { selectionSubmitSchema, formatZodError } from '@/lib/api/validation';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
@@ -23,13 +23,7 @@ export const POST = withRequestContext(async (
     const validation = selectionSubmitSchema.safeParse(body);
 
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
-      return errorResponse(
-        firstError.path.length > 0
-          ? `${firstError.path.join('.')}: ${firstError.message}`
-          : firstError.message,
-        400
-      );
+      return errorResponse(formatZodError(validation.error), 400);
     }
 
     const { photoIds } = validation.data;
