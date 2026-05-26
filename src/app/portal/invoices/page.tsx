@@ -1,8 +1,18 @@
 'use client'
 
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
-import { Loader2, Receipt, Upload, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react'
+import { Loader2, Receipt, Upload, CheckCircle, Clock, XCircle, AlertCircle, ChevronDown, ChevronUp, MapPin, Package, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
+
+interface PackageDetail {
+  nama: string
+  description: string | null
+  price: number
+  duration: number | null
+  fitur: string[]
+  maxSelection: number
+  maxDownload: number
+}
 
 interface Payment {
   id: string
@@ -17,7 +27,9 @@ interface Payment {
     id: string
     namaProject: string
     eventDate: string
+    location: string | null
     paymentStatus: string
+    package: PackageDetail | null
   }
 }
 
@@ -34,6 +46,7 @@ export default function InvoicesPage() {
   const [payments, setPayments] = useState<Payment[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [activePaymentId, setActivePaymentId] = useState<string | null>(null)
 
@@ -189,56 +202,139 @@ export default function InvoicesPage() {
             const isUploading = uploading === payment.id
 
             return (
-              <div key={payment.id} className="bg-card border border-border rounded-xl p-5 space-y-4">
-                {/* Header */}
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-semibold text-foreground">{payment.event.namaProject}</h3>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {new Date(payment.event.eventDate).toLocaleDateString('id-ID', {
-                        day: 'numeric', month: 'long', year: 'numeric'
-                      })}
-                    </p>
+              <div key={payment.id} className="bg-card border border-border rounded-xl overflow-hidden">
+                {/* Clickable header */}
+                <button
+                  onClick={() => setExpandedId(expandedId === payment.id ? null : payment.id)}
+                  className="w-full text-left p-5 space-y-4 hover:bg-card-hover transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold text-foreground">{payment.event.namaProject}</h3>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {new Date(payment.event.eventDate).toLocaleDateString('id-ID', {
+                          day: 'numeric', month: 'long', year: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full ${cfg.className}`}>
+                        <Icon className="w-3.5 h-3.5" />
+                        {cfg.label}
+                      </span>
+                      {expandedId === payment.id
+                        ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                        : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                      }
+                    </div>
                   </div>
-                  <span className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full shrink-0 ${cfg.className}`}>
-                    <Icon className="w-3.5 h-3.5" />
-                    {cfg.label}
-                  </span>
-                </div>
 
-                {/* Amount */}
-                <div className="flex items-center justify-between pt-3 border-t border-border">
-                  <div className="text-sm text-muted-foreground">
-                    <span>{typeLabels[payment.type] ?? payment.type}</span>
-                    <span className="mx-2">·</span>
-                    <span>Transfer Bank</span>
+                  {/* Amount */}
+                  <div className="flex items-center justify-between pt-3 border-t border-border">
+                    <div className="text-sm text-muted-foreground">
+                      <span>{typeLabels[payment.type] ?? payment.type}</span>
+                      <span className="mx-2">·</span>
+                      <span>Transfer Bank</span>
+                    </div>
+                    <span className="text-xl font-bold text-foreground">
+                      Rp {payment.amount.toLocaleString('id-ID')}
+                    </span>
                   </div>
-                  <span className="text-xl font-bold text-foreground">
-                    Rp {payment.amount.toLocaleString('id-ID')}
-                  </span>
-                </div>
+                </button>
 
-                {/* Proof status */}
-                {payment.proofUrl && payment.status !== 'approved' && (
-                  <div className="flex items-center gap-2 text-sm text-primary bg-primary/5 rounded-lg px-3 py-2">
-                    <CheckCircle className="w-4 h-4 shrink-0" />
-                    Bukti transfer sudah dikirim, menunggu konfirmasi studio
-                  </div>
-                )}
+                {/* Expandable detail */}
+                {expandedId === payment.id && (
+                  <div className="px-5 pb-5 space-y-4 border-t border-border">
+                    {/* Event info */}
+                    <div className="pt-4 space-y-2">
+                      <h4 className="text-sm font-medium text-foreground">Detail Event</h4>
+                      <div className="space-y-1.5 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 shrink-0" />
+                          {new Date(payment.event.eventDate).toLocaleDateString('id-ID', {
+                            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+                          })}
+                        </div>
+                        {payment.event.location && (
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 shrink-0" />
+                            {payment.event.location}
+                          </div>
+                        )}
+                      </div>
+                    </div>
 
-                {/* Upload button */}
-                {canUpload && (
-                  <button
-                    onClick={() => handleUploadClick(payment.id)}
-                    disabled={isUploading}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-primary text-primary hover:bg-primary/5 transition-colors disabled:opacity-50 text-sm font-medium"
-                  >
-                    {isUploading ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> Mengupload...</>
-                    ) : (
-                      <><Upload className="w-4 h-4" /> Upload Bukti Transfer</>
+                    {/* Package detail */}
+                    {payment.event.package && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+                          <Package className="w-4 h-4" />
+                          Paket: {payment.event.package.nama}
+                        </h4>
+                        {payment.event.package.description && (
+                          <p className="text-sm text-muted-foreground">{payment.event.package.description}</p>
+                        )}
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="bg-background rounded-lg p-3">
+                            <p className="text-muted-foreground text-xs mb-1">Harga Paket</p>
+                            <p className="font-semibold text-foreground">Rp {payment.event.package.price.toLocaleString('id-ID')}</p>
+                          </div>
+                          {payment.event.package.duration && (
+                            <div className="bg-background rounded-lg p-3">
+                              <p className="text-muted-foreground text-xs mb-1">Durasi</p>
+                              <p className="font-semibold text-foreground">{payment.event.package.duration} menit</p>
+                            </div>
+                          )}
+                          <div className="bg-background rounded-lg p-3">
+                            <p className="text-muted-foreground text-xs mb-1">Maks. Pilih Foto</p>
+                            <p className="font-semibold text-foreground">{payment.event.package.maxSelection} foto</p>
+                          </div>
+                          <div className="bg-background rounded-lg p-3">
+                            <p className="text-muted-foreground text-xs mb-1">Maks. Download</p>
+                            <p className="font-semibold text-foreground">
+                              {payment.event.package.maxDownload === 0 ? 'Tidak terbatas' : `${payment.event.package.maxDownload} foto`}
+                            </p>
+                          </div>
+                        </div>
+                        {payment.event.package.fitur.length > 0 && (
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground font-medium">Termasuk:</p>
+                            <ul className="space-y-1">
+                              {payment.event.package.fitur.map((f, i) => (
+                                <li key={i} className="flex items-center gap-2 text-sm text-foreground">
+                                  <CheckCircle className="w-3.5 h-3.5 text-primary shrink-0" />
+                                  {f}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
                     )}
-                  </button>
+
+                    {/* Proof status */}
+                    {payment.proofUrl && payment.status !== 'approved' && (
+                      <div className="flex items-center gap-2 text-sm text-primary bg-primary/5 rounded-lg px-3 py-2">
+                        <CheckCircle className="w-4 h-4 shrink-0" />
+                        Bukti transfer sudah dikirim, menunggu konfirmasi studio
+                      </div>
+                    )}
+
+                    {/* Upload button */}
+                    {canUpload && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleUploadClick(payment.id) }}
+                        disabled={isUploading}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-primary text-primary hover:bg-primary/5 transition-colors disabled:opacity-50 text-sm font-medium"
+                      >
+                        {isUploading ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Mengupload...</>
+                        ) : (
+                          <><Upload className="w-4 h-4" /> Upload Bukti Transfer</>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )

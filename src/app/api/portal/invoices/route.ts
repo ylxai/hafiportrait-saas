@@ -29,7 +29,24 @@ export const GET = withRequestContext(async (request: Request) => {
         where: { event: { clientId: auth.user.id } },
         include: {
           event: {
-            select: { id: true, namaProject: true, eventDate: true, paymentStatus: true }
+            select: {
+              id: true,
+              namaProject: true,
+              eventDate: true,
+              location: true,
+              paymentStatus: true,
+              package: {
+                select: {
+                  nama: true,
+                  description: true,
+                  price: true,
+                  duration: true,
+                  fitur: true,
+                  maxSelection: true,
+                  maxDownload: true,
+                }
+              }
+            }
           }
         },
         orderBy: { createdAt: 'desc' },
