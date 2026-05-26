@@ -7,11 +7,14 @@ import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 
+const MAX_EXPORT_ROWS = 10000; // Prevent memory DoS on large datasets
+
 /**
  * GET /api/admin/export/clients
  * 
  * Exports all clients to CSV format.
  * No input validation needed - read-only endpoint with no parameters.
+ * Capped at MAX_EXPORT_ROWS to prevent memory exhaustion.
  */
 export const GET = withRequestContext(async () => {
   try {
@@ -27,6 +30,7 @@ export const GET = withRequestContext(async () => {
         _count: { select: { events: true } },
       },
       orderBy: { createdAt: 'desc' },
+      take: MAX_EXPORT_ROWS,
     });
 
     // Convert to CSV format

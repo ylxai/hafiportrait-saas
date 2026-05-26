@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/db';
-import { successResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
+import { successResponse, notFoundResponse, serverErrorResponse, rateLimitResponse } from '@/lib/api/response';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 export const GET = withRequestContext(async (
   request: Request,
@@ -9,6 +10,13 @@ export const GET = withRequestContext(async (
 ) => {
   try {
     const { kodeBooking } = await params;
+
+    // Rate limit: prevent kodeBooking enumeration
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown';
+    const rl = await checkRateLimit(`public:booking:lookup:${ip}`, RATE_LIMITS.PUBLIC_READ);
+    if (!rl.success) {
+      return rateLimitResponse('Too many requests', Math.ceil((rl.resetAt - Date.now()) / 1000));
+    }
 
     const event = await prisma.event.findUnique({
       where: { kodeBooking },

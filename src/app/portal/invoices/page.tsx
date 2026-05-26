@@ -211,7 +211,7 @@ export default function InvoicesPage() {
                   onClick={() => setExpandedId(isExpanded ? null : payment.id)}
                   aria-expanded={isExpanded}
                   aria-controls={detailId}
-                  className="w-full text-left p-5 space-y-4 hover:bg-card-hover transition-colors"
+                  className="w-full text-left p-5 space-y-4 hover:bg-muted transition-colors"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>

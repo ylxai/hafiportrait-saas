@@ -9,6 +9,8 @@ import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { formatZodError } from '@/lib/api/validation';
 
+const MAX_EXPORT_ROWS = 10000; // Prevent memory DoS on large datasets
+
 // Zod schema for export query parameters
 const exportQuerySchema = z.object({
   status: z.enum(['pending', 'confirmed', 'completed', 'cancelled']).optional(),
@@ -43,6 +45,7 @@ export const GET = withRequestContext(async (request: Request) => {
         package: { select: { nama: true, price: true } },
       },
       orderBy: { eventDate: 'desc' },
+      take: MAX_EXPORT_ROWS,
     });
 
     // Convert to CSV format

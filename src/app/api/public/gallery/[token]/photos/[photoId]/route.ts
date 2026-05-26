@@ -3,6 +3,7 @@ import {
   successResponse,
   notFoundResponse,
   serverErrorResponse,
+  rateLimitResponse,
 } from '@/lib/api/response';
 import { assertGalleryOwnership } from '@/lib/gallery/auth';
 import { getDefaultAccount } from '@/lib/storage/accounts';
@@ -10,6 +11,7 @@ import { stringifyWithBigInt } from '@/lib/bigint-utils';
 import { serializeGalleryPhoto } from '@/lib/gallery/load-public-gallery';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 /**
  * Returns a single photo row for the owning client in the same wire-shape
@@ -30,6 +32,13 @@ export const GET = withRequestContext(async (
 ) => {
   try {
     const { token, photoId } = await params;
+
+    // Rate limit (IP-based)
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown';
+    const rl = await checkRateLimit(`public:gallery:photo:${ip}`, RATE_LIMITS.PUBLIC_READ);
+    if (!rl.success) {
+      return rateLimitResponse('Too many requests', Math.ceil((rl.resetAt - Date.now()) / 1000));
+    }
 
     const ownership = await assertGalleryOwnership(token);
     if ('response' in ownership) return ownership.response;
