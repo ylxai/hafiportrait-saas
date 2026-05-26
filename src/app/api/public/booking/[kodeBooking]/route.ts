@@ -15,10 +15,9 @@ export const GET = withRequestContext(async (
       include: {
         client: {
           select: {
+            // BUG FIX: strip PII — only expose nama for display purposes.
+            // email, phone, instagram must NOT be returned to unauthenticated callers.
             nama: true,
-            email: true,
-            phone: true,
-            instagram: true,
           },
         },
         package: {
@@ -30,8 +29,18 @@ export const GET = withRequestContext(async (
           },
         },
         payments: {
-          orderBy: {
-            createdAt: 'desc',
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            amount: true,
+            method: true,
+            status: true,
+            type: true,
+            // BUG FIX: uniqueCode must NOT be exposed — it is used to verify
+            // real transfers and leaking it enables payment fraud.
+            // proofUrl also excluded — internal admin field.
+            createdAt: true,
+            updatedAt: true,
           },
         },
       },

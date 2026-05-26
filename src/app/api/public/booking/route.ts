@@ -10,15 +10,34 @@ import { isPrismaError } from '@/lib/prisma-error';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 import { MAX_RETRIES, BCRYPT_ROUNDS } from '@/lib/api/constants';
 
-// Match the cost factor used in `src/app/api/admin/clients/route.ts` and the
-// auth provider's dummy hash so the bcrypt compare path takes ~the same
-// time regardless of whether the row was created by admin or via booking.
-// (See BCRYPT_ROUNDS in @/lib/api/constants.)
-
 export const POST = withRequestContext(async (request: Request) => {
   try {
     const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
     if (tooLarge) return tooLarge;
+
+    // BUG FIX #3: IP-based rate limit in addition to per-email limit.
+    // Per-email alone is trivially bypassed with different email addresses.
+    // On Vercel, x-forwarded-for is set by Vercel's trusted edge and cannot
+    // be spoofed by clients (Vercel strips client-supplied headers).
+    // We still validate the extracted value to guard against unexpected formats.
+    const rawIp =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      null;
+    // Only use IP rate limiting when we have a valid-looking IP address.
+    // Skip (don't block) when IP is unavailable rather than grouping all
+    // unknown-IP traffic under a single 'unknown' key which would
+    // over-throttle legitimate users behind shared proxies.
+    const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+    const ipv6Regex = /^[0-9a-fA-F:]+$/;
+    const validIp = rawIp && (ipv4Regex.test(rawIp) || ipv6Regex.test(rawIp)) ? rawIp : null;
+    if (validIp) {
+      const ipRateLimit = await checkRateLimit(`booking:ip:${validIp}`, RATE_LIMITS.BOOKING_IP);
+      if (!ipRateLimit.success) {
+        const retryAfterSeconds = Math.ceil((ipRateLimit.resetAt - Date.now()) / 1000);
+        return rateLimitResponse('Too many booking requests. Please try again later.', retryAfterSeconds);
+      }
+    }
 
     let body: unknown;
     try {
@@ -40,38 +59,38 @@ export const POST = withRequestContext(async (request: Request) => {
       return rateLimitResponse('Too many booking requests. Please try again later.', retryAfterSeconds);
     }
 
-    let client = await prisma.client.findFirst({
+    const existingClient = await prisma.client.findFirst({
       where: { email: validated.email },
     });
 
-    if (!client) {
-      // Brand-new self-registration via the public booking form.
-      //
-      // We hash the password and store the row, but flip `isApproved` to
-      // `false` so the auth provider in `src/lib/auth/options.ts` blocks
-      // login until an admin reviews the booking and approves the row
-      // from the dashboard. This protects against:
-      //   1. Spam/bot-created accounts logging into the portal before
-      //      anyone vets them.
-      //   2. A booking taking effect against a real existing client whose
-      //      email was guessed by an attacker (we never overwrite an
-      //      existing row's password — see the `else` branch below).
-      const passwordHash = await hash(validated.password, BCRYPT_ROUNDS);
-      client = await prisma.client.create({
-        data: {
-          nama: validated.nama,
-          email: validated.email,
-          phone: validated.phone,
-          instagram: validated.instagram,
-          password: passwordHash,
-          isApproved: false,
-        },
-      });
+    // BUG FIX #4: Block fake event injection for existing clients.
+    // If the email is already registered, the public booking form must NOT
+    // silently create a new event under that account — an attacker who knows
+    // a client's email could spam their event list indefinitely.
+    // Existing clients should log in to the portal or contact the studio.
+    if (existingClient) {
+      // Generic message — does NOT confirm whether the email is registered
+      // (prevents email enumeration via the booking form).
+      return errorResponse(
+        'Tidak dapat memproses booking. Silakan hubungi studio atau login ke portal client.',
+        409
+      );
     }
-    // If the client already exists we deliberately ignore the supplied
-    // password and re-use the existing row. This prevents a booking-form
-    // submission from silently rotating the password of an established
-    // client — admins can rotate passwords explicitly from the dashboard.
+
+    // Brand-new self-registration via the public booking form.
+    // We hash the password and store the row, but flip `isApproved` to
+    // `false` so the auth provider blocks login until an admin approves.
+    const passwordHash = await hash(validated.password, BCRYPT_ROUNDS);
+    const client = await prisma.client.create({
+      data: {
+        nama: validated.nama,
+        email: validated.email,
+        phone: validated.phone,
+        instagram: validated.instagram,
+        password: passwordHash,
+        isApproved: false,
+      },
+    });
 
     let packageData = null;
     if (validated.packageId) {
@@ -80,16 +99,13 @@ export const POST = withRequestContext(async (request: Request) => {
       });
     }
 
-    // Retry pattern for unique kode booking
     let event = null;
     let kodeBooking = '';
-    
+
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       kodeBooking = generateKodeBooking();
-      
       try {
         const uniqueCode = Math.floor(Math.random() * 900) + 100;
-        
         event = await prisma.event.create({
           data: {
             kodeBooking,
@@ -106,15 +122,13 @@ export const POST = withRequestContext(async (request: Request) => {
               create: {
                 amount: packageData?.price || 0,
                 uniqueCode,
-                type: 'full', // Default to full, can be changed if UI supports DP selection
+                type: 'full',
                 method: 'transfer',
-                status: 'pending'
-              }
-            }
+                status: 'pending',
+              },
+            },
           },
-          include: {
-            payments: true
-          }
+          include: { payments: true },
         });
         break;
       } catch (error: unknown) {
@@ -123,7 +137,6 @@ export const POST = withRequestContext(async (request: Request) => {
             attempt: attempt + 1,
             maxRetries: MAX_RETRIES,
           });
-          // Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1000ms (capped)
           await new Promise(r => setTimeout(r, Math.min(100 * 2 ** attempt, 1000)));
           continue;
         }

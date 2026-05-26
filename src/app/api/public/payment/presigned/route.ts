@@ -13,6 +13,11 @@ import {
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/options';
+import { isClientSession } from '@/lib/auth/role-helpers';
+import { enforceRateLimit } from '@/lib/rate-limit-helper';
+import { RATE_LIMITS } from '@/lib/rate-limit';
 
 // Zod validation schema for public presigned upload request
 const PublicPresignedRequestSchema = z.object({
@@ -48,6 +53,21 @@ function validateFileType(filename: string): { valid: boolean; error?: string } 
 
 export const POST = withRequestContext(async (request: Request) => {
   try {
+    // BUG FIX: require client auth — unauthenticated callers must not be able
+    // to generate R2 upload URLs for arbitrary events (payment fraud vector).
+    const session = await getServerSession(authOptions);
+    if (!isClientSession(session)) {
+      return errorResponse('Unauthorized', 401);
+    }
+
+    // Rate limit per client — dedicated bucket for payment proof uploads,
+    // tuned independently from admin write operations.
+    const rateLimit = await enforceRateLimit({
+      identifier: `payment-presigned:${session.user.id}`,
+      limit: RATE_LIMITS.PAYMENT_PRESIGNED_CLIENT,
+    });
+    if (rateLimit) return rateLimit;
+
     const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
     if (tooLarge) return tooLarge;
 
@@ -65,11 +85,12 @@ export const POST = withRequestContext(async (request: Request) => {
       return errorResponse(typeValidation.error || 'Invalid file type', 400);
     }
 
-    // Check if event exists
+    // Check if event exists AND belongs to the authenticated client
     const event = await prisma.event.findUnique({
       where: { id: eventId },
       select: {
         id: true,
+        clientId: true,
         paymentStatus: true,
         payments: {
           where: { status: 'pending', proofUrl: null },
@@ -83,6 +104,13 @@ export const POST = withRequestContext(async (request: Request) => {
       return errorResponse('Event not found', 404);
     }
 
+    // BUG FIX: verify the event belongs to the authenticated client.
+    // Without this check any logged-in client could upload a fake payment
+    // proof for another client's event.
+    if (event.clientId !== session.user.id) {
+      return errorResponse('Event not found', 404);
+    }
+
     if (event.paymentStatus === 'paid') {
       return errorResponse('Payment already settled', 400);
     }
@@ -91,8 +119,6 @@ export const POST = withRequestContext(async (request: Request) => {
       return errorResponse('No active payment to upload for', 400);
     }
 
-    // Note: Payment proof upload uses a special dummy galleryId or eventId-based path
-    // Let's use `payments/${eventId}` as a virtual galleryId for the path generation
     const virtualGalleryId = `payments/${eventId}`;
 
     const { presignedUrl, publicUrl, r2Key, uploadId, r2AccountId } = await generatePresignedUploadUrl(

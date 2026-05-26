@@ -308,7 +308,9 @@ export const RATE_LIMITS = {
   BULK_DELETE: { maxRequests: 20, windowMs: 60 * 1000 }, // 20 req/min
   UPLOAD_PRESIGNED: { maxRequests: 100, windowMs: 60 * 1000 }, // 100 presigned URLs/min per user
   UPLOAD_COMPLETE: { maxRequests: 100, windowMs: 60 * 1000 }, // 100 upload completions/min per user
-  BOOKING: { maxRequests: 5, windowMs: 60 * 60 * 1000 }, // 5 req/hour
+  BOOKING: { maxRequests: 5, windowMs: 60 * 60 * 1000 }, // 5 req/hour per email
+  BOOKING_IP: { maxRequests: 10, windowMs: 60 * 60 * 1000 }, // 10 req/hour per IP
+  PAYMENT_PRESIGNED_CLIENT: { maxRequests: 10, windowMs: 60 * 1000 }, // 10 presigned URLs/min per client
 
   // Admin routes rate limits
   ADMIN_READ: { maxRequests: 60, windowMs: 60 * 1000 }, // 60 req/min for GET operations
