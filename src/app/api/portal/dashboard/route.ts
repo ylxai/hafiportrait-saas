@@ -16,8 +16,8 @@ export const GET = withRequestContext(async (request: Request) => {
 
     const { searchParams } = new URL(request.url);
     const paginationResult = paginationSchema.safeParse({
-      page: searchParams.get('page') ?? undefined,
-      limit: searchParams.get('limit') ?? String(GALLERIES_PER_PAGE),
+      page: searchParams.get('page') || undefined,
+      limit: searchParams.get('limit') || String(GALLERIES_PER_PAGE),
     });
     if (!paginationResult.success) {
       return errorResponse(formatZodError(paginationResult.error), 400);

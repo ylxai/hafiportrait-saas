@@ -280,13 +280,20 @@ export function validateRequest<S extends z.ZodTypeAny>(
 /**
  * Extract the first Zod error as a human-readable string.
  * Includes the field path when present: "email: Invalid email"
+ * Returns a generic message if the errors array is unexpectedly empty.
  */
 export function formatZodError(error: z.ZodError): string {
+  if (error.errors.length === 0) return 'Validation failed';
   const firstError = error.errors[0];
   return firstError.path.length > 0
     ? `${firstError.path.join('.')}: ${firstError.message}`
     : firstError.message;
 }
+
+// Normalize empty string / null / undefined → undefined so Zod optional()
+// defaults kick in and refine checks don't need to repeat the same triple guard.
+const emptyToUndefined = <T>(val: T) =>
+  val === null || val === undefined || val === '' ? undefined : val;
 
 /**
  * Portal-safe profile update schema.
@@ -294,21 +301,33 @@ export function formatZodError(error: z.ZodError): string {
  * so clients cannot escalate their own privileges via PATCH /api/portal/profile.
  */
 export const portalProfileUpdateSchema = z.object({
+  // Transform first, then refine — so a spaces-only name ("   ") is caught
+  // after sanitizeString trims it to "" rather than passing the .min(1) check.
   nama: z.string()
-    .min(1, 'Name is required')
     .max(255, 'Name is too long')
     .optional()
-    .transform((val) => val ? sanitizeString(val) : val),
-  phone: z.string()
-    .max(20, 'Phone is too long')
-    .nullish()
-    .refine((val) => val === null || val === undefined || val === '' || phoneRegex.test(val), {
-      message: 'Invalid phone number format (use 08xx or +62)',
+    .transform((val) => val ? sanitizeString(val) : val)
+    .refine((val) => val === undefined || val.length > 0, {
+      message: 'Name is required',
     }),
-  instagram: z.string()
-    .max(100, 'Instagram is too long')
-    .nullish()
-    .refine((val) => val === null || val === undefined || val === '' || /^@?[a-zA-Z0-9._]{1,30}$/.test(val), {
-      message: 'Invalid Instagram format',
-    }),
+  phone: z.preprocess(
+    emptyToUndefined,
+    z.string()
+      .max(20, 'Phone is too long')
+      .refine((val) => phoneRegex.test(val), {
+        message: 'Invalid phone number format (use 08xx or +62)',
+      })
+      .optional()
+      .nullable()
+  ),
+  instagram: z.preprocess(
+    emptyToUndefined,
+    z.string()
+      .max(100, 'Instagram is too long')
+      .refine((val) => /^@?[a-zA-Z0-9._]{1,30}$/.test(val), {
+        message: 'Invalid Instagram format',
+      })
+      .optional()
+      .nullable()
+  ),
 });
