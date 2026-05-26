@@ -60,10 +60,11 @@ export const POST = withRequestContext(async (request: Request) => {
       return errorResponse('Unauthorized', 401);
     }
 
-    // Rate limit per client to prevent upload URL abuse
+    // Rate limit per client — dedicated bucket for payment proof uploads,
+    // tuned independently from admin write operations.
     const rateLimit = await enforceRateLimit({
       identifier: `payment-presigned:${session.user.id}`,
-      limit: RATE_LIMITS.ADMIN_WRITE,
+      limit: RATE_LIMITS.PAYMENT_PRESIGNED_CLIENT,
     });
     if (rateLimit) return rateLimit;
 

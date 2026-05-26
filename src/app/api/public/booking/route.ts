@@ -17,14 +17,26 @@ export const POST = withRequestContext(async (request: Request) => {
 
     // BUG FIX #3: IP-based rate limit in addition to per-email limit.
     // Per-email alone is trivially bypassed with different email addresses.
-    const ip =
+    // On Vercel, x-forwarded-for is set by Vercel's trusted edge and cannot
+    // be spoofed by clients (Vercel strips client-supplied headers).
+    // We still validate the extracted value to guard against unexpected formats.
+    const rawIp =
       request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
       request.headers.get('x-real-ip') ||
-      'unknown';
-    const ipRateLimit = await checkRateLimit(`booking:ip:${ip}`, RATE_LIMITS.BOOKING_IP);
-    if (!ipRateLimit.success) {
-      const retryAfterSeconds = Math.ceil((ipRateLimit.resetAt - Date.now()) / 1000);
-      return rateLimitResponse('Too many booking requests. Please try again later.', retryAfterSeconds);
+      null;
+    // Only use IP rate limiting when we have a valid-looking IP address.
+    // Skip (don't block) when IP is unavailable rather than grouping all
+    // unknown-IP traffic under a single 'unknown' key which would
+    // over-throttle legitimate users behind shared proxies.
+    const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+    const ipv6Regex = /^[0-9a-fA-F:]+$/;
+    const validIp = rawIp && (ipv4Regex.test(rawIp) || ipv6Regex.test(rawIp)) ? rawIp : null;
+    if (validIp) {
+      const ipRateLimit = await checkRateLimit(`booking:ip:${validIp}`, RATE_LIMITS.BOOKING_IP);
+      if (!ipRateLimit.success) {
+        const retryAfterSeconds = Math.ceil((ipRateLimit.resetAt - Date.now()) / 1000);
+        return rateLimitResponse('Too many booking requests. Please try again later.', retryAfterSeconds);
+      }
     }
 
     let body: unknown;
@@ -57,10 +69,10 @@ export const POST = withRequestContext(async (request: Request) => {
     // a client's email could spam their event list indefinitely.
     // Existing clients should log in to the portal or contact the studio.
     if (existingClient) {
-      // Generic message to avoid confirming whether the email exists
+      // Generic message — does NOT confirm whether the email is registered
       // (prevents email enumeration via the booking form).
       return errorResponse(
-        'An account with this email already exists. Please log in to the client portal or contact the studio.',
+        'Tidak dapat memproses booking. Silakan hubungi studio atau login ke portal client.',
         409
       );
     }
