@@ -67,35 +67,6 @@ export async function getCachedData<T>(
   return JSON.parse(serialized) as T;
 }
 
-export async function invalidateCache(prefix: string) {
-  if (!redisCache) return;
-
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const stream = redisCache!.scanStream({
-        match: `${prefix}*`,
-        count: 100
-      });
-      
-      const promises: Promise<number>[] = [];
-      
-      stream.on('data', (keys: string[]) => {
-        if (keys.length > 0) {
-          promises.push(redisCache!.del(...keys));
-        }
-      });
-      
-      stream.on('end', () => {
-        Promise.all(promises).then(() => resolve()).catch(reject);
-      });
-      
-      stream.on('error', (err: Error) => reject(err));
-    });
-  } catch (error) {
-    logger.error('redis.cache.invalidate_failed', { prefix, err: error });
-  }
-}
-
 /**
  * Close Redis connection gracefully
  * Call this on server shutdown (SIGTERM/SIGINT)

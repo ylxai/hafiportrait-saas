@@ -63,5 +63,3 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
-
-export type ServerEnv = z.infer<typeof serverEnvSchema>;

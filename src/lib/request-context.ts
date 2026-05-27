@@ -54,10 +54,3 @@ export function getRequestId(): string | undefined {
   return requestContextStorage.getStore()?.requestId;
 }
 
-/**
- * Read the entire request context. Mostly useful for forwarding into
- * downstream services (queue payloads, webhook callbacks).
- */
-export function getRequestContext(): RequestContext | undefined {
-  return requestContextStorage.getStore();
-}
