@@ -13,7 +13,6 @@ export const SMALL_BATCH_THRESHOLD = 10; // Files count threshold for batch stra
 // Storage quota (default per client, now configurable per-client in DB)
 export const BYTES_PER_GB = 1024 * 1024 * 1024;
 export const DEFAULT_STORAGE_QUOTA_GB = 10;
-export const DEFAULT_STORAGE_QUOTA_BYTES = DEFAULT_STORAGE_QUOTA_GB * BYTES_PER_GB;
 
 // Quota warning thresholds
 export const QUOTA_WARNING_THRESHOLDS = [80, 90, 95] as const;
@@ -26,9 +25,6 @@ export const MAX_UPLOAD_WORKERS = 10;
 // Timeouts and expiry
 export const PRESIGNED_URL_EXPIRY_SECONDS = 900; // 15 minutes
 export const UPLOAD_SESSION_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
-export const UPLOAD_SESSION_EXPIRY_HOURS = 1;
-export const CLEANUP_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
-export const CLEANUP_INTERVAL_MINUTES = 30;
 
 // Retry configuration
 export const MAX_RETRY_ATTEMPTS = 3;
@@ -36,7 +32,6 @@ export const RETRY_DELAYS_MS = [1000, 2000, 4000]; // Exponential backoff: 1s, 2
 export const UPLOAD_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes for large file uploads
 
 // Compression settings
-export const COMPRESSION_MAX_SIZE_MB = 10;
 export const COMPRESSION_MAX_DIMENSION = 4096;
 export const COMPRESSION_QUALITY = 0.92;
 // Note: Pica auto-detects Web Worker/WASM support at runtime.

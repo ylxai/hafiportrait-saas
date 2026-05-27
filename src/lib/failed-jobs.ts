@@ -10,8 +10,6 @@ import { publishFailedJobAlert } from '@/lib/ably';
 import { logger } from '@/lib/logger';
 
 export type FailedJobType = 'thumbnail-generation' | 'storage-deletion';
-export type FailedJobStatus = 'pending' | 'resolved' | 'discarded';
-
 export interface CreateFailedJobParams {
   jobType: FailedJobType;
   payload: Record<string, unknown>;
