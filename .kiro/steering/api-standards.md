@@ -46,7 +46,9 @@ return successResponse({
 
 ## Zod Validation Pattern
 ```typescript
+import { errorResponse } from '@/lib/api/response'
 import { z } from 'zod'
+import { formatZodError } from '@/lib/api/validation'
 
 const schema = z.object({
   name: z.string().min(1).max(255),
@@ -55,16 +57,29 @@ const schema = z.object({
 })
 
 const result = schema.safeParse(body)
-if (!result.success) return validationError(result.error.flatten())
+if (!result.success) return errorResponse(formatZodError(result.error), 400)
+```
+
+## Route Params Validation
+```typescript
+import { errorResponse } from '@/lib/api/response'
+import { tokenParamsSchema, formatZodError } from '@/lib/api/validation'
+
+// Selalu validate params sebelum dipakai
+const rawParams = await params
+const validated = tokenParamsSchema.safeParse(rawParams)
+if (!validated.success) return errorResponse(formatZodError(validated.error), 400)
+const { token } = validated.data
 ```
 
 ## Auth Check Pattern
 ```typescript
-async function checkAuth() {
-  const session = await getServerSession(authOptions)
-  if (!session) return unauthorizedResponse()
-  return session
-}
+import { NextResponse } from 'next/server'
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth'
+
+const auth = await requireAdminAuth()
+if (auth instanceof NextResponse) return auth
+// auth.user sekarang tersedia
 ```
 
 ## Cloudflare Queue Integration
