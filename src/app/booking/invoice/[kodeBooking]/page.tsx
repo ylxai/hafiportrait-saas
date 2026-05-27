@@ -99,10 +99,12 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
           contentType: selectedFile.type,
           eventId: event.id,
           fileSize: selectedFile.size,
-          // Token-based auth for new bookers (no session)
-          kodeBooking: event.kodeBooking,
-          uploadToken: event.uploadToken,
-          uploadTokenExpiry: event.uploadTokenExpiry,
+          // Token-based auth for new bookers (no session) — omit null fields
+          ...(event.uploadToken != null && event.uploadTokenExpiry != null ? {
+            kodeBooking: event.kodeBooking,
+            uploadToken: event.uploadToken,
+            uploadTokenExpiry: event.uploadTokenExpiry,
+          } : {}),
         }),
       });
 
@@ -291,7 +293,7 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
                       Rp {formatCurrency(pendingPayment.transferAmount)}
                     </p>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => handleCopy(formatCurrency(pendingPayment.transferAmount), 'Nominal')}>
+                  <Button variant="ghost" size="icon" onClick={() => handleCopy(String(pendingPayment.transferAmount), 'Nominal')}>
                     {copied === 'Nominal' ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
                   </Button>
                 </div>
