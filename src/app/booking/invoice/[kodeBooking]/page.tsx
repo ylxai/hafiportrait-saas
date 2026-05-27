@@ -23,11 +23,14 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 interface Payment {
   id: string;
   amount: number;
-  uniqueCode: number;
+  transferAmount: number;
   type: string;
   status: string;
   proofUrl: string | null;
 }
+
+const formatCurrency = (value: number) =>
+  Number.isFinite(value) ? value.toLocaleString('id-ID') : '0';
 
 interface EventData {
   id: string;
@@ -50,6 +53,8 @@ interface EventData {
     price: number;
   } | null;
   payments: Payment[];
+  uploadToken?: string | null;
+  uploadTokenExpiry?: number | null;
 }
 
 export default function InvoicePage({ params }: { params: Promise<{ kodeBooking: string }> }) {
@@ -94,6 +99,10 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
           contentType: selectedFile.type,
           eventId: event.id,
           fileSize: selectedFile.size,
+          // Token-based auth for new bookers (no session)
+          kodeBooking: event.kodeBooking,
+          uploadToken: event.uploadToken,
+          uploadTokenExpiry: event.uploadTokenExpiry,
         }),
       });
 
@@ -279,10 +288,10 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Total Transfer (Hingga digit terakhir)</p>
                     <p className="text-2xl font-mono font-bold text-primary">
-                      Rp {(pendingPayment.amount + pendingPayment.uniqueCode).toLocaleString('id-ID')}
+                      Rp {formatCurrency(pendingPayment.transferAmount)}
                     </p>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => handleCopy((pendingPayment.amount + pendingPayment.uniqueCode).toString(), 'Nominal')}>
+                  <Button variant="ghost" size="icon" onClick={() => handleCopy(formatCurrency(pendingPayment.transferAmount), 'Nominal')}>
                     {copied === 'Nominal' ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
                   </Button>
                 </div>

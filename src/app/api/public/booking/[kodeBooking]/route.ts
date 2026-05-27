@@ -1,9 +1,16 @@
+import { createHmac } from 'crypto';
 import { prisma } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse, rateLimitResponse, getClientIp, errorResponse } from '@/lib/api/response';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { kodeBookingParamsSchema, formatZodError } from '@/lib/api/validation';
+import { env } from '@/lib/env.server';
+
+// Upload token validity for new-booker payment proof uploads.
+// Long enough to cover the booker checking email, returning later, and
+// uploading transfer proof; short enough to limit replay risk if leaked.
+const UPLOAD_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export const GET = withRequestContext(async (
   request: Request,
@@ -63,8 +70,27 @@ export const GET = withRequestContext(async (
     if (!event) {
       return notFoundResponse('Booking not found');
     }
-    
-    return successResponse(event);
+
+    // BUG FIX (Bug 2): issue a short-lived HMAC upload token so new bookers
+    // — who don't have an authenticated client session yet — can still
+    // request a presigned URL for their payment proof. The token binds
+    // {event.id, expiry} so it cannot be replayed against another event.
+    let uploadToken: string | null = null;
+    let uploadTokenExpiry: number | null = null;
+    if (env.VPS_WEBHOOK_SECRET) {
+      uploadTokenExpiry = Date.now() + UPLOAD_TOKEN_TTL_MS;
+      uploadToken = createHmac('sha256', env.VPS_WEBHOOK_SECRET)
+        .update(`${event.id}:${uploadTokenExpiry}`)
+        .digest('hex');
+    } else {
+      logger.warn('public.booking.upload_token_skipped_no_secret', { kodeBooking });
+    }
+
+    return successResponse({
+      ...event,
+      uploadToken,
+      uploadTokenExpiry,
+    });
   } catch (error) {
     logger.error('public.booking.fetch_failed', { err: error });
     return serverErrorResponse('Failed to fetch booking data');

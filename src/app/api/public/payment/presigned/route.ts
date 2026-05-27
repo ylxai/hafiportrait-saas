@@ -1,5 +1,6 @@
+import { createHmac, timingSafeEqual } from 'crypto';
 import { formatZodError } from '@/lib/api/validation';
-import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
+import { successResponse, errorResponse, serverErrorResponse, getClientIp } from '@/lib/api/response';
 import { generatePresignedUploadUrl } from '@/lib/upload/presigned';
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
@@ -18,8 +19,11 @@ import { authOptions } from '@/lib/auth/options';
 import { isClientSession } from '@/lib/auth/role-helpers';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { RATE_LIMITS } from '@/lib/rate-limit';
+import { env } from '@/lib/env.server';
 
-// Zod validation schema for public presigned upload request
+// Zod validation schema for public presigned upload request.
+// `kodeBooking` + `uploadToken` + `uploadTokenExpiry` are optional and only
+// required when the caller is unauthenticated (new booker flow).
 const PublicPresignedRequestSchema = z.object({
   filename: z.string()
     .min(1, 'Filename is required')
@@ -38,6 +42,10 @@ const PublicPresignedRequestSchema = z.object({
     .int('File size must be integer')
     .positive('File size must be positive')
     .max(MAX_FILE_SIZE_BYTES, `File too large. Maximum ${MAX_FILE_SIZE_MB}MB`),
+  // New-booker auth path
+  kodeBooking: z.string().min(1).max(64).optional(),
+  uploadToken: z.string().min(1).max(256).optional(),
+  uploadTokenExpiry: z.number().int().positive().optional(),
 });
 
 function validateFileType(filename: string): { valid: boolean; error?: string } {
@@ -51,46 +59,100 @@ function validateFileType(filename: string): { valid: boolean; error?: string } 
   return { valid: true };
 }
 
+/**
+ * Constant-time HMAC verification for the upload token.
+ * Token = HMAC-SHA256(VPS_WEBHOOK_SECRET, `${eventId}:${expiry}`)
+ */
+function verifyUploadToken(
+  eventId: string,
+  uploadToken: string,
+  uploadTokenExpiry: number
+): boolean {
+  if (!env.VPS_WEBHOOK_SECRET) return false;
+  if (Date.now() > uploadTokenExpiry) return false;
+
+  const expected = createHmac('sha256', env.VPS_WEBHOOK_SECRET)
+    .update(`${eventId}:${uploadTokenExpiry}`)
+    .digest('hex');
+
+  const a = Buffer.from(uploadToken, 'hex');
+  const b = Buffer.from(expected, 'hex');
+  if (a.length !== b.length) return false;
+  try {
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
 export const POST = withRequestContext(async (request: Request) => {
   try {
-    // BUG FIX: require client auth — unauthenticated callers must not be able
-    // to generate R2 upload URLs for arbitrary events (payment fraud vector).
-    const session = await getServerSession(authOptions);
-    if (!isClientSession(session)) {
-      return errorResponse('Unauthorized', 401);
-    }
-
-    // Rate limit per client — dedicated bucket for payment proof uploads,
-    // tuned independently from admin write operations.
-    const rateLimit = await enforceRateLimit({
-      identifier: `payment-presigned:${session.user.id}`,
-      limit: RATE_LIMITS.PAYMENT_PRESIGNED_CLIENT,
-    });
-    if (rateLimit) return rateLimit;
-
     const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
     if (tooLarge) return tooLarge;
 
     const body: unknown = await request.json();
     const validation = PublicPresignedRequestSchema.safeParse(body);
-    
+
     if (!validation.success) {
       return errorResponse(formatZodError(validation.error), 400);
     }
 
-    const { filename, contentType, eventId } = validation.data;
+    const {
+      filename,
+      contentType,
+      eventId,
+      kodeBooking,
+      uploadToken,
+      uploadTokenExpiry,
+    } = validation.data;
 
     const typeValidation = validateFileType(filename);
     if (!typeValidation.valid) {
       return errorResponse(typeValidation.error || 'Invalid file type', 400);
     }
 
-    // Check if event exists AND belongs to the authenticated client
+    // BUG FIX: require auth — unauthenticated callers must not be able to
+    // generate R2 upload URLs for arbitrary events (payment fraud vector).
+    // Two valid auth paths:
+    //   1. Approved client session (existing portal flow)
+    //   2. Short-lived HMAC upload token bound to {eventId, expiry}
+    //      issued by GET /api/public/booking/[kodeBooking] for new bookers
+    //      who haven't established a portal session yet.
+    const session = await getServerSession(authOptions);
+    let rateLimitIdentifier: string;
+    let authMode: 'session' | 'token';
+
+    if (isClientSession(session)) {
+      authMode = 'session';
+      rateLimitIdentifier = `payment-presigned:client:${session.user.id}`;
+    } else {
+      // Token-based auth path
+      if (!kodeBooking || !uploadToken || uploadTokenExpiry === undefined) {
+        return errorResponse('Unauthorized', 401);
+      }
+
+      if (!verifyUploadToken(eventId, uploadToken, uploadTokenExpiry)) {
+        return errorResponse('Invalid or expired upload token', 401);
+      }
+
+      authMode = 'token';
+      // Rate limit per IP for token flow (no user id available yet).
+      rateLimitIdentifier = `payment-presigned:token:${getClientIp(request)}`;
+    }
+
+    const rateLimit = await enforceRateLimit({
+      identifier: rateLimitIdentifier,
+      limit: RATE_LIMITS.PAYMENT_PRESIGNED_CLIENT,
+    });
+    if (rateLimit) return rateLimit;
+
+    // Look up the event with the fields needed for ownership / status checks.
     const event = await prisma.event.findUnique({
       where: { id: eventId },
       select: {
         id: true,
         clientId: true,
+        kodeBooking: true,
         paymentStatus: true,
         payments: {
           where: { status: 'pending', proofUrl: null },
@@ -104,11 +166,19 @@ export const POST = withRequestContext(async (request: Request) => {
       return errorResponse('Event not found', 404);
     }
 
-    // BUG FIX: verify the event belongs to the authenticated client.
-    // Without this check any logged-in client could upload a fake payment
-    // proof for another client's event.
-    if (event.clientId !== session.user.id) {
-      return errorResponse('Event not found', 404);
+    if (authMode === 'session') {
+      // BUG FIX: verify the event belongs to the authenticated client.
+      // Without this check any logged-in client could upload a fake payment
+      // proof for another client's event.
+      if (event.clientId !== session!.user.id) {
+        return errorResponse('Event not found', 404);
+      }
+    } else {
+      // Token mode: bind kodeBooking to event so a token issued for one
+      // booking cannot be used to upload for a different one.
+      if (event.kodeBooking !== kodeBooking) {
+        return errorResponse('Invalid or expired upload token', 401);
+      }
     }
 
     if (event.paymentStatus === 'paid') {
@@ -119,6 +189,9 @@ export const POST = withRequestContext(async (request: Request) => {
       return errorResponse('No active payment to upload for', 400);
     }
 
+    // Storage path: dedicated `payments/${eventId}` prefix keeps payment
+    // proofs isolated from gallery uploads and matches the verifier in
+    // /api/public/payment which checks galleryId === `payments/${eventId}`.
     const virtualGalleryId = `payments/${eventId}`;
 
     const { presignedUrl, publicUrl, r2Key, uploadId, r2AccountId } = await generatePresignedUploadUrl(

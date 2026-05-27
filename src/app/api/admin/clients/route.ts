@@ -230,6 +230,35 @@ export const DELETE = withRequestContext(async (request: Request) => {
       gallery: { event: { clientId: id } },
     });
 
+    // Step 1b — Decrement StorageAccount counters for all photos being
+    // deleted. The cascade only removes the Photo rows; the per-account
+    // usedStorage / totalPhotos columns must be adjusted explicitly.
+    const photosByAccount = await prisma.photo.groupBy({
+      by: ['storageAccountId'],
+      where: {
+        gallery: { event: { clientId: id } },
+        storageAccountId: { not: null },
+      },
+      _sum: { fileSize: true },
+      _count: { id: true },
+    });
+
+    if (photosByAccount.length > 0) {
+      await prisma.$transaction(
+        photosByAccount
+          .filter((g: (typeof photosByAccount)[number]) => g.storageAccountId != null)
+          .map((g: (typeof photosByAccount)[number]) =>
+            prisma.storageAccount.update({
+              where: { id: g.storageAccountId! },
+              data: {
+                usedStorage: { decrement: g._sum.fileSize ?? BigInt(0) },
+                totalPhotos: { decrement: g._count.id },
+              },
+            })
+          )
+      );
+    }
+
     // Step 2 — DB-first delete; queue stays untouched if this fails so
     // the operation is safe to retry.
     await prisma.client.delete({ where: { id } });
