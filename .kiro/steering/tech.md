@@ -1,7 +1,7 @@
 # Technology Stack
 
 ## Core Framework
-- **Next.js 15.4.11** (App Router) — BREAKING CHANGES dari versi sebelumnya
+- **Next.js 15.5.18** (App Router) — BREAKING CHANGES dari versi sebelumnya
   - Route `params` dan `searchParams` HARUS di-await sebagai Promise sebelum destructure
   - Baca `node_modules/next/dist/docs/` sebelum menulis kode baru
 - **TypeScript** — strict mode, NO `any`, gunakan `unknown` atau interface spesifik

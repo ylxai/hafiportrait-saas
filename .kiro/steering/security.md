@@ -2,7 +2,8 @@
 
 ## Authentication
 - Semua `/api/admin/*` WAJIB cek `getServerSession()` di awal handler
-- Gunakan helper `requireAuth()` atau `verifyAuth()` dari `src/lib/auth/api.ts`
+- Gunakan `requireAdminAuth()` dari `src/lib/auth/require-admin-auth.ts`
+- Gunakan `requireClientAuth()` dari `src/lib/auth/require-client-auth.ts`
 - Public routes: `/api/public/*`, `/gallery/[token]`, `/booking`
 
 ## Secrets & Credentials

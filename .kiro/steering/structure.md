@@ -30,7 +30,7 @@ src/
 │   ├── api/                   # response.ts, validation.ts
 │   ├── auth/                  # NextAuth options
 │   ├── hooks/                 # useAbly
-│   ├── storage/               # r2.ts, cloudinary.ts, accounts.ts, rotation.ts, deletion.ts
+│   ├── storage/               # r2.ts, cloudinary.ts, accounts.ts, rotation.ts
 │   ├── upload/                # presigned.ts, analytics.ts, cleanup.ts, hash-client.ts
 │   ├── ably.ts
 │   ├── bigint-utils.ts
@@ -43,7 +43,6 @@ workers/                       # Cloudflare Edge Workers
 prisma/
 ├── schema.prisma
 └── seed.ts
-docs/                          # EXCLUDED from build — docs only
 ```
 
 ## Naming Conventions

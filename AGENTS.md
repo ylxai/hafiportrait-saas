@@ -6,11 +6,12 @@
 
 ## TL;DR
 
-- **Stack**: Next.js 15.4.11, TypeScript strict, Tailwind v4, Prisma + Prisma Accelerate (Neon PostgreSQL), Cloudflare R2, Cloudinary, Ably
+- **Stack**: Next.js 15.5.18, TypeScript strict, Tailwind v4, Prisma + Prisma Accelerate (Neon PostgreSQL), Cloudflare R2, Cloudinary, Ably
 - **NOT standard Next.js**: Must await `params` and `searchParams` as Promise
-- **Verify before commit**: `npm run lint && npm run build && npm run test:e2e`
+- **Verify before commit**: `npm run lint && npm run build`
 - **Styling**: Tailwind v4 OKLCH semantic only — NO static colors
 - **Testing**: Playwright E2E with semantic locators only — NO CSS selectors, NO waitForTimeout
+- **Zod**: ALL API inputs MUST be validated — use `formatZodError()` for error responses
 
 ---
 
@@ -18,11 +19,11 @@
 
 ```bash
 npm run dev          # Dev server (port 3000)
-npm run build       # Production build (lint + typecheck + build)
-npm run lint       # ESLint only
-npm run test:e2e    # Run E2E tests
-npm run db:push    # Push Prisma schema to Neon (requires DIRECT_URL, NOT prisma://)
-npm run db:generate # Generate Prisma client
+npm run build        # Production build (lint + typecheck + build)
+npm run lint         # ESLint only
+npm run test:e2e     # Run E2E tests
+npm run db:push      # Push Prisma schema to Neon (requires DIRECT_URL, NOT prisma://)
+npm run db:generate  # Generate Prisma client
 ```
 
 ---
@@ -68,16 +69,17 @@ import { HTTP_STATUS } from '@/tests/e2e/constants/http-status'
 | `src/components/ui/` | shadcn/ui components |
 | `src/lib/storage/` | R2, Cloudinary, accounts |
 | `src/lib/upload/` | Presigned URLs |
-| `src/lib/cloudflare-queue.ts` | Cloudflare Queues |
+| `src/lib/cloudflare-queue.ts` | Cloudflare Queues (via Worker HTTP) |
 | `workers/` | Cloudflare Edge Workers |
 | `prisma/schema.prisma` | Database schema (Neon PostgreSQL via Prisma Accelerate) |
 
-**Database**: Neon PostgreSQL via Prisma Accelerate
+---
 
 ## Database (Neon + Prisma Accelerate)
 
 **Provider**: Neon PostgreSQL via Prisma Accelerate (connection pooling + edge cache)
 **ORM**: Prisma
+**Generated client**: `src/generated/prisma/`
 
 ### Database Operations
 ```bash
@@ -86,16 +88,27 @@ npm run db:generate   # Generate Prisma client
 ```
 
 ### Query Database
-Use **Tiger MCP** for direct database queries and inspection:
-- Check database schema
-- Query tables directly
-- Inspect data
+Use **Tiger MCP** for direct database queries and inspection.
 
 ### Schema Changes
 1. Edit `prisma/schema.prisma`
 2. Run `npm run db:push`
 3. Run `npm run db:generate`
 4. Restart dev server
+
+### Prisma Accelerate — TypeScript Pitfall
+`withAccelerate()` changes the Prisma client type — TypeScript cannot infer callback types:
+```typescript
+// Transaction callbacks MUST be typed explicitly
+import { Prisma } from '@/generated/prisma'
+await prisma.$transaction(async (tx: Prisma.TransactionClient) => { ... })
+
+// Catch parameters
+} catch (e: unknown) { ... }
+
+// Array callbacks — use typeof
+const allActive = current.every((p: { isActive: boolean }) => p.isActive)
+```
 
 ---
 
@@ -108,10 +121,13 @@ Use **Tiger MCP** for direct database queries and inspection:
 ```typescript
 // Prisma BigInt cannot JSON.stringify:
 return successResponse({ fileSize: photo.fileSize?.toString() })
+// Or use serializeBigInt() from '@/lib/bigint-utils'
 ```
 
 ### Background Jobs
-- Use **Cloudflare Queues only** — NO BullMQ, NO PM2, NO Redis
+- Use **Cloudflare Queues only** via `src/lib/cloudflare-queue.ts`
+- Next.js POSTs to `CLOUDFLARE_WORKER_URL` — Worker handles queue publishing
+- NO BullMQ, NO PM2, NO Redis for task queues
 
 ### API Response
 ```typescript
@@ -120,8 +136,12 @@ import { successResponse, errorResponse, paginatedResponse } from '@/lib/api/res
 
 ### Pagination
 ```typescript
-const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
-const limit = Math.min(100, parseInt(searchParams.get('limit') ?? '20', 10))
+// Use paginationSchema from validation.ts
+import { paginationSchema } from '@/lib/api/validation'
+const result = paginationSchema.safeParse({
+  page: searchParams.get('page') || undefined,
+  limit: searchParams.get('limit') || undefined,
+})
 ```
 
 ---
@@ -131,7 +151,39 @@ const limit = Math.min(100, parseInt(searchParams.get('limit') ?? '20', 10))
 - **TypeScript strict**: NO `any`, use `unknown` or specific interfaces
 - **Imports**: Use `@/` alias for all `src/` imports
 - **Notifications**: `toast()` from `sonner` — NEVER `alert()`
-- **Dialog**: Import from `@/components/ui/dialog'` — uses `@base-ui/react`, NOT Radix
+- **Dialog**: Import from `@/components/ui/dialog` — uses `@base-ui/react`, NOT Radix
+
+---
+
+## Zod Validation
+
+ALL API inputs MUST be validated with Zod. Use `formatZodError()` for consistent error messages.
+
+### Body Validation
+```typescript
+import { clientSchema, formatZodError } from '@/lib/api/validation'
+
+const result = clientSchema.safeParse(body)
+if (!result.success) return errorResponse(formatZodError(result.error), 400)
+const data = result.data
+```
+
+### Route Params Validation
+```typescript
+import { tokenParamsSchema, tokenPhotoParamsSchema, formatZodError } from '@/lib/api/validation'
+
+const rawParams = await params
+const validated = tokenParamsSchema.safeParse(rawParams)
+if (!validated.success) return errorResponse(formatZodError(validated.error), 400)
+const { token } = validated.data
+```
+
+### Available Schemas
+- `idSchema`, `paginationSchema`, `searchQuerySchema`
+- `clientSchema`, `packageSchema`, `eventSchema`, `gallerySchema`
+- `bookingSchema`, `selectionSubmitSchema`, `paymentProofSchema`
+- `tokenParamsSchema`, `tokenPhotoParamsSchema`, `kodeBookingParamsSchema`
+- `clientReconcileQuerySchema`
 
 ---
 
@@ -175,53 +227,32 @@ border-border
 
 ## Security
 
-- All `/api/admin/*` routes MUST call `getServerSession()` at the top
+- All `/api/admin/*` routes MUST use `requireAdminAuth()` from `@/lib/auth/require-admin-auth`
+- Portal routes use `requireClientAuth()` from `@/lib/auth/require-client-auth`
 - Webhooks MUST validate `VPS_WEBHOOK_SECRET` header
 - NEVER commit secrets, tokens, credentials
-- Validate inputs with **Zod**
+- Validate ALL inputs with **Zod** + `formatZodError()`
 - Handle Prisma `P2025` → return 404
+
+```typescript
+// Admin route auth pattern
+import { requireAdminAuth } from '@/lib/auth/require-admin-auth'
+const auth = await requireAdminAuth()
+if (auth instanceof NextResponse) return auth
+```
 
 ---
 
 ## Explicit Prohibitions
 
-1. **NO bash for file operations** — use Filesystem MCP tools
-2. **NO custom test scripts** — use Playwright MCP
-3. **NO `alert()`** — use `sonner toast()` only
-4. **NO static Tailwind colors** — use OKLCH semantic tokens
-5. **NO unbounded queries** — always paginate
-6. **NO CSS selectors in tests** — use semantic locators only
-7. **NO `waitForTimeout()` in tests** — use Playwright auto-wait
-8. **NO magic numbers** — use named constants
-
----
-
-## Multi-Agent System
-
-This project uses **either** Kiro CLI **or** Claude Code — not both simultaneously.
-
-### Using Kiro CLI
-
-```bash
-kiro-cli chat
-# Define agents in ./.kiro/agents/
-```
-
-### Using Claude Code
-
-```bash
-claude
-# Agents defined via CLAUDE.md
-```
-
-### Manual Agent Invocation
-
-```
-@frontend Build login page
-@backend Create auth API
-@reviewer Review code
-@devops Deploy to staging
-```
+1. **NO `alert()`** — use `sonner toast()` only
+2. **NO static Tailwind colors** — use OKLCH semantic tokens
+3. **NO unbounded queries** — always paginate
+4. **NO CSS selectors in tests** — use semantic locators only
+5. **NO `waitForTimeout()` in tests** — use Playwright auto-wait
+6. **NO magic numbers** — use named constants from `@/lib/api/constants`
+7. **NO `any` type** — use `unknown` or specific interfaces
+8. **NO direct DB credentials in `.env`** — use `StorageAccount` table
 
 ---
 
@@ -239,43 +270,24 @@ claude
 
 ---
 
+## Environment Variables
+
+```env
+DATABASE_URL=prisma+postgres://accelerate.prisma-data.net/?api_key=...
+DIRECT_URL=postgresql://...  # For db:push only (DDL not supported via prisma://)
+CLOUDFLARE_WORKER_URL=https://...
+ABLY_API_KEY=...
+NEXTAUTH_SECRET=...
+VPS_WEBHOOK_SECRET=...
+VERCEL_AUTOMATION_BYPASS_SECRET=...  # For preview URL testing
+```
+
+---
+
 ## Pattern Learning
 
 After completing a task successfully:
 
 1. Note what worked in a comment
-2. For reusable patterns, create a skill in `.kiro/skills/` or `.claude/skills/`
-3. Reference past tasks in `TASK-BOARD.md`
-
----
-
-## Environment Variables
-
-```env
-DATABASE_URL=postgresql://...
-CLOUDFLARE_API_TOKEN=...
-ABLY_API_KEY=...
-NEXTAUTH_SECRET=...
-VPS_WEBHOOK_SECRET=...
-```
-
----
-
-## Kiro Configuration (Optional)
-
-Project-specific rules in `.kiro/steering/`:
-
-| File | Content |
-|------|---------|
-| `product.md` | Product overview |
-| `tech.md` | Stack details |
-| `structure.md` | Directory layout |
-| `security.md` | Auth rules |
-
----
-
-## Verification Before Commit
-
-```bash
-npm run lint && npm run build && npm run test:e2e
-```
+2. For reusable patterns, save as a Hermes skill via `skill_manage`
+3. Reference past tasks via session search
