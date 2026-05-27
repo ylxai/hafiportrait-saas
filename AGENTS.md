@@ -104,7 +104,11 @@ import { Prisma } from '@/generated/prisma'
 await prisma.$transaction(async (tx: Prisma.TransactionClient) => { ... })
 
 // Catch parameters
-} catch (e: unknown) { ... }
+try {
+  // ...
+} catch (e: unknown) {
+  // ...
+}
 
 // Array callbacks — use explicit type annotation
 const allActive = current.every((p: { isActive: boolean }) => p.isActive)
