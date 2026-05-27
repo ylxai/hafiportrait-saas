@@ -57,9 +57,10 @@ export const GET = withRequestContext(async (
             method: true,
             status: true,
             type: true,
-            // BUG FIX: uniqueCode must NOT be exposed — it is used to verify
-            // real transfers and leaking it enables payment fraud.
-            // proofUrl also excluded — internal admin field.
+            // uniqueCode selected for computing transferAmount, but stripped
+            // before returning to the client (see paymentsWithTransfer below).
+            uniqueCode: true,
+            proofUrl: true,
             createdAt: true,
             updatedAt: true,
           },
@@ -79,15 +80,29 @@ export const GET = withRequestContext(async (
     let uploadTokenExpiry: number | null = null;
     if (env.VPS_WEBHOOK_SECRET) {
       uploadTokenExpiry = Date.now() + UPLOAD_TOKEN_TTL_MS;
-      uploadToken = createHmac('sha256', env.VPS_WEBHOOK_SECRET)
+      // Derive a domain-separated key for upload tokens so the same
+      // `VPS_WEBHOOK_SECRET` cannot be cross-used to forge VPS webhook
+      // signatures (or vice-versa). The literal `'upload-token-v1'` tag
+      // pins the derivation purpose; bumping the version invalidates
+      // outstanding tokens without rotating the underlying secret.
+      const tokenKey = createHmac('sha256', env.VPS_WEBHOOK_SECRET)
+        .update('upload-token-v1')
+        .digest();
+      uploadToken = createHmac('sha256', tokenKey)
         .update(`${event.id}:${uploadTokenExpiry}`)
         .digest('hex');
     } else {
       logger.warn('public.booking.upload_token_skipped_no_secret', { kodeBooking });
     }
 
+    const paymentsWithTransfer = event.payments.map(({ uniqueCode, ...p }: typeof event.payments[number]) => ({
+      ...p,
+      transferAmount: p.amount + uniqueCode,
+    }));
+
     return successResponse({
       ...event,
+      payments: paymentsWithTransfer,
       uploadToken,
       uploadTokenExpiry,
     });

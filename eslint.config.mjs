@@ -24,7 +24,8 @@ const config = [
       ".claude/**",
       ".agents/**",
       ".gemini/**",
-      ".junie/**"
+      ".junie/**",
+      "next-env.d.ts",
     ],
   },
   {

@@ -263,6 +263,34 @@ export async function deleteClient(
       gallery: { event: { clientId: id } },
     });
 
+    // Decrement StorageAccount counters using deletionPayloads. The
+    // Client→Event→Gallery→Photo cascade only removes Photo rows; the
+    // per-account `usedStorage` / `totalPhotos` columns must be adjusted
+    // explicitly here, otherwise the dashboard counters drift over time.
+    const storageUpdates = new Map<string, { usedStorage: bigint; totalPhotos: number }>();
+    for (const p of deletionPayloads) {
+      if (!p.storageAccountId) continue;
+      const current = storageUpdates.get(p.storageAccountId) || { usedStorage: BigInt(0), totalPhotos: 0 };
+      const size = p.r2Key && p.fileSize ? BigInt(p.fileSize) : BigInt(0);
+      storageUpdates.set(p.storageAccountId, {
+        usedStorage: current.usedStorage + size,
+        totalPhotos: current.totalPhotos + 1,
+      });
+    }
+    if (storageUpdates.size > 0) {
+      await prisma.$transaction(
+        Array.from(storageUpdates.entries()).map(([accountId, delta]) =>
+          prisma.storageAccount.update({
+            where: { id: accountId },
+            data: {
+              usedStorage: { decrement: delta.usedStorage },
+              totalPhotos: { decrement: delta.totalPhotos },
+            },
+          })
+        )
+      );
+    }
+
     await prisma.client.delete({ where: { id } });
 
     const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
@@ -306,6 +334,34 @@ export async function deleteClientsBulk(
     const deletionPayloads = await collectPhotoDeletionPayloads({
       gallery: { event: { clientId: { in: ids } } },
     });
+
+    // Decrement StorageAccount counters using deletionPayloads. The
+    // Client→Event→Gallery→Photo cascade only removes Photo rows; the
+    // per-account `usedStorage` / `totalPhotos` columns must be adjusted
+    // explicitly here, otherwise the dashboard counters drift over time.
+    const storageUpdates = new Map<string, { usedStorage: bigint; totalPhotos: number }>();
+    for (const p of deletionPayloads) {
+      if (!p.storageAccountId) continue;
+      const current = storageUpdates.get(p.storageAccountId) || { usedStorage: BigInt(0), totalPhotos: 0 };
+      const size = p.r2Key && p.fileSize ? BigInt(p.fileSize) : BigInt(0);
+      storageUpdates.set(p.storageAccountId, {
+        usedStorage: current.usedStorage + size,
+        totalPhotos: current.totalPhotos + 1,
+      });
+    }
+    if (storageUpdates.size > 0) {
+      await prisma.$transaction(
+        Array.from(storageUpdates.entries()).map(([accountId, delta]) =>
+          prisma.storageAccount.update({
+            where: { id: accountId },
+            data: {
+              usedStorage: { decrement: delta.usedStorage },
+              totalPhotos: { decrement: delta.totalPhotos },
+            },
+          })
+        )
+      );
+    }
 
     const result = await prisma.client.deleteMany({ where: { id: { in: ids } } });
 

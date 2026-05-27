@@ -230,32 +230,33 @@ export const DELETE = withRequestContext(async (request: Request) => {
       gallery: { event: { clientId: id } },
     });
 
-    // Step 1b — Decrement StorageAccount counters for all photos being
-    // deleted. The cascade only removes the Photo rows; the per-account
-    // usedStorage / totalPhotos columns must be adjusted explicitly.
-    const photosByAccount = await prisma.photo.groupBy({
-      by: ['storageAccountId'],
-      where: {
-        gallery: { event: { clientId: id } },
-        storageAccountId: { not: null },
-      },
-      _sum: { fileSize: true },
-      _count: { id: true },
-    });
+    // Step 1b — Decrement StorageAccount counters using deletionPayloads.
+    // Using payloads (already deduped via r2Key=null for shared files)
+    // ensures cross-gallery deduplication is honored: photos that share
+    // an R2 key with another row outside this delete batch must not
+    // decrement disk usage.
+    const storageUpdates = new Map<string, { usedStorage: bigint; totalPhotos: number }>();
+    for (const p of deletionPayloads) {
+      if (!p.storageAccountId) continue;
+      const current = storageUpdates.get(p.storageAccountId) || { usedStorage: BigInt(0), totalPhotos: 0 };
+      const size = p.r2Key && p.fileSize ? BigInt(p.fileSize) : BigInt(0);
+      storageUpdates.set(p.storageAccountId, {
+        usedStorage: current.usedStorage + size,
+        totalPhotos: current.totalPhotos + 1,
+      });
+    }
 
-    if (photosByAccount.length > 0) {
+    if (storageUpdates.size > 0) {
       await prisma.$transaction(
-        photosByAccount
-          .filter((g: (typeof photosByAccount)[number]) => g.storageAccountId != null)
-          .map((g: (typeof photosByAccount)[number]) =>
-            prisma.storageAccount.update({
-              where: { id: g.storageAccountId! },
-              data: {
-                usedStorage: { decrement: g._sum.fileSize ?? BigInt(0) },
-                totalPhotos: { decrement: g._count.id },
-              },
-            })
-          )
+        Array.from(storageUpdates.entries()).map(([accountId, delta]) =>
+          prisma.storageAccount.update({
+            where: { id: accountId },
+            data: {
+              usedStorage: { decrement: delta.usedStorage },
+              totalPhotos: { decrement: delta.totalPhotos },
+            },
+          })
+        )
       );
     }
 

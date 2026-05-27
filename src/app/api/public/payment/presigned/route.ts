@@ -61,17 +61,30 @@ function validateFileType(filename: string): { valid: boolean; error?: string } 
 
 /**
  * Constant-time HMAC verification for the upload token.
- * Token = HMAC-SHA256(VPS_WEBHOOK_SECRET, `${eventId}:${expiry}`)
+ * Token = HMAC-SHA256(tokenKey, `${eventId}:${expiry}`)
+ * where tokenKey = HMAC-SHA256(VPS_WEBHOOK_SECRET, 'upload-token-v1')
+ *
+ * Domain separation via the derived `tokenKey` ensures the upload-token
+ * MAC and the VPS webhook MAC live in disjoint key spaces — neither can
+ * be cross-used to forge the other even though they share the underlying
+ * `VPS_WEBHOOK_SECRET`. Bumping the `'upload-token-v1'` tag invalidates
+ * outstanding tokens without rotating the secret. Must stay byte-for-byte
+ * identical to the issuer in
+ * /api/public/booking/[kodeBooking]/route.ts.
  */
 function verifyUploadToken(
   eventId: string,
   uploadToken: string,
   uploadTokenExpiry: number
 ): boolean {
-  if (!env.VPS_WEBHOOK_SECRET) return false;
+  const secret = env.VPS_WEBHOOK_SECRET;
+  if (!secret) return false;
   if (Date.now() > uploadTokenExpiry) return false;
 
-  const expected = createHmac('sha256', env.VPS_WEBHOOK_SECRET)
+  const tokenKey = createHmac('sha256', secret)
+    .update('upload-token-v1')
+    .digest();
+  const expected = createHmac('sha256', tokenKey)
     .update(`${eventId}:${uploadTokenExpiry}`)
     .digest('hex');
 

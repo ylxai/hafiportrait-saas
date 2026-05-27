@@ -439,7 +439,6 @@ async function callbackThumbnailToVercel(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${env.VPS_WEBHOOK_SECRET}`,
       'x-webhook-signature': signature,
       'x-webhook-timestamp': timestamp,
     },
@@ -512,7 +511,6 @@ async function callbackToVercel(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${env.VPS_WEBHOOK_SECRET}`,
       'x-webhook-signature': signature,
       'x-webhook-timestamp': timestamp,
     },
