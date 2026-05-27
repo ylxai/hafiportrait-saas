@@ -75,19 +75,6 @@ export interface ViewCountUpdate {
   galleryId: string;
 }
 
-export interface Notification {
-  type: 'booking' | 'payment' | 'selection' | 'gallery';
-  title: string;
-  message: string;
-  data?: Record<string, unknown>;
-}
-
-export interface BookingUpdate {
-  eventId: string;
-  action: 'created' | 'updated' | 'status_changed';
-  booking: Record<string, unknown>;
-}
-
 export interface PaymentUpdate {
   eventId: string;
   action: 'created' | 'updated' | 'paid';
@@ -196,103 +183,6 @@ export function useViewCountSubscription(galleryId: string, onUpdate: (count: nu
       releaseScopedClient(scope);
     };
   }, [galleryId]);
-
-  return isConnected;
-}
-
-export function useNotificationSubscription(userId: string, onNotification: (notification: Notification) => void) {
-  const [isConnected, setIsConnected] = useState(false);
-  const callbackRef = useRef(onNotification);
-
-  useEffect(() => {
-    callbackRef.current = onNotification;
-  }, [onNotification]);
-
-  useEffect(() => {
-    if (!userId) return;
-    const scope = 'user';
-    reserveScopedClient(scope);
-
-    const client = getScopedClient(scope);
-    const channel = client.channels.get(`photostudio:notifications:${userId}`);
-
-    const handleNotification = (msg: Ably.Message) => {
-      callbackRef.current(msg.data as Notification);
-    };
-
-    channel.subscribe('notification', handleNotification);
-    setIsConnected(true);
-
-    return () => {
-      channel.unsubscribe('notification', handleNotification);
-      setIsConnected(false);
-      releaseScopedClient(scope);
-    };
-  }, [userId]);
-
-  return isConnected;
-}
-
-export function useBookingUpdates(onUpdate: (update: BookingUpdate) => void) {
-  const [isConnected, setIsConnected] = useState(false);
-  const callbackRef = useRef(onUpdate);
-
-  useEffect(() => {
-    callbackRef.current = onUpdate;
-  }, [onUpdate]);
-
-  useEffect(() => {
-    const scope = 'user';
-    reserveScopedClient(scope);
-
-    const client = getScopedClient(scope);
-    const channel = client.channels.get('photostudio:bookings');
-
-    const handleUpdate = (msg: Ably.Message) => {
-      callbackRef.current(msg.data as BookingUpdate);
-    };
-
-    channel.subscribe('booking-update', handleUpdate);
-    setIsConnected(true);
-
-    return () => {
-      channel.unsubscribe('booking-update', handleUpdate);
-      setIsConnected(false);
-      releaseScopedClient(scope);
-    };
-  }, []);
-
-  return isConnected;
-}
-
-export function usePaymentUpdates(onUpdate: (update: PaymentUpdate) => void) {
-  const [isConnected, setIsConnected] = useState(false);
-  const callbackRef = useRef(onUpdate);
-
-  useEffect(() => {
-    callbackRef.current = onUpdate;
-  }, [onUpdate]);
-
-  useEffect(() => {
-    const scope = 'user';
-    reserveScopedClient(scope);
-
-    const client = getScopedClient(scope);
-    const channel = client.channels.get('photostudio:payments');
-
-    const handleUpdate = (msg: Ably.Message) => {
-      callbackRef.current(msg.data as PaymentUpdate);
-    };
-
-    channel.subscribe('payment-update', handleUpdate);
-    setIsConnected(true);
-
-    return () => {
-      channel.unsubscribe('payment-update', handleUpdate);
-      setIsConnected(false);
-      releaseScopedClient(scope);
-    };
-  }, []);
 
   return isConnected;
 }
