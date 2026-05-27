@@ -1,15 +1,21 @@
 import { prisma } from '@/lib/db';
-import { successResponse, notFoundResponse, serverErrorResponse, rateLimitResponse, getClientIp } from '@/lib/api/response';
+import { successResponse, notFoundResponse, serverErrorResponse, rateLimitResponse, getClientIp, errorResponse } from '@/lib/api/response';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { kodeBookingParamsSchema, formatZodError } from '@/lib/api/validation';
 
 export const GET = withRequestContext(async (
   request: Request,
   { params }: { params: Promise<{ kodeBooking: string }> }
 ) => {
   try {
-    const { kodeBooking } = await params;
+    const rawParams = await params;
+    const validated = kodeBookingParamsSchema.safeParse(rawParams);
+    if (!validated.success) {
+      return errorResponse(formatZodError(validated.error), 400);
+    }
+    const { kodeBooking } = validated.data;
 
     // Rate limit: prevent kodeBooking enumeration
     const ip = getClientIp(request);

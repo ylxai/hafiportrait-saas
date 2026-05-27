@@ -8,6 +8,7 @@ import { logger } from '@/lib/logger';
 import { Prisma } from '@/generated/prisma';
 import { withRequestContext } from '@/lib/with-request-context';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
+import { clientReconcileQuerySchema, formatZodError } from '@/lib/api/validation';
 
 /**
  * Counter reconciliation endpoint.
@@ -98,14 +99,18 @@ export const POST = withRequestContext(async (request: Request) => {
     // through to the scan-all branch — a typo or stripped param could
     // otherwise trigger a full reconciliation unintentionally.
     const url = new URL(request.url);
-    const clientIdRaw = url.searchParams.get('clientId');
-    const clientId = clientIdRaw?.trim();
-    if (clientIdRaw !== null && (clientId === undefined || clientId === '')) {
+    // Pass all query params via Object.fromEntries. Unknown keys are stripped
+    // (default Zod behavior) so future params won't break validation.
+    const validated = clientReconcileQuerySchema.safeParse(
+      Object.fromEntries(url.searchParams.entries()),
+    );
+    if (!validated.success) {
       return errorResponse(
-        'clientId query param must be a non-empty string when provided',
+        formatZodError(validated.error),
         400,
       );
     }
+    const { clientId } = validated.data;
 
     // Phase 1: compute canonical aggregates per client.
     //

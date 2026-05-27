@@ -5,6 +5,7 @@ import {
   serverErrorResponse,
   rateLimitResponse,
   getClientIp,
+  errorResponse,
 } from '@/lib/api/response';
 import { assertGalleryOwnership } from '@/lib/gallery/auth';
 import { getDefaultAccount } from '@/lib/storage/accounts';
@@ -13,6 +14,7 @@ import { serializeGalleryPhoto } from '@/lib/gallery/load-public-gallery';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { tokenPhotoParamsSchema, formatZodError } from '@/lib/api/validation';
 
 /**
  * Returns a single photo row for the owning client in the same wire-shape
@@ -32,7 +34,12 @@ export const GET = withRequestContext(async (
   { params }: { params: Promise<{ token: string; photoId: string }> },
 ) => {
   try {
-    const { token, photoId } = await params;
+    const rawParams = await params;
+    const validated = tokenPhotoParamsSchema.safeParse(rawParams);
+    if (!validated.success) {
+      return errorResponse(formatZodError(validated.error), 400);
+    }
+    const { token, photoId } = validated.data;
 
     // Rate limit (IP-based)
     const ip = getClientIp(request);
