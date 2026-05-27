@@ -65,6 +65,34 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
+    // Auth check for all POST endpoints
+    if (request.method === 'POST') {
+      const authHeader = request.headers.get('Authorization');
+      const expectedHeader = `Bearer ${env.VPS_WEBHOOK_SECRET}`;
+
+      let isAuthorized = false;
+      if (authHeader && env.VPS_WEBHOOK_SECRET) {
+        const encoder = new TextEncoder();
+        const aBytes = encoder.encode(authHeader);
+        const bBytes = encoder.encode(expectedHeader);
+        // Constant-time comparison to prevent timing attacks
+        if (aBytes.byteLength === bBytes.byteLength) {
+          let diff = 0;
+          for (let i = 0; i < aBytes.byteLength; i++) {
+            diff |= aBytes[i] ^ bBytes[i];
+          }
+          isAuthorized = diff === 0;
+        }
+      }
+
+      if (!isAuthorized) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // POST /queue/thumbnail - Publish thumbnail generation job
     if (url.pathname === '/queue/thumbnail' && request.method === 'POST') {
       try {
@@ -108,39 +136,38 @@ export default {
     console.log(`[DeletionWorker] Processing ${deletionMessages.length} deletion jobs, ${thumbnailMessages.length} thumbnail jobs`);
 
     // Process deletion jobs
-    for (const message of deletionMessages) {
-      const job = message.body as DeletionJob;
-
-      try {
-        const result = await processDeletion(job, env);
-        // Try callback but don't fail if Vercel blocks it
-        await callbackToVercel(job, result, env).catch((err) => {
-          console.warn(`[DeletionWorker] Callback failed (non-critical): ${err.message}`);
-        });
-        message.ack();
-        console.log(`[DeletionWorker] ✅ Deleted: ${job.photoId}`);
-      } catch (error) {
-        console.error(`[DeletionWorker] ❌ Failed: ${job.photoId}`, error);
-        message.retry();
-      }
-    }
+    await Promise.allSettled(
+      deletionMessages.map(async (message) => {
+        const job = message.body as DeletionJob;
+        try {
+          const result = await processDeletion(job, env);
+          await callbackToVercel(job, result, env); // throw on failure → queue retry
+          message.ack();
+          console.log(`[DeletionWorker] ✅ Deleted: ${job.photoId}`);
+        } catch (error) {
+          console.error(`[DeletionWorker] ❌ Failed: ${job.photoId}`, error);
+          message.retry();
+        }
+      })
+    );
 
     // Process thumbnail jobs
-    for (const message of thumbnailMessages) {
-      const job = message.body as ThumbnailJob;
-
-      try {
-        const result = await processThumbnail(job, env);
-        if (result) {
-          await callbackThumbnailToVercel(job, result, env);
+    await Promise.allSettled(
+      thumbnailMessages.map(async (message) => {
+        const job = message.body as ThumbnailJob;
+        try {
+          const result = await processThumbnail(job, env);
+          if (result) {
+            await callbackThumbnailToVercel(job, result, env);
+          }
+          message.ack();
+          console.log(`[DeletionWorker] ✅ Thumbnail generated: ${job.photoId}`);
+        } catch (error) {
+          console.error(`[DeletionWorker] ❌ Thumbnail failed: ${job.photoId}`, error);
+          message.retry();
         }
-        message.ack();
-        console.log(`[DeletionWorker] ✅ Thumbnail generated: ${job.photoId}`);
-      } catch (error) {
-        console.error(`[DeletionWorker] ❌ Thumbnail failed: ${job.photoId}`, error);
-        message.retry();
-      }
-    }
+      })
+    );
   },
 
   // Handle cron-triggered scheduled events (upload session cleanup)
@@ -422,15 +449,10 @@ async function callbackThumbnailToVercel(
 
     if (!response.ok) {
       const error = await response.text();
-      console.error(`[Thumbnail] Callback failed (${response.status}): ${error}`);
-      // Don't throw - thumbnail is already uploaded to Cloudinary
-      return;
+      throw new Error(`[Thumbnail] Callback failed (${response.status}): ${error}`);
     }
 
     console.log(`[Thumbnail] ✅ Callback to Vercel successful for ${job.photoId}`);
-  } catch (error) {
-    console.error(`[Thumbnail] Callback error (non-critical):`, error);
-    // Don't throw - thumbnail is already uploaded, DB update can be done manually
   }
 }
 
