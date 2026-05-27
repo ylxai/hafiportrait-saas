@@ -432,28 +432,26 @@ async function callbackThumbnailToVercel(
     publicId: result.publicId,
   };
 
-  try {
-    const body = JSON.stringify(payload);
-    const { signature, timestamp } = await signWebhookBody(env.VPS_WEBHOOK_SECRET, body);
+  const body = JSON.stringify(payload);
+  const { signature, timestamp } = await signWebhookBody(env.VPS_WEBHOOK_SECRET, body);
 
-    const response = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${env.VPS_WEBHOOK_SECRET}`,
-        'x-webhook-signature': signature,
-        'x-webhook-timestamp': timestamp,
-      },
-      body,
-    });
+  const response = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${env.VPS_WEBHOOK_SECRET}`,
+      'x-webhook-signature': signature,
+      'x-webhook-timestamp': timestamp,
+    },
+    body,
+  });
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`[Thumbnail] Callback failed (${response.status}): ${error}`);
-    }
-
-    console.log(`[Thumbnail] ✅ Callback to Vercel successful for ${job.photoId}`);
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`[Thumbnail] Callback failed (${response.status}): ${error}`);
   }
+
+  console.log(`[Thumbnail] ✅ Callback to Vercel successful for ${job.photoId}`);
 }
 
 // ─── Cloudinary Helpers ─────────────────────────────────────────
