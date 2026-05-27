@@ -37,11 +37,3 @@ export const safeClientSelect = {
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.ClientSelect;
-
-/**
- * Pre-built `include` for callers that previously wrote
- * `include: { client: true }`. Drop-in replacement.
- */
-export const safeClientInclude = {
-  client: { select: safeClientSelect },
-} satisfies Prisma.EventInclude;
