@@ -106,7 +106,7 @@ await prisma.$transaction(async (tx: Prisma.TransactionClient) => { ... })
 // Catch parameters
 } catch (e: unknown) { ... }
 
-// Array callbacks — use typeof
+// Array callbacks — use explicit type annotation
 const allActive = current.every((p: { isActive: boolean }) => p.isActive)
 ```
 
@@ -161,6 +161,7 @@ ALL API inputs MUST be validated with Zod. Use `formatZodError()` for consistent
 
 ### Body Validation
 ```typescript
+import { errorResponse } from '@/lib/api/response'
 import { clientSchema, formatZodError } from '@/lib/api/validation'
 
 const result = clientSchema.safeParse(body)
@@ -170,6 +171,7 @@ const data = result.data
 
 ### Route Params Validation
 ```typescript
+import { errorResponse } from '@/lib/api/response'
 import { tokenParamsSchema, tokenPhotoParamsSchema, formatZodError } from '@/lib/api/validation'
 
 const rawParams = await params
@@ -236,6 +238,7 @@ border-border
 
 ```typescript
 // Admin route auth pattern
+import { NextResponse } from 'next/server'
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth'
 const auth = await requireAdminAuth()
 if (auth instanceof NextResponse) return auth
