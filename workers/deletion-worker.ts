@@ -65,6 +65,17 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
+    // Auth check for all POST endpoints
+    if (request.method === 'POST') {
+      const authHeader = request.headers.get('Authorization');
+      if (!env.VPS_WEBHOOK_SECRET || authHeader !== `Bearer ${env.VPS_WEBHOOK_SECRET}`) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // POST /queue/thumbnail - Publish thumbnail generation job
     if (url.pathname === '/queue/thumbnail' && request.method === 'POST') {
       try {
@@ -108,39 +119,38 @@ export default {
     console.log(`[DeletionWorker] Processing ${deletionMessages.length} deletion jobs, ${thumbnailMessages.length} thumbnail jobs`);
 
     // Process deletion jobs
-    for (const message of deletionMessages) {
-      const job = message.body as DeletionJob;
-
-      try {
-        const result = await processDeletion(job, env);
-        // Try callback but don't fail if Vercel blocks it
-        await callbackToVercel(job, result, env).catch((err) => {
-          console.warn(`[DeletionWorker] Callback failed (non-critical): ${err.message}`);
-        });
-        message.ack();
-        console.log(`[DeletionWorker] ✅ Deleted: ${job.photoId}`);
-      } catch (error) {
-        console.error(`[DeletionWorker] ❌ Failed: ${job.photoId}`, error);
-        message.retry();
-      }
-    }
+    await Promise.allSettled(
+      deletionMessages.map(async (message) => {
+        const job = message.body as DeletionJob;
+        try {
+          const result = await processDeletion(job, env);
+          await callbackToVercel(job, result, env); // throw on failure → queue retry
+          message.ack();
+          console.log(`[DeletionWorker] ✅ Deleted: ${job.photoId}`);
+        } catch (error) {
+          console.error(`[DeletionWorker] ❌ Failed: ${job.photoId}`, error);
+          message.retry();
+        }
+      })
+    );
 
     // Process thumbnail jobs
-    for (const message of thumbnailMessages) {
-      const job = message.body as ThumbnailJob;
-
-      try {
-        const result = await processThumbnail(job, env);
-        if (result) {
-          await callbackThumbnailToVercel(job, result, env);
+    await Promise.allSettled(
+      thumbnailMessages.map(async (message) => {
+        const job = message.body as ThumbnailJob;
+        try {
+          const result = await processThumbnail(job, env);
+          if (result) {
+            await callbackThumbnailToVercel(job, result, env);
+          }
+          message.ack();
+          console.log(`[DeletionWorker] ✅ Thumbnail generated: ${job.photoId}`);
+        } catch (error) {
+          console.error(`[DeletionWorker] ❌ Thumbnail failed: ${job.photoId}`, error);
+          message.retry();
         }
-        message.ack();
-        console.log(`[DeletionWorker] ✅ Thumbnail generated: ${job.photoId}`);
-      } catch (error) {
-        console.error(`[DeletionWorker] ❌ Thumbnail failed: ${job.photoId}`, error);
-        message.retry();
-      }
-    }
+      })
+    );
   },
 
   // Handle cron-triggered scheduled events (upload session cleanup)

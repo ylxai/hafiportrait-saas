@@ -273,6 +273,7 @@ model StorageAccount {
   
   // Usage stats
   usedStorage   BigInt         @default(0)
+  storageLimitGB Int?           // null = unlimited; enables proactive failover
   totalPhotos    Int            @default(0)
   
   createdAt     DateTime       @default(now())

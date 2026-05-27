@@ -24,6 +24,8 @@ type StorageAccount = {
   secondarySecret?: string | null;
   secondaryAccessKey?: string | null;
   isSecondaryActive?: boolean | null;
+  storageLimitGB?: number | null;
+  usedStorage?: bigint | null;
 };
 
 export async function getStorageAccounts(provider: 'CLOUDINARY' | 'R2'): Promise<StorageAccount[]> {
@@ -93,7 +95,8 @@ export async function decreaseStorageUsage(accountId: string, fileSize: bigint) 
 
 export async function findWorkingAccount(
   provider: 'CLOUDINARY' | 'R2',
-  lastFailedAccountId?: string
+  lastFailedAccountId?: string,
+  incomingSize: bigint = BigInt(0)
 ): Promise<StorageAccount | null> {
   const accounts = await getStorageAccounts(provider);
   
@@ -101,6 +104,16 @@ export async function findWorkingAccount(
     if (lastFailedAccountId && account.id === lastFailedAccountId) {
       continue;
     }
+    
+    // Skip accounts that have exceeded their storage limit
+    if (account.storageLimitGB) {
+      const limitBytes = BigInt(account.storageLimitGB) * BigInt(1024 * 1024 * 1024);
+      const usedBytes = account.usedStorage ?? BigInt(0);
+      if (usedBytes + incomingSize >= limitBytes) {
+        continue; // Account is full, skip it
+      }
+    }
+    
     return account;
   }
   
