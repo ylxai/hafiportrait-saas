@@ -619,38 +619,6 @@ export async function queueThumbnailGeneration(data: {
 }
 
 /**
- * Queue multiple thumbnail generation jobs in bulk
- */
-export async function queueThumbnailGenerationBulk(dataList: Array<{
-  photoId: string;
-  r2Url: string;
-  galleryId: string;
-  filename: string;
-  cloudinaryCredentials: {
-    cloudName: string | null;
-    apiKey: string | null;
-    apiSecret: string | null;
-  };
-}>): Promise<{ success: boolean; error?: string; failedCount?: number }> {
-  const timestamp = Date.now();
-  const messages = dataList.map(data => ({
-    type: 'thumbnail-generation',
-    timestamp,
-    photoId: data.photoId,
-    r2Url: data.r2Url,
-    galleryId: data.galleryId,
-    filename: data.filename,
-    cloudinaryCredentials: {
-      cloudName: data.cloudinaryCredentials.cloudName,
-      apiKey: data.cloudinaryCredentials.apiKey,
-      apiSecret: data.cloudinaryCredentials.apiSecret,
-    },
-  }));
-
-  return publishToQueueBulk('thumbnail-generation', messages);
-}
-
-/**
  * Check if Cloudflare Queue is configured
  */
 export function isQueueConfigured(): boolean {
@@ -1162,29 +1130,4 @@ export async function enqueueDeletionWithOutbox(
     }).catch(() => undefined);
     return { queued: 0, outboxed: enqueueable.length, outboxJobId };
   }
-}
-
-/**
- * @deprecated Prefer the two-step ordering:
- *   1. `const payloads = await collectPhotoDeletionPayloads(where)`
- *   2. `await prisma.$transaction([...DB delete...])`
- *   3. `await enqueueDeletionWithOutbox(payloads)`
- *
- * The legacy helper kept the old queue-then-delete ordering, which orphans
- * DB rows when the queue succeeds but the DB transaction fails. This
- * shim is retained so older callers keep building, but it is now also
- * outbox-backed: a queue failure no longer aborts the operation.
- */
-export async function queuePhotosDeletionForEntities(
-  whereCriteria: Prisma.PhotoWhereInput,
-): Promise<{ success: boolean; error?: string }> {
-  const payloads = await collectPhotoDeletionPayloads(whereCriteria);
-  const { outboxed } = await enqueueDeletionWithOutbox(payloads);
-  // The legacy contract is `success` in the queue-publish sense; an
-  // outboxed batch counts as a soft failure for callers that still
-  // branch on the response, but the actual delete will be retried.
-  if (outboxed > 0) {
-    return { success: false, error: `Queue publish failed; ${outboxed} jobs persisted to outbox.` };
-  }
-  return { success: true };
 }
