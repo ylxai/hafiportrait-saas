@@ -193,7 +193,6 @@ export async function publishToQueue(
   };
 }
 
-
 /**
  * Queue storage deletion job
  */
