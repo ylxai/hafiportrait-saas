@@ -83,28 +83,6 @@ export function stringifyWithBigInt(obj: unknown, space?: string | number): stri
 }
 
 /**
- * Type guard to check if value is BigInt
- */
-export function isBigInt(value: unknown): value is bigint {
-  return typeof value === 'bigint';
-}
-
-/**
- * Safely convert BigInt to number (with overflow check)
- * Throws error if BigInt exceeds Number.MAX_SAFE_INTEGER
- * 
- * @example
- * const size = bigIntToNumber(1024n); // 1024
- * bigIntToNumber(9007199254740992n); // throws Error
- */
-export function bigIntToNumber(value: bigint): number {
-  if (value > BigInt(Number.MAX_SAFE_INTEGER) || value < BigInt(Number.MIN_SAFE_INTEGER)) {
-    throw new Error(`BigInt value ${value} exceeds safe integer range`);
-  }
-  return Number(value);
-}
-
-/**
  * Format BigInt as human-readable file size
  * 
  * @example
