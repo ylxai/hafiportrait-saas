@@ -21,7 +21,7 @@ npm run dev          # Dev server (port 3000)
 npm run build       # Production build (lint + typecheck + build)
 npm run lint       # ESLint only
 npm run test:e2e    # Run E2E tests
-npm run db:push    # Push Prisma schema to Neon (via Prisma Accelerate)
+npm run db:push    # Push Prisma schema to Neon (requires DIRECT_URL, NOT prisma://)
 npm run db:generate # Generate Prisma client
 ```
 
@@ -81,7 +81,7 @@ import { HTTP_STATUS } from '@/tests/e2e/constants/http-status'
 
 ### Database Operations
 ```bash
-npm run db:push       # Push schema changes to Neon
+npm run db:push       # Push schema changes to Neon (requires DIRECT_URL, NOT prisma://)
 npm run db:generate   # Generate Prisma client
 ```
 

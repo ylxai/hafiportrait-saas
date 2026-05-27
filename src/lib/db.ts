@@ -10,7 +10,10 @@ import { withAccelerate } from '@prisma/extension-accelerate';
  * - Edge-compatible (no binary engine needed — postinstall uses --no-engine)
  *
  * DATABASE_URL must be set to the Prisma Accelerate URL:
- *   prisma://accelerate.prisma.io/?api_key=...
+ *   prisma+postgres://accelerate.prisma-data.net/?api_key=...
+ *
+ * For schema migrations (db push/migrate), use DIRECT_URL with the
+ * Neon direct connection string (prisma:// does not support DDL).
  *
  * The `globalForPrisma` singleton pattern prevents HMR in development
  * from spawning a fresh client on every reload.
@@ -26,5 +29,8 @@ function makePrismaClient() {
 }
 
 export const prisma = globalForPrisma.prisma ?? makePrismaClient();
+
+/** Stable type alias for the Accelerate-extended Prisma client. */
+export type ExtendedPrismaClient = typeof prisma;
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
