@@ -68,46 +68,6 @@ export async function publishViewCount(galleryId: string, count: number) {
   }
 }
 
-export async function publishNotification(userId: string, data: {
-  type: 'booking' | 'payment' | 'selection' | 'gallery';
-  title: string;
-  message: string;
-  data?: Record<string, unknown>;
-}) {
-  try {
-    const client = getAblyRestClient();
-    await client.channels.get(CHANNELS.NOTIFICATIONS(userId)).publish('notification', data);
-  } catch (error) {
-    logger.error('ably.notification.publish_failed', { userId, err: error });
-  }
-}
-
-export async function publishBookingUpdate(data: {
-  eventId: string;
-  action: 'created' | 'updated' | 'status_changed';
-  booking: Record<string, unknown>;
-}) {
-  try {
-    const client = getAblyRestClient();
-    await client.channels.get(CHANNELS.BOOKINGS).publish('booking-update', data);
-  } catch (error) {
-    logger.error('ably.booking_update.publish_failed', { eventId: data.eventId, err: error });
-  }
-}
-
-export async function publishPaymentUpdate(data: {
-  eventId: string;
-  action: 'created' | 'updated' | 'paid';
-  amount: number;
-}) {
-  try {
-    const client = getAblyRestClient();
-    await client.channels.get(CHANNELS.PAYMENTS).publish('payment-update', data);
-  } catch (error) {
-    logger.error('ably.payment_update.publish_failed', { eventId: data.eventId, err: error });
-  }
-}
-
 export async function publishPhotoUploaded(galleryId: string, data: {
   photoId: string;
   filename: string;
@@ -118,22 +78,6 @@ export async function publishPhotoUploaded(galleryId: string, data: {
     await client.channels.get(CHANNELS.UPLOADS(galleryId)).publish('photo-uploaded', data);
   } catch (error) {
     logger.error('ably.photo_uploaded.publish_failed', { galleryId, err: error });
-  }
-}
-
-/**
- * Publish photo thumbnail generated event (for real-time dashboard update)
- */
-export async function publishPhotoThumbnailGenerated(galleryId: string, data: {
-  photoId: string;
-  thumbnailUrl: string;
-  filename: string;
-}) {
-  try {
-    const client = getAblyRestClient();
-    await client.channels.get(CHANNELS.UPLOADS(galleryId)).publish('photo-thumbnail-generated', data);
-  } catch (error) {
-    logger.error('ably.photo_thumbnail_generated.publish_failed', { galleryId, err: error });
   }
 }
 

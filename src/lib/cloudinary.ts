@@ -111,18 +111,6 @@ export async function getCloudinaryThumbnailUrlAsync(
 }
 
 /**
- * Get different thumbnail sizes
- */
-export function getThumbnailSizes(r2Url: string, cloudName?: string) {
-  return {
-    small: getCloudinaryThumbnailUrl(r2Url, { width: 200, height: 200, cloudName }),
-    medium: getCloudinaryThumbnailUrl(r2Url, { width: 400, height: 400, cloudName }),
-    large: getCloudinaryThumbnailUrl(r2Url, { width: 800, height: 800, cloudName }),
-    original: r2Url,
-  };
-}
-
-/**
  * Get high-res URL for lightbox display (sharp, not blurry)
  * Uses Cloudinary with quality optimization for fast loading
  */
@@ -131,22 +119,6 @@ export function getCloudinaryLightboxUrl(
   cloudName?: string
 ): string {
   return getCloudinaryThumbnailUrl(r2Url, {
-    width: 1920,
-    quality: 'auto:good',
-    format: 'auto',
-    cloudName,
-  });
-}
-
-/**
- * Get high-res URL for lightbox display (async version with database config)
- * Use this in server-side code (API routes, server components)
- */
-export async function getCloudinaryLightboxUrlAsync(
-  r2Url: string,
-  cloudName?: string
-): Promise<string> {
-  return getCloudinaryThumbnailUrlAsync(r2Url, {
     width: 1920,
     quality: 'auto:good',
     format: 'auto',
