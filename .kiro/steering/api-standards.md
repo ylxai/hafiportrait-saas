@@ -63,7 +63,7 @@ if (!result.success) return errorResponse(formatZodError(result.error), 400)
 ## Route Params Validation
 ```typescript
 import { errorResponse } from '@/lib/api/response'
-import { tokenParamsSchema, tokenPhotoParamsSchema, formatZodError } from '@/lib/api/validation'
+import { tokenParamsSchema, formatZodError } from '@/lib/api/validation'
 
 // Selalu validate params sebelum dipakai
 const rawParams = await params

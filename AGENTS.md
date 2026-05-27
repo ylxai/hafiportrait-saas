@@ -176,7 +176,7 @@ const data = result.data
 ### Route Params Validation
 ```typescript
 import { errorResponse } from '@/lib/api/response'
-import { tokenParamsSchema, tokenPhotoParamsSchema, formatZodError } from '@/lib/api/validation'
+import { tokenParamsSchema, formatZodError } from '@/lib/api/validation'
 
 const rawParams = await params
 const validated = tokenParamsSchema.safeParse(rawParams)
