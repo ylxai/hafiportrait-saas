@@ -30,7 +30,4 @@ function makePrismaClient() {
 
 export const prisma = globalForPrisma.prisma ?? makePrismaClient();
 
-/** Stable type alias for the Accelerate-extended Prisma client. */
-export type ExtendedPrismaClient = typeof prisma;
-
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

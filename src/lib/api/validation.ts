@@ -268,11 +268,6 @@ export const updateGallerySchema = z.object({
     .transform((val) => val ? sanitizeString(val) : val),
 });
 
-export const loginSchema = z.object({
-  email: z.string().email('Invalid email'),
-  password: z.string().min(1, 'Password is required'),
-});
-
 // Partial schemas for PATCH endpoints (all fields optional)
 export const eventUpdateSchema = eventSchema.partial();
 export const clientUpdateSchema = clientSchema.partial();
