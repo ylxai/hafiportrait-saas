@@ -259,7 +259,7 @@ if (auth instanceof NextResponse) return auth
 5. **NO `waitForTimeout()` in tests** — use Playwright auto-wait
 6. **NO magic numbers** — use named constants from `@/lib/api/constants`
 7. **NO `any` type** — use `unknown` or specific interfaces
-8. **NO direct DB credentials in `.env`** — use `StorageAccount` table
+8. **NO direct storage credentials in `.env`** — use `StorageAccount` table
 
 ---
 
