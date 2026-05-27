@@ -22,8 +22,6 @@ import { getRequestId } from '@/lib/request-context';
 import { REQUEST_ID_HEADER } from '@/lib/request-id-constants';
 import { logger } from '@/lib/logger';
 
-const ACCOUNT_ID = env.CLOUDFLARE_ACCOUNT_ID;
-const API_TOKEN = env.NEXT_SERVER_CF_QUEUE_TOKEN;
 const WORKER_URL = env.CLOUDFLARE_WORKER_URL;
 
 // Bulk-delete fan-out concurrency.
@@ -305,7 +303,7 @@ export async function queueThumbnailGeneration(data: {
  * Check if Cloudflare Queue is configured
  */
 export function isQueueConfigured(): boolean {
-  return !!ACCOUNT_ID && !!API_TOKEN;
+  return !!WORKER_URL;
 }
 
 /**
@@ -783,7 +781,7 @@ export async function enqueueDeletionWithOutbox(
       // Review #73-1: redact `apiSecret` before persisting; secrets
       // can be rehydrated from `StorageAccount` on retry.
       payload: { photos: redactPayloadsForOutbox(enqueueable) },
-      errorMessage: 'Cloudflare Queue not configured (CLOUDFLARE_ACCOUNT_ID / NEXT_SERVER_CF_QUEUE_TOKEN missing)',
+      errorMessage: 'Cloudflare Queue not configured (CLOUDFLARE_WORKER_URL missing)',
     }).catch(() => undefined);
     return { queued: 0, outboxed: enqueueable.length, outboxJobId };
   }
