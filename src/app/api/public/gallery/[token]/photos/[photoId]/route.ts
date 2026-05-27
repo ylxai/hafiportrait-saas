@@ -14,7 +14,7 @@ import { serializeGalleryPhoto } from '@/lib/gallery/load-public-gallery';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { tokenPhotoParamsSchema } from '@/lib/api/validation';
+import { tokenPhotoParamsSchema, formatZodError } from '@/lib/api/validation';
 
 /**
  * Returns a single photo row for the owning client in the same wire-shape
@@ -37,7 +37,7 @@ export const GET = withRequestContext(async (
     const rawParams = await params;
     const validated = tokenPhotoParamsSchema.safeParse(rawParams);
     if (!validated.success) {
-      return errorResponse(validated.error.errors[0]?.message ?? 'Invalid parameters', 400);
+      return errorResponse(formatZodError(validated.error), 400);
     }
     const { token, photoId } = validated.data;
 

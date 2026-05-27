@@ -3,7 +3,7 @@ import { successResponse, notFoundResponse, serverErrorResponse, rateLimitRespon
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { kodeBookingParamsSchema } from '@/lib/api/validation';
+import { kodeBookingParamsSchema, formatZodError } from '@/lib/api/validation';
 
 export const GET = withRequestContext(async (
   request: Request,
@@ -13,7 +13,7 @@ export const GET = withRequestContext(async (
     const rawParams = await params;
     const validated = kodeBookingParamsSchema.safeParse(rawParams);
     if (!validated.success) {
-      return errorResponse(validated.error.errors[0]?.message ?? 'Invalid booking code', 400);
+      return errorResponse(formatZodError(validated.error), 400);
     }
     const { kodeBooking } = validated.data;
 

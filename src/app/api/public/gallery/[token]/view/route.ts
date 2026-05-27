@@ -7,7 +7,7 @@ import { logger } from '@/lib/logger';
 import { isPrismaError } from '@/lib/prisma-error';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { tokenParamsSchema } from '@/lib/api/validation';
+import { tokenParamsSchema, formatZodError } from '@/lib/api/validation';
 
 export const POST = withRequestContext(async (
   request: Request,
@@ -20,7 +20,7 @@ export const POST = withRequestContext(async (
     const rawParams = await params;
     const validated = tokenParamsSchema.safeParse(rawParams);
     if (!validated.success) {
-      return errorResponse(validated.error.errors[0]?.message ?? 'Invalid token', 400);
+      return errorResponse(formatZodError(validated.error), 400);
     }
     const { token } = validated.data;
 

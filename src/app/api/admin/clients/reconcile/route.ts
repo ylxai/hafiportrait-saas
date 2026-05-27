@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger';
 import { Prisma } from '@/generated/prisma';
 import { withRequestContext } from '@/lib/with-request-context';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
-import { clientReconcileQuerySchema } from '@/lib/api/validation';
+import { clientReconcileQuerySchema, formatZodError } from '@/lib/api/validation';
 
 /**
  * Counter reconciliation endpoint.
@@ -105,7 +105,7 @@ export const POST = withRequestContext(async (request: Request) => {
     });
     if (!validated.success) {
       return errorResponse(
-        validated.error.errors[0]?.message ?? 'Invalid query parameters',
+        formatZodError(validated.error),
         400,
       );
     }

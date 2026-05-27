@@ -204,8 +204,12 @@ export const kodeBookingParamsSchema = z.object({
   kodeBooking: z.string().trim().min(1, 'Booking code is required'),
 });
 
+// Token schema matches the format used in public/portal gallery routes:
+// accepts CUID or any string between 10-50 chars
+const galleryTokenField = z.string().cuid().or(z.string().min(10).max(50));
+
 export const tokenParamsSchema = z.object({
-  token: z.string().trim().min(1, 'Gallery token is required'),
+  token: galleryTokenField,
 });
 
 export const photoIdParamsSchema = z.object({
@@ -215,10 +219,12 @@ export const photoIdParamsSchema = z.object({
 // Compose from base schemas to avoid duplication
 export const tokenPhotoParamsSchema = tokenParamsSchema.merge(photoIdParamsSchema);
 
-// Query params validation
+// Query params validation — strict() rejects unknown keys so typos like
+// ?clientID= (instead of ?clientId=) return 400 instead of silently
+// falling through to a full-scan reconciliation.
 export const clientReconcileQuerySchema = z.object({
   clientId: z.string().trim().min(1, 'Client ID must be non-empty when provided').optional(),
-});
+}).strict();
 
 export const selectionSubmitSchema = z.object({
   photoIds: z.array(z.string()).min(1, 'Select at least 1 photo'),
