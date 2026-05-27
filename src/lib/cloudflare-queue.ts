@@ -26,11 +26,6 @@ const ACCOUNT_ID = env.CLOUDFLARE_ACCOUNT_ID;
 const API_TOKEN = env.NEXT_SERVER_CF_QUEUE_TOKEN;
 const WORKER_URL = env.CLOUDFLARE_WORKER_URL;
 
-// Retry configuration
-const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY_MS = 1000; // 1 second
-const MAX_RETRY_DELAY_MS = 10000; // 10 seconds
-
 // Bulk-delete fan-out concurrency.
 //
 // `queueStorageDeletionBulk` POSTs once per payload to the deletion
@@ -41,21 +36,6 @@ const MAX_RETRY_DELAY_MS = 10000; // 10 seconds
 // Tuned conservatively to stay under the worker's effective rate
 // budget while still giving us headroom on the function timeout.
 const BULK_DELETE_CONCURRENCY = 10;
-
-/**
- * Sleep utility for retry delays
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-/**
- * Calculate exponential backoff delay
- */
-function getRetryDelay(attempt: number): number {
-  const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt);
-  return Math.min(delay, MAX_RETRY_DELAY_MS);
-}
 
 /**
  * Enhanced error logging with context
