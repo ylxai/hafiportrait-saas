@@ -247,8 +247,8 @@ export const DELETE = withRequestContext(async (request: Request) => {
     }
 
     if (storageUpdates.size > 0) {
-      await prisma.$transaction(
-        Array.from(storageUpdates.entries()).map(([accountId, delta]) =>
+      await prisma.$transaction([
+        ...Array.from(storageUpdates.entries()).map(([accountId, delta]) =>
           prisma.storageAccount.update({
             where: { id: accountId },
             data: {
@@ -256,13 +256,12 @@ export const DELETE = withRequestContext(async (request: Request) => {
               totalPhotos: { decrement: delta.totalPhotos },
             },
           })
-        )
-      );
+        ),
+        prisma.client.delete({ where: { id } }),
+      ]);
+    } else {
+      await prisma.client.delete({ where: { id } });
     }
-
-    // Step 2 — DB-first delete; queue stays untouched if this fails so
-    // the operation is safe to retry.
-    await prisma.client.delete({ where: { id } });
 
     // Step 3 — best-effort enqueue with outbox fallback.
     const outcome = await enqueueDeletionWithOutbox(deletionPayloads);

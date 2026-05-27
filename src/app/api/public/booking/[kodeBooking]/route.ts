@@ -97,7 +97,7 @@ export const GET = withRequestContext(async (
 
     const paymentsWithTransfer = event.payments.map(({ uniqueCode, ...p }: typeof event.payments[number]) => ({
       ...p,
-      transferAmount: p.amount + uniqueCode,
+      transferAmount: (p.amount ?? 0) + (uniqueCode ?? 0),
     }));
 
     return successResponse({
