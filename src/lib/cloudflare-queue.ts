@@ -763,7 +763,9 @@ export async function getOrphanedR2Keys(
     distinct: ['r2Key'],
   });
   const stillSet = new Set(
-    stillReferenced.map((p) => p.r2Key).filter((k): k is string => Boolean(k)),
+    stillReferenced
+      .map((p: (typeof stillReferenced)[number]) => p.r2Key)
+      .filter((k: string | null): k is string => Boolean(k)),
   );
 
   const orphaned = new Set<string>();
@@ -810,8 +812,10 @@ export async function collectDeletionDataForTransaction(
   }
 
   const orphanedR2Keys = await getOrphanedR2Keys(
-    photos.map((p) => p.r2Key).filter((k): k is string => Boolean(k)),
-    photos.map((p) => p.id),
+    photos
+      .map((p: (typeof photos)[number]) => p.r2Key)
+      .filter((k: string | null): k is string => Boolean(k)),
+    photos.map((p: (typeof photos)[number]) => p.id),
   );
 
   // Compute storage delta and photo count
@@ -832,7 +836,7 @@ export async function collectDeletionDataForTransaction(
 
   // Resolve Cloudinary credentials
   const uniqueStorageAccountIds = Array.from(
-    new Set(photos.map((p) => p.storageAccountId).filter(Boolean) as string[]),
+    new Set(photos.map((p: (typeof photos)[number]) => p.storageAccountId).filter(Boolean) as string[]),
   );
   const storageAccounts = uniqueStorageAccountIds.length
     ? await prisma.storageAccount.findMany({
@@ -880,7 +884,7 @@ export async function collectDeletionDataForTransaction(
     : null;
 
   // Build payloads
-  const payloads = photos.map<PhotoDeletionPayload>((photo) => {
+  const payloads = photos.map<PhotoDeletionPayload>((photo: (typeof photos)[number]) => {
     let cloudinaryCredentials = defaultCloudinaryCredentials;
     if (photo.storageAccountId && cloudinaryCredentialsMap.has(photo.storageAccountId)) {
       const accountCreds = cloudinaryCredentialsMap.get(photo.storageAccountId);
@@ -933,8 +937,10 @@ export async function computeUsedStorageDeltaForDeletion(
   if (photos.length === 0) return new Map();
 
   const orphaned = await getOrphanedR2Keys(
-    photos.map((p) => p.r2Key).filter((k): k is string => Boolean(k)),
-    photos.map((p) => p.id),
+    photos
+      .map((p: (typeof photos)[number]) => p.r2Key)
+      .filter((k: string | null): k is string => Boolean(k)),
+    photos.map((p: (typeof photos)[number]) => p.id),
   );
 
   const usedByClient = new Map<string, bigint>();
@@ -998,13 +1004,15 @@ export async function collectPhotoDeletionPayloads(
   // Compute orphan-after-delete keys so we don't enqueue R2 deletes for
   // files that another Photo row still references (cross-gallery dedup).
   const orphanedR2Keys = await getOrphanedR2Keys(
-    photos.map((p) => p.r2Key).filter((k): k is string => Boolean(k)),
-    photos.map((p) => p.id),
+    photos
+      .map((p: (typeof photos)[number]) => p.r2Key)
+      .filter((k: string | null): k is string => Boolean(k)),
+    photos.map((p: (typeof photos)[number]) => p.id),
   );
 
   // Resolve Cloudinary credentials per storage account in one round-trip.
   const uniqueStorageAccountIds = Array.from(
-    new Set(photos.map((p) => p.storageAccountId).filter(Boolean) as string[]),
+    new Set(photos.map((p: (typeof photos)[number]) => p.storageAccountId).filter(Boolean) as string[]),
   );
   const storageAccounts = uniqueStorageAccountIds.length
     ? await prisma.storageAccount.findMany({
@@ -1059,7 +1067,7 @@ export async function collectPhotoDeletionPayloads(
   // `enqueueDeletionWithOutbox` so callers can iterate the full list
   // for `usedStorage` accounting (a row that never hit R2 still ate
   // quota at upload time).
-  return photos.map<PhotoDeletionPayload>((photo) => {
+  return photos.map<PhotoDeletionPayload>((photo: (typeof photos)[number]) => {
     let cloudinaryCredentials = defaultCloudinaryCredentials;
     if (photo.storageAccountId && cloudinaryCredentialsMap.has(photo.storageAccountId)) {
       const accountCreds = cloudinaryCredentialsMap.get(photo.storageAccountId);

@@ -6,7 +6,7 @@
 
 ## TL;DR
 
-- **Stack**: Next.js 15.4.11, TypeScript strict, Tailwind v4, Prisma + TigerDB, Cloudflare R2, Cloudinary, Ably
+- **Stack**: Next.js 15.4.11, TypeScript strict, Tailwind v4, Prisma + Prisma Accelerate (Neon PostgreSQL), Cloudflare R2, Cloudinary, Ably
 - **NOT standard Next.js**: Must await `params` and `searchParams` as Promise
 - **Verify before commit**: `npm run lint && npm run build && npm run test:e2e`
 - **Styling**: Tailwind v4 OKLCH semantic only — NO static colors
@@ -21,7 +21,7 @@ npm run dev          # Dev server (port 3000)
 npm run build       # Production build (lint + typecheck + build)
 npm run lint       # ESLint only
 npm run test:e2e    # Run E2E tests
-npm run db:push    # Push Prisma schema to TigerDB
+npm run db:push    # Push Prisma schema to Neon (requires DIRECT_URL, NOT prisma://)
 npm run db:generate # Generate Prisma client
 ```
 
@@ -70,20 +70,18 @@ import { HTTP_STATUS } from '@/tests/e2e/constants/http-status'
 | `src/lib/upload/` | Presigned URLs |
 | `src/lib/cloudflare-queue.ts` | Cloudflare Queues |
 | `workers/` | Cloudflare Edge Workers |
-| `prisma/schema.prisma` | Database schema (TigerDB) |
+| `prisma/schema.prisma` | Database schema (Neon PostgreSQL via Prisma Accelerate) |
 
-**Database**: TigerDB (PostgreSQL-compatible) via Prisma
+**Database**: Neon PostgreSQL via Prisma Accelerate
 
----
+## Database (Neon + Prisma Accelerate)
 
-## Database (TigerDB)
-
-**Provider**: TigerDB (PostgreSQL-compatible)  
+**Provider**: Neon PostgreSQL via Prisma Accelerate (connection pooling + edge cache)
 **ORM**: Prisma
 
 ### Database Operations
 ```bash
-npm run db:push       # Push schema changes to TigerDB
+npm run db:push       # Push schema changes to Neon (requires DIRECT_URL, NOT prisma://)
 npm run db:generate   # Generate Prisma client
 ```
 

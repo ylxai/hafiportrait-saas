@@ -230,7 +230,7 @@ export async function toggleActivePackagesBulk(
       where: { id: { in: ids } },
       select: { isActive: true },
     });
-    const allActive = current.every((p) => p.isActive);
+    const allActive = current.every((p: { isActive: boolean }) => p.isActive);
     const newIsActive = !allActive;
 
     const result = await prisma.package.updateMany({

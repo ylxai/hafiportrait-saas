@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { Prisma } from '@/generated/prisma';
 import { successResponse, notFoundResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
@@ -143,7 +144,7 @@ export const DELETE = withRequestContext(async (
     const clientId = photo.gallery?.event?.clientId;
     const fileSize = photo.fileSize ?? BigInt(0);
     const decrementBytes = isR2Orphan ? fileSize : BigInt(0);
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.photo.delete({ where: { id: photoId } });
       if (clientId && decrementBytes > BigInt(0)) {
         try {

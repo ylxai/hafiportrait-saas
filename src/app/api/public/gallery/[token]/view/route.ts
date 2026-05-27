@@ -63,7 +63,7 @@ export const POST = withRequestContext(async (
         data: { viewCount: { increment: 1 } },
         select: { viewCount: true },
       })
-      .then((updated) => publishViewCount(galleryId, updated.viewCount))
+      .then((updated: { viewCount: number }) => publishViewCount(galleryId, updated.viewCount))
       .catch((error: unknown) => {
         if (isPrismaError(error, 'P2025')) {
           logger.error('public.gallery.view.record_not_found', { galleryId });

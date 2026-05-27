@@ -325,7 +325,7 @@ export const POST = withRequestContext(async (
           usedStorage: { decrement: fileSize },
           photoCount: { decrement: 1 },
         },
-      }).catch((rollbackErr) => {
+      }).catch((rollbackErr: unknown) => {
         logger.error('gallery.photos.upload.rollback_client_failed', {
           clientId,
           fileSize: fileSize.toString(),

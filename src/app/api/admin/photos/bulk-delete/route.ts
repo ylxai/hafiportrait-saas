@@ -64,7 +64,7 @@ export const POST = withRequestContext(async (request: Request) => {
 
     // Step 2: Atomic DB transaction — delete photos + decrement client counters
     const deletedPhotoIds = payloads.map((p) => p.photoId);
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.photo.deleteMany({ where: { id: { in: deletedPhotoIds } } });
 
       for (const [cId, count] of photoCountByClient) {

@@ -183,7 +183,7 @@ export const POST = withRequestContext(async (
         sumByClient.set(cId, (sumByClient.get(cId) ?? BigInt(0)) + p.fileSize);
       }
     }
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.photo.deleteMany({
         where: {
           id: { in: photos.map((p: typeof photos[number]) => p.id) },
