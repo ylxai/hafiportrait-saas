@@ -22,14 +22,7 @@ import { getRequestId } from '@/lib/request-context';
 import { REQUEST_ID_HEADER } from '@/lib/request-id-constants';
 import { logger } from '@/lib/logger';
 
-const ACCOUNT_ID = env.CLOUDFLARE_ACCOUNT_ID;
-const API_TOKEN = env.NEXT_SERVER_CF_QUEUE_TOKEN;
 const WORKER_URL = env.CLOUDFLARE_WORKER_URL;
-
-// Retry configuration
-const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY_MS = 1000; // 1 second
-const MAX_RETRY_DELAY_MS = 10000; // 10 seconds
 
 // Bulk-delete fan-out concurrency.
 //
@@ -43,21 +36,6 @@ const MAX_RETRY_DELAY_MS = 10000; // 10 seconds
 const BULK_DELETE_CONCURRENCY = 10;
 
 /**
- * Sleep utility for retry delays
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-/**
- * Calculate exponential backoff delay
- */
-function getRetryDelay(attempt: number): number {
-  const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt);
-  return Math.min(delay, MAX_RETRY_DELAY_MS);
-}
-
-/**
  * Enhanced error logging with context
  */
 function logQueueError(context: string, error: unknown, metadata?: Record<string, unknown>): void {
@@ -68,130 +46,6 @@ function logQueueError(context: string, error: unknown, metadata?: Record<string
   });
 }
 
-/**
- * Publish message to Cloudflare Queue via REST API with retry logic.
- *
- * Sprint 3 / Task 3.1: when called from inside a request scope, the
- * current `requestId` is auto-merged into the message body under
- * `requestId` so downstream queue consumers (and any webhook
- * callbacks they emit back) can echo the same correlation ID.
- * Callers can override by setting `requestId` on the message
- * themselves.
- */
-export async function publishToQueue(
-  queueName: string,
-  message: unknown,
-  options?: { delaySeconds?: number }
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  if (!ACCOUNT_ID || !API_TOKEN) {
-    logQueueError('Missing credentials', new Error('CLOUDFLARE_ACCOUNT_ID or NEXT_SERVER_CF_QUEUE_TOKEN not set'));
-    return { success: false, error: 'Missing credentials' };
-  }
-
-  // Auto-attach the current request's correlation ID to the message
-  // body so the consumer (Cloudflare Worker) can include it on any
-  // webhook callback it sends back. We only inject when the message
-  // is a plain object AND doesn't already carry an explicit
-  // `requestId`.
-  const requestId = getRequestId();
-  let enrichedMessage: unknown = message;
-  if (
-    requestId &&
-    typeof message === 'object' &&
-    message !== null &&
-    !Array.isArray(message) &&
-    !('requestId' in (message as Record<string, unknown>))
-  ) {
-    enrichedMessage = { ...(message as Record<string, unknown>), requestId };
-  }
-
-  let lastError: Error | undefined;
-
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const response = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/queues/${queueName}/messages`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${API_TOKEN}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messages: [{
-              body: enrichedMessage,
-              delay_seconds: options?.delaySeconds,
-            }],
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        const errorMsg = data.errors?.[0]?.message || 'Failed to publish';
-        lastError = new Error(errorMsg);
-        
-        // Log error with attempt number
-        logQueueError(`Publish failed (attempt ${attempt + 1}/${MAX_RETRIES + 1})`, lastError, {
-          queueName,
-          statusCode: response.status,
-          responseData: data,
-        });
-
-        // Don't retry on client errors (4xx)
-        if (response.status >= 400 && response.status < 500) {
-          return { success: false, error: errorMsg };
-        }
-
-        // Retry on server errors (5xx) or network issues
-        if (attempt < MAX_RETRIES) {
-          const delay = getRetryDelay(attempt);
-          logger.info('queue.retry', { queueName, attempt: attempt + 1, delayMs: delay });
-          await sleep(delay);
-          continue;
-        }
-
-        return { success: false, error: errorMsg };
-      }
-
-      // Success
-      if (attempt > 0) {
-        logger.info('queue.publish.success_after_retry', { queueName, attempts: attempt + 1 });
-      }
-
-      return {
-        success: true,
-        messageId: data.result?.message_ids?.[0],
-      };
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error('Unknown error');
-      
-      logQueueError(`Network error (attempt ${attempt + 1}/${MAX_RETRIES + 1})`, lastError, {
-        queueName,
-      });
-
-      // Retry on network errors
-      if (attempt < MAX_RETRIES) {
-        const delay = getRetryDelay(attempt);
-        logger.info('queue.retry', { queueName, attempt: attempt + 1, delayMs: delay });
-        await sleep(delay);
-        continue;
-      }
-
-      return {
-        success: false,
-        error: lastError.message,
-      };
-    }
-  }
-
-  // Should never reach here, but TypeScript needs it
-  return {
-    success: false,
-    error: lastError?.message || 'Max retries exceeded',
-  };
-}
 
 /**
  * Queue storage deletion job
@@ -449,7 +303,7 @@ export async function queueThumbnailGeneration(data: {
  * Check if Cloudflare Queue is configured
  */
 export function isQueueConfigured(): boolean {
-  return !!ACCOUNT_ID && !!API_TOKEN;
+  return !!WORKER_URL;
 }
 
 /**
@@ -927,7 +781,7 @@ export async function enqueueDeletionWithOutbox(
       // Review #73-1: redact `apiSecret` before persisting; secrets
       // can be rehydrated from `StorageAccount` on retry.
       payload: { photos: redactPayloadsForOutbox(enqueueable) },
-      errorMessage: 'Cloudflare Queue not configured (CLOUDFLARE_ACCOUNT_ID / NEXT_SERVER_CF_QUEUE_TOKEN missing)',
+      errorMessage: 'Cloudflare Queue not configured (CLOUDFLARE_WORKER_URL missing)',
     }).catch(() => undefined);
     return { queued: 0, outboxed: enqueueable.length, outboxJobId };
   }
