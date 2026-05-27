@@ -106,7 +106,7 @@ export async function findWorkingAccount(
     }
     
     // Skip accounts that have exceeded their storage limit
-    if (account.storageLimitGB) {
+    if (account.storageLimitGB != null) {
       const limitBytes = BigInt(account.storageLimitGB) * BigInt(1024 * 1024 * 1024);
       const usedBytes = account.usedStorage ?? BigInt(0);
       if (usedBytes + incomingSize >= limitBytes) {

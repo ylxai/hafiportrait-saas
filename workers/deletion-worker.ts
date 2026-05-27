@@ -68,7 +68,24 @@ export default {
     // Auth check for all POST endpoints
     if (request.method === 'POST') {
       const authHeader = request.headers.get('Authorization');
-      if (!env.VPS_WEBHOOK_SECRET || authHeader !== `Bearer ${env.VPS_WEBHOOK_SECRET}`) {
+      const expectedHeader = `Bearer ${env.VPS_WEBHOOK_SECRET}`;
+
+      let isAuthorized = false;
+      if (authHeader && env.VPS_WEBHOOK_SECRET) {
+        const encoder = new TextEncoder();
+        const aBytes = encoder.encode(authHeader);
+        const bBytes = encoder.encode(expectedHeader);
+        // Constant-time comparison to prevent timing attacks
+        if (aBytes.byteLength === bBytes.byteLength) {
+          let diff = 0;
+          for (let i = 0; i < aBytes.byteLength; i++) {
+            diff |= aBytes[i] ^ bBytes[i];
+          }
+          isAuthorized = diff === 0;
+        }
+      }
+
+      if (!isAuthorized) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
           status: 401,
           headers: { 'Content-Type': 'application/json' },
