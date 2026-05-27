@@ -41,34 +41,6 @@ export function generateThumbnailUrl(publicId: string, width = 400, height = 400
   });
 }
 
-export function generateMediumUrl(publicId: string, width = 800, credentials?: CloudinaryCredentials): string {
-  const config = credentials ? getCloudinaryClient(credentials) : undefined;
-
-  return cloudinary.url(publicId, {
-    width,
-    crop: 'limit',
-    quality: 'auto',
-    format: 'auto',
-    fetch_format: 'auto',
-    cloud_name: config?.cloud_name,
-    secure: true,
-  });
-}
-
-export function generatePreviewUrl(publicId: string, width = 200, credentials?: CloudinaryCredentials): string {
-  const config = credentials ? getCloudinaryClient(credentials) : undefined;
-
-  return cloudinary.url(publicId, {
-    width,
-    crop: 'scale',
-    quality: 'auto:low',
-    format: 'auto',
-    fetch_format: 'auto',
-    cloud_name: config?.cloud_name,
-    secure: true,
-  });
-}
-
 export async function uploadToCloudinary(
   file: Buffer,
   folder: string = 'photos',
@@ -116,20 +88,3 @@ export async function deleteFromCloudinary(publicId: string, credentials: Cloudi
   await cloudinary.uploader.destroy(publicId);
 }
 
-export function getCloudinaryPublicId(url: string): string | null {
-  try {
-    const urlObj = new URL(url);
-    const pathParts = urlObj.pathname.split('/');
-    const uploadIndex = pathParts.indexOf('upload');
-    if (uploadIndex !== -1) {
-      const publicIdParts = pathParts.slice(uploadIndex + 1);
-      if (publicIdParts[0]?.startsWith('v')) {
-        publicIdParts.shift();
-      }
-      return publicIdParts.join('/');
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
