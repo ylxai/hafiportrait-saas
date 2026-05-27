@@ -99,8 +99,10 @@ export const POST = withRequestContext(async (request: Request) => {
     // through to the scan-all branch — a typo or stripped param could
     // otherwise trigger a full reconciliation unintentionally.
     const url = new URL(request.url);
-    const queryParams = Object.fromEntries(url.searchParams.entries());
-    const validated = clientReconcileQuerySchema.safeParse(queryParams);
+    // Preserve original behavior: use .get() to take first value if duplicates exist
+    const validated = clientReconcileQuerySchema.safeParse({
+      clientId: url.searchParams.get('clientId') ?? undefined,
+    });
     if (!validated.success) {
       return errorResponse(
         validated.error.errors[0]?.message ?? 'Invalid query parameters',

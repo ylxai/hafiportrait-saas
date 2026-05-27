@@ -212,19 +212,12 @@ export const photoIdParamsSchema = z.object({
   photoId: z.string().trim().min(1, 'Photo ID is required'),
 });
 
-export const tokenPhotoParamsSchema = z.object({
-  token: z.string().trim().min(1, 'Gallery token is required'),
-  photoId: z.string().trim().min(1, 'Photo ID is required'),
-});
+// Compose from base schemas to avoid duplication
+export const tokenPhotoParamsSchema = tokenParamsSchema.merge(photoIdParamsSchema);
 
 // Query params validation
 export const clientReconcileQuerySchema = z.object({
   clientId: z.string().trim().min(1, 'Client ID must be non-empty when provided').optional(),
-});
-
-// Gallery view tracking
-export const galleryViewBodySchema = z.object({
-  // Empty body for now - just tracking the view
 });
 
 export const selectionSubmitSchema = z.object({
