@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { BYTES_PER_GB } from '@/lib/upload/constants';
 // Note: logger is NOT imported here because storage/accounts.ts is imported
 // by cloudinary.ts which is used in client components (PhotoImage.tsx).
 // Using logger would pull in node:async_hooks which is unavailable in browser.
@@ -107,7 +108,7 @@ export async function findWorkingAccount(
     
     // Skip accounts that have exceeded their storage limit
     if (account.storageLimitGB != null) {
-      const limitBytes = BigInt(account.storageLimitGB) * BigInt(1024 * 1024 * 1024);
+      const limitBytes = BigInt(account.storageLimitGB) * BigInt(BYTES_PER_GB);
       const usedBytes = account.usedStorage ?? BigInt(0);
       if (usedBytes + incomingSize >= limitBytes) {
         continue; // Account is full, skip it

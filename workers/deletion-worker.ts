@@ -449,9 +449,7 @@ async function callbackThumbnailToVercel(
 
     if (!response.ok) {
       const error = await response.text();
-      console.error(`[Thumbnail] Callback failed (${response.status}): ${error}`);
-      // Don't throw - thumbnail is already uploaded to Cloudinary
-      return;
+      throw new Error(`[Thumbnail] Callback failed (${response.status}): ${error}`);
     }
 
     console.log(`[Thumbnail] ✅ Callback to Vercel successful for ${job.photoId}`);

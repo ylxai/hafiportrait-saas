@@ -38,6 +38,7 @@ const SAFE_ACCOUNT_SELECT = {
   rotationSchedule: true,
   // Metadata
   usedStorage: true,
+  storageLimitGB: true,
   createdAt: true,
   updatedAt: true,
   // secretKey: EXCLUDED (R2 secret)
