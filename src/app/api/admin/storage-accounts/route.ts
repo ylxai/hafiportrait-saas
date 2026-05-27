@@ -146,7 +146,7 @@ export const GET = withRequestContext(async () => {
     });
 
     // Convert BigInt to string for JSON serialization
-    const serializedAccounts = accounts.map((account) => ({
+    const serializedAccounts = accounts.map((account: (typeof accounts)[number]) => ({
       ...account,
       usedStorage: serializeBigInt(account.usedStorage),
     }));

@@ -65,11 +65,13 @@ export const GET = withRequestContext(async (request: Request) => {
     ]);
 
     // Transform to match expected response shape
-    const clientsWithUsage = clients.map(({ usedStorage, photoCount, ...client }) => ({
-      ...client,
-      usedStorageBytes: usedStorage.toString(),
-      photoCount,
-    }));
+    const clientsWithUsage = clients.map(
+      ({ usedStorage, photoCount, ...client }: (typeof clients)[number]) => ({
+        ...client,
+        usedStorageBytes: usedStorage.toString(),
+        photoCount,
+      })
+    );
 
     return successResponse({
       clients: clientsWithUsage,

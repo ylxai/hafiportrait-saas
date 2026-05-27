@@ -4,6 +4,7 @@ import { verifyR2Upload, cleanupUploadSession, deleteFromR2, getR2Credentials } 
 import { NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { prisma } from '@/lib/db';
+import { Prisma } from '@/generated/prisma';
 import { getStorageAccountById } from '@/lib/storage/accounts';
 import { publishPhotoUploaded } from '@/lib/ably';
 import { z } from 'zod';
@@ -261,7 +262,7 @@ export const POST = withRequestContext(async (request: Request) => {
               // NOTE: Do NOT decrement photoCount here - Photo record is still created at line 286
             },
           })
-          .catch((rollbackErr) => {
+          .catch((rollbackErr: unknown) => {
             logger.error('upload.complete.dedup.rollback_used_storage_failed', {
               clientId,
               err: rollbackErr,
@@ -407,7 +408,7 @@ export const POST = withRequestContext(async (request: Request) => {
     let photo: Awaited<ReturnType<typeof prisma.photo.create>>;
 
     try {
-      photo = await prisma.$transaction(async (tx) => {
+      photo = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         const newPhoto = await tx.photo.create({
           data: {
             galleryId: galleryId!,
@@ -449,7 +450,7 @@ export const POST = withRequestContext(async (request: Request) => {
           usedStorage: { decrement: fileSizeBig },
           photoCount: { decrement: 1 },
         },
-      }).catch((e) => logger.error('upload.complete.rollback_used_storage_failed', { clientId, err: e }));
+      }).catch((e: unknown) => logger.error('upload.complete.rollback_used_storage_failed', { clientId, err: e }));
 
       // Always rollback the orphan R2 file
       try {

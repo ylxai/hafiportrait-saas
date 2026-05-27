@@ -205,7 +205,8 @@ export const POST = withRequestContext(async (request: Request) => {
     const updates: Prisma.PrismaPromise<unknown>[] = [];
 
     for (const agg of aggregates) {
-      const storageDrift = agg.computedStorage - agg.storedStorage;
+      const storageDrift: bigint =
+        BigInt(agg.computedStorage) - BigInt(agg.storedStorage);
       const countDrift = agg.computedCount - agg.storedCount;
       // BigInt literal `0n` would require ES2020 target; use BigInt(0)
       // for compatibility with the project's tsconfig target.

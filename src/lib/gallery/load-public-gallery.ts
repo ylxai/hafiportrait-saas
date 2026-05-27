@@ -91,14 +91,16 @@ export async function loadPublicGallery(token: string, cursor?: string | null) {
       })
     : [];
 
-  const selections = selectedPhotoIds.map((s) => s.photoId);
+  const selections = selectedPhotoIds.map((s: { photoId: string }) => s.photoId);
 
   const cloudinaryAccount = await getDefaultAccount('CLOUDINARY');
   // cloudName is String? in Prisma (string | null); coerce null → undefined
   // so serializeGalleryPhoto receives string | undefined as expected.
   const cloudName = cloudinaryAccount?.cloudName ?? undefined;
 
-  const serializedPhotos = photoList.map((photo) => serializeGalleryPhoto(photo, cloudName));
+  const serializedPhotos = photoList.map((photo: NonNullable<PrismaPhotoRow>) =>
+    serializeGalleryPhoto(photo, cloudName),
+  );
 
   const payload = {
     gallery: {
