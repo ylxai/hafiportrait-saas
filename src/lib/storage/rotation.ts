@@ -23,39 +23,6 @@ export async function getAccountsNeedingRotation(): Promise<string[]> {
   return accounts.map((a: typeof accounts[number]) => a.id);
 }
 
-export async function shouldUseSecondaryCredentials(
-  accountId: string
-): Promise<boolean> {
-  const account = await prisma.storageAccount.findUnique({
-    where: { id: accountId },
-    select: {
-      isSecondaryActive: true,
-      secondaryApiKey: true,
-      secondaryApiSecret: true,
-      secondaryAccessKey: true,
-      secondarySecretKey: true,
-      provider: true,
-    },
-  });
-
-  if (!account) return false;
-
-  if (account.provider === 'CLOUDINARY') {
-    return (
-      account.isSecondaryActive &&
-      !!account.secondaryApiKey &&
-      !!account.secondaryApiSecret
-    );
-  }
-
-  // R2
-  return (
-    account.isSecondaryActive &&
-    !!account.secondaryAccessKey &&
-    !!account.secondarySecretKey
-  );
-}
-
 /**
  * Atomically rotate credentials by swapping secondary → primary.
  * Uses a Prisma transaction to ensure both the credential swap and
@@ -216,25 +183,6 @@ function computeNextRotationDate(schedule: string | null): Date | null {
     default:
       return null;
   }
-}
-
-export async function scheduleNextRotation(accountId: string): Promise<void> {
-  const account = await prisma.storageAccount.findUnique({
-    where: { id: accountId },
-    select: { rotationSchedule: true, rotationEnabled: true },
-  });
-
-  if (!account || !account.rotationEnabled || !account.rotationSchedule) {
-    return;
-  }
-
-  const nextDate = computeNextRotationDate(account.rotationSchedule);
-  if (!nextDate) return;
-
-  await prisma.storageAccount.update({
-    where: { id: accountId },
-    data: { rotationNextDate: nextDate },
-  });
 }
 
 export async function enableKeyRotation(
