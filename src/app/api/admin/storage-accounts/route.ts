@@ -69,6 +69,8 @@ const createStorageAccountSchema = z.object({
   rotationEnabled: z.boolean().default(false),
   rotationSchedule: z.string().max(50).optional(),
   secondaryApiKey: z.string().max(100).optional(),
+  // Storage limit
+  storageLimitGB: z.number().int().min(0).nullable().optional(),
 }).superRefine((data, ctx) => {
   if (data.provider === 'R2') {
     const requiredR2: Array<'accountId' | 'accessKey' | 'secretKey' | 'bucketName'> = [
@@ -123,6 +125,8 @@ const updateStorageAccountSchema = z.object({
   rotationEnabled: z.boolean().optional(),
   rotationSchedule: z.string().max(50).optional(),
   secondaryApiKey: z.string().max(100).optional(),
+  // Storage limit
+  storageLimitGB: z.number().int().min(0).nullable().optional(),
 });
 
 const deleteStorageAccountSchema = z.object({

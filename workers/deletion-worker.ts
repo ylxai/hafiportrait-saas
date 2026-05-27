@@ -453,9 +453,6 @@ async function callbackThumbnailToVercel(
     }
 
     console.log(`[Thumbnail] ✅ Callback to Vercel successful for ${job.photoId}`);
-  } catch (error) {
-    console.error(`[Thumbnail] Callback error (non-critical):`, error);
-    // Don't throw - thumbnail is already uploaded, DB update can be done manually
   }
 }
 
