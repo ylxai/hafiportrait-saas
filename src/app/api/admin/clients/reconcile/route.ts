@@ -99,10 +99,12 @@ export const POST = withRequestContext(async (request: Request) => {
     // through to the scan-all branch — a typo or stripped param could
     // otherwise trigger a full reconciliation unintentionally.
     const url = new URL(request.url);
-    // Preserve original behavior: use .get() to take first value if duplicates exist
-    const validated = clientReconcileQuerySchema.safeParse({
-      clientId: url.searchParams.get('clientId') ?? undefined,
-    });
+    // Pass all query params so .strict() can reject unknown keys (e.g. ?clientID= typo).
+    // Object.fromEntries takes the last value for duplicate keys; this is acceptable
+    // for an admin endpoint where duplicate clientId params are not expected.
+    const validated = clientReconcileQuerySchema.safeParse(
+      Object.fromEntries(url.searchParams.entries()),
+    );
     if (!validated.success) {
       return errorResponse(
         formatZodError(validated.error),
