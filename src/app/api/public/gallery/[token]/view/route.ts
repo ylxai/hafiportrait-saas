@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { successResponse, notFoundResponse, rateLimitResponse, getClientIp } from '@/lib/api/response';
+import { successResponse, notFoundResponse, rateLimitResponse, getClientIp, errorResponse } from '@/lib/api/response';
 import { assertGalleryOwnership } from '@/lib/gallery/auth';
 import { publishViewCount } from '@/lib/ably';
 import { withRequestContext } from '@/lib/with-request-context';
@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger';
 import { isPrismaError } from '@/lib/prisma-error';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { tokenParamsSchema } from '@/lib/api/validation';
 
 export const POST = withRequestContext(async (
   request: Request,
@@ -16,7 +17,12 @@ export const POST = withRequestContext(async (
     const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
     if (tooLarge) return tooLarge;
 
-    const { token } = await params;
+    const rawParams = await params;
+    const validated = tokenParamsSchema.safeParse(rawParams);
+    if (!validated.success) {
+      return errorResponse(validated.error.errors[0]?.message ?? 'Invalid token', 400);
+    }
+    const { token } = validated.data;
 
     // Rate limit (IP-based)
     const ip = getClientIp(request);

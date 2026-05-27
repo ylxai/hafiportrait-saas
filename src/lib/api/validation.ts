@@ -199,6 +199,34 @@ export const bookingSchema = z.object({
   ),
 });
 
+// Route params validation
+export const kodeBookingParamsSchema = z.object({
+  kodeBooking: z.string().trim().min(1, 'Booking code is required'),
+});
+
+export const tokenParamsSchema = z.object({
+  token: z.string().trim().min(1, 'Gallery token is required'),
+});
+
+export const photoIdParamsSchema = z.object({
+  photoId: z.string().trim().min(1, 'Photo ID is required'),
+});
+
+export const tokenPhotoParamsSchema = z.object({
+  token: z.string().trim().min(1, 'Gallery token is required'),
+  photoId: z.string().trim().min(1, 'Photo ID is required'),
+});
+
+// Query params validation
+export const clientReconcileQuerySchema = z.object({
+  clientId: z.string().trim().min(1, 'Client ID must be non-empty when provided').optional(),
+});
+
+// Gallery view tracking
+export const galleryViewBodySchema = z.object({
+  // Empty body for now - just tracking the view
+});
+
 export const selectionSubmitSchema = z.object({
   photoIds: z.array(z.string()).min(1, 'Select at least 1 photo'),
 });

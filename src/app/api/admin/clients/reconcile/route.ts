@@ -8,6 +8,7 @@ import { logger } from '@/lib/logger';
 import { Prisma } from '@/generated/prisma';
 import { withRequestContext } from '@/lib/with-request-context';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
+import { clientReconcileQuerySchema } from '@/lib/api/validation';
 
 /**
  * Counter reconciliation endpoint.
@@ -98,14 +99,15 @@ export const POST = withRequestContext(async (request: Request) => {
     // through to the scan-all branch — a typo or stripped param could
     // otherwise trigger a full reconciliation unintentionally.
     const url = new URL(request.url);
-    const clientIdRaw = url.searchParams.get('clientId');
-    const clientId = clientIdRaw?.trim();
-    if (clientIdRaw !== null && (clientId === undefined || clientId === '')) {
+    const queryParams = Object.fromEntries(url.searchParams.entries());
+    const validated = clientReconcileQuerySchema.safeParse(queryParams);
+    if (!validated.success) {
       return errorResponse(
-        'clientId query param must be a non-empty string when provided',
+        validated.error.errors[0]?.message ?? 'Invalid query parameters',
         400,
       );
     }
+    const { clientId } = validated.data;
 
     // Phase 1: compute canonical aggregates per client.
     //
