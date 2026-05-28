@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { successResponse, serverErrorResponse, errorResponse } from '@/lib/api/response';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
+import { buildStorageDecrements, storageDecrementOps } from '@/lib/storage/counter-utils';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
@@ -46,29 +47,10 @@ export const DELETE = withRequestContext(async (request: Request) => {
     // ensures cross-gallery deduplication is honored: photos that share
     // an R2 key with another row outside this delete batch must not
     // decrement disk usage.
-    const storageUpdates = new Map<string, { usedStorage: bigint; totalPhotos: number }>();
-    for (const p of deletionPayloads) {
-      if (!p.storageAccountId) continue;
-      const current = storageUpdates.get(p.storageAccountId) || { usedStorage: BigInt(0), totalPhotos: 0 };
-      const size = p.r2Key && p.fileSize ? BigInt(p.fileSize) : BigInt(0);
-      storageUpdates.set(p.storageAccountId, {
-        usedStorage: current.usedStorage + size,
-        totalPhotos: current.totalPhotos + 1,
-      });
-    }
+    const storageUpdates = buildStorageDecrements(deletionPayloads);
 
     if (storageUpdates.size > 0) {
-      await prisma.$transaction(
-        Array.from(storageUpdates.entries()).map(([accountId, delta]) =>
-          prisma.storageAccount.update({
-            where: { id: accountId },
-            data: {
-              usedStorage: { decrement: delta.usedStorage },
-              totalPhotos: { decrement: delta.totalPhotos },
-            },
-          })
-        )
-      );
+      await prisma.$transaction(storageDecrementOps(storageUpdates));
     }
 
     // Step 2 — DB-first deleteMany; the queue is left alone if this
