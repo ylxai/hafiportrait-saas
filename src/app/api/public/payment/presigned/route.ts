@@ -1,4 +1,3 @@
-import { createHmac, timingSafeEqual } from 'crypto';
 import { formatZodError } from '@/lib/api/validation';
 import { successResponse, errorResponse, serverErrorResponse, getClientIp } from '@/lib/api/response';
 import { generatePresignedUploadUrl } from '@/lib/upload/presigned';
@@ -19,11 +18,8 @@ import { authOptions } from '@/lib/auth/options';
 import { isClientSession } from '@/lib/auth/role-helpers';
 import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { RATE_LIMITS } from '@/lib/rate-limit';
-import { env } from '@/lib/env.server';
+import { verifyUploadToken } from '@/lib/upload-token';
 
-// Zod validation schema for public presigned upload request.
-// `kodeBooking` + `uploadToken` + `uploadTokenExpiry` are optional and only
-// required when the caller is unauthenticated (new booker flow).
 const PublicPresignedRequestSchema = z.object({
   filename: z.string()
     .min(1, 'Filename is required')
@@ -59,45 +55,9 @@ function validateFileType(filename: string): { valid: boolean; error?: string } 
   return { valid: true };
 }
 
-/**
- * Constant-time HMAC verification for the upload token.
- * Token = HMAC-SHA256(tokenKey, `${eventId}:${expiry}`)
- * where tokenKey = HMAC-SHA256(VPS_WEBHOOK_SECRET, 'upload-token-v1')
- *
- * Domain separation via the derived `tokenKey` ensures the upload-token
- * MAC and the VPS webhook MAC live in disjoint key spaces — neither can
- * be cross-used to forge the other even though they share the underlying
- * `VPS_WEBHOOK_SECRET`. Bumping the `'upload-token-v1'` tag invalidates
- * outstanding tokens without rotating the secret. Must stay byte-for-byte
- * identical to the issuer in
- * /api/public/booking/[kodeBooking]/route.ts.
- */
-function verifyUploadToken(
-  eventId: string,
-  uploadToken: string,
-  uploadTokenExpiry: number
-): boolean {
-  const secret = env.VPS_WEBHOOK_SECRET;
-  if (!secret) return false;
-  if (Date.now() > uploadTokenExpiry) return false;
-
-  const tokenKey = createHmac('sha256', secret)
-    .update('upload-token-v1')
-    .digest();
-  const expected = createHmac('sha256', tokenKey)
-    .update(`${eventId}:${uploadTokenExpiry}`)
-    .digest('hex');
-
-  const a = Buffer.from(uploadToken, 'hex');
-  const b = Buffer.from(expected, 'hex');
-  if (a.length !== b.length) return false;
-  try {
-    return timingSafeEqual(a, b);
-  } catch {
-    return false;
-  }
-}
-
+// Zod validation schema for public presigned upload request.
+// `kodeBooking` + `uploadToken` + `uploadTokenExpiry` are optional and only
+// required when the caller is unauthenticated (new booker flow).
 export const POST = withRequestContext(async (request: Request) => {
   try {
     const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
@@ -144,7 +104,8 @@ export const POST = withRequestContext(async (request: Request) => {
         return errorResponse('Unauthorized', 401);
       }
 
-      if (!verifyUploadToken(eventId, uploadToken, uploadTokenExpiry)) {
+      const tokenVerification = verifyUploadToken(uploadToken, eventId, uploadTokenExpiry);
+      if (!tokenVerification.valid) {
         return errorResponse('Invalid or expired upload token', 401);
       }
 
