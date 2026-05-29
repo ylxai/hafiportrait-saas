@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import Link from 'next/link';
+import Image from 'next/image';
 import { toast } from 'sonner';
 import { CheckCircle, XCircle, Clock, ExternalLink, ImageIcon, RefreshCw } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading';
@@ -49,6 +50,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function PaymentRow({ payment, onAction }: { payment: PaymentItem; onAction: (id: string, action: 'approve' | 'reject') => Promise<void> }) {
   const [loading, setLoading] = useState<'approve' | 'reject' | null>(null);
+  const [imgError, setImgError] = useState(false);
 
   const handle = async (action: 'approve' | 'reject') => {
     setLoading(action);
@@ -63,10 +65,17 @@ function PaymentRow({ payment, onAction }: { payment: PaymentItem; onAction: (id
     <div className="flex flex-col sm:flex-row sm:items-start gap-4 p-4 rounded-2xl border border-border bg-background/50 hover:bg-card/50 transition-colors">
       {/* Proof */}
       <div className="flex-shrink-0">
-        {payment.proofUrl ? (
+        {payment.proofUrl && !imgError ? (
           <a href={payment.proofUrl} target="_blank" rel="noopener noreferrer"
             className="block w-16 h-16 rounded-xl overflow-hidden border border-border hover:border-primary transition-colors group relative">
-            <img src={payment.proofUrl} alt="Bukti transfer" className="w-full h-full object-cover" />
+            <Image
+              src={payment.proofUrl}
+              alt="Bukti transfer"
+              fill
+              className="object-cover"
+              onError={() => setImgError(true)}
+              unoptimized
+            />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <ExternalLink className="w-4 h-4 text-white" />
             </div>

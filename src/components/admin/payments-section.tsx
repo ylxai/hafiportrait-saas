@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
+import Image from 'next/image';
 import { toast } from 'sonner';
 import { CheckCircle, XCircle, Clock, ExternalLink, ImageIcon } from 'lucide-react';
 import { usePaymentStatusSubscription } from '@/lib/hooks/useAbly';
@@ -51,6 +52,7 @@ function PaymentStatusBadge({ status }: { status: string }) {
 
 function PaymentRow({ payment, onAction }: { payment: Payment; onAction: (id: string, action: 'approve' | 'reject') => Promise<void> }) {
   const [loading, setLoading] = useState<'approve' | 'reject' | null>(null);
+  const [imgError, setImgError] = useState(false);
 
   const handleAction = async (action: 'approve' | 'reject') => {
     setLoading(action);
@@ -65,10 +67,17 @@ function PaymentRow({ payment, onAction }: { payment: Payment; onAction: (id: st
     <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-2xl border border-border bg-background/50">
       {/* Proof thumbnail */}
       <div className="flex-shrink-0">
-        {payment.proofUrl ? (
+        {payment.proofUrl && !imgError ? (
           <a href={payment.proofUrl} target="_blank" rel="noopener noreferrer"
             className="block w-16 h-16 rounded-xl overflow-hidden border border-border hover:border-primary transition-colors group relative">
-            <img src={payment.proofUrl} alt="Bukti transfer" className="w-full h-full object-cover" />
+            <Image
+              src={payment.proofUrl}
+              alt="Bukti transfer"
+              fill
+              className="object-cover"
+              onError={() => setImgError(true)}
+              unoptimized
+            />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <ExternalLink className="w-4 h-4 text-white" />
             </div>
