@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { CheckCircle, XCircle, Clock, ExternalLink, ImageIcon } from 'lucide-react';
 
-export const PAYMENT_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+export type PaymentStatus = 'pending' | 'approved' | 'rejected';
+
+export const PAYMENT_STATUS_CONFIG: Record<PaymentStatus, { label: string; className: string }> = {
   pending: {
     label: 'Menunggu Konfirmasi',
     className: 'bg-warning/15 text-warning border border-warning/30',
@@ -19,7 +21,7 @@ export const PAYMENT_STATUS_CONFIG: Record<string, { label: string; className: s
   },
 };
 
-export function PaymentStatusBadge({ status }: { status: string }) {
+export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
   const cfg = PAYMENT_STATUS_CONFIG[status] ?? PAYMENT_STATUS_CONFIG.pending;
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.className}`}>
@@ -33,6 +35,10 @@ export function PaymentStatusBadge({ status }: { status: string }) {
 
 export function PaymentProofThumbnail({ proofUrl }: { proofUrl: string | null }) {
   const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [proofUrl]);
 
   if (proofUrl && !imgError) {
     return (
@@ -71,7 +77,7 @@ export function PaymentActionButtons({
   onApprove,
   onReject,
 }: {
-  status: string;
+  status: PaymentStatus;
   proofUrl: string | null;
   loading: 'approve' | 'reject' | null;
   onApprove: () => void;

@@ -8,7 +8,7 @@ import { Clock, ExternalLink, RefreshCw } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { useAdminAlertsSubscription, usePaymentStatusSubscription, type AdminAlert, type PaymentStatusUpdate } from '@/lib/hooks/useAbly';
 import { useSession } from 'next-auth/react';
-import { PaymentStatusBadge, PaymentProofThumbnail, PaymentActionButtons } from '@/components/admin/payment-shared';
+import { PaymentStatusBadge, PaymentProofThumbnail, PaymentActionButtons, type PaymentStatus } from '@/components/admin/payment-shared';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -17,7 +17,7 @@ interface PaymentItem {
   amount: number;
   type: string;
   method: string;
-  status: string;
+  status: PaymentStatus;
   proofUrl: string | null;
   createdAt: string;
   event: {

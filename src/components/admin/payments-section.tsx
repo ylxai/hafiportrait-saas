@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { Clock } from 'lucide-react';
 import { usePaymentStatusSubscription, type PaymentStatusUpdate } from '@/lib/hooks/useAbly';
-import { PaymentStatusBadge, PaymentProofThumbnail, PaymentActionButtons } from '@/components/admin/payment-shared';
+import { PaymentStatusBadge, PaymentProofThumbnail, PaymentActionButtons, type PaymentStatus } from '@/components/admin/payment-shared';
 import { useState } from 'react';
 
 interface Payment {
@@ -12,7 +12,7 @@ interface Payment {
   amount: number;
   type: string;
   method: string;
-  status: string;
+  status: PaymentStatus;
   proofUrl: string | null;
   createdAt: string;
 }
