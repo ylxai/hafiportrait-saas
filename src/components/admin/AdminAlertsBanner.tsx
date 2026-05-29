@@ -71,14 +71,18 @@ function describeFailedJob(alert: Extract<AdminAlert, { type: 'failed_job' }>): 
 
 function isPersistentAlert(alert: AdminAlert): alert is PersistentAlert {
   if (alert.type === 'storage_quota') return alert.alertType === 'exceeded';
-  return alert.alertType === 'failed';
+  if (alert.type === 'failed_job') return alert.alertType === 'failed';
+  return false;
 }
 
 function alertKey(alert: AdminAlert): string {
   if (alert.type === 'storage_quota') {
     return `q:${alert.clientId}:${alert.galleryId}:${alert.alertType}`;
   }
-  return `j:${alert.jobId}:${alert.alertType}`;
+  if (alert.type === 'failed_job') {
+    return `j:${alert.jobId}:${alert.alertType}`;
+  }
+  return `p:${alert.paymentId}`;
 }
 
 /**
@@ -110,7 +114,7 @@ export default function AdminAlertsBanner() {
       } else {
         toast.error(message);
       }
-    } else {
+    } else if (alert.type === 'failed_job') {
       const { variant, message } = describeFailedJob(alert);
       if (variant === 'success') {
         toast.success(message);
@@ -119,6 +123,11 @@ export default function AdminAlertsBanner() {
       } else {
         toast.error(message);
       }
+    } else {
+      // payment_proof — toast only, no persistent banner
+      toast.info(`Bukti transfer baru dari ${alert.clientName}`, {
+        description: `Rp ${alert.amount.toLocaleString('id-ID')} · ${alert.kodeBooking}`,
+      });
     }
 
     if (!isPersistentAlert(alert)) return;
