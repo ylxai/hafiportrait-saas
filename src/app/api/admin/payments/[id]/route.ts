@@ -62,7 +62,7 @@ export const PATCH = withRequestContext(async (
         where: { eventId: payment.eventId, status: 'approved', id: { not: id } },
         select: { amount: true },
       });
-      const approvedTotal = approvedPayments.reduce((sum: number, p) => sum + p.amount, 0);
+      const approvedTotal = approvedPayments.reduce((sum: number, p: { amount: number }) => sum + p.amount, 0);
       const total = payment.event.totalPrice ?? 0;
       if (approvedTotal <= 0) {
         newEventPaymentStatus = 'unpaid';
