@@ -4,6 +4,7 @@ import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { kodeBookingParamsSchema, formatZodError } from '@/lib/api/validation';
+import { deriveUploadToken, UPLOAD_TOKEN_TTL_MS } from '@/lib/upload-token';
 
 export const GET = withRequestContext(async (
   request: Request,
@@ -50,9 +51,10 @@ export const GET = withRequestContext(async (
             method: true,
             status: true,
             type: true,
-            // BUG FIX: uniqueCode must NOT be exposed — it is used to verify
-            // real transfers and leaking it enables payment fraud.
-            // proofUrl also excluded — internal admin field.
+            // uniqueCode selected for computing transferAmount, but stripped
+            // before returning to the client (see paymentsWithTransfer below).
+            uniqueCode: true,
+            proofUrl: true,
             createdAt: true,
             updatedAt: true,
           },
@@ -63,8 +65,30 @@ export const GET = withRequestContext(async (
     if (!event) {
       return notFoundResponse('Booking not found');
     }
-    
-    return successResponse(event);
+
+    // Issue a short-lived HMAC upload token so new bookers (no session yet)
+    // can request a presigned URL for their payment proof.
+    // Derivation is handled by the shared helper in @/lib/upload-token.
+    let uploadToken: string | null = null;
+    let uploadTokenExpiry: number | null = null;
+    uploadTokenExpiry = Date.now() + UPLOAD_TOKEN_TTL_MS;
+    uploadToken = deriveUploadToken(event.id, uploadTokenExpiry);
+    if (!uploadToken) {
+      logger.warn('public.booking.upload_token_skipped_no_secret', { kodeBooking });
+      uploadTokenExpiry = null;
+    }
+
+    const paymentsWithTransfer = event.payments.map(({ uniqueCode, proofUrl: _proofUrl, ...p }: typeof event.payments[number]) => ({
+      ...p,
+      transferAmount: (p.amount ?? 0) + (uniqueCode ?? 0),
+    }));
+
+    return successResponse({
+      ...event,
+      payments: paymentsWithTransfer,
+      uploadToken,
+      uploadTokenExpiry,
+    });
   } catch (error) {
     logger.error('public.booking.fetch_failed', { err: error });
     return serverErrorResponse('Failed to fetch booking data');

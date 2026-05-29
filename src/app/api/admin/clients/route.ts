@@ -5,6 +5,7 @@ import { successResponse, serverErrorResponse, errorResponse, notFoundResponse }
 import { clientSchema, clientUpdateSchema, idSchema, validateRequest, formatZodError } from '@/lib/api/validation';
 import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
+import { buildStorageDecrements, storageDecrementOps } from '@/lib/storage/counter-utils';
 import { logger } from '@/lib/logger';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
 import { RATE_LIMITS } from '@/lib/rate-limit';
@@ -230,9 +231,21 @@ export const DELETE = withRequestContext(async (request: Request) => {
       gallery: { event: { clientId: id } },
     });
 
-    // Step 2 — DB-first delete; queue stays untouched if this fails so
-    // the operation is safe to retry.
-    await prisma.client.delete({ where: { id } });
+    // Step 1b — Decrement StorageAccount counters using deletionPayloads.
+    // Using payloads (already deduped via r2Key=null for shared files)
+    // ensures cross-gallery deduplication is honored: photos that share
+    // an R2 key with another row outside this delete batch must not
+    // decrement disk usage.
+    const storageUpdates = buildStorageDecrements(deletionPayloads);
+
+    if (storageUpdates.size > 0) {
+      await prisma.$transaction([
+        ...storageDecrementOps(storageUpdates),
+        prisma.client.delete({ where: { id } }),
+      ]);
+    } else {
+      await prisma.client.delete({ where: { id } });
+    }
 
     // Step 3 — best-effort enqueue with outbox fallback.
     const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
