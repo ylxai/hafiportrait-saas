@@ -81,6 +81,7 @@ export const POST = withRequestContext(async (request: Request) => {
         payments: {
           where: { status: 'pending' },
           select: { id: true },
+          take: 1,
         },
       },
     });
@@ -98,6 +99,11 @@ export const POST = withRequestContext(async (request: Request) => {
       if (event.kodeBooking !== kodeBooking) {
         return errorResponse('Invalid or expired upload token', 401);
       }
+    }
+
+    // Fail-fast: check pre-fetched pending payments before hitting transaction
+    if (event.payments.length > 0) {
+      return errorResponse('A pending payment already exists', 400);
     }
 
     // Check not already fully paid
@@ -138,6 +144,12 @@ export const POST = withRequestContext(async (request: Request) => {
     let payment;
     try {
       payment = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        // Lock the parent event row to prevent concurrent payment creation race conditions
+        await tx.event.update({
+          where: { id: eventId },
+          data: { updatedAt: new Date() },
+        });
+
         const existing = await tx.payment.findFirst({
           where: { eventId, status: 'pending' },
         });
