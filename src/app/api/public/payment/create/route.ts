@@ -105,9 +105,17 @@ export const POST = withRequestContext(async (request: Request) => {
       return errorResponse('Payment already settled', 400);
     }
 
-    // Prevent duplicate DP when partial payment already made
-    if (type === 'dp' && event.paymentStatus === 'partial') {
-      return errorResponse('DP already paid. Please pay the remaining balance.', 400);
+    // Enforce valid state transitions server-side
+    if (type === 'dp') {
+      // DP only allowed when unpaid and no prior payments
+      if (event.paymentStatus !== 'unpaid' || event.paidAmount > 0) {
+        return errorResponse('DP payment is only allowed for new unpaid bookings', 400);
+      }
+    } else {
+      // Full/pelunasan only allowed when unpaid or partial
+      if (event.paymentStatus !== 'unpaid' && event.paymentStatus !== 'partial') {
+        return errorResponse('Full payment is not allowed in current payment status', 400);
+      }
     }
 
     // Check no existing pending payment (prevent duplicates) - atomic via transaction
