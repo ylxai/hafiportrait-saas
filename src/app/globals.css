@@ -212,6 +212,44 @@
   border-color: rgba(245, 158, 11, 0.3);
 }
 
+.glass-btn {
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: var(--foreground);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.glass-btn:hover {
+  background: var(--glass-border);
+  border-color: var(--primary);
+}
+
+.glass-btn-primary {
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: var(--primary-foreground);
+  font-weight: 500;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+.glass-btn-primary:hover {
+  opacity: 0.9;
+}
+
 /* ===== CUSTOM COMPONENTS ===== */
 
 /* Touch target minimum */
