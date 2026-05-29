@@ -325,7 +325,8 @@ export function usePaymentStatusSubscription(
     const scope = 'admin';
     reserveScopedClient(scope);
     const client = getScopedClient(scope);
-    const channel = client.channels.get('photostudio:payments');
+    const prefix = process.env.NEXT_PUBLIC_ABLY_CHANNEL_PREFIX ?? 'photostudio';
+    const channel = client.channels.get(`${prefix}:payments`);
     const handle = (msg: Ably.Message) => callbackRef.current(msg.data as PaymentStatusUpdate);
     channel.subscribe('payment-status-update', handle);
     return () => {

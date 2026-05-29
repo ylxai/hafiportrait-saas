@@ -12,7 +12,6 @@ import { publishPaymentStatusUpdate } from '@/lib/ably';
 
 const patchSchema = z.object({
   action: z.enum(['approve', 'reject']),
-  note: z.string().max(500).optional(),
 });
 
 export const PATCH = withRequestContext(async (
