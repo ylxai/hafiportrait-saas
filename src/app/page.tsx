@@ -18,10 +18,16 @@ export default function Home() {
           </Link>
           
           <div className="flex items-center gap-3">
-            <Link href="/booking" className="inline-flex items-center px-4 py-2 min-h-[44px] text-sm rounded-xl border border-border/50 bg-white/5 backdrop-blur-sm text-foreground hover:bg-white/10 hover:border-primary/50 transition-colors">
+            <Link
+              href="/booking"
+              style={{ display: 'inline-flex', alignItems: 'center', minHeight: '44px', padding: '0.5rem 1rem', fontSize: '0.875rem', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: 'var(--foreground)', textDecoration: 'none' }}
+            >
               Booking
             </Link>
-            <Link href="/login" className="inline-flex items-center px-4 py-3 min-h-[44px] text-sm rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-colors">
+            <Link
+              href="/login"
+              style={{ display: 'inline-flex', alignItems: 'center', minHeight: '44px', padding: '0.5rem 1rem', fontSize: '0.875rem', borderRadius: '0.75rem', background: 'var(--primary)', color: 'var(--primary-foreground)', fontWeight: 500, textDecoration: 'none' }}
+            >
               Masuk
             </Link>
           </div>
