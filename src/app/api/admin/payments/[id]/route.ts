@@ -17,13 +17,13 @@ const patchSchema = z.object({
 
 export const PATCH = withRequestContext(async (
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const { id } = params;
+    const { id } = await params;
     if (!id) return errorResponse('Payment ID is required', 400);
 
     const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
