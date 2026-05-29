@@ -29,6 +29,7 @@ import { hash } from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { clientSchema, clientUpdateSchema } from '@/lib/api/validation';
 import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
+import { buildStorageDecrements, storageDecrementOps } from '@/lib/storage/counter-utils';
 import { logger } from '@/lib/logger';
 // Review #74-1: shared auth gate (admin-only, role-checked) lives in
 // `src/lib/actions/auth.ts` so every Server Action gets the same
@@ -263,7 +264,16 @@ export async function deleteClient(
       gallery: { event: { clientId: id } },
     });
 
-    await prisma.client.delete({ where: { id } });
+    // Decrement StorageAccount counters + delete client atomically.
+    const storageUpdates = buildStorageDecrements(deletionPayloads);
+    if (storageUpdates.size > 0) {
+      await prisma.$transaction([
+        ...storageDecrementOps(storageUpdates),
+        prisma.client.delete({ where: { id } }),
+      ]);
+    } else {
+      await prisma.client.delete({ where: { id } });
+    }
 
     const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
     if (outcome.outboxed > 0) {
@@ -307,7 +317,23 @@ export async function deleteClientsBulk(
       gallery: { event: { clientId: { in: ids } } },
     });
 
-    const result = await prisma.client.deleteMany({ where: { id: { in: ids } } });
+    // Decrement StorageAccount counters + deleteMany atomically via shared helper.
+    const storageUpdates = buildStorageDecrements(deletionPayloads);
+    let deletedCount: number;
+    if (storageUpdates.size > 0) {
+      const results = await prisma.$transaction([
+        ...storageDecrementOps(storageUpdates),
+        prisma.client.deleteMany({ where: { id: { in: ids } } }),
+      ]);
+      // Last element is the deleteMany result
+      const deleteResult = results[results.length - 1] as { count: number };
+      deletedCount = deleteResult.count;
+    } else {
+      const result = await prisma.client.deleteMany({ where: { id: { in: ids } } });
+      deletedCount = result.count;
+    }
+
+    const result = { count: deletedCount };
 
     const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
     if (outcome.outboxed > 0) {
