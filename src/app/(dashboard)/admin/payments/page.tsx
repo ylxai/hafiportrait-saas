@@ -1,15 +1,14 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import Link from 'next/link';
-import Image from 'next/image';
 import { toast } from 'sonner';
-import { CheckCircle, XCircle, Clock, ExternalLink, ImageIcon, RefreshCw } from 'lucide-react';
+import { Clock, ExternalLink, RefreshCw } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading';
-import { useAdminAlertsSubscription, type AdminAlert } from '@/lib/hooks/useAbly';
+import { useAdminAlertsSubscription, usePaymentStatusSubscription, type AdminAlert, type PaymentStatusUpdate } from '@/lib/hooks/useAbly';
 import { useSession } from 'next-auth/react';
+import { PaymentStatusBadge, PaymentProofThumbnail, PaymentActionButtons, type PaymentStatus } from '@/components/admin/payment-shared';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -18,7 +17,7 @@ interface PaymentItem {
   amount: number;
   type: string;
   method: string;
-  status: string;
+  status: PaymentStatus;
   proofUrl: string | null;
   createdAt: string;
   event: {
@@ -30,27 +29,8 @@ interface PaymentItem {
   };
 }
 
-const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  pending: { label: 'Menunggu', className: 'bg-warning/15 text-warning border border-warning/30' },
-  approved: { label: 'Disetujui', className: 'bg-success/15 text-success border border-success/30' },
-  rejected: { label: 'Ditolak', className: 'bg-destructive/15 text-destructive border border-destructive/30' },
-};
-
-function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending;
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.className}`}>
-      {status === 'pending' && <Clock className="w-3 h-3" />}
-      {status === 'approved' && <CheckCircle className="w-3 h-3" />}
-      {status === 'rejected' && <XCircle className="w-3 h-3" />}
-      {cfg.label}
-    </span>
-  );
-}
-
 function PaymentRow({ payment, onAction }: { payment: PaymentItem; onAction: (id: string, action: 'approve' | 'reject') => Promise<void> }) {
   const [loading, setLoading] = useState<'approve' | 'reject' | null>(null);
-  const [imgError, setImgError] = useState(false);
 
   const handle = async (action: 'approve' | 'reject') => {
     setLoading(action);
@@ -63,65 +43,35 @@ function PaymentRow({ payment, onAction }: { payment: PaymentItem; onAction: (id
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-start gap-4 p-4 rounded-2xl border border-border bg-background/50 hover:bg-card/50 transition-colors">
-      {/* Proof */}
       <div className="flex-shrink-0">
-        {payment.proofUrl && !imgError ? (
-          <a href={payment.proofUrl} target="_blank" rel="noopener noreferrer"
-            className="block w-16 h-16 rounded-xl overflow-hidden border border-border hover:border-primary transition-colors group relative">
-            <Image
-              src={payment.proofUrl}
-              alt="Bukti transfer"
-              fill
-              className="object-cover"
-              onError={() => setImgError(true)}
-              unoptimized
-            />
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <ExternalLink className="w-4 h-4 text-white" />
-            </div>
-          </a>
-        ) : (
-          <div className="w-16 h-16 rounded-xl border border-border bg-muted flex items-center justify-center">
-            <ImageIcon className="w-6 h-6 text-muted-foreground" />
-          </div>
-        )}
+        <PaymentProofThumbnail proofUrl={payment.proofUrl} />
       </div>
-
-      {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2 mb-1">
           <Link href={`/admin/events/${payment.event.id}`}
             className="font-medium text-foreground hover:text-primary transition-colors">
             {payment.event.namaProject}
           </Link>
-          <StatusBadge status={payment.status} />
+          <PaymentStatusBadge status={payment.status} />
         </div>
         <p className="text-sm text-muted-foreground">{payment.event.client.nama} · {payment.event.kodeBooking}</p>
         <p className="text-sm font-medium text-foreground mt-0.5">
           Rp {payment.amount.toLocaleString('id-ID')}
           <span className="text-muted-foreground font-normal"> · {payment.type === 'dp' ? 'Down Payment' : 'Pelunasan'} · {payment.method}</span>
         </p>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <p className="text-xs text-muted-foreground mt-0.5" suppressHydrationWarning>
           {new Date(payment.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
         </p>
       </div>
-
-      {/* Actions */}
       <div className="flex gap-2 flex-shrink-0">
-        {payment.status === 'pending' && payment.proofUrl ? (
-          <>
-            <button onClick={() => handle('approve')} disabled={loading !== null}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-success/15 text-success border border-success/30 hover:bg-success/25 transition-colors text-sm font-medium disabled:opacity-50">
-              <CheckCircle className="w-3.5 h-3.5" />
-              {loading === 'approve' ? 'Memproses...' : 'Setujui'}
-            </button>
-            <button onClick={() => handle('reject')} disabled={loading !== null}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-destructive/15 text-destructive border border-destructive/30 hover:bg-destructive/25 transition-colors text-sm font-medium disabled:opacity-50">
-              <XCircle className="w-3.5 h-3.5" />
-              {loading === 'reject' ? 'Memproses...' : 'Tolak'}
-            </button>
-          </>
-        ) : (
+        <PaymentActionButtons
+          status={payment.status}
+          proofUrl={payment.proofUrl}
+          loading={loading}
+          onApprove={() => handle('approve')}
+          onReject={() => handle('reject')}
+        />
+        {(payment.status !== 'pending' || !payment.proofUrl) && (
           <Link href={`/admin/events/${payment.event.id}`}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:border-primary transition-colors text-sm">
             <ExternalLink className="w-3.5 h-3.5" />
@@ -135,7 +85,6 @@ function PaymentRow({ payment, onAction }: { payment: PaymentItem; onAction: (id
 
 export default function AdminPaymentsPage() {
   const { data: session } = useSession();
-  const router = useRouter();
   const isAdmin = session?.user?.role === 'admin';
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
 
@@ -167,16 +116,17 @@ export default function AdminPaymentsPage() {
     }
   }, [mutate]);
 
-  // Real-time: new proof uploaded → refresh if on pending tab
+  // Real-time: new proof uploaded → refresh only (toast handled by AdminAlertsBanner)
   useAdminAlertsSubscription(isAdmin, useCallback((alert: AdminAlert) => {
     if (alert.type === 'payment_proof') {
       if (filter === 'pending' || filter === 'all') mutate();
-      toast.info(`Bukti transfer baru dari ${alert.clientName}`, {
-        description: `Rp ${alert.amount.toLocaleString('id-ID')} · ${alert.kodeBooking}`,
-        action: { label: 'Lihat', onClick: () => router.push(`/admin/events/${alert.eventId}`) },
-      });
     }
-  }, [filter, mutate, router]));
+  }, [filter, mutate]));
+
+  // Real-time: payment approved/rejected in another tab → refresh
+  usePaymentStatusSubscription(useCallback((_update: PaymentStatusUpdate) => {
+    mutate();
+  }, [mutate]));
 
   const TABS: { key: typeof filter; label: string }[] = [
     { key: 'pending', label: 'Menunggu' },
