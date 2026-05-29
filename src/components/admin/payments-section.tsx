@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import { CheckCircle, XCircle, Clock, ExternalLink, ImageIcon } from 'lucide-react';
 import { usePaymentStatusSubscription } from '@/lib/hooks/useAbly';
@@ -20,7 +21,7 @@ interface PaymentsSectionProps {
   onMutate: () => void;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
+const STATUS_CONFIG: Record<string, { label: string; className: string; icon: ReactNode }> = {
   pending: {
     label: 'Menunggu Konfirmasi',
     className: 'bg-warning/15 text-warning border border-warning/30',
@@ -53,8 +54,11 @@ function PaymentRow({ payment, onAction }: { payment: Payment; onAction: (id: st
 
   const handleAction = async (action: 'approve' | 'reject') => {
     setLoading(action);
-    await onAction(payment.id, action);
-    setLoading(null);
+    try {
+      await onAction(payment.id, action);
+    } finally {
+      setLoading(null);
+    }
   };
 
   return (

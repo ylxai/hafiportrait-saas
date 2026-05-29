@@ -88,7 +88,7 @@ export const POST = withRequestContext(async (request: Request) => {
         paymentId: validated.paymentId,
         eventId: validated.eventId,
         kodeBooking: payment.event.kodeBooking ?? '',
-        clientName: payment.event.clientName ?? '',
+        clientName: payment.event.client?.nama ?? '',
         amount: payment.amount,
       });
     } catch {

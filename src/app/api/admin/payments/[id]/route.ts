@@ -17,13 +17,13 @@ const patchSchema = z.object({
 
 export const PATCH = withRequestContext(async (
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
 
-    const { id } = await params;
+    const { id } = params;
     if (!id) return errorResponse('Payment ID is required', 400);
 
     const tooLarge = enforceBodySizeLimit(request, BODY_LIMITS.JSON_SMALL);
@@ -57,11 +57,20 @@ export const PATCH = withRequestContext(async (
       const total = payment.event.totalPrice ?? 0;
       newEventPaymentStatus = newPaid >= total ? 'paid' : 'partial';
     } else {
-      // On reject: revert event status back to unpaid if no other approved payments
-      const otherApproved = await prisma.payment.count({
+      // On reject: recompute event status from remaining approved payments
+      const approvedPayments = await prisma.payment.findMany({
         where: { eventId: payment.eventId, status: 'approved', id: { not: id } },
+        select: { amount: true },
       });
-      if (otherApproved === 0) newEventPaymentStatus = 'unpaid';
+      const approvedTotal = approvedPayments.reduce((sum, p) => sum + p.amount, 0);
+      const total = payment.event.totalPrice ?? 0;
+      if (approvedTotal <= 0) {
+        newEventPaymentStatus = 'unpaid';
+      } else if (approvedTotal >= total) {
+        newEventPaymentStatus = 'paid';
+      } else {
+        newEventPaymentStatus = 'partial';
+      }
     }
 
     const [updatedPayment] = await prisma.$transaction([

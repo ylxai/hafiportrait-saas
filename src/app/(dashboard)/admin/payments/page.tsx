@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -51,8 +52,11 @@ function PaymentRow({ payment, onAction }: { payment: PaymentItem; onAction: (id
 
   const handle = async (action: 'approve' | 'reject') => {
     setLoading(action);
-    await onAction(payment.id, action);
-    setLoading(null);
+    try {
+      await onAction(payment.id, action);
+    } finally {
+      setLoading(null);
+    }
   };
 
   return (
@@ -122,6 +126,7 @@ function PaymentRow({ payment, onAction }: { payment: PaymentItem; onAction: (id
 
 export default function AdminPaymentsPage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const isAdmin = session?.user?.role === 'admin';
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
 
@@ -159,7 +164,7 @@ export default function AdminPaymentsPage() {
       if (filter === 'pending' || filter === 'all') mutate();
       toast.info(`Bukti transfer baru dari ${alert.clientName}`, {
         description: `Rp ${alert.amount.toLocaleString('id-ID')} · ${alert.kodeBooking}`,
-        action: { label: 'Lihat', onClick: () => window.location.href = `/admin/events/${alert.eventId}` },
+        action: { label: 'Lihat', onClick: () => router.push(`/admin/events/${alert.eventId}`) },
       });
     }
   }, [filter, mutate]));
