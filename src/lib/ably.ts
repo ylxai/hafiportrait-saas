@@ -111,6 +111,42 @@ export async function publishStorageQuotaAlert(data: {
   }
 }
 
+export async function publishPaymentStatusUpdate(data: {
+  paymentId: string;
+  eventId: string;
+  action: 'approve' | 'reject';
+  amount: number;
+}) {
+  try {
+    const client = getAblyRestClient();
+    await client.channels.get(CHANNELS.PAYMENTS).publish('payment-status-update', {
+      ...data,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    logger.error('ably.payment_status_update.publish_failed', { paymentId: data.paymentId, err: error });
+  }
+}
+
+export async function publishPaymentProofUploaded(data: {
+  paymentId: string;
+  eventId: string;
+  kodeBooking: string;
+  clientName: string;
+  amount: number;
+}) {
+  try {
+    const client = getAblyRestClient();
+    await client.channels.get(CHANNELS.ADMIN_ALERTS).publish('payment-proof-uploaded', {
+      type: 'payment_proof',
+      ...data,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    logger.error('ably.payment_proof_uploaded.publish_failed', { paymentId: data.paymentId, err: error });
+  }
+}
+
 export type FailedJobAlertType = 'failed' | 'retry' | 'resolved';
 
 /**

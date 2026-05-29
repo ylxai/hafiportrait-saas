@@ -118,7 +118,24 @@ export type AdminAlert =
       attemptCount?: number;
       resolvedBy?: string;
       timestamp: string;
+    }
+  | {
+      type: 'payment_proof';
+      paymentId: string;
+      eventId: string;
+      kodeBooking: string;
+      clientName: string;
+      amount: number;
+      timestamp: string;
     };
+
+export interface PaymentStatusUpdate {
+  paymentId: string;
+  eventId: string;
+  action: 'approve' | 'reject';
+  amount: number;
+  timestamp: string;
+}
 
 export function useSelectionSubscription(galleryId: string, onUpdate: (update: SelectionUpdate) => void) {
   const [isConnected, setIsConnected] = useState(false);
@@ -292,6 +309,30 @@ export function useAdminAlertsSubscription(
   }, [enabled]);
 
   return isConnected;
+}
+
+/**
+ * Subscribes the admin dashboard to payment status updates (approve/reject).
+ * Fires whenever an admin acts on a payment so other open tabs refresh.
+ */
+export function usePaymentStatusSubscription(
+  onUpdate: (update: PaymentStatusUpdate) => void,
+) {
+  const callbackRef = useRef(onUpdate);
+  useEffect(() => { callbackRef.current = onUpdate; }, [onUpdate]);
+
+  useEffect(() => {
+    const scope = 'admin';
+    reserveScopedClient(scope);
+    const client = getScopedClient(scope);
+    const channel = client.channels.get('photostudio:payments');
+    const handle = (msg: Ably.Message) => callbackRef.current(msg.data as PaymentStatusUpdate);
+    channel.subscribe('payment-status-update', handle);
+    return () => {
+      channel.unsubscribe('payment-status-update', handle);
+      releaseScopedClient(scope);
+    };
+  }, []);
 }
 
 /**

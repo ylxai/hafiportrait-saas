@@ -46,7 +46,7 @@ export const POST = withRequestContext(async (request: Request) => {
     // 2. Find payment and event
     const payment = await prisma.payment.findUnique({
       where: { id: validated.paymentId },
-      include: { event: true },
+      include: { event: { include: { client: { select: { nama: true } } } } },
     });
 
     if (!payment) {
@@ -80,6 +80,20 @@ export const POST = withRequestContext(async (request: Request) => {
 
     // 4. Cleanup session
     await cleanupUploadSession(validated.uploadId);
+
+    // 5. Notify admin via Ably (best-effort)
+    try {
+      const { publishPaymentProofUploaded } = await import('@/lib/ably');
+      await publishPaymentProofUploaded({
+        paymentId: validated.paymentId,
+        eventId: validated.eventId,
+        kodeBooking: payment.event.kodeBooking ?? '',
+        clientName: payment.event.client?.nama ?? '',
+        amount: payment.amount,
+      });
+    } catch {
+      // non-critical, don't fail the request
+    }
 
     return successResponse({ message: 'Transfer proof uploaded successfully' });
   } catch (error) {

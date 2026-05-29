@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading';
+import { PaymentsSection } from '@/components/admin/payments-section';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -186,6 +187,12 @@ export default function EventDetailPage() {
             <p className="text-muted-foreground text-sm">Rp {event.package.price?.toLocaleString()}</p>
           </div>
         )}
+
+        {/* Payments */}
+        <PaymentsSection
+          payments={event.payments ?? []}
+          onMutate={mutate}
+        />
       </div>
     </div>
   );
