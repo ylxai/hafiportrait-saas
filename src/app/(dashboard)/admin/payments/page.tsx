@@ -167,7 +167,7 @@ export default function AdminPaymentsPage() {
         action: { label: 'Lihat', onClick: () => router.push(`/admin/events/${alert.eventId}`) },
       });
     }
-  }, [filter, mutate]));
+  }, [filter, mutate, router]));
 
   const TABS: { key: typeof filter; label: string }[] = [
     { key: 'pending', label: 'Menunggu' },

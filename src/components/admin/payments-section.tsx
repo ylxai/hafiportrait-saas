@@ -143,7 +143,7 @@ export function PaymentsSection({ payments, onMutate }: PaymentsSectionProps) {
   }, [onMutate]);
 
   // Real-time: refresh when any payment status changes
-  usePaymentStatusSubscription(useCallback(() => { onMutate(); }, [onMutate]));
+  usePaymentStatusSubscription(useCallback((_update) => { onMutate(); }, [onMutate]));
 
   const pending = payments.filter(p => p.status === 'pending' && p.proofUrl);
   const others = payments.filter(p => !(p.status === 'pending' && p.proofUrl));
