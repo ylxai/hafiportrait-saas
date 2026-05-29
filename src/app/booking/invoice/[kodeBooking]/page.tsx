@@ -163,9 +163,9 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
           } : {}),
         }),
       });
-      const data = await res.json();
+      const result = await res.json();
       if (!res.ok) {
-        toast.error(data.error || 'Gagal membuat tagihan');
+        toast.error(result.error || 'Gagal membuat tagihan');
         return;
       }
       await mutate();
@@ -334,7 +334,7 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
             )}
 
             {/* Pelunasan - show when DP already paid */}
-            {!pendingPayment && event.paymentStatus === 'dp_paid' && (
+            {!pendingPayment && event.paymentStatus === 'partial' && (
               <Card className="border-2 border-primary/20 bg-primary/5 rounded-xl p-6 space-y-4">
                 <h3 className="font-bold text-primary">Bayar Pelunasan</h3>
                 <p className="text-sm text-muted-foreground">DP sudah diterima. Silakan lanjutkan pembayaran pelunasan.</p>

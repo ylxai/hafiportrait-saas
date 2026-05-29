@@ -1,3 +1,4 @@
+import { Prisma } from '@/generated/prisma';
 import { formatZodError } from '@/lib/api/validation';
 import { successResponse, errorResponse, notFoundResponse, getClientIp } from '@/lib/api/response';
 import { prisma } from '@/lib/db';
@@ -104,11 +105,12 @@ export const POST = withRequestContext(async (request: Request) => {
       return errorResponse('Payment already settled', 400);
     }
 
-    // Check no existing pending payment (prevent duplicates)
-    if (event.payments.length > 0) {
-      return errorResponse('A pending payment already exists', 400);
+    // Prevent duplicate DP when partial payment already made
+    if (type === 'dp' && event.paymentStatus === 'partial') {
+      return errorResponse('DP already paid. Please pay the remaining balance.', 400);
     }
 
+    // Check no existing pending payment (prevent duplicates) - atomic via transaction
     // Calculate amount
     let amount: number;
     if (type === 'dp') {
@@ -117,20 +119,40 @@ export const POST = withRequestContext(async (request: Request) => {
       amount = event.totalPrice - event.paidAmount;
     }
 
+    if (amount <= 0) {
+      return errorResponse('Jumlah pembayaran harus lebih besar dari 0', 400);
+    }
+
     // Generate unique code
     const uniqueCode = Math.floor(Math.random() * 900) + 100;
 
-    // Create payment
-    const payment = await prisma.payment.create({
-      data: {
-        eventId,
-        amount,
-        uniqueCode,
-        type,
-        method: 'transfer',
-        status: 'pending',
-      },
-    });
+    // Create payment atomically to prevent race conditions
+    let payment;
+    try {
+      payment = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        const existing = await tx.payment.findFirst({
+          where: { eventId, status: 'pending' },
+        });
+        if (existing) {
+          throw new Error('DUPLICATE_PENDING');
+        }
+        return tx.payment.create({
+          data: {
+            eventId,
+            amount,
+            uniqueCode,
+            type,
+            method: 'transfer',
+            status: 'pending',
+          },
+        });
+      });
+    } catch (txError) {
+      if (txError instanceof Error && txError.message === 'DUPLICATE_PENDING') {
+        return errorResponse('A pending payment already exists', 400);
+      }
+      throw txError;
+    }
 
     logger.info('public.payment.created', {
       paymentId: payment.id,
