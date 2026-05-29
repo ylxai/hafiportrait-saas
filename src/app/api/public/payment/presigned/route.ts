@@ -38,10 +38,20 @@ const PublicPresignedRequestSchema = z.object({
     .int('File size must be integer')
     .positive('File size must be positive')
     .max(MAX_FILE_SIZE_BYTES, `File too large. Maximum ${MAX_FILE_SIZE_MB}MB`),
-  // New-booker auth path
+  // New-booker auth path — all three must be present together or all absent.
   kodeBooking: z.string().min(1).max(64).optional(),
   uploadToken: z.string().min(1).max(256).optional(),
   uploadTokenExpiry: z.number().int().positive().optional(),
+}).superRefine((data, ctx) => {
+  const tokenFields = [data.kodeBooking, data.uploadToken, data.uploadTokenExpiry];
+  const provided = tokenFields.filter((f) => f !== undefined).length;
+  if (provided > 0 && provided < 3) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'kodeBooking, uploadToken, and uploadTokenExpiry must all be provided together',
+      path: ['uploadToken'],
+    });
+  }
 });
 
 function validateFileType(filename: string): { valid: boolean; error?: string } {

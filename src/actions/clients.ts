@@ -29,6 +29,7 @@ import { hash } from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { clientSchema, clientUpdateSchema } from '@/lib/api/validation';
 import { collectPhotoDeletionPayloads, enqueueDeletionWithOutbox } from '@/lib/cloudflare-queue';
+import { buildStorageDecrements, storageDecrementOps } from '@/lib/storage/counter-utils';
 import { logger } from '@/lib/logger';
 // Review #74-1: shared auth gate (admin-only, role-checked) lives in
 // `src/lib/actions/auth.ts` so every Server Action gets the same
@@ -263,35 +264,16 @@ export async function deleteClient(
       gallery: { event: { clientId: id } },
     });
 
-    // Decrement StorageAccount counters using deletionPayloads. The
-    // Client→Event→Gallery→Photo cascade only removes Photo rows; the
-    // per-account `usedStorage` / `totalPhotos` columns must be adjusted
-    // explicitly here, otherwise the dashboard counters drift over time.
-    const storageUpdates = new Map<string, { usedStorage: bigint; totalPhotos: number }>();
-    for (const p of deletionPayloads) {
-      if (!p.storageAccountId) continue;
-      const current = storageUpdates.get(p.storageAccountId) || { usedStorage: BigInt(0), totalPhotos: 0 };
-      const size = p.r2Key && p.fileSize ? BigInt(p.fileSize) : BigInt(0);
-      storageUpdates.set(p.storageAccountId, {
-        usedStorage: current.usedStorage + size,
-        totalPhotos: current.totalPhotos + 1,
-      });
-    }
+    // Decrement StorageAccount counters + delete client atomically.
+    const storageUpdates = buildStorageDecrements(deletionPayloads);
     if (storageUpdates.size > 0) {
-      await prisma.$transaction(
-        Array.from(storageUpdates.entries()).map(([accountId, delta]) =>
-          prisma.storageAccount.update({
-            where: { id: accountId },
-            data: {
-              usedStorage: { decrement: delta.usedStorage },
-              totalPhotos: { decrement: delta.totalPhotos },
-            },
-          })
-        )
-      );
+      await prisma.$transaction([
+        ...storageDecrementOps(storageUpdates),
+        prisma.client.delete({ where: { id } }),
+      ]);
+    } else {
+      await prisma.client.delete({ where: { id } });
     }
-
-    await prisma.client.delete({ where: { id } });
 
     const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
     if (outcome.outboxed > 0) {
@@ -335,35 +317,18 @@ export async function deleteClientsBulk(
       gallery: { event: { clientId: { in: ids } } },
     });
 
-    // Decrement StorageAccount counters using deletionPayloads. The
-    // Client→Event→Gallery→Photo cascade only removes Photo rows; the
-    // per-account `usedStorage` / `totalPhotos` columns must be adjusted
-    // explicitly here, otherwise the dashboard counters drift over time.
-    const storageUpdates = new Map<string, { usedStorage: bigint; totalPhotos: number }>();
-    for (const p of deletionPayloads) {
-      if (!p.storageAccountId) continue;
-      const current = storageUpdates.get(p.storageAccountId) || { usedStorage: BigInt(0), totalPhotos: 0 };
-      const size = p.r2Key && p.fileSize ? BigInt(p.fileSize) : BigInt(0);
-      storageUpdates.set(p.storageAccountId, {
-        usedStorage: current.usedStorage + size,
-        totalPhotos: current.totalPhotos + 1,
-      });
-    }
+    // Decrement StorageAccount counters + deleteMany atomically via shared helper.
+    const storageUpdates = buildStorageDecrements(deletionPayloads);
     if (storageUpdates.size > 0) {
-      await prisma.$transaction(
-        Array.from(storageUpdates.entries()).map(([accountId, delta]) =>
-          prisma.storageAccount.update({
-            where: { id: accountId },
-            data: {
-              usedStorage: { decrement: delta.usedStorage },
-              totalPhotos: { decrement: delta.totalPhotos },
-            },
-          })
-        )
-      );
+      await prisma.$transaction([
+        ...storageDecrementOps(storageUpdates),
+        prisma.client.deleteMany({ where: { id: { in: ids } } }),
+      ]);
+    } else {
+      await prisma.client.deleteMany({ where: { id: { in: ids } } });
     }
 
-    const result = await prisma.client.deleteMany({ where: { id: { in: ids } } });
+    const result = { count: ids.length };
 
     const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
     if (outcome.outboxed > 0) {
