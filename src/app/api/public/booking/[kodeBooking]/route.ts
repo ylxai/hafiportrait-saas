@@ -78,7 +78,7 @@ export const GET = withRequestContext(async (
       uploadTokenExpiry = null;
     }
 
-    const paymentsWithTransfer = event.payments.map(({ uniqueCode, ...p }: typeof event.payments[number]) => ({
+    const paymentsWithTransfer = event.payments.map(({ uniqueCode, proofUrl: _proofUrl, ...p }: typeof event.payments[number]) => ({
       ...p,
       transferAmount: (p.amount ?? 0) + (uniqueCode ?? 0),
     }));

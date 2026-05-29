@@ -50,14 +50,13 @@ export const DELETE = withRequestContext(async (request: Request) => {
     const storageUpdates = buildStorageDecrements(deletionPayloads);
 
     if (storageUpdates.size > 0) {
-      await prisma.$transaction(storageDecrementOps(storageUpdates));
+      await prisma.$transaction([
+        ...storageDecrementOps(storageUpdates),
+        prisma.client.deleteMany({ where: { id: { in: ids } } }),
+      ]);
+    } else {
+      await prisma.client.deleteMany({ where: { id: { in: ids } } });
     }
-
-    // Step 2 — DB-first deleteMany; the queue is left alone if this
-    // fails so the call can be retried safely.
-    await prisma.client.deleteMany({
-      where: { id: { in: ids } },
-    });
 
     // Step 3 — best-effort enqueue with `FailedJob` outbox fallback.
     const outcome = await enqueueDeletionWithOutbox(deletionPayloads);

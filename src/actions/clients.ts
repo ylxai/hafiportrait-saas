@@ -319,16 +319,21 @@ export async function deleteClientsBulk(
 
     // Decrement StorageAccount counters + deleteMany atomically via shared helper.
     const storageUpdates = buildStorageDecrements(deletionPayloads);
+    let deletedCount: number;
     if (storageUpdates.size > 0) {
-      await prisma.$transaction([
+      const results = await prisma.$transaction([
         ...storageDecrementOps(storageUpdates),
         prisma.client.deleteMany({ where: { id: { in: ids } } }),
       ]);
+      // Last element is the deleteMany result
+      const deleteResult = results[results.length - 1] as { count: number };
+      deletedCount = deleteResult.count;
     } else {
-      await prisma.client.deleteMany({ where: { id: { in: ids } } });
+      const result = await prisma.client.deleteMany({ where: { id: { in: ids } } });
+      deletedCount = result.count;
     }
 
-    const result = { count: ids.length };
+    const result = { count: deletedCount };
 
     const outcome = await enqueueDeletionWithOutbox(deletionPayloads);
     if (outcome.outboxed > 0) {
