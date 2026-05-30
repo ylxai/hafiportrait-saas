@@ -102,7 +102,6 @@ export const POST = withRequestContext(async (request: Request) => {
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       kodeBooking = generateKodeBooking();
       try {
-        const uniqueCode = Math.floor(Math.random() * 900) + 100;
         event = await prisma.event.create({
           data: {
             kodeBooking,
@@ -115,15 +114,6 @@ export const POST = withRequestContext(async (request: Request) => {
             totalPrice: packageData?.price || 0,
             status: 'pending',
             paymentStatus: 'unpaid',
-            payments: {
-              create: {
-                amount: packageData?.price || 0,
-                uniqueCode,
-                type: 'full',
-                method: 'transfer',
-                status: 'pending',
-              },
-            },
           },
           include: { payments: true },
         });

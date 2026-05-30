@@ -69,6 +69,7 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [isCreatingPayment, setIsCreatingPayment] = useState(false);
 
   const event = data?.data;
 
@@ -142,6 +143,47 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
       toast.error(err instanceof Error ? err.message : 'Terjadi kesalahan saat mengunggah');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleCreatePayment = async (type: 'dp' | 'full') => {
+    if (isCreatingPayment) return;
+    if (!event) return;
+    setIsCreatingPayment(true);
+    try {
+      const res = await fetch('/api/public/payment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: event.id,
+          type,
+          ...(event.uploadToken != null && event.uploadTokenExpiry != null ? {
+            kodeBooking: event.kodeBooking,
+            uploadToken: event.uploadToken,
+            uploadTokenExpiry: event.uploadTokenExpiry,
+          } : {}),
+        }),
+      });
+      // Guard against non-JSON responses (e.g. 502/503 from proxy)
+      let result: { error?: string } | null = null;
+      try {
+        const ct = res.headers.get('content-type');
+        if (ct && ct.includes('application/json')) {
+          result = await res.json();
+        }
+      } catch {
+        result = null;
+      }
+      if (!res.ok) {
+        toast.error(result?.error || 'Gagal membuat tagihan');
+        return;
+      }
+      await mutate();
+      toast.success('Tagihan berhasil dibuat');
+    } catch {
+      toast.error('Gagal membuat tagihan');
+    } finally {
+      setIsCreatingPayment(false);
     }
   };
 
@@ -273,6 +315,48 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
                 <p className="text-primary">Rp {(event.totalPrice - event.paidAmount).toLocaleString('id-ID')}</p>
               </div>
             </div>
+
+            {/* Payment selection - show when no pending payment and not yet paid */}
+            {!pendingPayment && event.paymentStatus === 'unpaid' && (
+              <Card className="border-2 border-primary/20 bg-primary/5 rounded-xl p-6 space-y-4">
+                <h3 className="font-bold text-primary">Pilih Metode Pembayaran</h3>
+                <p className="text-sm text-muted-foreground">Pilih apakah ingin membayar DP (50%) atau langsung lunas.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant="outline"
+                    className="h-auto py-4 flex flex-col gap-1"
+                    onClick={() => handleCreatePayment('dp')}
+                    disabled={isCreatingPayment}
+                  >
+                    <span className="font-bold">Bayar DP</span>
+                    <span className="text-xs text-muted-foreground">50% = Rp {formatCurrency(Math.floor(event.totalPrice / 2))}</span>
+                  </Button>
+                  <Button
+                    className="h-auto py-4 flex flex-col gap-1"
+                    onClick={() => handleCreatePayment('full')}
+                    disabled={isCreatingPayment}
+                  >
+                    <span className="font-bold">Bayar Lunas</span>
+                    <span className="text-xs">Rp {formatCurrency(event.totalPrice)}</span>
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            {/* Pelunasan - show when DP already paid */}
+            {!pendingPayment && event.paymentStatus === 'partial' && (
+              <Card className="border-2 border-primary/20 bg-primary/5 rounded-xl p-6 space-y-4">
+                <h3 className="font-bold text-primary">Bayar Pelunasan</h3>
+                <p className="text-sm text-muted-foreground">DP sudah diterima. Silakan lanjutkan pembayaran pelunasan.</p>
+                <Button
+                  className="w-full h-12"
+                  onClick={() => handleCreatePayment('full')}
+                  disabled={isCreatingPayment}
+                >
+                  Bayar Pelunasan — Rp {formatCurrency(event.totalPrice - event.paidAmount)}
+                </Button>
+              </Card>
+            )}
 
             {/* Payment Instructions if Unpaid */}
             {pendingPayment && !awaitingConfirmation && (
