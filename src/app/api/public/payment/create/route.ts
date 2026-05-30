@@ -153,6 +153,17 @@ export const POST = withRequestContext(async (request: Request) => {
           throw new Error('EVENT_NOT_FOUND');
         }
 
+        // Re-validate state transitions with fresh data inside transaction
+        if (lockedEvent.paymentStatus === 'paid') {
+          throw new Error('ALREADY_PAID');
+        }
+        if (type === 'dp' && (lockedEvent.paymentStatus !== 'unpaid' || lockedEvent.paidAmount > 0)) {
+          throw new Error('INVALID_STATE_DP');
+        }
+        if (type === 'full' && lockedEvent.paymentStatus !== 'unpaid' && lockedEvent.paymentStatus !== 'partial') {
+          throw new Error('INVALID_STATE_FULL');
+        }
+
         const existing = await tx.payment.findFirst({
           where: { eventId, status: 'pending' },
         });
@@ -176,6 +187,15 @@ export const POST = withRequestContext(async (request: Request) => {
       }
       if (txError instanceof Error && txError.message === 'EVENT_NOT_FOUND') {
         return notFoundResponse('Event not found');
+      }
+      if (txError instanceof Error && txError.message === 'ALREADY_PAID') {
+        return errorResponse('Payment already settled', 400);
+      }
+      if (txError instanceof Error && txError.message === 'INVALID_STATE_DP') {
+        return errorResponse('DP payment is only allowed for new unpaid bookings', 400);
+      }
+      if (txError instanceof Error && txError.message === 'INVALID_STATE_FULL') {
+        return errorResponse('Full payment is not allowed in current payment status', 400);
       }
       throw txError;
     }
