@@ -164,9 +164,18 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
           } : {}),
         }),
       });
-      const result = await res.json();
+      // Guard against non-JSON responses (e.g. 502/503 from proxy)
+      let result: { error?: string } | null = null;
+      try {
+        const ct = res.headers.get('content-type');
+        if (ct && ct.includes('application/json')) {
+          result = await res.json();
+        }
+      } catch {
+        result = null;
+      }
       if (!res.ok) {
-        toast.error(result.error || 'Gagal membuat tagihan');
+        toast.error(result?.error || 'Gagal membuat tagihan');
         return;
       }
       await mutate();

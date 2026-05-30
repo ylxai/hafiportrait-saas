@@ -147,7 +147,7 @@ export const POST = withRequestContext(async (request: Request) => {
         // Re-read event inside transaction for concurrency control (no business field mutation)
         const lockedEvent = await tx.event.findUnique({
           where: { id: eventId },
-          select: { id: true, paymentStatus: true, paidAmount: true },
+          select: { id: true, paymentStatus: true, paidAmount: true, totalPrice: true },
         });
         if (!lockedEvent) {
           throw new Error('EVENT_NOT_FOUND');
@@ -164,6 +164,14 @@ export const POST = withRequestContext(async (request: Request) => {
           throw new Error('INVALID_STATE_FULL');
         }
 
+        // Compute amount inside tx using fresh lockedEvent data to prevent stale-read race
+        const txAmount = type === 'dp'
+          ? Math.floor(lockedEvent.totalPrice / 2)
+          : lockedEvent.totalPrice - lockedEvent.paidAmount;
+        if (txAmount <= 0) {
+          throw new Error('INVALID_AMOUNT');
+        }
+
         const existing = await tx.payment.findFirst({
           where: { eventId, status: 'pending' },
         });
@@ -173,7 +181,7 @@ export const POST = withRequestContext(async (request: Request) => {
         return tx.payment.create({
           data: {
             eventId,
-            amount,
+            amount: txAmount,
             uniqueCode,
             type,
             method: 'transfer',
@@ -196,6 +204,9 @@ export const POST = withRequestContext(async (request: Request) => {
       }
       if (txError instanceof Error && txError.message === 'INVALID_STATE_FULL') {
         return errorResponse('Full payment is not allowed in current payment status', 400);
+      }
+      if (txError instanceof Error && txError.message === 'INVALID_AMOUNT') {
+        return errorResponse('Jumlah pembayaran harus lebih besar dari 0', 400);
       }
       throw txError;
     }
