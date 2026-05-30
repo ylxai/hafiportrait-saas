@@ -237,7 +237,7 @@ export default function BookingPage() {
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 bg-background text-foreground"
                   placeholder="Permintaan khusus, theme, konsep foto, dll."
                 />
               </div>
