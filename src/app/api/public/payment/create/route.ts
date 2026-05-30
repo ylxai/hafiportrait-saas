@@ -125,17 +125,7 @@ export const POST = withRequestContext(async (request: Request) => {
     }
 
     // Check no existing pending payment (prevent duplicates) - atomic via transaction
-    // Calculate amount
-    let amount: number;
-    if (type === 'dp') {
-      amount = Math.floor(event.totalPrice / 2);
-    } else {
-      amount = event.totalPrice - event.paidAmount;
-    }
-
-    if (amount <= 0) {
-      return errorResponse('Jumlah pembayaran harus lebih besar dari 0', 400);
-    }
+    // Amount is computed inside transaction using fresh lockedEvent data
 
     // Generate unique code
     const uniqueCode = Math.floor(Math.random() * 900) + 100;
@@ -215,7 +205,7 @@ export const POST = withRequestContext(async (request: Request) => {
       paymentId: payment.id,
       eventId,
       type,
-      amount,
+      amount: payment.amount,
       uniqueCode,
     });
 
