@@ -134,6 +134,7 @@ export default function BookingPage() {
                   id="nama"
                   type="text"
                   required
+                  className="h-11 py-3"
                   autoComplete="name"
                   value={formData.nama}
                   onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
@@ -146,6 +147,7 @@ export default function BookingPage() {
                   id="email"
                   type="email"
                   required
+                  className="h-11 py-3"
                   autoComplete="email"
                   inputMode="email"
                   value={formData.email}
@@ -159,6 +161,7 @@ export default function BookingPage() {
                   id="password"
                   type="password"
                   required
+                  className="h-11 py-3"
                   minLength={8}
                   maxLength={72}
                   autoComplete="new-password"
@@ -176,6 +179,7 @@ export default function BookingPage() {
                   id="phone"
                   type="tel"
                   required
+                  className="h-11 py-3"
                   autoComplete="tel"
                   inputMode="tel"
                   value={formData.phone}
@@ -188,6 +192,7 @@ export default function BookingPage() {
                 <Input
                   id="instagram"
                   type="text"
+                  className="h-11 py-3"
                   value={formData.instagram}
                   onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
                   placeholder="@username"
@@ -209,6 +214,7 @@ export default function BookingPage() {
                   id="eventDate"
                   type="date"
                   required
+                  className="h-11 py-3"
                   value={formData.eventDate}
                   onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
                 />
@@ -218,6 +224,7 @@ export default function BookingPage() {
                 <Input
                   id="location"
                   type="text"
+                  className="h-11 py-3"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   placeholder="Jakarta / Outdoor / Studio"
