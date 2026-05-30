@@ -136,7 +136,7 @@ export default function BookingPage() {
                   autoComplete="name"
                   value={formData.nama}
                   onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                  className="w-full px-3 py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
                   placeholder="Nama lengkap Anda…"
                 />
               </div>
@@ -150,7 +150,7 @@ export default function BookingPage() {
                   inputMode="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
                   placeholder="email@example.com"
                 />
               </div>
@@ -165,7 +165,7 @@ export default function BookingPage() {
                   autoComplete="new-password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3 py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
                   placeholder="Minimal 8 karakter"
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -182,7 +182,7 @@ export default function BookingPage() {
                   inputMode="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3 py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
                   placeholder="0812 3456 7890"
                 />
               </div>
@@ -193,7 +193,7 @@ export default function BookingPage() {
                   type="text"
                   value={formData.instagram}
                   onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
-                  className="w-full px-3 py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
                   placeholder="@username"
                 />
               </div>
@@ -215,7 +215,7 @@ export default function BookingPage() {
                   required
                   value={formData.eventDate}
                   onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-                  className="w-full px-3 py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
                 />
               </div>
               <div>
@@ -225,7 +225,7 @@ export default function BookingPage() {
                   type="text"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="w-full px-3 py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
                   placeholder="Jakarta / Outdoor / Studio"
                 />
               </div>
@@ -236,7 +236,7 @@ export default function BookingPage() {
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
+                  className="w-full px-3 py-2.5 sm:py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
                   placeholder="Permintaan khusus, theme, konsep foto, dll."
                 />
               </div>
