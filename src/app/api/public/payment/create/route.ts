@@ -144,11 +144,14 @@ export const POST = withRequestContext(async (request: Request) => {
     let payment;
     try {
       payment = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        // Lock the parent event row to prevent concurrent payment creation race conditions
-        await tx.event.update({
+        // Re-read event inside transaction for concurrency control (no business field mutation)
+        const lockedEvent = await tx.event.findUnique({
           where: { id: eventId },
-          data: { updatedAt: new Date() },
+          select: { id: true, paymentStatus: true, paidAmount: true },
         });
+        if (!lockedEvent) {
+          throw new Error('EVENT_NOT_FOUND');
+        }
 
         const existing = await tx.payment.findFirst({
           where: { eventId, status: 'pending' },
@@ -170,6 +173,9 @@ export const POST = withRequestContext(async (request: Request) => {
     } catch (txError) {
       if (txError instanceof Error && txError.message === 'DUPLICATE_PENDING') {
         return errorResponse('A pending payment already exists', 400);
+      }
+      if (txError instanceof Error && txError.message === 'EVENT_NOT_FOUND') {
+        return notFoundResponse('Event not found');
       }
       throw txError;
     }

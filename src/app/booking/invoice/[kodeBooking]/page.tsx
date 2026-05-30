@@ -147,6 +147,7 @@ export default function InvoicePage({ params }: { params: Promise<{ kodeBooking:
   };
 
   const handleCreatePayment = async (type: 'dp' | 'full') => {
+    if (isCreatingPayment) return;
     if (!event) return;
     setIsCreatingPayment(true);
     try {
