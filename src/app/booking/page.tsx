@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { CheckCircle, ChevronRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 
 type Package = {
   id: string;
@@ -129,20 +130,19 @@ export default function BookingPage() {
             <div className="space-y-4">
               <div>
                 <label htmlFor="nama" className="block text-sm font-medium text-foreground mb-1.5">Nama Lengkap *</label>
-                <input
+                <Input
                   id="nama"
                   type="text"
                   required
                   autoComplete="name"
                   value={formData.nama}
                   onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                  className="w-full px-3 py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
                   placeholder="Nama lengkap Anda…"
                 />
               </div>
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">Email *</label>
-                <input
+                <Input
                   id="email"
                   type="email"
                   required
@@ -150,13 +150,12 @@ export default function BookingPage() {
                   inputMode="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
                   placeholder="email@example.com"
                 />
               </div>
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1.5">Password *</label>
-                <input
+                <Input
                   id="password"
                   type="password"
                   required
@@ -165,7 +164,6 @@ export default function BookingPage() {
                   autoComplete="new-password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3 py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
                   placeholder="Minimal 8 karakter"
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -174,7 +172,7 @@ export default function BookingPage() {
               </div>
               <div>
                 <label htmlFor="phone" className="block text-sm font-medium text-foreground mb-1.5">Nomor WhatsApp *</label>
-                <input
+                <Input
                   id="phone"
                   type="tel"
                   required
@@ -182,18 +180,16 @@ export default function BookingPage() {
                   inputMode="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3 py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
                   placeholder="0812 3456 7890"
                 />
               </div>
               <div>
                 <label htmlFor="instagram" className="block text-sm font-medium text-foreground mb-1.5">Instagram</label>
-                <input
+                <Input
                   id="instagram"
                   type="text"
                   value={formData.instagram}
                   onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
-                  className="w-full px-3 py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
                   placeholder="@username"
                 />
               </div>
@@ -209,23 +205,21 @@ export default function BookingPage() {
             <div className="space-y-4">
               <div>
                 <label htmlFor="eventDate" className="block text-sm font-medium text-foreground mb-1.5">Tanggal Event *</label>
-                <input
+                <Input
                   id="eventDate"
                   type="date"
                   required
                   value={formData.eventDate}
                   onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-                  className="w-full px-3 py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
                 />
               </div>
               <div>
                 <label htmlFor="location" className="block text-sm font-medium text-foreground mb-1.5">Lokasi</label>
-                <input
+                <Input
                   id="location"
                   type="text"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="w-full px-3 py-3 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
                   placeholder="Jakarta / Outdoor / Studio"
                 />
               </div>
