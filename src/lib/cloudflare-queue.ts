@@ -225,6 +225,11 @@ export async function queueThumbnailGeneration(data: {
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   if (!data.cloudinaryCredentials.cloudName || !data.cloudinaryCredentials.apiKey || !data.cloudinaryCredentials.apiSecret) {
     logger.warn('queue.thumbnail.missing_credentials', { photoId: data.photoId });
+    await recordFailedJob({
+      jobType: 'thumbnail-generation',
+      payload: { photoId: data.photoId, r2Key: data.r2Key, galleryId: data.galleryId },
+      errorMessage: 'Missing Cloudinary credentials',
+    }).catch((err) => { logger.error('queue.outbox_record_failed', { err }); return undefined; });
     return { success: false, error: 'Missing Cloudinary credentials' };
   }
 
@@ -782,7 +787,7 @@ export async function enqueueDeletionWithOutbox(
       // can be rehydrated from `StorageAccount` on retry.
       payload: { photos: redactPayloadsForOutbox(enqueueable) },
       errorMessage: 'Cloudflare Queue not configured (CLOUDFLARE_WORKER_URL missing)',
-    }).catch(() => undefined);
+    }).catch((err) => { logger.error('queue.outbox_record_failed', { err }); return undefined; });
     return { queued: 0, outboxed: enqueueable.length, outboxJobId };
   }
 
@@ -800,7 +805,7 @@ export async function enqueueDeletionWithOutbox(
       jobType: 'storage-deletion',
       payload: { photos: redactPayloadsForOutbox(enqueueable) },
       errorMessage: result.error || `Queue publish failed (${result.failedCount ?? '?'} jobs)`,
-    }).catch(() => undefined);
+    }).catch((err) => { logger.error('queue.outbox_record_failed', { err }); return undefined; });
     return { queued: 0, outboxed: enqueueable.length, outboxJobId };
   } catch (cfError) {
     logQueueError('Bulk deletion queue error', cfError, { photoCount: enqueueable.length });
@@ -808,7 +813,7 @@ export async function enqueueDeletionWithOutbox(
       jobType: 'storage-deletion',
       payload: { photos: redactPayloadsForOutbox(enqueueable) },
       errorMessage: cfError instanceof Error ? cfError.message : String(cfError),
-    }).catch(() => undefined);
+    }).catch((err) => { logger.error('queue.outbox_record_failed', { err }); return undefined; });
     return { queued: 0, outboxed: enqueueable.length, outboxJobId };
   }
 }

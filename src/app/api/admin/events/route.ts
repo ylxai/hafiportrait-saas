@@ -178,23 +178,20 @@ export const PATCH = withRequestContext(async (request: Request) => {
       return errorResponse('Invalid JSON body', 400);
     }
     
-    // Validate ID
-    const idValidation = validateRequest(idSchema, body);
-    if (!idValidation.success) {
-      return errorResponse(idValidation.error, 400);
-    }
-
-    const { id } = idValidation.data;
-
-    // Validate update data
-    const dataValidation = validateRequest(eventUpdateSchema, body);
+    // Validate update data (id + fields in one pass)
+    const dataValidation = validateRequest(
+      eventUpdateSchema.extend({ id: idSchema.shape.id }),
+      body
+    );
     if (!dataValidation.success) {
       return errorResponse(dataValidation.error, 400);
     }
 
+    const { id, ...updateData } = dataValidation.data;
+
     const event = await prisma.event.update({
       where: { id },
-      data: dataValidation.data,
+      data: updateData,
       include: { client: { select: safeClientSelect }, package: true },
     });
 
