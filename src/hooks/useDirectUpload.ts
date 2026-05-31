@@ -77,9 +77,20 @@ const checkMagicBytes = (file: File): Promise<boolean> => {
       if (arr.length >= 12 &&
           arr[0] === 0x52 && arr[1] === 0x49 && arr[2] === 0x46 && arr[3] === 0x46 &&
           arr[8] === 0x57 && arr[9] === 0x45 && arr[10] === 0x42 && arr[11] === 0x50) return resolve(true);
-      // HEIC/HEIF: 'ftyp' at offset 4 (needs 8 bytes)
-      if (arr.length >= 8 &&
-          arr[4] === 0x66 && arr[5] === 0x74 && arr[6] === 0x79 && arr[7] === 0x70) return resolve(true);
+      // HEIC/HEIF: 'ftyp' at offset 4 + HEIC/HEIF major brand at offset 8 (needs 12 bytes)
+      if (arr.length >= 12 &&
+          arr[4] === 0x66 && arr[5] === 0x74 && arr[6] === 0x79 && arr[7] === 0x70 &&
+          (
+            // heic
+            (arr[8] === 0x68 && arr[9] === 0x65 && arr[10] === 0x69 && arr[11] === 0x63) ||
+            // heix
+            (arr[8] === 0x68 && arr[9] === 0x65 && arr[10] === 0x69 && arr[11] === 0x78) ||
+            // hevc
+            (arr[8] === 0x68 && arr[9] === 0x65 && arr[10] === 0x76 && arr[11] === 0x63) ||
+            // mif1
+            (arr[8] === 0x6D && arr[9] === 0x69 && arr[10] === 0x66 && arr[11] === 0x31)
+          )
+      ) return resolve(true);
       // RAW formats (NEF, CR2, ARW, DNG) - TIFF header: II or MM
       if ((arr[0] === 0x49 && arr[1] === 0x49) || (arr[0] === 0x4D && arr[1] === 0x4D)) return resolve(true);
       resolve(false);
