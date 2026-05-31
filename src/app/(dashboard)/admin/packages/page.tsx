@@ -242,7 +242,7 @@ export default function PackagesPage() {
       <Button
         onClick={() => { resetForm(); setShowModal(true); }}
         size="icon"
-        className="fab bg-primary text-primary-foreground sm:hidden fixed bottom-6 right-6"
+        className="fab bg-primary text-primary-foreground sm:hidden"
         aria-label="Tambah Paket Baru"
       >
         <Plus className="w-6 h-6" />
@@ -293,7 +293,7 @@ export default function PackagesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {packages.filter(p => p && p.id).map((pkg) => (
-            <div key={pkg.id} className={`glass-card p-6 glass-card-hover ${selectedIds.includes(pkg.id) ? 'ring-2 ring-champagne-500' : ''}`}>
+            <div key={pkg.id} className={`glass-card p-6 glass-card-hover ${selectedIds.includes(pkg.id) ? 'ring-2 ring-primary' : ''}`}>
               <div className="flex items-start gap-3 mb-3">
                 <Checkbox
                   checked={selectedIds.includes(pkg.id)}

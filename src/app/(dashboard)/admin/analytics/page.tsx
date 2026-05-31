@@ -122,7 +122,7 @@ export default function AnalyticsPage() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-champagne-100">
+            <tbody className="divide-y divide-border">
               {filteredAnalytics.length > 0 ? (
                 filteredAnalytics.map((item) => (
                   <tr key={item.id} className="hover:bg-muted/30 transition-smooth">

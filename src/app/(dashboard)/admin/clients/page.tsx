@@ -258,7 +258,7 @@ export default function ClientsPage() {
       <Button
         onClick={() => { resetForm(); setShowModal(true); }}
         size="icon"
-        className="fab bg-primary text-primary-foreground sm:hidden fixed bottom-6 right-6"
+        className="fab bg-primary text-primary-foreground sm:hidden"
         aria-label="Tambah Client Baru"
       >
         <Plus className="w-6 h-6" />
@@ -415,7 +415,7 @@ export default function ClientsPage() {
 
       {/* Add/Edit Client Modal */}
       <Dialog open={showModal} onOpenChange={(open) => { setShowModal(open); if (!open) resetForm(); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingClient ? 'Edit Client' : 'Tambah Client Baru'}</DialogTitle>
             <DialogDescription>

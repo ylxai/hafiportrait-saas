@@ -155,7 +155,7 @@ export default function FinancePage() {
       )}
 
       <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl">
-        <div className="p-4 border-b border-champagne-100">
+        <div className="p-4 border-b border-border">
           <h2 className="font-semibold text-foreground">Events</h2>
         </div>
         <div className="overflow-x-auto">
@@ -172,7 +172,7 @@ export default function FinancePage() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {events.length > 0 ? (
                 events.map((event) => (
                   <tr key={event.id} className="hover:bg-muted">
