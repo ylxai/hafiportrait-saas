@@ -167,7 +167,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {mobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-40" onClick={() => setMobileMenuOpen(false)}>
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-[280px] bg-card border-r border-border shadow-2xl transform transition-transform duration-300 ease-out flex flex-col">
+          <div className="absolute left-0 top-0 bottom-0 w-[280px] bg-card border-r border-border shadow-2xl transform transition-transform duration-300 ease-out flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgb(245_158_11_/_0.2)]">

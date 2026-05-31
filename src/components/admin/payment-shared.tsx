@@ -51,6 +51,7 @@ export function PaymentProofThumbnail({ proofUrl }: { proofUrl: string | null })
         <img
           src={proofUrl}
           alt="Bukti transfer"
+          loading="lazy"
           className="w-full h-full object-cover"
           onError={() => setImgError(true)}
         />
