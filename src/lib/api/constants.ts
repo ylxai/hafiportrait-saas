@@ -36,3 +36,12 @@ export const PHOTOS_PER_PAGE = 20;
 
 /** Maximum rows returned by admin export endpoints to prevent memory DoS */
 export const MAX_EXPORT_ROWS = 10_000;
+
+/** Maximum packages returned by the public booking packages endpoint */
+export const MAX_PACKAGES_PER_PAGE = 100;
+
+/** Number of recent items shown in the admin stats dashboard widgets */
+export const STATS_RECENT_LIMIT = 5;
+
+/** Maximum results per entity type in admin search */
+export const SEARCH_RESULTS_LIMIT = 10;

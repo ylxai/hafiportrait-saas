@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { formatZodError } from '@/lib/api/validation';
+import { SEARCH_RESULTS_LIMIT } from '@/lib/api/constants';
 
 // Zod schema for search query parameters
 const searchQuerySchema = z.object({
@@ -60,7 +61,7 @@ export const GET = withRequestContext(async (request: Request) => {
           },
         },
       },
-        take: 10,
+        take: SEARCH_RESULTS_LIMIT,
       })
         : Promise.resolve([]),
       (type === 'all' || type === 'events')
@@ -80,7 +81,7 @@ export const GET = withRequestContext(async (request: Request) => {
         status: true,
         client: { select: { nama: true } },
       },
-        take: 10,
+        take: SEARCH_RESULTS_LIMIT,
       })
         : Promise.resolve([]),
       (type === 'all' || type === 'clients')
@@ -99,7 +100,7 @@ export const GET = withRequestContext(async (request: Request) => {
         phone: true,
         createdAt: true,
       },
-        take: 10,
+        take: SEARCH_RESULTS_LIMIT,
       })
         : Promise.resolve([]),
     ]);

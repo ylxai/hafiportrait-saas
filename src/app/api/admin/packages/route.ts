@@ -8,12 +8,8 @@ import { requireAdminAuth } from '@/lib/auth/require-admin-auth';
 import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
-import { isPrismaError as isPrismaErrorShared } from '@/lib/prisma-error';
+import { isPrismaError } from '@/lib/prisma-error';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
-
-function isPrismaError(error: unknown, code: string): boolean {
-  return isPrismaErrorShared(error, code);
-}
 
 export const GET = withRequestContext(async (request: Request) => {
   try {

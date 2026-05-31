@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 import { formatZodError } from '@/lib/api/validation';
+import { parseAdminPaginationSafe, createAdminPaginationResponse } from '@/types/pagination';
 
 /**
  * Safe fields to return in API responses — excludes plaintext secrets.
@@ -133,7 +134,7 @@ const deleteStorageAccountSchema = z.object({
   id: z.string().min(1, 'Account ID is required'),
 });
 
-export const GET = withRequestContext(async () => {
+export const GET = withRequestContext(async (request: Request) => {
   try {
     const auth = await requireAdminAuth();
     if (auth instanceof NextResponse) return auth;
@@ -145,10 +146,22 @@ export const GET = withRequestContext(async () => {
     });
     if (rateLimit) return rateLimit;
 
-    const accounts = await prisma.storageAccount.findMany({
-      select: SAFE_ACCOUNT_SELECT,
-      orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }],
-    });
+    const { searchParams } = new URL(request.url);
+    const paginationResult = parseAdminPaginationSafe(searchParams);
+    if (!paginationResult.success) {
+      return errorResponse(formatZodError(paginationResult.error), 400);
+    }
+    const { page, limit, skip } = paginationResult.data;
+
+    const [accounts, total] = await Promise.all([
+      prisma.storageAccount.findMany({
+        select: SAFE_ACCOUNT_SELECT,
+        orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }],
+        take: limit,
+        skip,
+      }),
+      prisma.storageAccount.count(),
+    ]);
 
     // Convert BigInt to string for JSON serialization
     const serializedAccounts = accounts.map((account: (typeof accounts)[number]) => ({
@@ -156,7 +169,7 @@ export const GET = withRequestContext(async () => {
       usedStorage: serializeBigInt(account.usedStorage),
     }));
 
-    return successResponse({ accounts: serializedAccounts });
+    return successResponse({ accounts: serializedAccounts, pagination: createAdminPaginationResponse(page, limit, total) });
   } catch (error) {
     logger.error('storage_accounts.get_failed', { err: error });
     return serverErrorResponse('Failed to fetch storage accounts');
