@@ -236,12 +236,13 @@ export default function EventsPage() {
     const ok = await confirm({ description: `Hapus ${selectedIds.length} event ini?`, variant: 'destructive', confirmLabel: 'Hapus' });
     if (!ok) return;
 
+    const ids = [...selectedIds]; // snapshot before async transition
     setIsBulkSubmitting(true);
     startTransition(async () => {
       try {
-        const result = await deleteEventsBulk(selectedIds);
+        const result = await deleteEventsBulk(ids);
         if (result.success) {
-          const removed = new Set(selectedIds);
+          const removed = new Set(ids);
           setEvents((prev) => prev.filter((e) => !removed.has(e.id)));
           setSelectedIds([]);
           setShowBulkModal(false);
@@ -257,10 +258,11 @@ export default function EventsPage() {
   const handleBulkUpdate = async () => {
     if (!selectedIds.length) return;
 
+    const ids = [...selectedIds]; // snapshot before async transition
     setIsBulkSubmitting(true);
     startTransition(async () => {
       try {
-        const input: Parameters<typeof updateEventsBulk>[0] = { ids: selectedIds };
+        const input: Parameters<typeof updateEventsBulk>[0] = { ids };
         if (bulkAction === 'status') {
           input.status = bulkValue as 'pending' | 'confirmed' | 'completed' | 'cancelled';
         }
@@ -270,7 +272,7 @@ export default function EventsPage() {
 
         const result = await updateEventsBulk(input);
         if (result.success) {
-          const targets = new Set(selectedIds);
+          const targets = new Set(ids);
           setEvents((prev) => prev.map((e) =>
             targets.has(e.id)
               ? {
