@@ -66,7 +66,7 @@ export default function GalleriesPage() {
   const limit = 20;
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
-  const { data, isLoading, mutate } = useSWR<GalleriesResponse>(
+  const { data, isLoading, error, mutate } = useSWR<GalleriesResponse>(
     `/api/admin/galleries?page=${page}&limit=${limit}`,
     fetcher,
   );
@@ -244,7 +244,11 @@ export default function GalleriesPage() {
         </div>
       )}
 
-      {isLoading ? (
+      {error ? (
+        <div className="flex items-center justify-center h-40 text-muted-foreground">
+          Gagal memuat data. Silakan refresh halaman.
+        </div>
+      ) : isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div

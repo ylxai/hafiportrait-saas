@@ -88,7 +88,7 @@ export default function AdminPaymentsPage() {
   const isAdmin = session?.user?.role === 'admin';
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
 
-  const { data, isLoading, mutate } = useSWR(
+  const { data, isLoading, error, mutate } = useSWR(
     `/api/admin/payments?status=${filter}`,
     fetcher,
     { refreshInterval: 30000 }
@@ -164,7 +164,11 @@ export default function AdminPaymentsPage() {
       </div>
 
       {/* Content */}
-      {isLoading ? (
+      {error ? (
+        <div className="flex items-center justify-center h-40 text-muted-foreground">
+          Gagal memuat data. Silakan refresh halaman.
+        </div>
+      ) : isLoading ? (
         <div className="flex items-center justify-center h-40">
           <LoadingSpinner size="md" />
         </div>

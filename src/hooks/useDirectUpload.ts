@@ -59,6 +59,25 @@ interface UseDirectUploadOptions {
 // Error types yang bisa di-retry (temporary errors)
 const RETRYABLE_ERROR_CODES: UploadFile['errorCode'][] = ['NETWORK_ERROR', 'UPLOAD_FAILED', 'PROCESSING_FAILED'];
 
+
+// Check magic bytes to verify file content matches its extension
+const checkMagicBytes = (file: File): Promise<boolean> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const arr = new Uint8Array(e.target?.result as ArrayBuffer);
+      if (arr[0] === 0xFF && arr[1] === 0xD8 && arr[2] === 0xFF) return resolve(true);
+      if (arr[0] === 0x89 && arr[1] === 0x50 && arr[2] === 0x4E && arr[3] === 0x47) return resolve(true);
+      if (arr[0] === 0x52 && arr[1] === 0x49 && arr[2] === 0x46 && arr[3] === 0x46 &&
+          arr[8] === 0x57 && arr[9] === 0x45 && arr[10] === 0x42 && arr[11] === 0x50) return resolve(true);
+      if (arr[4] === 0x66 && arr[5] === 0x74 && arr[6] === 0x79 && arr[7] === 0x70) return resolve(true);
+      if ((arr[0] === 0x49 && arr[1] === 0x49) || (arr[0] === 0x4D && arr[1] === 0x4D)) return resolve(true);
+      resolve(false);
+    };
+    reader.readAsArrayBuffer(file.slice(0, 12));
+  });
+};
+
 // Validate file type
 function validateFileType(file: File): { valid: boolean; error?: string } {
   const extension = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -79,6 +98,17 @@ function validateFileType(file: File): { valid: boolean; error?: string } {
     };
   }
   
+  return { valid: true };
+}
+
+// Async validation including magic bytes check
+async function validateFileWithMagicBytes(file: File): Promise<{ valid: boolean; error?: string }> {
+  const typeCheck = validateFileType(file);
+  if (!typeCheck.valid) return typeCheck;
+  const magicBytesValid = await checkMagicBytes(file);
+  if (!magicBytesValid) {
+    return { valid: false, error: "File content does not match its extension" };
+  }
   return { valid: true };
 }
 
@@ -667,7 +697,7 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
   };
 
   // Add files ke queue dengan validasi
-  const addFiles = useCallback((newFiles: FileList | null) => {
+  const addFiles = useCallback(async (newFiles: FileList | null) => {
     if (!newFiles) return;
 
     const fileArray = Array.from(newFiles);
@@ -685,8 +715,8 @@ export function useDirectUpload(options: UseDirectUploadOptions) {
         continue;
       }
       
-      // Validasi: file type
-      const typeValidation = validateFileType(file);
+      // Validasi: file type + magic bytes
+      const typeValidation = await validateFileWithMagicBytes(file);
       if (!typeValidation.valid) {
         invalidFiles.push({ 
           filename: file.name, 

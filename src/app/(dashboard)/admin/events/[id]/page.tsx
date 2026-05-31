@@ -16,7 +16,7 @@ export default function EventDetailPage() {
   
   const [message, setMessage] = useState('');
 
-  const { data, isLoading, mutate } = useSWR(
+  const { data, isLoading, error, mutate } = useSWR(
     eventId ? `/api/admin/events/${eventId}` : null,
     fetcher
   );
@@ -48,6 +48,14 @@ export default function EventDetailPage() {
       setMessage('Error updating event');
     }
   };
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        Gagal memuat data. Silakan refresh halaman.
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

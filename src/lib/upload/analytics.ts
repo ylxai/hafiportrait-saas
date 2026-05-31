@@ -1,10 +1,11 @@
 /**
  * Upload analytics types.
- * The UploadAnalytics interface is used across the codebase for
+ * The UploadAnalyticsData interface is used across the codebase for
  * typing analytics dashboard data structures.
  */
 
-export interface UploadAnalytics {
+// NOTE: Renamed from UploadAnalytics to avoid conflict with the Prisma model of the same name.
+export interface UploadAnalyticsData {
   period: 'day' | 'week' | 'month';
   totalUploads: number;
   successfulUploads: number;

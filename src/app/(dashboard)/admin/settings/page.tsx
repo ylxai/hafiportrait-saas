@@ -41,7 +41,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export default function SettingsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { data, isLoading, mutate } = useSWR<{ data: { settings: Settings } }>('/api/admin/settings', fetcher);
+  const { data, isLoading, error, mutate } = useSWR<{ data: { settings: Settings } }>('/api/admin/settings', fetcher);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<Settings>(defaultSettings);
   const [message, setMessage] = useState('');
@@ -103,6 +103,14 @@ export default function SettingsPage() {
   const handleChange = (key: keyof Settings, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        Gagal memuat data. Silakan refresh halaman.
+      </div>
+    );
+  }
 
   if (status === 'loading' || isLoading) {
     return (
