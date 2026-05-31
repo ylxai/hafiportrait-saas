@@ -65,15 +65,26 @@ const checkMagicBytes = (file: File): Promise<boolean> => {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const arr = new Uint8Array(e.target?.result as ArrayBuffer);
+      const result = e.target?.result;
+      if (!result) return resolve(false);
+      const arr = new Uint8Array(result as ArrayBuffer);
+      if (arr.length < 4) return resolve(false);
+      // JPEG: FF D8 FF
       if (arr[0] === 0xFF && arr[1] === 0xD8 && arr[2] === 0xFF) return resolve(true);
+      // PNG: 89 50 4E 47
       if (arr[0] === 0x89 && arr[1] === 0x50 && arr[2] === 0x4E && arr[3] === 0x47) return resolve(true);
-      if (arr[0] === 0x52 && arr[1] === 0x49 && arr[2] === 0x46 && arr[3] === 0x46 &&
+      // WebP: RIFF....WEBP (needs 12 bytes)
+      if (arr.length >= 12 &&
+          arr[0] === 0x52 && arr[1] === 0x49 && arr[2] === 0x46 && arr[3] === 0x46 &&
           arr[8] === 0x57 && arr[9] === 0x45 && arr[10] === 0x42 && arr[11] === 0x50) return resolve(true);
-      if (arr[4] === 0x66 && arr[5] === 0x74 && arr[6] === 0x79 && arr[7] === 0x70) return resolve(true);
+      // HEIC/HEIF: 'ftyp' at offset 4 (needs 8 bytes)
+      if (arr.length >= 8 &&
+          arr[4] === 0x66 && arr[5] === 0x74 && arr[6] === 0x79 && arr[7] === 0x70) return resolve(true);
+      // RAW formats (NEF, CR2, ARW, DNG) - TIFF header: II or MM
       if ((arr[0] === 0x49 && arr[1] === 0x49) || (arr[0] === 0x4D && arr[1] === 0x4D)) return resolve(true);
       resolve(false);
     };
+    reader.onerror = () => resolve(false);
     reader.readAsArrayBuffer(file.slice(0, 12));
   });
 };

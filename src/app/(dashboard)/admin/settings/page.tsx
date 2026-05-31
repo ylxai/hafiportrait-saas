@@ -104,14 +104,6 @@ export default function SettingsPage() {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64 text-muted-foreground">
-        Gagal memuat data. Silakan refresh halaman.
-      </div>
-    );
-  }
-
   if (status === 'loading' || isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -122,6 +114,14 @@ export default function SettingsPage() {
 
   if (!session) {
     return null;
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        Gagal memuat data. Silakan refresh halaman.
+      </div>
+    );
   }
 
   return (
