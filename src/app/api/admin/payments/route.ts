@@ -45,7 +45,7 @@ export const GET = withRequestContext(async (request: Request) => {
               kodeBooking: true,
               namaProject: true,
               paymentStatus: true,
-              client: { select: { nama: true, email: true } },
+              client: { select: { nama: true } },
             },
           },
         },

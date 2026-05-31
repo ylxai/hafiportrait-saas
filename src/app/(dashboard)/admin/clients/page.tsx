@@ -59,6 +59,7 @@ export default function ClientsPage() {
   // UX so the swap from `fetch`-based pending state is invisible.
   const [isPending, startTransition] = useTransition();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [formData, setFormData] = useState({
     nama: '',
@@ -226,18 +227,21 @@ export default function ClientsPage() {
     const ok = await confirm({ description: `Hapus ${selectedIds.length} client ini?`, variant: 'destructive', confirmLabel: 'Hapus' });
     if (!ok) return;
 
+    setIsBulkSubmitting(true);
     startTransition(async () => {
-      const result = await deleteClientsBulk(selectedIds);
-      if (!result.success) {
-        toast.error(result.error || 'Gagal menghapus client');
-        return;
+      try {
+        const result = await deleteClientsBulk(selectedIds);
+        if (!result.success) {
+          toast.error(result.error || 'Gagal menghapus client');
+          return;
+        }
+        const removed = new Set(selectedIds);
+        setClients((prev) => prev.filter((c) => !removed.has(c.id)));
+        setSelectedIds([]);
+        setShowBulkModal(false);
+      } finally {
+        setIsBulkSubmitting(false);
       }
-      // Snapshot the IDs before clearing them so the filter below uses
-      // a stable list even if `selectedIds` is mutated mid-transition.
-      const removed = new Set(selectedIds);
-      setClients((prev) => prev.filter((c) => !removed.has(c.id)));
-      setSelectedIds([]);
-      setShowBulkModal(false);
     });
   };
 
@@ -270,7 +274,7 @@ export default function ClientsPage() {
             {selectedIds.length} item dipilih
           </span>
           <div className="flex gap-2">
-            <Button variant="destructive" size="sm" onClick={openBulkModal}>
+            <Button variant="destructive" size="sm" disabled={isBulkSubmitting} onClick={openBulkModal}>
               Hapus
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>

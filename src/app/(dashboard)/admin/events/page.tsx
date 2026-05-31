@@ -52,6 +52,7 @@ export default function EventsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
   const [, startTransition] = useTransition();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -235,15 +236,20 @@ export default function EventsPage() {
     const ok = await confirm({ description: `Hapus ${selectedIds.length} event ini?`, variant: 'destructive', confirmLabel: 'Hapus' });
     if (!ok) return;
 
+    setIsBulkSubmitting(true);
     startTransition(async () => {
-      const result = await deleteEventsBulk(selectedIds);
-      if (result.success) {
-        const removed = new Set(selectedIds);
-        setEvents((prev) => prev.filter((e) => !removed.has(e.id)));
-        setSelectedIds([]);
-        setShowBulkModal(false);
-      } else {
-        toast.error(result.error);
+      try {
+        const result = await deleteEventsBulk(selectedIds);
+        if (result.success) {
+          const removed = new Set(selectedIds);
+          setEvents((prev) => prev.filter((e) => !removed.has(e.id)));
+          setSelectedIds([]);
+          setShowBulkModal(false);
+        } else {
+          toast.error(result.error);
+        }
+      } finally {
+        setIsBulkSubmitting(false);
       }
     });
   };
@@ -251,31 +257,36 @@ export default function EventsPage() {
   const handleBulkUpdate = async () => {
     if (!selectedIds.length) return;
 
+    setIsBulkSubmitting(true);
     startTransition(async () => {
-      const input: Parameters<typeof updateEventsBulk>[0] = { ids: selectedIds };
-      if (bulkAction === 'status') {
-        input.status = bulkValue as 'pending' | 'confirmed' | 'completed' | 'cancelled';
-      }
-      if (bulkAction === 'payment') {
-        input.paymentStatus = bulkValue as 'unpaid' | 'partial' | 'paid' | 'awaiting_confirmation';
-      }
+      try {
+        const input: Parameters<typeof updateEventsBulk>[0] = { ids: selectedIds };
+        if (bulkAction === 'status') {
+          input.status = bulkValue as 'pending' | 'confirmed' | 'completed' | 'cancelled';
+        }
+        if (bulkAction === 'payment') {
+          input.paymentStatus = bulkValue as 'unpaid' | 'partial' | 'paid' | 'awaiting_confirmation';
+        }
 
-      const result = await updateEventsBulk(input);
-      if (result.success) {
-        const targets = new Set(selectedIds);
-        setEvents((prev) => prev.map((e) =>
-          targets.has(e.id)
-            ? {
-                ...e,
-                ...(bulkAction === 'status' ? { status: bulkValue } : {}),
-                ...(bulkAction === 'payment' ? { paymentStatus: bulkValue } : {}),
-              }
-            : e
-        ));
-        setSelectedIds([]);
-        setShowBulkModal(false);
-      } else {
-        toast.error(result.error);
+        const result = await updateEventsBulk(input);
+        if (result.success) {
+          const targets = new Set(selectedIds);
+          setEvents((prev) => prev.map((e) =>
+            targets.has(e.id)
+              ? {
+                  ...e,
+                  ...(bulkAction === 'status' ? { status: bulkValue } : {}),
+                  ...(bulkAction === 'payment' ? { paymentStatus: bulkValue } : {}),
+                }
+              : e
+          ));
+          setSelectedIds([]);
+          setShowBulkModal(false);
+        } else {
+          toast.error(result.error);
+        }
+      } finally {
+        setIsBulkSubmitting(false);
       }
     });
   };
@@ -316,13 +327,13 @@ export default function EventsPage() {
             {selectedIds.length} item dipilih
           </span>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => openBulkModal('status')}>
+            <Button variant="outline" size="sm" disabled={isBulkSubmitting} onClick={() => openBulkModal('status')}>
               Ubah Status
             </Button>
-            <Button variant="outline" size="sm" onClick={() => openBulkModal('payment')}>
+            <Button variant="outline" size="sm" disabled={isBulkSubmitting} onClick={() => openBulkModal('payment')}>
               Ubah Pembayaran
             </Button>
-            <Button variant="destructive" size="sm" onClick={() => openBulkModal('delete')}>
+            <Button variant="destructive" size="sm" disabled={isBulkSubmitting} onClick={() => openBulkModal('delete')}>
               Hapus
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>

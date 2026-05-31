@@ -148,6 +148,7 @@ export default function GalleriesPage() {
   const handleBulkDelete = async () => {
     const ok = await confirm({ description: `Hapus ${selectedIds.length} gallery ini?`, variant: "destructive", confirmLabel: "Hapus" });
     if (!ok) return;
+    setIsSubmitting(true);
     try {
       const res = await fetch("/api/admin/galleries/bulk", {
         method: "DELETE",
@@ -161,11 +162,14 @@ export default function GalleriesPage() {
     } catch (error) {
       console.error("Error bulk deleting:", error);
       toast.error("Gagal menghapus gallery");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleBulkStatus = async () => {
     if (!bulkStatus) return;
+    setIsSubmitting(true);
     try {
       const res = await fetch("/api/admin/galleries/bulk", {
         method: "PATCH",
@@ -180,6 +184,8 @@ export default function GalleriesPage() {
     } catch (error) {
       console.error("Error bulk updating:", error);
       toast.error("Gagal mengubah status gallery");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -219,6 +225,7 @@ export default function GalleriesPage() {
             <Button
               variant="outline"
               size="sm"
+              disabled={isSubmitting}
               onClick={() => {
                 setBulkStatus("");
                 setShowBulkModal(true);
@@ -229,6 +236,7 @@ export default function GalleriesPage() {
             <Button
               variant="destructive"
               size="sm"
+              disabled={isSubmitting}
               onClick={() => handleBulkDelete()}
             >
               Hapus
