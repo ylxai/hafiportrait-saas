@@ -103,6 +103,7 @@ export default function EventsPage() {
       }
     } catch (error) {
       console.error('Error fetching events:', error);
+      toast.error('Gagal memuat data');
     } finally {
       setLoading(false);
     }

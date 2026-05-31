@@ -51,7 +51,13 @@ export async function uploadToR2(
     },
   });
 
-  await parallelUploads3.done();
+  try {
+    await parallelUploads3.done();
+  } catch (error) {
+    throw new Error(
+      `R2 upload failed for key "${key}": ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
 
   const url = `${publicUrl}/${key}`;
   

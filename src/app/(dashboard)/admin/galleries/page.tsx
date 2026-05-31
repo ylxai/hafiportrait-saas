@@ -149,33 +149,37 @@ export default function GalleriesPage() {
     const ok = await confirm({ description: `Hapus ${selectedIds.length} gallery ini?`, variant: "destructive", confirmLabel: "Hapus" });
     if (!ok) return;
     try {
-      await fetch("/api/admin/galleries/bulk", {
+      const res = await fetch("/api/admin/galleries/bulk", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedIds }),
       });
+      if (!res.ok) throw new Error("Bulk delete failed");
       mutate();
       setSelectedIds([]);
       setShowBulkModal(false);
     } catch (error) {
       console.error("Error bulk deleting:", error);
+      toast.error("Gagal menghapus gallery");
     }
   };
 
   const handleBulkStatus = async () => {
     if (!bulkStatus) return;
     try {
-      await fetch("/api/admin/galleries/bulk", {
+      const res = await fetch("/api/admin/galleries/bulk", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedIds, status: bulkStatus }),
       });
+      if (!res.ok) throw new Error("Bulk status update failed");
       mutate();
       setSelectedIds([]);
       setShowBulkModal(false);
       setBulkStatus("");
     } catch (error) {
       console.error("Error bulk updating:", error);
+      toast.error("Gagal mengubah status gallery");
     }
   };
 
