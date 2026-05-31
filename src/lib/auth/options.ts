@@ -171,6 +171,12 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role;
       }
+      // Preserve id on token refresh (user is null on refresh).
+      // token.id persists in the JWT payload across refreshes,
+      // but guard against edge cases where it could be stripped.
+      if (!token.id && token.sub) {
+        token.id = token.sub;
+      }
       return token;
     },
     async session({ session, token }) {

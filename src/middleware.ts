@@ -102,10 +102,9 @@ export async function middleware(request: NextRequest) {
       if (existingRole === ROLE_CLIENT) {
         // Client is already logged in — honour callbackUrl or fall back to dashboard.
         const cb = request.nextUrl.searchParams.get('callbackUrl');
-        const safe =
-          cb && cb.startsWith('/') && !cb.startsWith('//') && !cb.startsWith('/\\')
-            ? cb
-            : '/portal/dashboard';
+        const trimmed = cb?.trim() ?? '';
+        const isSafe = trimmed.startsWith('/') && !trimmed.startsWith('//') && !trimmed.includes('\\') && !trimmed.includes('://');
+        const safe = isSafe ? trimmed : '/portal/dashboard';
         return redirectWithRequestId(new URL(safe, request.url), requestId);
       }
     }
@@ -241,8 +240,17 @@ export async function middleware(request: NextRequest) {
   // is echoed on the response (it's a non-sensitive correlation token).
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(REQUEST_ID_HEADER, requestId);
-  requestHeaders.set("x-user-email", token.email as string);
-  requestHeaders.set("x-user-id", token.sub as string);
+  // SECURITY: Delete any client-supplied identity headers to prevent spoofing.
+  // These are only set from the trusted JWT token below.
+  requestHeaders.delete("x-user-email");
+  requestHeaders.delete("x-user-id");
+  requestHeaders.delete("x-user-role");
+  if (token.email) {
+    requestHeaders.set("x-user-email", token.email as string);
+  }
+  if (token.sub) {
+    requestHeaders.set("x-user-id", token.sub);
+  }
   // Only set the role header when we actually have a non-empty role.
   // Setting `x-user-role: ""` would surface a misleading blank header to
   // downstream handlers that test for header presence rather than value
