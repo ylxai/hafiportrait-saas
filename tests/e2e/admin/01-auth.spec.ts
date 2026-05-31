@@ -1,5 +1,7 @@
 import { test, expect, TEST_USER } from "../fixtures/auth";
 
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test.describe("Authentication Flow", () => {
   test("should login with valid credentials", async ({ adminPage }) => {
     await adminPage.login(TEST_USER.email, TEST_USER.password);
@@ -34,19 +36,28 @@ test.describe("Authentication Flow", () => {
     adminPage,
   }) => {
     await page.goto("/admin/galleries");
-    await page.waitForURL("/login");
     await adminPage.expectToBeOnLoginPage();
   });
 
-  test("should show loading state during login", async ({ page }) => {
+  test("should show loading state during login", async ({ page, adminPage }) => {
     await page.goto("/login");
     await page.getByLabel(/email/i).fill(TEST_USER.email);
     await page.getByLabel(/password/i).fill(TEST_USER.password);
 
-    const submitButton = page.getByRole("button", { name: /submit|masuk/i });
+    let delayedAuthRequest = false;
+    await page.route("**/api/auth/callback/admin-credentials", async (route) => {
+      if (!delayedAuthRequest) {
+        delayedAuthRequest = true;
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+      await route.continue();
+    });
+
+    const submitButton = page.getByRole("button").first();
     await submitButton.click();
 
     await expect(submitButton).toBeDisabled();
+    await adminPage.expectToBeOnAdminPage();
   });
 
   test("should handle session expiry", async ({ page, context, adminPage }) => {
@@ -56,7 +67,6 @@ test.describe("Authentication Flow", () => {
     await context.clearCookies();
 
     await page.goto("/admin/galleries");
-    await page.waitForURL("/login");
     await adminPage.expectToBeOnLoginPage();
   });
 });

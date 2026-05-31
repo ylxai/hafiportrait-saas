@@ -31,7 +31,7 @@ if (!process.env.NEXTAUTH_SECRET) {
 }
 
 export default defineConfig({
-  testDir: "./tests/e2e",
+  testDir: "./tests",
   // Database isolation requires sequential execution per worker
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
@@ -62,10 +62,7 @@ export default defineConfig({
     {
       name: "client",
       testDir: "./tests/e2e/client-portal",
-      use: {
-        ...devices["Desktop Chrome"],
-        storageState: "playwright/.auth/client.json",
-      },
+      use: { ...devices["Desktop Chrome"] },
       dependencies: ["setup"],
     },
     {
