@@ -227,15 +227,16 @@ export default function ClientsPage() {
     const ok = await confirm({ description: `Hapus ${selectedIds.length} client ini?`, variant: 'destructive', confirmLabel: 'Hapus' });
     if (!ok) return;
 
+    const ids = [...selectedIds]; // snapshot before async transition
     setIsBulkSubmitting(true);
     startTransition(async () => {
       try {
-        const result = await deleteClientsBulk(selectedIds);
+        const result = await deleteClientsBulk(ids);
         if (!result.success) {
           toast.error(result.error || 'Gagal menghapus client');
           return;
         }
-        const removed = new Set(selectedIds);
+        const removed = new Set(ids);
         setClients((prev) => prev.filter((c) => !removed.has(c.id)));
         setSelectedIds([]);
         setShowBulkModal(false);
