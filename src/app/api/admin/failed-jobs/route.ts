@@ -19,29 +19,34 @@ import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 
 // GET /api/admin/failed-jobs - Get pending failed jobs or stats
 export const GET = withRequestContext(async (request: Request) => {
-  const auth = await requireAdminAuth();
-  if (auth instanceof NextResponse) return auth;
+  try {
+    const auth = await requireAdminAuth();
+    if (auth instanceof NextResponse) return auth;
 
-  // Rate limiting
-  const rateLimit = await enforceRateLimit({
-    identifier: `failed-jobs:get:${auth.user.email}`,
-    limit: RATE_LIMITS.ADMIN_READ
-  });
-  if (rateLimit) return rateLimit;
+    // Rate limiting
+    const rateLimit = await enforceRateLimit({
+      identifier: `failed-jobs:get:${auth.user.email}`,
+      limit: RATE_LIMITS.ADMIN_READ
+    });
+    if (rateLimit) return rateLimit;
 
-  const { searchParams } = new URL(request.url);
-  const action = searchParams.get('action') || 'list';
-  const jobType = searchParams.get('jobType') as FailedJobType | null;
-  const limit = Math.min(100, parseInt(searchParams.get('limit') || '50', 10));
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get('action') || 'list';
+    const jobType = searchParams.get('jobType') as FailedJobType | null;
+    const limit = Math.min(100, parseInt(searchParams.get('limit') || '50', 10));
 
-  if (action === 'stats') {
-    const stats = await getFailedJobStats();
-    return successResponse(stats);
+    if (action === 'stats') {
+      const stats = await getFailedJobStats();
+      return successResponse(stats);
+    }
+
+    // Default: list pending jobs
+    const jobs = await getPendingFailedJobs(jobType || undefined, limit);
+    return successResponse({ jobs });
+  } catch (error) {
+    logger.error('admin.failed_jobs.fetch_failed', { err: error });
+    return errorResponse('Failed to fetch failed jobs', 500);
   }
-
-  // Default: list pending jobs
-  const jobs = await getPendingFailedJobs(jobType || undefined, limit);
-  return successResponse({ jobs });
 });
 
 // POST /api/admin/failed-jobs - Retry or resolve a failed job

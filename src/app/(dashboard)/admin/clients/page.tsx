@@ -93,6 +93,7 @@ export default function ClientsPage() {
       setClients(data.data?.clients || data.clients || []);
     } catch (error) {
       console.error('Error fetching clients:', error);
+      toast.error('Gagal memuat data');
     } finally {
       setLoading(false);
     }

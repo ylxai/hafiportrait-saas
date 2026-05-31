@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /home/ubuntu/hafiportrait-saas/docs 2>/dev/null || echo \"docs folder does not exist\")",
+      "Bash(mkdir:*)"
+    ]
+  }
+}
