@@ -129,7 +129,7 @@ async function validateFileWithMagicBytes(file: File): Promise<{ valid: boolean;
   if (!typeCheck.valid) return typeCheck;
   const magicBytesValid = await checkMagicBytes(file);
   if (!magicBytesValid) {
-    return { valid: false, error: "File content does not match its extension" };
+    return { valid: false, error: "Konten file tidak sesuai dengan ekstensinya" };
   }
   return { valid: true };
 }
