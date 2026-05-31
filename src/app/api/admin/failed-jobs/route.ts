@@ -37,7 +37,7 @@ export const GET = withRequestContext(async (request: Request) => {
 
     if (action === 'stats') {
       const stats = await getFailedJobStats();
-      return successResponse(stats);
+      return successResponse({ stats });
     }
 
     // Default: list pending jobs
