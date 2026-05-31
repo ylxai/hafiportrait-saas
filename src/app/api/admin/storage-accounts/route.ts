@@ -156,7 +156,7 @@ export const GET = withRequestContext(async (request: Request) => {
     const [accounts, total] = await Promise.all([
       prisma.storageAccount.findMany({
         select: SAFE_ACCOUNT_SELECT,
-        orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }],
+        orderBy: [{ isDefault: 'desc' }, { priority: 'asc' }, { id: 'asc' }],
         take: limit,
         skip,
       }),
