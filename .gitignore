@@ -134,3 +134,6 @@ scripts/setup-vercel-env.sh
 .env.test
 .output.txt
 logs-vercel.json
+
+# Local docs (not for version control)
+docs/
