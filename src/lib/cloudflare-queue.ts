@@ -36,6 +36,15 @@ const WORKER_URL = env.CLOUDFLARE_WORKER_URL;
 const BULK_DELETE_CONCURRENCY = 10;
 
 /**
+ * Centralized handler for failed outbox record attempts.
+ * Logs the error and returns undefined so callers can chain with .catch().
+ */
+function handleOutboxFailure(err: unknown): undefined {
+  logger.error('queue.outbox_record_failed', { err });
+  return undefined;
+}
+
+/**
  * Enhanced error logging with context
  */
 function logQueueError(context: string, error: unknown, metadata?: Record<string, unknown>): void {
@@ -229,7 +238,7 @@ export async function queueThumbnailGeneration(data: {
       jobType: 'thumbnail-generation',
       payload: { photoId: data.photoId, r2Key: data.r2Key, galleryId: data.galleryId },
       errorMessage: 'Missing Cloudinary credentials',
-    }).catch((err) => { logger.error('queue.outbox_record_failed', { err }); return undefined; });
+    }).catch(handleOutboxFailure);
     return { success: false, error: 'Missing Cloudinary credentials' };
   }
 
@@ -787,7 +796,7 @@ export async function enqueueDeletionWithOutbox(
       // can be rehydrated from `StorageAccount` on retry.
       payload: { photos: redactPayloadsForOutbox(enqueueable) },
       errorMessage: 'Cloudflare Queue not configured (CLOUDFLARE_WORKER_URL missing)',
-    }).catch((err) => { logger.error('queue.outbox_record_failed', { err }); return undefined; });
+    }).catch(handleOutboxFailure);
     return { queued: 0, outboxed: enqueueable.length, outboxJobId };
   }
 
@@ -805,7 +814,7 @@ export async function enqueueDeletionWithOutbox(
       jobType: 'storage-deletion',
       payload: { photos: redactPayloadsForOutbox(enqueueable) },
       errorMessage: result.error || `Queue publish failed (${result.failedCount ?? '?'} jobs)`,
-    }).catch((err) => { logger.error('queue.outbox_record_failed', { err }); return undefined; });
+    }).catch(handleOutboxFailure);
     return { queued: 0, outboxed: enqueueable.length, outboxJobId };
   } catch (cfError) {
     logQueueError('Bulk deletion queue error', cfError, { photoCount: enqueueable.length });
@@ -813,7 +822,7 @@ export async function enqueueDeletionWithOutbox(
       jobType: 'storage-deletion',
       payload: { photos: redactPayloadsForOutbox(enqueueable) },
       errorMessage: cfError instanceof Error ? cfError.message : String(cfError),
-    }).catch((err) => { logger.error('queue.outbox_record_failed', { err }); return undefined; });
+    }).catch(handleOutboxFailure);
     return { queued: 0, outboxed: enqueueable.length, outboxJobId };
   }
 }
