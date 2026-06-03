@@ -133,7 +133,7 @@ export default function GalleryDetailPage() {
   const _isAblyConnected = useAblyConnection();
   useSelectionSubscription(gallery?.id || "", handleSelectionUpdate);
 
-  const { data: storageData, error: storageError } = useSWR<{
+  const { data: storageData, error: storageError, mutate: mutateStorage } = useSWR<{
     data: { accounts: StorageAccount[] };
   }>("/api/admin/storage-accounts", fetcher);
 
@@ -329,7 +329,7 @@ export default function GalleryDetailPage() {
           <p className="text-destructive mb-4">
             Gagal memuat data gallery. Silakan coba lagi.
           </p>
-          <Button onClick={() => { mutate(); mutatePhotos(); }}>
+          <Button onClick={() => { mutate(); mutatePhotos(); mutateStorage(); }}>
             Coba Lagi
           </Button>
         </div>
