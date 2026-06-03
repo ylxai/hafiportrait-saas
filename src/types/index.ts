@@ -43,7 +43,8 @@ export type Event = {
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   totalPrice: number;
   paidAmount: number;
-  paymentStatus: 'unpaid' | 'awaiting_confirmation' | 'dp_paid' | 'fully_paid' | 'partial' | 'paid';
+  // NOTE: Keep paymentStatus values in sync with src/lib/api/validation.ts
+  paymentStatus: 'unpaid' | 'awaiting_confirmation' | 'partial' | 'paid';
   createdAt: Date;
   updatedAt: Date;
 };
