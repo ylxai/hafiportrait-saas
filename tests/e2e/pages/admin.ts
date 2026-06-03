@@ -12,9 +12,10 @@ export class AdminPage {
   }
 
   async logout() {
-    await this.page.click('[data-testid="user-menu"]');
-    await this.page.getByText("Logout").click();
-    await this.page.waitForURL("/login");
+    await this.page
+      .getByRole("button", { name: /keluar|logout/i })
+      .click({ force: true });
+    await expect(this.page).toHaveURL(/\/login(?:\?|$)/);
   }
 
   async expectToBeOnAdminPage() {

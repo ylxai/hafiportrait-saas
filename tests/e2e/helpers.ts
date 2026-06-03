@@ -15,9 +15,10 @@ export async function login(page: Page) {
 }
 
 export async function logout(page: Page) {
-  await page.getByTestId("user-menu").click();
-  await page.getByText("Logout").click();
-  await page.waitForURL("/login");
+  await page.getByRole("button", { name: /keluar|logout/i }).click({
+    force: true,
+  });
+  await expect(page).toHaveURL(/\/login(?:\?|$)/);
 }
 
 export function generateTestData() {
