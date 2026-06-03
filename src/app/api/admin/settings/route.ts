@@ -9,7 +9,6 @@ import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
-import { isPrismaError } from '@/lib/prisma-error';
 import { formatZodError } from '@/lib/api/validation';
 
 // Normalize null → undefined so legacy DB rows with null JSON columns
@@ -144,24 +143,13 @@ export const POST = withRequestContext(async (request: Request) => {
       namaBank: data.namaBank || '',
     };
 
-    // Settings is a singleton row (id="studio"). Prisma's upsert is not
-    // atomic across concurrent requests, so under contention two callers can
-    // both miss the row and race to INSERT — one wins, the other gets P2002.
-    // Try create first; on P2002 fall back to a pure update so the loser of
-    // the race still applies its payload.
-    let settings;
-    try {
-      settings = await prisma.settings.create({ data: createPayload });
-    } catch (error) {
-      if (isPrismaError(error, 'P2002')) {
-        settings = await prisma.settings.update({
-          where: { id: 'studio' },
-          data: updatePayload,
-        });
-      } else {
-        throw error;
-      }
-    }
+    // Atomic upsert — avoids the race condition where two concurrent
+    // requests both miss the row and race to INSERT (one gets P2002).
+    const settings = await prisma.settings.upsert({
+      where: { id: 'studio' },
+      create: createPayload,
+      update: updatePayload,
+    });
 
     return successResponse({ settings });
   } catch (error) {
