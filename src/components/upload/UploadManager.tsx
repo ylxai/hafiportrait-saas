@@ -99,8 +99,8 @@ export function UploadManager({
     maxConcurrent: 10,
     maxRetries: 3,
     autoUpload: false,
-    onComplete: (photo) => {
-      console.log('Photo uploaded:', photo);
+    onComplete: (_photo) => {
+      // Upload complete - handled by useDirectUpload state
     },
     onError: (_fileId, error, errorCode) => {
       console.error('Upload error:', error, errorCode);
