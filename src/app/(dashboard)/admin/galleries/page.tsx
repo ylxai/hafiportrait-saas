@@ -66,7 +66,7 @@ export default function GalleriesPage() {
   const limit = 20;
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
-  const { data, isLoading, mutate } = useSWR<GalleriesResponse>(
+  const { data, isLoading, error, mutate } = useSWR<GalleriesResponse>(
     `/api/admin/galleries?page=${page}&limit=${limit}`,
     fetcher,
   );
@@ -74,7 +74,7 @@ export default function GalleriesPage() {
   const pagination = data?.data?.pagination;
 
   // Fetch events for the create form
-  const { data: eventsData } = useSWR<EventsResponse>(
+  const { data: eventsData, error: _eventsError } = useSWR<EventsResponse>(
     "/api/admin/events?limit=100",
     fetcher,
   );
@@ -262,6 +262,17 @@ export default function GalleriesPage() {
               </div>
             </div>
           ))}
+        </div>
+      ) : error ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-destructive mb-4">
+              Gagal memuat daftar gallery. Silakan coba lagi.
+            </p>
+            <Button onClick={() => mutate()}>
+              Coba Lagi
+            </Button>
+          </div>
         </div>
       ) : galleries.length === 0 ? (
         <div className="bg-card/50 backdrop-blur-xl border border-border shadow-2xl rounded-3xl p-12 text-center">
