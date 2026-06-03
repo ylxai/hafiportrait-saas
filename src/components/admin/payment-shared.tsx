@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { CheckCircle, XCircle, Clock, ExternalLink, ImageIcon } from 'lucide-react';
 
 export type PaymentStatus = 'pending' | 'approved' | 'rejected';
@@ -48,13 +47,13 @@ export function PaymentProofThumbnail({ proofUrl }: { proofUrl: string | null })
         rel="noopener noreferrer"
         className="block w-16 h-16 rounded-xl overflow-hidden border border-border hover:border-primary transition-colors group relative"
       >
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={proofUrl}
           alt="Bukti transfer"
-          fill
-          className="object-cover"
+          loading="lazy"
+          className="w-full h-full object-cover"
           onError={() => setImgError(true)}
-          unoptimized
         />
         <div className="absolute inset-0 bg-foreground/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
           <ExternalLink className="w-4 h-4 text-background" />
