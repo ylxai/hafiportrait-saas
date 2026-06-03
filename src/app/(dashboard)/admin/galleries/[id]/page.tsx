@@ -85,7 +85,7 @@ export default function GalleryDetailPage() {
   const [settingsMessage, setSettingsMessage] = useState("");
 
   const fetcher = (url: string) => fetch(url).then((res) => res.json());
-  const { data, isLoading, mutate } = useSWR<{ data: { gallery: Gallery } }>(
+  const { data, isLoading, error, mutate } = useSWR<{ data: { gallery: Gallery } }>(
     galleryId ? `/api/admin/galleries/${galleryId}` : null,
     fetcher,
   );
@@ -95,6 +95,7 @@ export default function GalleryDetailPage() {
   const {
     data: photosRes,
     isLoading: photosLoading,
+    error: photosError,
     mutate: mutatePhotos,
   } = useSWR<{
     data: { photos: Photo[]; pagination: { total: number; pages: number } };
@@ -132,7 +133,7 @@ export default function GalleryDetailPage() {
   const _isAblyConnected = useAblyConnection();
   useSelectionSubscription(gallery?.id || "", handleSelectionUpdate);
 
-  const { data: storageData } = useSWR<{
+  const { data: storageData, error: storageError } = useSWR<{
     data: { accounts: StorageAccount[] };
   }>("/api/admin/storage-accounts", fetcher);
 
@@ -320,6 +321,21 @@ export default function GalleryDetailPage() {
   const totalPhotos = pagination?.total || 0;
   const totalPages = pagination?.pages || 0;
   const paginatedPhotos = photos;
+
+  if (error || photosError || storageError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-destructive mb-4">
+            Gagal memuat data gallery. Silakan coba lagi.
+          </p>
+          <Button onClick={() => { mutate(); mutatePhotos(); }}>
+            Coba Lagi
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || photosLoading) {
     return (
