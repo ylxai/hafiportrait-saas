@@ -210,7 +210,7 @@ export default function GalleriesPage() {
       <Button
         onClick={() => setShowModal(true)}
         size="icon"
-        className="fab bg-primary text-primary-foreground sm:hidden fixed bottom-6 right-6"
+        className="fab bg-primary text-primary-foreground sm:hidden"
         aria-label="Buat Gallery Baru"
       >
         <Plus className="w-6 h-6" />

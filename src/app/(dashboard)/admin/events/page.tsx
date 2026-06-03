@@ -317,7 +317,7 @@ export default function EventsPage() {
       <Button
         onClick={() => { resetForm(); setShowModal(true); }}
         size="icon"
-        className="fab bg-muted0 text-white sm:hidden fixed bottom-6 right-6"
+        className="fab bg-primary text-primary-foreground sm:hidden"
         aria-label="Buat Event Baru"
       >
         <Plus className="w-6 h-6" />
@@ -386,7 +386,7 @@ export default function EventsPage() {
                 <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-champagne-100">
+            <tbody className="divide-y divide-border">
               {events.map((event) => (
                 <tr key={event.id} className={`hover:bg-muted/20 transition-smooth ${selectedIds.includes(event.id) ? 'bg-muted' : ''}`}>
                   <td className="px-4 py-4">
