@@ -3,6 +3,7 @@ import { successResponse, serverErrorResponse, rateLimitResponse, getClientIp } 
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { MAX_PACKAGES_PER_PAGE } from '@/lib/api/constants';
 
 export const GET = withRequestContext(async (request: Request) => {
   try {
@@ -13,7 +14,7 @@ export const GET = withRequestContext(async (request: Request) => {
     const packages = await prisma.package.findMany({
       where: { isActive: true },
       orderBy: { createdAt: 'desc' },
-      take: 100,
+      take: MAX_PACKAGES_PER_PAGE,
     });
 
     return successResponse({ packages });

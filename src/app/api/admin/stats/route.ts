@@ -10,6 +10,7 @@ import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { getCachedData } from "@/lib/cache";
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
+import { STATS_RECENT_LIMIT } from '@/lib/api/constants';
 
 /**
  * GET /api/admin/stats
@@ -47,7 +48,7 @@ export const GET = withRequestContext(async (_request: Request) => {
           prisma.photo.count(),
           prisma.event.findMany({
             orderBy: { createdAt: "desc" },
-            take: 5,
+            take: STATS_RECENT_LIMIT,
             // Only the client name is rendered in the dashboard's "Recent
             // events" widget, so narrow the select instead of pulling the
             // entire row (which would include `Client.password`, the
@@ -56,7 +57,7 @@ export const GET = withRequestContext(async (_request: Request) => {
           }),
           prisma.gallery.findMany({
             orderBy: { createdAt: "desc" },
-            take: 5,
+            take: STATS_RECENT_LIMIT,
             include: {
               event: { select: { client: { select: { nama: true } } } },
               _count: { select: { photos: true } },

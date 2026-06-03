@@ -13,10 +13,7 @@ import { enforceRateLimit } from '@/lib/rate-limit-helper';
 import { withRequestContext } from '@/lib/with-request-context';
 import { isPrismaError } from '@/lib/prisma-error';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
-
-// bcrypt cost factor for client portal passwords. Matches the dummy hash
-// shape used in lib/auth/options.ts for timing-attack protection.
-const BCRYPT_ROUNDS = 10;
+import { BCRYPT_ROUNDS } from '@/lib/api/constants';
 
 export const GET = withRequestContext(async (request: Request) => {
   try {

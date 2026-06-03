@@ -22,7 +22,7 @@ type StorageAccount = {
   publicUrl?: string | null;
   endpoint?: string | null;
   secondaryApiKey?: string | null;
-  secondarySecret?: string | null;
+  secondarySecretKey?: string | null;
   secondaryAccessKey?: string | null;
   isSecondaryActive?: boolean | null;
   storageLimitGB?: number | null;

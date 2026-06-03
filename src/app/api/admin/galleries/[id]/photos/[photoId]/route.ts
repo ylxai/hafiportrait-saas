@@ -7,13 +7,8 @@ import { getOrphanedR2Keys, queueStorageDeletion, isQueueConfigured } from '@/li
 import { z } from 'zod';
 import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
-import { isPrismaError as isPrismaErrorShared } from '@/lib/prisma-error';
+import { isPrismaError } from '@/lib/prisma-error';
 import { formatZodError } from '@/lib/api/validation';
-
-// Helper to check Prisma error codes
-function isPrismaError(error: unknown, code: string): boolean {
-  return isPrismaErrorShared(error, code);
-}
 
 // Zod schema for route params
 const paramsSchema = z.object({
