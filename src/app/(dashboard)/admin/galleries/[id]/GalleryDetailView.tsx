@@ -59,6 +59,7 @@ type Gallery = {
 };
 
 export default function GalleryDetailView({ galleryId }: { galleryId: string }) {
+  console.log('[DEBUG] GalleryDetailView mounting for ID:', galleryId);
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const [selectedPhotoIdsForBulk, setSelectedPhotoIdsForBulk] = useState<
@@ -74,7 +75,10 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
   const photosPerPage = 50;
 
   // Gallery settings state
-  const [gallerySettings, setGallerySettings] = useState({
+  const [gallerySettings, setGallerySettings] = useState<{
+    maxSelection: number | "";
+    enableDownload: boolean;
+  }>({
     maxSelection: 20,
     enableDownload: false,
   });
@@ -174,7 +178,7 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          maxSelection: gallerySettings.maxSelection,
+          maxSelection: Number(gallerySettings.maxSelection) || 0,
           enableDownload: gallerySettings.enableDownload,
         }),
       });
@@ -262,14 +266,13 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
       if (!response.ok) {
         throw new Error("Failed to bulk delete photos");
       }
+      setSelectedPhotoIdsForBulk(new Set());
+      setBulkMode(false);
+      mutatePhotos();
     } catch (error) {
       console.error("Error bulk deleting photos:", error);
       toast.error("Terjadi kesalahan saat menghapus foto");
     }
-
-    setSelectedPhotoIdsForBulk(new Set());
-    setBulkMode(false);
-    mutatePhotos();
   }, [galleryId, mutatePhotos, selectedPhotoIdsForBulk, confirm]);
 
   const handleExport = () => {
@@ -279,12 +282,12 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
       toast.error("Tidak ada foto seleksi klien untuk diekspor");
       return;
     }
-    const content = photosToExport.map((p) => p.filename).join("\\n");
+    const content = photosToExport.map((p) => p.filename).join("\n");
     const blob = new Blob([content], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = ` ${gallery?.namaProject || "gallery"}-selection-filelist.txt`;
+    a.download = `${gallery?.namaProject || "gallery"}-selection-filelist.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -461,8 +464,8 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
                       <div className="absolute top-1 left-1 bg-foreground text-background text-xs px-1.5 py-0.5 rounded">
                         {idx + 1}
                       </div>
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition rounded-lg flex items-center justify-center">
-                        <span className="text-white text-xs">
+                      <div className="absolute inset-0 bg-background/50 opacity-0 group-hover:opacity-100 transition rounded-lg flex items-center justify-center">
+                        <span className="text-foreground text-xs">
                           {photo.filename}
                         </span>
                       </div>
@@ -479,7 +482,7 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
                 <div className="text-xs text-muted-foreground font-mono max-h-32 overflow-y-auto">
                   {latestSelection?.photos
                     ?.map((item) => item.photo.filename)
-                    .join("\\n")}
+                    .join("\n")}
                 </div>
               </div>
             </div>
@@ -573,6 +576,7 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
           onClose={() => setShowUploadManager(false)}
           onSuccess={() => {
             mutate();
+            mutatePhotos();
             setShowUploadManager(false);
           }}
           cloudinaryAccounts={cloudinaryAccounts}
@@ -616,13 +620,13 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
                           type="checkbox"
                           checked={selectedPhotoIdsForBulk.has(photo.id)}
                           readOnly
-                          className="w-6 h-6 rounded border-2 border-white shadow-md cursor-pointer pointer-events-none"
+                          className="w-6 h-6 rounded border-2 border-border shadow-md cursor-pointer pointer-events-none"
                         />
                       </div>
                     )}
                     {reorderMode && (
                       <div
-                        className="absolute inset-0 z-10 bg-black/40 flex items-center justify-center p-2 cursor-pointer"
+                        className="absolute inset-0 z-10 bg-background/40 flex items-center justify-center p-2 cursor-pointer"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="flex flex-col items-center gap-2">
@@ -672,7 +676,7 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
                       </button>
                     )}
                     {!bulkMode && !reorderMode && (
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-white text-xs truncate rounded-b-lg opacity-0 group-hover:opacity-100 transition-smooth pointer-events-none text-center">
+                      <div className="absolute bottom-0 left-0 right-0 bg-background/60 p-1 text-foreground text-xs truncate rounded-b-lg opacity-0 group-hover:opacity-100 transition-smooth pointer-events-none text-center">
                         {photo.filename}
                       </div>
                     )}
@@ -785,7 +789,7 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
               onChange={(e) => {
                 setGallerySettings((prev) => ({
                   ...prev,
-                  maxSelection: parseInt(e.target.value, 10) || 20,
+                  maxSelection: e.target.value === "" ? "" : parseInt(e.target.value, 10),
                 }));
               }}
               className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground"
