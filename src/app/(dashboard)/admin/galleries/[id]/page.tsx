@@ -61,6 +61,7 @@ type Gallery = {
 
 export default function GalleryDetailPage() {
   const params = useParams();
+  console.log('[DEBUG] GalleryDetailPage params:', params);
   const galleryId = params.id as string;
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
