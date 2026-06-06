@@ -26,10 +26,6 @@ LOG_LEVEL=debug                                        # Logger verbosity
 # Kernel API key (cloud browsers)
 # KERNEL_API_KEY=sk_b183d707-5496-474b-a69d-219bf210547e.TN5lDMo4BvzlGIxpiOlZyh+FGAZPw2+g7XnrxJUMi4g
 
-# AI Router (9Router) ─────────────────────────────────────
-# AI Router endpoint at localhost:20128/v1 with Kiro AI provider
-# Models: kr/claude-sonnet-4.5, kr/claude-sonnet-4.6, kr/deepseek-3.2, etc.
-
 # Deprecated / Not Used on This Project ───────────────────
 # NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=...   # Storage creds in DB
 # R2_ACCESS_KEY=...                       # (moved to StorageAccount)

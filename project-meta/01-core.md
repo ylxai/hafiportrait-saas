@@ -16,8 +16,7 @@
 | **Vercel Bypass Secret** | `rrl1yNdMMWQMg95VEmHDQ09fvtGIRSeD` (for preview URL access) |
 | **Admin Credentials** | Email: `admin@photostudio.com`, Password: `admin123` |
 | **Kernel API Key** | `sk_b183d707-5496-474b-a69d-219bf210547e.TN5lDMo4BvzlGIxpiOlZyh+FGAZPw2+g7XnrxJUMi4g` (cloud browser testing) |
-| **Honcho API Key** | `hch-v3-hhwjo2hh8r0ie3do46ocnbk1wq5856mukfs7cnncibi83gel0sy20sfvegs2ywm4` (memory service) |
-| **AI Router** | 9Router at `localhost:20128/v1` with Kiro AI provider |
+| **Honcho API Key** | `hch-v3-90ndfzsbuf99uzf8mnagehgcfvg3suljx712x0uu62957po7y2cf9ytnbz8mz13y` (memory service) |
 
 ---
 
@@ -212,16 +211,3 @@ Append to preview URL:
 ```
 
 **Note**: Bypass secret only works for **preview** deployments, NOT production.
-
----
-
-## 9. Model Configuration
-
-This project is developed via **Hermes Agent** with AI routing through **9Router** (`localhost:20128/v1`):
-
-| Aspect | Detail |
-|---|---|
-| Primary Provider | Kiro AI (via 9Router) |
-| Models Used | claude-sonnet-4.5, claude-sonnet-4.6, kimi-k2.6, deepseek-v4-flash |
-| Dashboard | http://localhost:20128/dashboard |
-| Skills | nextjs-expert, Prisma, kernel-cli, and 120+ others |
