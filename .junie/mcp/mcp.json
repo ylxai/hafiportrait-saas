@@ -12,8 +12,8 @@
                 "X-Honcho-User-Name:${USER_NAME}"
             ],
             "env": {
-                "AUTH_HEADER": "Bearer hch-v3-90ndfzsbuf99uzf8mnagehgcfvg3suljx712x0uu62957po7y2cf9ytnbz8mz13y",
-                "USER_NAME": "RrQHNeRvhQ3l1VN0lzrFW"
+                "AUTH_HEADER": "${HONCHO_AUTH_HEADER}",
+                "USER_NAME": "${HONCHO_USER_NAME}"
             }
         }
     }
