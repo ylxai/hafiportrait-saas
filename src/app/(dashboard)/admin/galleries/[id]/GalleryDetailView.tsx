@@ -9,13 +9,12 @@ import {
 import { UploadManager } from "@/components/upload/UploadManager";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Upload } from "lucide-react";
 import { PhotoImage } from "@/components/photo/PhotoImage";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import YARLightbox from "yet-another-react-lightbox";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import "yet-another-react-lightbox/styles.css";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Upload } from "lucide-react";
 
 type StorageAccount = {
   id: string;
@@ -110,14 +109,16 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
   const pagination = photosRes?.data?.pagination;
 
   // Update settings state when gallery data loads
+  // Guard: only update if user hasn't explicitly changed settings
+  const [userTouchedSettings, setUserTouchedSettings] = useState(false);
   useEffect(() => {
-    if (gallery) {
+    if (gallery && !userTouchedSettings) {
       setGallerySettings({
         maxSelection: gallery.maxSelection || 20,
         enableDownload: gallery.enableDownload || false,
       });
     }
-  }, [gallery]);
+  }, [gallery, userTouchedSettings]);
 
   const handleSelectionUpdate = useCallback(
     (_update: {
@@ -155,12 +156,18 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
       if (!ok) return;
 
       try {
-        await fetch(`/api/admin/galleries/${galleryId}/photos/${photoId}`, {
+        const res = await fetch(`/api/admin/galleries/${galleryId}/photos/${photoId}`, {
           method: "DELETE",
         });
-        mutatePhotos();
+        if (res.ok) {
+          toast.success("Foto berhasil dihapus");
+          mutatePhotos();
+        } else {
+          toast.error("Gagal menghapus foto");
+        }
       } catch (error) {
         console.error("Error deleting photo:", error);
+        toast.error("Gagal menghapus foto");
       }
     },
     [galleryId, mutatePhotos, confirm],
@@ -178,7 +185,7 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          maxSelection: Number(gallerySettings.maxSelection) || 0,
+          maxSelection: gallerySettings.maxSelection === "" ? gallery.maxSelection : Number(gallerySettings.maxSelection),
           enableDownload: gallerySettings.enableDownload,
         }),
       });
@@ -213,12 +220,15 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
       );
 
       if (response.ok) {
+        toast.success("Urutan foto berhasil diubah");
         mutatePhotos(); // Refresh photos
       } else {
         console.error("Failed to reorder photo");
+        toast.error("Gagal mengubah urutan foto");
       }
     } catch (error) {
       console.error("Error reordering photo:", error);
+      toast.error("Gagal mengubah urutan foto");
     } finally {
       setIsReordering(false);
     }
@@ -452,8 +462,10 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
                 {latestSelection?.photos?.map((item, idx) => {
                   const photo = item.photo;
+                  // Guard: photo might be null if deleted after selection
+                  if (!photo) return null;
                   return (
-                    <div key={photo.id} className="relative group">
+                    <div key={item.photoId} className="relative group">
                       <PhotoImage
                         src={photo.thumbnailUrl || photo.url}
                         alt={photo.filename}
@@ -787,6 +799,7 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
               type="number"
               value={gallerySettings.maxSelection}
               onChange={(e) => {
+                setUserTouchedSettings(true);
                 setGallerySettings((prev) => ({
                   ...prev,
                   maxSelection: e.target.value === "" ? "" : parseInt(e.target.value, 10),
@@ -801,12 +814,13 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
               type="checkbox"
               id="enableDownload"
               checked={gallerySettings.enableDownload}
-              onChange={(e) =>
+              onChange={(e) => {
+                setUserTouchedSettings(true);
                 setGallerySettings((prev) => ({
                   ...prev,
                   enableDownload: e.target.checked,
-                }))
-              }
+                }));
+              }}
               className="rounded border-border"
             />
             <label htmlFor="enableDownload" className="text-sm text-foreground">
