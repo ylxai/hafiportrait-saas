@@ -13,6 +13,11 @@
 | **Production URL** | https://studio.hafiportrait.photography |
 | **Project ID** | prj_VoHbI9F4ZPQYDgE4RorWe91QgCe1 |
 | **Node Version** | v25.x (via .nvm) |
+| **Vercel Bypass Secret** | `rrl1yNdMMWQMg95VEmHDQ09fvtGIRSeD` (for preview URL access) |
+| **Admin Credentials** | Email: `admin@photostudio.com`, Password: `admin123` |
+| **Kernel API Key** | `sk_b183d707-5496-474b-a69d-219bf210547e.TN5lDMo4BvzlGIxpiOlZyh+FGAZPw2+g7XnrxJUMi4g` (cloud browser testing) |
+| **Honcho API Key** | `hch-v3-hhwjo2hh8r0ie3do46ocnbk1wq5856mukfs7cnncibi83gel0sy20sfvegs2ywm4` (memory service) |
+| **AI Router** | 9Router at `localhost:20128/v1` with Kiro AI provider |
 
 ---
 
@@ -144,3 +149,79 @@ tests/
 - **`src/lib/logger.ts`**: Guards `node:async_hooks` import — falls back to no requestId in Edge
 - **`src/lib/cloudinary.ts`**, **`src/lib/storage/accounts.ts`**: **Browser context** — cannot use `node:async_hooks`, use `console.*` (by design, NOT a bug)
 - **`src/app/api/*` routes**: Always server-side — use `logger` from `@/lib/logger`
+
+---
+
+## 6. Chunked Write Protocol (Critical for AI Agents)
+
+When writing files, follow these rules **strictly**:
+
+| File Size | Method | Strategy |
+|---|---|---|
+| ≤ 300 lines | Single `write_file()` | OK for one operation |
+| > 300 lines | **NEVER single write** | Split into multiple chunked writes |
+| Editing | `patch()` tool | Surgical find-replace, NEVER rewrite entire file |
+| New file >300 lines | Write first 250-300 lines | Then append remaining in separate chunks |
+
+**Rule of thumb**: Multiple small operations > one large operation. If a write takes >2 seconds, stop and chunk it.
+
+---
+
+## 7. AI Agent Memory & Context Access
+
+### Session Search (Cross-Session Context)
+Use `session_search()` to recall past conversations:
+- **By topic**: `session_search(query="gallery error fix")` — FTS5 over all sessions
+- **By browse**: `session_search()` — recent sessions chronologically
+- **Scroll within session**: `session_search(session_id="...", around_message_id=...)`
+
+### Memory (`memory` tool)
+Save durable facts that will matter across sessions:
+- **DO save**: User preferences, environment facts, project conventions, tool quirks
+- **DO NOT save**: Task progress, session outcomes, PR numbers, commit SHAs, "Phase N done"
+
+### Honcho (Hybrid Memory)
+- `honcho_profile()` — Quick factual snapshot about user
+- `honcho_search()` — Raw excerpts by topic
+- `honcho_reasoning()` — Synthesized answers (LLM cost)
+- `honcho_conclude()` — Save facts about user
+
+### LCM (Long Context Memory)
+- `lcm_grep()` — FTS5 search within active session
+- `lcm_expand()` — Recover detail behind summary nodes
+
+---
+
+## 8. Kernel Browser Setup (Preview URL Testing)
+
+### Credentials
+```bash
+export KERNEL_API_KEY='sk_b183d707-5496-474b-a69d-219bf210547e.TN5lDMo4BvzlGIxpiOlZyh+FGAZPw2+g7XnrxJUMi4g'
+```
+
+### Workflow
+1. Create browser session: `kernel browsers create -o json | jq -r .session_id`
+2. Navigate: `kernel browsers playwright execute $SESSION "await page.goto(url)"`
+3. Screenshot: `kernel browsers computer screenshot $SESSION --to /tmp/shot.png`
+4. Cleanup: `kernel browsers delete $SESSION`
+
+### Bypass Protection for Vercel Preview
+Append to preview URL:
+```
+?x-vercel-protection-bypass=rrl1yNdMMWQMg95VEmHDQ09fvtGIRSeD&x-vercel-set-bypass-cookie=true
+```
+
+**Note**: Bypass secret only works for **preview** deployments, NOT production.
+
+---
+
+## 9. Model Configuration
+
+This project is developed via **Hermes Agent** with AI routing through **9Router** (`localhost:20128/v1`):
+
+| Aspect | Detail |
+|---|---|
+| Primary Provider | Kiro AI (via 9Router) |
+| Models Used | claude-sonnet-4.5, claude-sonnet-4.6, kimi-k2.6, deepseek-v4-flash |
+| Dashboard | http://localhost:20128/dashboard |
+| Skills | nextjs-expert, Prisma, kernel-cli, and 120+ others |

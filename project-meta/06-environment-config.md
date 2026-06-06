@@ -10,21 +10,29 @@
 # Required ──────────────────────────────────────────────────
 DATABASE_URL=prisma+postgres://accelerate.prisma-data.net/?api_key=...
 DIRECT_URL=postgresql://...                             # For db:push only
-NEXTAUTH_SECRET=your-secret-key                         # JWT signing (32+ chars)
+NEXTAUTH_SECRET=BRRKq/4N/V42AxD0ia4Huz8k/T94uzMS/xfMEmm8GQs=
 NEXTAUTH_URL=http://localhost:3000                    # Base URL for callbacks
-ABLY_API_KEY=your-ably-api-key                        # Real-time pub/sub
-VPS_WEBHOOK_SECRET=your-webhook-secret                 # Webhook validation
-CLOUDFLARE_WORKER_URL=https://your-worker.workers.dev # Queue endpoint
+ABLY_API_KEY=HfnUMw.NKtTdA:CxmZ7wqYhXv1g78XMZ3MNVTGowwti8JV55oGRky-xco
+VPS_WEBHOOK_SECRET=dev-webhook-secret-change-in-production
+CLOUDFLARE_WORKER_URL=https://photostudio-deletion-worker.masipah1973.workers.dev
 
 # Optional ─────────────────────────────────────────────────
-RESEND_API_KEY=...                                     # Email magic links
+RESEND_API_KEY=re_your_api_key_here                    # Email magic links
 NEXT_PUBLIC_URL=http://localhost:3000                  # Public URL (for links)
-VERCEL_AUTOMATION_BYPASS_SECRET=...                  # For E2E against preview
-LOG_LEVEL=debug                                      # Logger verbosity
+VERCEL_AUTOMATION_BYPASS_SECRET=rrl1yNdMMWQMg95VEmHDQ09fvtGIRSeD  # For E2E against preview
+LOG_LEVEL=debug                                        # Logger verbosity
 
-# Deprecated / Not Used on This Project ───────────────────────
-# NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=...                # Storage creds in DB
-# R2_ACCESS_KEY=...                                      # (moved to StorageAccount)
+# Kernel Browser Automation ───────────────────────────────
+# Kernel API key (cloud browsers)
+# KERNEL_API_KEY=sk_b183d707-5496-474b-a69d-219bf210547e.TN5lDMo4BvzlGIxpiOlZyh+FGAZPw2+g7XnrxJUMi4g
+
+# AI Router (9Router) ─────────────────────────────────────
+# AI Router endpoint at localhost:20128/v1 with Kiro AI provider
+# Models: kr/claude-sonnet-4.5, kr/claude-sonnet-4.6, kr/deepseek-3.2, etc.
+
+# Deprecated / Not Used on This Project ───────────────────
+# NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=...   # Storage creds in DB
+# R2_ACCESS_KEY=...                       # (moved to StorageAccount)
 ```
 
 ---

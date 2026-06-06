@@ -9,7 +9,7 @@
 
 | File | Topic | Lines | Read When You Need To... |
 |---|---|---|---|
-| [**01-core.md**](01-core.md) | Project Identity, Tech Stack, Architecture, File Structure | 146 | Understand the project at a glance |
+| [**01-core.md**](01-core.md) | Project Identity, Tech Stack, Architecture, File Structure | 151 | Understand the project at a glance |
 | [**02-database-storage.md**](02-database-storage.md) | Database Schema, Storage Architecture, BigInt, Known Data Issues | 145 | Work with data, storage, or database |
 | [**03-auth-security.md**](03-auth-security.md) | Auth Flow, Role System, Middleware, Route Guards, Webhooks | 171 | Implement auth, security, or access control |
 | [**04-api-conventions.md**](04-api-conventions.md) | Route Pattern, Validation, Response Helpers, Prisma Errors, Logger | 200 | Build API routes or handle errors |
@@ -17,6 +17,7 @@
 | [**06-environment-config.md**](06-environment-config.md) | .env, Vercel Config, Scripts, MCP Tools | 119 | Deploy, configure, or run commands |
 | [**07-utilities.md**](07-utilities.md) | Response Helpers, Validation, Constants, Hooks, Rate Limit | 183 | Use shared utilities or helpers |
 | [**08-known-issues.md**](08-known-issues.md) | Production Bugs, Symptoms, Debug Playbook | 146 | Debug production issues |
+| [**09-workflow-conventions.md**](09-workflow-conventions.md) | PR Workflow, Code Reviews, AI Handoff, Testing Rules | 145 | Understand how to work on this project |
 
 ---
 
