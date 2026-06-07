@@ -150,7 +150,7 @@ export default function AdminPaymentsPage() {
       </div>
 
       {/* Tabs - scrollable on mobile */}
-      <div className="flex gap-1 p-1 bg-muted/50 rounded-2xl mb-4 overflow-x-auto [-webkit-overflow-scrolling:touch] flex-nowrap w-full sm:w-fit">
+      <div className="flex gap-1 p-1 bg-muted/50 rounded-2xl mb-4 overflow-x-auto [-webkit-overflow-scrolling:touch] flex-nowrap w-full sm:w-fit [&::-webkit-scrollbar]:hidden">
         {TABS.map(tab => (
           <button key={tab.key} onClick={() => setFilter(tab.key)}
             className={`px-4 py-1.5 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${

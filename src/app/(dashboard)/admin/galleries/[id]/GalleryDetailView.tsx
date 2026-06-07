@@ -372,7 +372,7 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
               {gallery.namaProject}
             </h1>
             <span
-              className={`self-start px-2 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider ${
+              className={`self-start sm:self-auto px-2 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider ${
                 gallery.status === "published"
                   ? "bg-primary/20 text-primary"
                   : "bg-muted text-muted-foreground"
