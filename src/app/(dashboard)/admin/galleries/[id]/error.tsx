@@ -42,13 +42,16 @@ export default function GalleryDetailError({
           </p>
         </div>
 
-        {process.env.NODE_ENV === 'development' && (
-          <div className="p-4 bg-destructive/5 border border-destructive/20 rounded-lg text-left">
+        <div className="p-4 bg-destructive/5 border border-destructive/20 rounded-lg text-left">
             <p className="text-sm font-mono text-destructive break-all">
               {error.message}
             </p>
+            {process.env.NODE_ENV === 'development' && error.stack && (
+              <pre className="mt-2 text-xs text-muted-foreground overflow-auto max-h-40">
+                {error.stack}
+              </pre>
+            )}
           </div>
-        )}
 
         <div className="flex gap-3 justify-center">
           <Button
