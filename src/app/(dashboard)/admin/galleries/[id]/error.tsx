@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Home } from 'lucide-react';
 
@@ -11,6 +12,7 @@ export default function GalleryDetailError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const router = useRouter();
   useEffect(() => {
     console.error('GalleryDetailError:', {
       message: error.message,
@@ -57,7 +59,7 @@ export default function GalleryDetailError({
           </Button>
           <Button
             variant="outline"
-            onClick={() => window.location.href = '/admin/galleries'}
+            onClick={() => router.push('/admin/galleries')}
           >
             <Home className="w-4 h-4 mr-2" />
             Daftar Galeri
