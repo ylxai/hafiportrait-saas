@@ -659,9 +659,10 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
                               (currentPage - 1) * photosPerPage + localIndex + 1
                             }
                             onBlur={(e) => {
+                              const newOrder = Math.max(1, parseInt(e.target.value, 10) || 1);
                               void handleReorderPhoto(
                                 photo.id,
-                                parseInt(e.target.value, 10) || 0,
+                                newOrder,
                               );
                             }}
                             className="w-16 px-2 py-1 text-center font-bold text-background bg-foreground border-2 border-border rounded shadow-lg"
