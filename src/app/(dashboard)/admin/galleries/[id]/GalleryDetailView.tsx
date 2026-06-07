@@ -289,7 +289,7 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
 
   const handleExport = () => {
     // Only exports actual selection file names
-    const photosToExport = latestSelection?.photos?.map((p) => p.photo) || [];
+    const photosToExport = (latestSelection?.photos?.map((p) => p.photo) || []).filter(Boolean);
     if (photosToExport.length === 0) {
       toast.error("Tidak ada foto seleksi klien untuk diekspor");
       return;
@@ -495,7 +495,8 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
                 </p>
                 <div className="text-xs text-muted-foreground font-mono max-h-32 overflow-y-auto">
                   {latestSelection?.photos
-                    ?.map((item) => item.photo.filename)
+                    ?.map((item) => item.photo?.filename)
+                    .filter(Boolean)
                     .join("\n")}
                 </div>
               </div>
