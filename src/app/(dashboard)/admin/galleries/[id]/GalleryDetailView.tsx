@@ -114,7 +114,7 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
   useEffect(() => {
     if (gallery && !userTouchedSettings) {
       setGallerySettings({
-        maxSelection: gallery.maxSelection || 20,
+        maxSelection: gallery.maxSelection ?? 20,
         enableDownload: gallery.enableDownload || false,
       });
     }
@@ -191,7 +191,8 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
       });
 
       if (response.ok) {
-        setSettingsMessage("Settings saved successfully!");
+        toast.success("Settings saved successfully!");
+        setUserTouchedSettings(false);
         mutate(); // Refresh gallery data
         setTimeout(() => setSettingsMessage(""), 3000);
       } else {
@@ -276,6 +277,7 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
       if (!response.ok) {
         throw new Error("Failed to bulk delete photos");
       }
+      toast.success(`Berhasil menghapus ${selectedPhotoIdsForBulk.size} foto`);
       setSelectedPhotoIdsForBulk(new Set());
       setBulkMode(false);
       mutatePhotos();
