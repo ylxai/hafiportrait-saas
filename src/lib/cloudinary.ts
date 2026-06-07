@@ -1,7 +1,9 @@
-import { getCloudinaryConfig } from './storage/accounts';
-// Note: logger is NOT imported here because cloudinary.ts is used in both
-// server and client contexts (via PhotoImage.tsx). Using logger would pull
-// in node:async_hooks which is not available in the browser bundle.
+// Note: logger and storage/accounts are NOT imported at module level
+// because cloudinary.ts is used in both server and client contexts
+// (via PhotoImage.tsx). Using logger would pull in node:async_hooks
+// and importing storage/accounts pulls in PrismaClient — neither are
+// available in the browser bundle. Dynamic imports are used in
+// functions that need them.
 
 /**
  * Generate Cloudinary fetch URL from R2 public URL
@@ -99,6 +101,7 @@ export async function getCloudinaryThumbnailUrlAsync(
   
   // Otherwise, fetch from database
   try {
+    const { getCloudinaryConfig } = await import('./storage/accounts');
     const config = await getCloudinaryConfig();
     return getCloudinaryThumbnailUrl(r2Url, {
       ...restOptions,
