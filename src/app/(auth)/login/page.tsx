@@ -13,14 +13,15 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
 
+  const errorParam = searchParams.get("error");
+
   useEffect(() => {
-    const err = searchParams.get("error");
-    if (err === "SessionConflicts") {
+    if (errorParam === "SessionConflicts") {
       setError("Sesi Anda telah berubah karena login dari tab lain. Silakan login ulang.");
-    } else if (err) {
+    } else if (errorParam) {
       setError("Email atau password salah");
     }
-  }, [searchParams.get("error")]);
+  }, [errorParam]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
