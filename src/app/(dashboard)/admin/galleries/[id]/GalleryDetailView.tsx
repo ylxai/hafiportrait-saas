@@ -367,12 +367,12 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-foreground">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+            <h1 className="text-xl font-bold text-foreground break-words">
               {gallery.namaProject}
             </h1>
             <span
-              className={`px-2 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider ${
+              className={`self-start sm:self-auto px-2 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider ${
                 gallery.status === "published"
                   ? "bg-primary/20 text-primary"
                   : "bg-muted text-muted-foreground"
@@ -381,17 +381,17 @@ export default function GalleryDetailView({ galleryId }: { galleryId: string }) 
               {gallery.status}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground mt-2 flex flex-wrap items-center gap-2">
+          <p className="text-sm text-muted-foreground mt-2 flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-1 sm:gap-2">
             <span className="font-medium text-foreground">
               {gallery.event.client?.nama || "Unknown Client"}
             </span>
-            <span className="text-border">•</span>
-            {gallery.event.kodeBooking}
-            <span className="text-border">•</span>
-            <span className="flex items-center gap-1">
+            <span className="hidden sm:inline text-border">•</span>
+            <span className="text-xs sm:text-sm">{gallery.event.kodeBooking}</span>
+            <span className="hidden sm:inline text-border">•</span>
+            <span className="flex items-center gap-1 text-xs sm:text-sm">
               👁️ {gallery.viewCount} views
             </span>
-            <span className="text-border">•</span>
+            <span className="hidden sm:inline text-border">•</span>
             <span className="flex items-center gap-1 text-primary">
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
               Live
