@@ -47,13 +47,13 @@ function LoginForm() {
   // CLIENT role (e.g. /gallery/[token], /portal/dashboard). The raw query
   // value is run through `safeCallbackUrl` to prevent open-redirect.
   const callbackUrl = safeCallbackUrl(searchParams.get('callbackUrl'))
+  const errorParam = searchParams.get('error')
 
   useEffect(() => {
-    const err = searchParams.get('error')
-    if (err === 'SessionConflicts') {
+    if (errorParam === 'SessionConflicts') {
       toast.error('Sesi Anda telah berubah karena login dari tab lain. Silakan login ulang.')
     }
-  }, [searchParams])
+  }, [errorParam])
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

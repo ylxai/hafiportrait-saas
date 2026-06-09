@@ -124,7 +124,7 @@ export const PATCH = withRequestContext(async (
           await tx.gallery.create({
             data: {
               eventId: payment.eventId,
-              namaProject: payment.event.namaProject,
+              namaProject: payment.event.namaProject || 'Gallery',
               clientToken: randomUUID(),
               status: 'published',
               maxSelection: eventPackage?.maxSelection ?? 20,
