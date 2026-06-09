@@ -20,7 +20,7 @@ function LoginForm() {
     } else if (err) {
       setError("Email atau password salah");
     }
-  }, [searchParams]);
+  }, [searchParams.get("error")]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

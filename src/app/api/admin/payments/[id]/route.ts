@@ -6,6 +6,7 @@ import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { isPrismaError } from '@/lib/prisma-error';
 import { z } from 'zod';
+import { Prisma } from '@/generated/prisma';
 import { formatZodError } from '@/lib/api/validation';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 import { publishPaymentStatusUpdate } from '@/lib/ably';
@@ -64,50 +65,11 @@ export const PATCH = withRequestContext(async (
 
     // Compute new event paymentStatus when approving
     let newEventPaymentStatus: string | undefined;
-    let autoCreatedGallery: { id: string; clientToken: string } | undefined;
-    let clientApproved = false;
 
     if (action === 'approve') {
       const newPaid = (payment.event.paidAmount ?? 0) + payment.amount;
       const total = payment.event.totalPrice ?? 0;
       newEventPaymentStatus = newPaid >= total ? 'paid' : 'partial';
-
-      // Auto-approve client & auto-create gallery when payment is approved
-      // Only run for the first gallery-less payment approval
-      const existingGallery = await prisma.gallery.findFirst({
-        where: { eventId: payment.eventId },
-        select: { id: true },
-      });
-
-      if (!existingGallery) {
-        // Fetch package details for gallery defaults
-        const eventPackage = payment.event.packageId
-          ? await prisma.package.findUnique({
-              where: { id: payment.event.packageId },
-              select: { maxSelection: true, maxDownload: true },
-            })
-          : null;
-
-        // Auto-create gallery with package defaults + auto-approve client
-        const gallery = await prisma.gallery.create({
-          data: {
-            eventId: payment.eventId,
-            namaProject: payment.event.namaProject,
-            clientToken: randomUUID(),
-            status: 'published',
-            maxSelection: eventPackage?.maxSelection ?? 20,
-            enableDownload: (eventPackage?.maxDownload ?? 0) > 0,
-          },
-          select: { id: true, clientToken: true },
-        });
-        autoCreatedGallery = gallery;
-
-        await prisma.client.update({
-          where: { id: payment.event.clientId },
-          data: { isApproved: true },
-        });
-        clientApproved = true;
-      }
     } else {
       // On reject: recompute event status from remaining approved payments
       const approvedPayments = await prisma.payment.findMany({
@@ -125,21 +87,63 @@ export const PATCH = withRequestContext(async (
       }
     }
 
-    const [updatedPayment] = await prisma.$transaction([
-      prisma.payment.update({
+    const [updatedPayment] = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // 1. Update payment status
+      const updated = await tx.payment.update({
         where: { id },
         data: { status: newStatus },
-      }),
-      ...(newEventPaymentStatus
-        ? [prisma.event.update({
-            where: { id: payment.eventId },
+      });
+
+      // 2. Update event payment status + paidAmount
+      if (newEventPaymentStatus) {
+        await tx.event.update({
+          where: { id: payment.eventId },
+          data: {
+            paymentStatus: newEventPaymentStatus,
+            ...(action === 'approve' ? { paidAmount: { increment: payment.amount } } : {}),
+          },
+        });
+      }
+
+      // 3. Auto-create gallery + auto-approve client (only on first approval)
+      if (action === 'approve') {
+        const existing = await tx.gallery.findFirst({
+          where: { eventId: payment.eventId },
+          select: { id: true },
+        });
+
+        if (!existing) {
+          // Fetch package defaults
+          const eventPackage = payment.event.packageId
+            ? await tx.package.findUnique({
+                where: { id: payment.event.packageId },
+                select: { maxSelection: true, maxDownload: true },
+              })
+            : null;
+
+          await tx.gallery.create({
             data: {
-              paymentStatus: newEventPaymentStatus,
-              ...(action === 'approve' ? { paidAmount: { increment: payment.amount } } : {}),
+              eventId: payment.eventId,
+              namaProject: payment.event.namaProject,
+              clientToken: randomUUID(),
+              status: 'published',
+              maxSelection: eventPackage?.maxSelection ?? 20,
+              enableDownload: (eventPackage?.maxDownload ?? 0) > 0,
             },
-          })]
-        : []),
-    ]);
+          });
+
+          // Auto-approve client (with null guard)
+          if (payment.event.clientId) {
+            await tx.client.update({
+              where: { id: payment.event.clientId },
+              data: { isApproved: true },
+            });
+          }
+        }
+      }
+
+      return [updated];
+    });
 
     // Notify via Ably (best-effort)
     await publishPaymentStatusUpdate({
