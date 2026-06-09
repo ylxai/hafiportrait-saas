@@ -30,7 +30,10 @@ const phoneSchema = z
 const updateSettingsSchema = z.object({
   namaStudio: z.string().max(100, 'Studio name is too long').optional(),
   logoUrl: z.string().max(500, 'Logo URL is too long').refine(
-    (val) => val === '' || val.startsWith('http://') || val.startsWith('https://') || val.startsWith('/'),
+    (val) => {
+      const trimmed = val.trim();
+      return trimmed === '' || trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/');
+    },
     { message: 'Invalid logo URL. Must start with http://, https://, or /' }
   ).optional(),
   phone: phoneSchema.optional(),

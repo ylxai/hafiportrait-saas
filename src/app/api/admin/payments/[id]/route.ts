@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { formatZodError } from '@/lib/api/validation';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 import { publishPaymentStatusUpdate } from '@/lib/ably';
+import { randomUUID } from 'crypto';
 
 const patchSchema = z.object({
   action: z.enum(['approve', 'reject']),
@@ -92,7 +93,7 @@ export const PATCH = withRequestContext(async (
           data: {
             eventId: payment.eventId,
             namaProject: payment.event.namaProject,
-            clientToken: `${payment.event.namaProject.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}-${Math.random().toString(36).substring(2, 8)}`,
+            clientToken: randomUUID(),
             status: 'published',
             maxSelection: eventPackage?.maxSelection ?? 20,
             enableDownload: (eventPackage?.maxDownload ?? 0) > 0,
