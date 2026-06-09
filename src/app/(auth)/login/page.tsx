@@ -1,8 +1,9 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { PROVIDER_ID_ADMIN } from "@/lib/auth/role-constants";
 
 export default function LoginPage() {
@@ -10,6 +11,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const err = searchParams.get("error");
+    if (err === "SessionConflicts") {
+      setError("Sesi Anda telah berubah karena login dari tab lain. Silakan login ulang.");
+    } else if (err) {
+      setError("Email atau password salah");
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

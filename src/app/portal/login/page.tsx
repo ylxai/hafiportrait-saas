@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { signIn, signOut } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
 import { Loader2, KeyRound } from 'lucide-react'
@@ -47,6 +47,13 @@ function LoginForm() {
   // CLIENT role (e.g. /gallery/[token], /portal/dashboard). The raw query
   // value is run through `safeCallbackUrl` to prevent open-redirect.
   const callbackUrl = safeCallbackUrl(searchParams.get('callbackUrl'))
+
+  useEffect(() => {
+    const err = searchParams.get('error')
+    if (err === 'SessionConflicts') {
+      toast.error('Sesi Anda telah berubah karena login dari tab lain. Silakan login ulang.')
+    }
+  }, [searchParams])
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

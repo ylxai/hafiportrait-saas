@@ -43,7 +43,19 @@ export const PATCH = withRequestContext(async (
 
     const payment = await prisma.payment.findUnique({
       where: { id },
-      include: { event: { select: { id: true, paymentStatus: true, paidAmount: true, totalPrice: true } } },
+      include: {
+        event: {
+          select: {
+            id: true,
+            paymentStatus: true,
+            paidAmount: true,
+            totalPrice: true,
+            clientId: true,
+            namaProject: true,
+            packageId: true,
+          },
+        },
+      },
     });
 
     if (!payment) return notFoundResponse('Payment not found');
@@ -51,10 +63,50 @@ export const PATCH = withRequestContext(async (
 
     // Compute new event paymentStatus when approving
     let newEventPaymentStatus: string | undefined;
+    let autoCreatedGallery: { id: string; clientToken: string } | undefined;
+    let clientApproved = false;
+
     if (action === 'approve') {
       const newPaid = (payment.event.paidAmount ?? 0) + payment.amount;
       const total = payment.event.totalPrice ?? 0;
       newEventPaymentStatus = newPaid >= total ? 'paid' : 'partial';
+
+      // Auto-approve client & auto-create gallery when payment is approved
+      // Only run for the first gallery-less payment approval
+      const existingGallery = await prisma.gallery.findFirst({
+        where: { eventId: payment.eventId },
+        select: { id: true },
+      });
+
+      if (!existingGallery) {
+        // Fetch package details for gallery defaults
+        const eventPackage = payment.event.packageId
+          ? await prisma.package.findUnique({
+              where: { id: payment.event.packageId },
+              select: { maxSelection: true, maxDownload: true },
+            })
+          : null;
+
+        // Auto-create gallery with package defaults + auto-approve client
+        const gallery = await prisma.gallery.create({
+          data: {
+            eventId: payment.eventId,
+            namaProject: payment.event.namaProject,
+            clientToken: `${payment.event.namaProject.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}-${Math.random().toString(36).substring(2, 8)}`,
+            status: 'published',
+            maxSelection: eventPackage?.maxSelection ?? 20,
+            enableDownload: (eventPackage?.maxDownload ?? 0) > 0,
+          },
+          select: { id: true, clientToken: true },
+        });
+        autoCreatedGallery = gallery;
+
+        await prisma.client.update({
+          where: { id: payment.event.clientId },
+          data: { isApproved: true },
+        });
+        clientApproved = true;
+      }
     } else {
       // On reject: recompute event status from remaining approved payments
       const approvedPayments = await prisma.payment.findMany({
