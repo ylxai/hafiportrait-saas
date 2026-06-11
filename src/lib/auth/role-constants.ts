@@ -34,3 +34,6 @@ export type UserRole = typeof ROLE_ADMIN | typeof ROLE_CLIENT;
  */
 export const PROVIDER_ID_ADMIN = 'admin-credentials' as const;
 export const PROVIDER_ID_CLIENT = 'client-credentials' as const;
+
+// Session conflict error code used by middleware → login pages
+export const SESSION_CONFLICT_ERROR = 'SessionConflicts' as const;

@@ -155,6 +155,7 @@ model Gallery {
   @@index([status, createdAt])
   @@index([clientToken])
   @@index([namaProject]) // For search
+  @@unique([eventId]) // Prevent duplicate galleries per event
 }
 
 model Photo {

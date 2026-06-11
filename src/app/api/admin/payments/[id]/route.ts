@@ -6,9 +6,11 @@ import { withRequestContext } from '@/lib/with-request-context';
 import { logger } from '@/lib/logger';
 import { isPrismaError } from '@/lib/prisma-error';
 import { z } from 'zod';
+import { Prisma } from '@/generated/prisma';
 import { formatZodError } from '@/lib/api/validation';
 import { enforceBodySizeLimit, BODY_LIMITS } from '@/lib/api/body-size-limit';
 import { publishPaymentStatusUpdate } from '@/lib/ably';
+import { randomUUID } from 'crypto';
 
 const patchSchema = z.object({
   action: z.enum(['approve', 'reject']),
@@ -43,7 +45,19 @@ export const PATCH = withRequestContext(async (
 
     const payment = await prisma.payment.findUnique({
       where: { id },
-      include: { event: { select: { id: true, paymentStatus: true, paidAmount: true, totalPrice: true } } },
+      include: {
+        event: {
+          select: {
+            id: true,
+            paymentStatus: true,
+            paidAmount: true,
+            totalPrice: true,
+            clientId: true,
+            namaProject: true,
+            packageId: true,
+          },
+        },
+      },
     });
 
     if (!payment) return notFoundResponse('Payment not found');
@@ -51,6 +65,7 @@ export const PATCH = withRequestContext(async (
 
     // Compute new event paymentStatus when approving
     let newEventPaymentStatus: string | undefined;
+
     if (action === 'approve') {
       const newPaid = (payment.event.paidAmount ?? 0) + payment.amount;
       const total = payment.event.totalPrice ?? 0;
@@ -72,21 +87,63 @@ export const PATCH = withRequestContext(async (
       }
     }
 
-    const [updatedPayment] = await prisma.$transaction([
-      prisma.payment.update({
+    const [updatedPayment] = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // 1. Update payment status
+      const updated = await tx.payment.update({
         where: { id },
         data: { status: newStatus },
-      }),
-      ...(newEventPaymentStatus
-        ? [prisma.event.update({
-            where: { id: payment.eventId },
+      });
+
+      // 2. Update event payment status + paidAmount
+      if (newEventPaymentStatus) {
+        await tx.event.update({
+          where: { id: payment.eventId },
+          data: {
+            paymentStatus: newEventPaymentStatus,
+            ...(action === 'approve' ? { paidAmount: { increment: payment.amount } } : {}),
+          },
+        });
+      }
+
+      // 3. Auto-create gallery + auto-approve client (only on first approval)
+      if (action === 'approve') {
+        const existing = await tx.gallery.findFirst({
+          where: { eventId: payment.eventId },
+          select: { id: true },
+        });
+
+        if (!existing) {
+          // Fetch package defaults
+          const eventPackage = payment.event.packageId
+            ? await tx.package.findUnique({
+                where: { id: payment.event.packageId },
+                select: { maxSelection: true, maxDownload: true },
+              })
+            : null;
+
+          await tx.gallery.create({
             data: {
-              paymentStatus: newEventPaymentStatus,
-              ...(action === 'approve' ? { paidAmount: { increment: payment.amount } } : {}),
+              eventId: payment.eventId,
+              namaProject: payment.event.namaProject || 'Gallery',
+              clientToken: randomUUID(),
+              status: 'published',
+              maxSelection: eventPackage?.maxSelection ?? 20,
+              enableDownload: (eventPackage?.maxDownload ?? 0) > 0,
             },
-          })]
-        : []),
-    ]);
+          });
+
+          // Auto-approve client (with null guard)
+          if (payment.event.clientId) {
+            await tx.client.update({
+              where: { id: payment.event.clientId },
+              data: { isApproved: true },
+            });
+          }
+        }
+      }
+
+      return [updated];
+    });
 
     // Notify via Ably (best-effort)
     await publishPaymentStatusUpdate({

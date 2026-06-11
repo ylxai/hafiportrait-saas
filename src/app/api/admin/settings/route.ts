@@ -29,7 +29,10 @@ const phoneSchema = z
 // Zod schema for settings update
 const updateSettingsSchema = z.object({
   namaStudio: z.string().max(100, 'Studio name is too long').optional(),
-  logoUrl: z.string().url('Invalid logo URL').max(500).or(z.literal('')).optional(),
+  logoUrl: z.string().max(500, 'Logo URL is too long').transform(val => val.trim()).refine(
+    (val) => val === '' || val.startsWith('http://') || val.startsWith('https://') || val.startsWith('/'),
+    { message: 'Invalid logo URL. Must start with http://, https://, or /' }
+  ).optional(),
   phone: phoneSchema.optional(),
   email: z.string().email('Invalid email').max(100).or(z.literal('')).optional(),
   address: z.string().max(500, 'Address is too long').optional(),

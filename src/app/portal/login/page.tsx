@@ -1,11 +1,11 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { signIn, signOut } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
 import { Loader2, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
-import { PROVIDER_ID_CLIENT } from '@/lib/auth/role-constants'
+import { PROVIDER_ID_CLIENT, SESSION_CONFLICT_ERROR } from '@/lib/auth/role-constants'
 
 /**
  * Validate a `callbackUrl` query parameter against open-redirect attacks.
@@ -47,6 +47,13 @@ function LoginForm() {
   // CLIENT role (e.g. /gallery/[token], /portal/dashboard). The raw query
   // value is run through `safeCallbackUrl` to prevent open-redirect.
   const callbackUrl = safeCallbackUrl(searchParams.get('callbackUrl'))
+  const errorParam = searchParams.get('error')
+
+  useEffect(() => {
+    if (errorParam === SESSION_CONFLICT_ERROR) {
+      toast.error('Sesi Anda telah berubah karena login dari tab lain. Silakan login ulang.')
+    }
+  }, [errorParam])
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

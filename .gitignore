@@ -137,4 +137,5 @@ logs-vercel.json
 
 # Local docs (not for version control)
 docs/
+project-meta/
 .qoder/

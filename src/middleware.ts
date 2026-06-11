@@ -5,7 +5,7 @@ import {
   REQUEST_ID_HEADER,
   normalizeRequestId,
 } from "@/lib/request-id-constants";
-import { ROLE_ADMIN, ROLE_CLIENT } from "@/lib/auth/role-constants";
+import { ROLE_ADMIN, ROLE_CLIENT, SESSION_CONFLICT_ERROR } from "@/lib/auth/role-constants";
 import { normalizeTokenRole } from "@/lib/auth/role-helpers";
 
 /**
@@ -215,8 +215,12 @@ export async function middleware(request: NextRequest) {
         requestId,
       );
     }
-    const target = isClient ? "/portal/dashboard" : "/login";
-    return redirectWithRequestId(new URL(target, request.url), requestId);
+    // Session conflict: role doesn't match route
+    // Instead of silently redirecting to portal (confusing),
+    // send to login so user can re-authenticate
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("error", SESSION_CONFLICT_ERROR);
+    return redirectWithRequestId(loginUrl, requestId);
   }
 
   if (isPortalRoute && !isClient) {
@@ -227,8 +231,10 @@ export async function middleware(request: NextRequest) {
         requestId,
       );
     }
-    const target = isAdmin ? "/admin" : "/portal/login";
-    return redirectWithRequestId(new URL(target, request.url), requestId);
+    // Session conflict: role doesn't match route
+    const loginUrl = new URL("/portal/login", request.url);
+    loginUrl.searchParams.set("error", SESSION_CONFLICT_ERROR);
+    return redirectWithRequestId(loginUrl, requestId);
   }
 
   // Authenticated request: forward the request ID AND user-context

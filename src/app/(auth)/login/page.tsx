@@ -1,15 +1,27 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
-import { PROVIDER_ID_ADMIN } from "@/lib/auth/role-constants";
+import { useSearchParams } from "next/navigation";
+import { PROVIDER_ID_ADMIN, SESSION_CONFLICT_ERROR } from "@/lib/auth/role-constants";
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+
+  const errorParam = searchParams.get("error");
+
+  useEffect(() => {
+    if (errorParam === SESSION_CONFLICT_ERROR) {
+      setError("Sesi Anda telah berubah karena login dari tab lain. Silakan login ulang.");
+    } else if (errorParam) {
+      setError("Email atau password salah");
+    }
+  }, [errorParam]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,5 +182,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
