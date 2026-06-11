@@ -4,7 +4,7 @@ import { signIn } from "next-auth/react";
 import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { PROVIDER_ID_ADMIN } from "@/lib/auth/role-constants";
+import { PROVIDER_ID_ADMIN, SESSION_CONFLICT_ERROR } from "@/lib/auth/role-constants";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -16,7 +16,7 @@ function LoginForm() {
   const errorParam = searchParams.get("error");
 
   useEffect(() => {
-    if (errorParam === "SessionConflicts") {
+    if (errorParam === SESSION_CONFLICT_ERROR) {
       setError("Sesi Anda telah berubah karena login dari tab lain. Silakan login ulang.");
     } else if (errorParam) {
       setError("Email atau password salah");
