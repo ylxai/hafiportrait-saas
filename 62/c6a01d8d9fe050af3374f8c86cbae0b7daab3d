@@ -1,0 +1,89 @@
+.opencode/skills/github-pr-workflow/templates/pr-body-bugfix.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-35
+.opencode/skills/github-code-review/references/bot-review-triage.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-233
+.opencode/skills/github-pr-workflow/references/vercel-deployment-failure-isolation.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-133
+.opencode/skills/github-pr-workflow/references/codebase-audit-batch-fixing.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-140
+.opencode/skills/github-pr-workflow/references/code-quality-refactoring-patterns.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-257
+.opencode/skills/github-pr-workflow/references/bot-review-trigger-commands.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-59
+.opencode/skills/github-pr-workflow/references/incremental-pr-strategy.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-241
+.opencode/skills/debugging-with-ably-cli/MAINTAINING.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-62
+.opencode/skills/github-pr-workflow/references/file-editing-conventions.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-49
+.opencode/skills/github-pr-workflow/references/conventional-commits.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-71
+.opencode/skills/github-pr-workflow/references/nextjs-mass-codemod-patterns.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-171
+.opencode/skills/github-pr-workflow/references/vercel-build-transient-failures.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-106
+.opencode/skills/cloudflare/SKILL.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-245
+.opencode/skills/github-pr-workflow/SKILL.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-1223
+.opencode/skills/github-pr-workflow/references/bot-review-iteration-strategy.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-145
+.opencode/skills/github-pr-workflow/references/ci-troubleshooting.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-183
+.opencode/skills/github-code-review/references/review-output-template.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-74
+.opencode/skills/github-pr-workflow/references/vercel-environment-bypass.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-193
+.opencode/skills/github-code-review/SKILL.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-488
+.opencode/skills/github-pr-workflow/references/merge-conflict-resolution.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-187
+AGENTS.md
+  s_4024ed9e884660::t_b0cb5f69d06ab8 3,65,67-73,75-76,79-80,82-83,162-165,268-357,406
+.opencode/skills/debugging-with-ably-cli/SKILL.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-215
+.opencode/skills/github-pr-workflow/references/base-ui-css-specificity.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-75
+.opencode/skills/github-pr-workflow/references/bot-review-feedback.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-611
+.opencode/skills/github-pr-workflow/references/vercel-preview-url-discovery.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-93
+.opencode/skills/github-pr-workflow/references/bot-review-comprehensive-fix.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-193
+.opencode/skills/github-code-review/references/pr-review-analysis-workflow.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-133
+.opencode/skills/using-ably/SKILL.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-480
+.opencode/skills/github-pr-workflow/templates/pr-body-feature.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-33
+.opencode/skills/github-pr-workflow/references/pre-push-schema-tightening.md
+  s_4024ed9e884660::t_d5a7e1ad05a6b8 1-109
+.opencode/skills/check-pr-comments/SKILL.md
+  s_4024ed9e884660::t_223b7bb091e185 1-175
+.opencode/skills/codebase-context/SKILL.md
+  s_4024ed9e884660::t_d4264ee51678f8 1-65
+.opencode/skills/cubic-loop/SKILL.md
+  s_4024ed9e884660::t_70514eb2f9b2ae 1-173
+.opencode/skills/open-code-review-delegate/SKILL.md
+  s_4024ed9e884660::t_3c98b5f35ca66c 1-155
+.opencode/skills/review-patterns/SKILL.md
+  s_4024ed9e884660::t_6fec6668e61f6b 1-73
+.opencode/skills/run-review/SKILL.md
+  s_4024ed9e884660::t_cd2a5ae6fa4864 1-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "62c6a01d8d9fe050af3374f8c86cbae0b7daab3d",
+  "prompts": {},
+  "sessions": {
+    "s_4024ed9e884660": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0167cbbc8ffep4E5Sw3x9Z5dlz",
+        "model": "deepseek/deepseek-v4-pro-free"
+      },
+      "human_author": "ylxai <ylexrapper@gmail.com>"
+    }
+  }
+}
