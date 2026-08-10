@@ -1,6 +1,6 @@
 # AGENTS.md — PhotoStudio SaaS
 
-> ⚠️ Read this first before making any changes.
+> ⚠️ Read this first before making any changes. This is the single source of truth for agents working on **hafiportrait-saas** (previously also maintained as `AGENT.md` — merged here, that file is gone).
 
 ---
 
@@ -62,14 +62,25 @@ import { HTTP_STATUS } from '@/tests/e2e/constants/http-status'
 | Path | Purpose |
 |------|---------|
 | `src/app/(dashboard)/admin/` | Admin pages — auth required |
+| `src/app/portal/` | Client portal (login + selection) |
 | `src/app/gallery/[token]/` | Public gallery — token-based |
-| `src/app/api/admin/` | Admin API routes |
-| `src/app/api/public/` | Public API routes |
-| `src/app/api/webhook/` | Cloudflare Worker webhooks |
+| `src/app/booking/` | Public booking form |
+| `src/app/api/admin/` | Admin API routes (`requireAdminAuth`) |
+| `src/app/api/portal/` | Portal API routes (`requireClientAuth`) |
+| `src/app/api/public/` | Public API routes (no auth) |
+| `src/app/api/webhook/` | Cloudflare Worker callbacks (HMAC signed) |
+| `src/app/api/auth/[...nextauth]/` | NextAuth.js (dual providers) |
+| `src/app/api/ably/token` | Ably token (public read) |
 | `src/components/ui/` | shadcn/ui components |
+| `src/lib/auth/` | Guards, helpers, constants |
+| `src/lib/api/` | `response.ts`, `validation.ts`, `constants.ts` |
 | `src/lib/storage/` | R2, Cloudinary, accounts |
 | `src/lib/upload/` | Presigned URLs |
+| `src/lib/db.ts` | Prisma client singleton |
+| `src/lib/logger.ts` | Structured JSON logger |
 | `src/lib/cloudflare-queue.ts` | Cloudflare Queues (via Worker HTTP) |
+| `src/lib/bigint-utils.ts` | `serializeBigInt` |
+| `src/lib/hooks/useAbly.ts` | Real-time hooks |
 | `workers/` | Cloudflare Edge Workers |
 | `prisma/schema.prisma` | Database schema (Neon PostgreSQL via Prisma Accelerate) |
 
@@ -147,6 +158,10 @@ const result = paginationSchema.safeParse({
   limit: searchParams.get('limit') || undefined,
 })
 ```
+
+### Console vs Logger
+- Server → `logger` (structured JSON from `src/lib/logger.ts`)
+- Browser/Edge → `console.*` (by design)
 
 ---
 
@@ -250,6 +265,96 @@ if (auth instanceof NextResponse) return auth
 
 ---
 
+## Auth System
+
+Two separate login flows, each with its own JWT:
+- **Admin**: `/login` → CredentialsProvider(id: admin) → `role: "admin"`
+- **Client**: `/portal/login` → CredentialsProvider(id: client) → `role: "client"`
+
+Sessions use the same cookie name → conflict when both are open in different tabs. Middleware detects the mismatch → redirects to login with `?error=SessionConflicts`.
+
+---
+
+## Database Models
+
+- **User** — Admin accounts
+- **Client** — nama, email, isApproved, storageQuotaGB, usedStorage
+- **Event** — kodeBooking, clientId, packageId, status, totalPrice, paymentStatus
+- **Package** — nama, price, maxSelection, maxDownload
+- **Payment** — eventId, amount, type(dp/full), proofUrl, status
+- **Gallery** — eventId (unique!), namaProject, clientToken, maxSelection, enableDownload
+- **Photo** — galleryId, url, thumbnailUrl, r2Key, fileSize, order
+- **Selection** — galleryId, submittedAt
+- **StorageAccount** — provider(R2/CLOUDINARY), credentials, usedStorage
+
+---
+
+## Key API Routes
+
+| Route | Method | Auth | Purpose |
+|---|---|---|---|
+| `/api/admin/payments/[id]` | PATCH | admin | Approve/reject payment + auto-create gallery |
+| `/api/admin/galleries/[id]/photos` | GET | admin | List photos with pagination |
+| `/api/admin/upload/presigned` | POST | admin | Get R2 presigned URL |
+| `/api/admin/upload/complete` | POST | admin | Confirm upload → queue thumbnail |
+| `/api/public/payment/create` | POST | public | Create payment (DP/full) |
+| `/api/webhook/thumbnail-generated` | POST | HMAC | Worker callback after thumbnail done |
+| `/api/ably/token` | GET | public | Ably auth token for real-time |
+
+---
+
+## Key Fixes History
+
+| PR | What |
+|---|---|
+| #167 | Gallery crash — PrismaClient bundled to browser via PhotoImage → cloudinary. Fix: dynamic import |
+| #168 | Mobile UI — filter buttons wrap, gallery header text overlap |
+| #169 | Auto-gallery on payment approval + session conflict fix + logo validation + DB `@@unique([eventId])` |
+
+---
+
+## Known Limitations
+
+- Thumbnail generation depends on Cloudinary credentials in `StorageAccount` table
+- `VPS_WEBHOOK_SECRET` must match between Worker (wrangler secret) and Vercel env
+- Session conflict still possible between admin/client tabs (mitigated by middleware redirect)
+- DP → Pelunasan flow implemented but remaining balance calculation is implicit (total - paidAmount)
+
+---
+
+## Autonomous Mode
+
+| Cron | What |
+|---|---|
+| Daily 09:00 UTC | git pull → npm audit → build → fix minor → PR → merge auto |
+| Weekly Mon 10:00 | Full codebase scan (security, Prisma, types, deps) → report |
+
+---
+
+## PR Workflow
+
+```
+Branch → Commit/Push → PR → WAIT 3-5min for auto-review
+  → Read ALL bots (Sourcery, Gemini, Gitar, Seer, CodeAnt, Vercel)
+  → Fix ALL issues → Commit/Push
+  → Manual re-review (@sourcery-ai, /gemini) ONLY after fixes
+  → Vercel ✅ + all bots ✅ → ASK user → Merge
+  NEVER push to main. NEVER merge with unresolved issues.
+```
+
+---
+
+## Project Skills (project-scoped)
+
+Skills are kept **inside this repo** so they never leak across projects:
+
+- `.opencode/skills/` — opencode skills used by this project (review workflow: check-pr-comments, cubic-loop, codebase-context, review-patterns, run-review, open-code-review-delegate; stack: cloudflare, using-ably, debugging-with-ably-cli, github-pr-workflow, github-code-review)
+- `.agents/skills/` — shared skill library for this project (Next.js, Tailwind, Playwright, Zod, shadcn, SEO, etc.), symlinked from `.claude/skills/` and `.junie/skills/`
+
+Do NOT add project-specific skills to global skill directories (`~/.config/opencode/skills/`, `~/.agents/skills/`) — keep them in `.opencode/skills/` and reference them from here.
+
+---
+
 ## Explicit Prohibitions
 
 1. **NO `alert()`** — use `sonner toast()` only
@@ -298,5 +403,5 @@ VERCEL_AUTOMATION_BYPASS_SECRET=...
 After completing a task successfully:
 
 1. Note what worked in a comment
-2. For reusable patterns, save as a Hermes skill via `skill_manage`
+2. For reusable patterns, add a skill to `.opencode/skills/` (project-scoped) — NOT global
 3. Reference past tasks via session search
